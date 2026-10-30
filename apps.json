@@ -1,0 +1,61 @@
+{
+  "_uitleg": "Voeg een app toe door hier een blok bij te zetten (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin / Andere, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch).",
+  "apps": [
+    {
+      "name": "Coach Mic",
+      "url": "https://id-preview--bd23c93a-4a83-4811-9c35-e762a5ab1bd2.lovable.app",
+      "source": "Lovable",
+      "category": "Wedstrijd",
+      "icon": "mic",
+      "description": "Praat tijdens de match: timer, goals, wissels en coaching worden vanzelf bijgehouden."
+    },
+    {
+      "name": "Mixschema",
+      "url": "https://claude.ai/artifact/4FsvUQhEit2PtRcTmtqgmg",
+      "source": "Claude",
+      "category": "Wedstrijd",
+      "icon": "rotate",
+      "description": "Wie speelt bij wie per speeldag in de gemixte wedstrijd."
+    },
+    {
+      "name": "Coachbord",
+      "url": "https://id-preview--46e6a6be-f9cc-43a1-b0a7-920ad6aa9e98.lovable.app",
+      "source": "Lovable",
+      "category": "Training & tactiek",
+      "icon": "calendar",
+      "description": "Trainingen plannen, oefeningen tekenen en opstellingen afdrukken."
+    },
+    {
+      "name": "Tactiekbord",
+      "url": "https://id-preview--9f22be5d-866f-4731-a72a-7b57d652f76c.lovable.app",
+      "source": "Lovable",
+      "category": "Training & tactiek",
+      "icon": "video",
+      "description": "Spelprincipes per speelvorm met video en kernpunten."
+    },
+    {
+      "name": "Tactiekbord 2",
+      "url": "https://claude.ai/artifact/45CnyKEd5BU5WYvf9FXcjZ",
+      "source": "Claude",
+      "category": "Training & tactiek",
+      "icon": "board",
+      "description": "Tactiekvideo en wedstrijdbeelden naast elkaar."
+    },
+    {
+      "name": "Zonekaart 8v8",
+      "url": "https://claude.ai/code/artifact/ddea41e8-798b-4f0b-b67f-07d8a4ec4d89",
+      "source": "Claude",
+      "category": "Training & tactiek",
+      "icon": "field",
+      "description": "Zones en posities op het 8v8-veld."
+    },
+    {
+      "name": "Scouting",
+      "url": "https://claude.ai/artifact/DofQCkApMo9ecCQQoAJhpH",
+      "source": "Claude",
+      "category": "Scouting & spelers",
+      "icon": "scout",
+      "description": "Scoutingsdatabase: spelers opzoeken en beoordelen."
+    }
+  ]
+}
