@@ -76,6 +76,7 @@ const ICONS={
   calendar:`<svg viewBox="0 0 24 24" ${P}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/></svg>`,
   players:`<svg viewBox="0 0 24 24" ${P}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 4.8"/></svg>`,
   ball:`<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg>`,
+  sheet:`<svg viewBox="0 0 24 24" ${P}><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10h7M8.5 13.5h7M8.5 17h4"/></svg>`,
   stopwatch:`<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4M19 6l1.5-1.5"/></svg>`
 };
 const DEF={"Wedstrijd":"ball","Training & tactiek":"board","Scouting & spelers":"scout","Planning & admin":"calendar","Andere":"ball"};
@@ -83,7 +84,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 let apps=[],q="";
 function tile(a){
   const tip=esc(a.description?a.name+": "+a.description:a.name);
-  return `<a class="app" href="${esc(a.url)}" target="_blank" rel="noopener" title="${tip}"><span class="dot" data-s="${esc(a.source)}" aria-hidden="true"></span><span class="icon" aria-hidden="true">${ICONS[a.icon]||ICONS[DEF[a.category]]||ICONS.ball}</span><span class="name">${esc(a.name)}</span></a>`;
+  return `<a class="app" href="${esc(a.url)}"${/^https?:/.test(a.url)?' target="_blank" rel="noopener"':''} title="${tip}"><span class="dot" data-s="${esc(a.source)}" aria-hidden="true"></span><span class="icon" aria-hidden="true">${ICONS[a.icon]||ICONS[DEF[a.category]]||ICONS.ball}</span><span class="name">${esc(a.name)}</span></a>`;
 }
 function render(){
   const t=q.trim().toLowerCase();

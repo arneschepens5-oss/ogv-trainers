@@ -1,6 +1,14 @@
 {
-  "_uitleg": "Voeg een app toe door hier een blok bij te zetten (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin / Andere, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch).",
+  "_uitleg": "Voeg een app toe door hier een blok bij te zetten (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin / Andere, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch/sheet).",
   "apps": [
+    {
+      "name": "Matchday",
+      "url": "matchday/",
+      "source": "Claude",
+      "category": "Wedstrijd",
+      "icon": "sheet",
+      "description": "Wedstrijdblad voor de kleedkamer: opstelling, kapitein en opdrachten. Elke ploeg en spelvorm, af te drukken op A4."
+    },
     {
       "name": "Coach Mic",
       "url": "https://id-preview--bd23c93a-4a83-4811-9c35-e762a5ab1bd2.lovable.app",

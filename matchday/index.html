@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Matchday OG Vorselaar</title>
+<meta name="theme-color" content="#111110">
+<link rel="icon" type="image/png" href="../icons/favicon.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Links het invulpaneel (alleen op scherm), rechts een echt A4-blad. Clubkleuren geel-zwart. */
+:root{
+  --geel:#FFD400; --zwart:#111111; --papier:#ffffff;
+  --ui-bg:#F2F1EA; --ui-panel:#ffffff; --ui-fg:#1b1b18; --ui-muted:#6b6a60; --ui-line:#dddbd0; --ui-accent:#111; --ui-warn:#c0392b;
+  --display:"Bebas Neue","Arial Narrow",Impact,sans-serif;
+  --body:"Barlow","Helvetica Neue",Arial,sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ui-bg:#17170f;--ui-panel:#222219;--ui-fg:#f1f0e6;--ui-muted:#a5a493;--ui-line:#3a3a2f;--ui-accent:#FFD400;color-scheme:dark}}
+:root[data-theme="dark"]{--ui-bg:#17170f;--ui-panel:#222219;--ui-fg:#f1f0e6;--ui-muted:#a5a493;--ui-line:#3a3a2f;--ui-accent:#FFD400;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font-family:var(--body);font-size:14px}
+.topbar{position:sticky;top:0;z-index:20;background:#111110;color:#fff;display:flex;align-items:center;gap:12px;padding:calc(8px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
+.topbar a{color:var(--geel);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;min-height:36px}
+.topbar img{width:30px;height:30px;border-radius:7px;background:#fff}
+.topbar b{font-family:var(--display);font-size:22px;letter-spacing:.03em;font-weight:400;margin-left:auto}
+.app{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:24px;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));align-items:start}
+@media (max-width:980px){.app{grid-template-columns:1fr}}
+
+/* ---------- Invulpaneel ---------- */
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h1{font-family:var(--display);font-size:34px;letter-spacing:.02em;margin:0;line-height:1;font-weight:400}
+.panel h1 span{background:var(--geel);color:#111;padding:0 6px}
+.lead{color:var(--ui-muted);margin:4px 0 0;line-height:1.45}
+.card{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card h2{font-family:var(--cond);text-transform:uppercase;letter-spacing:.08em;font-size:13px;margin:0;color:var(--ui-muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ui-muted);min-width:0}
+input,select,textarea{font:inherit;color:var(--ui-fg);background:var(--ui-bg);border:1px solid var(--ui-line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:90px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--ui-accent);outline-offset:1px}
+button{font:inherit;font-weight:600;cursor:pointer;border-radius:6px;border:1px solid var(--ui-line);background:var(--ui-bg);color:var(--ui-fg);padding:7px 12px}
+button.primary{background:#111;color:var(--geel);border-color:#111}
+button.small{padding:3px 8px;font-size:12px}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{padding:5px 10px}
+.seg button[aria-pressed=true]{background:var(--geel);color:#111;border-color:#111}
+.squad{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow:auto}
+.squad .p{display:grid;grid-template-columns:22px 1fr 54px auto;gap:6px;align-items:center}
+.squad input[type=checkbox]{width:18px;height:18px}
+.squad .x{padding:2px 6px;font-size:13px;color:var(--ui-muted)}
+.count{font-family:var(--cond);font-size:13px;color:var(--ui-muted);text-transform:none;letter-spacing:0}
+.lu{display:grid;grid-template-columns:62px 1fr;gap:6px 8px;align-items:center}
+.lu input{font-family:var(--cond);font-weight:700;text-align:center;padding:6px 4px}
+.lu select.dup{border-color:var(--ui-warn)}
+.editor{background:#2f7d3a;border-radius:8px;touch-action:none;user-select:none;display:block;width:100%;max-width:300px;margin:0 auto}
+.editor circle.dot{cursor:grab}
+.warn{color:var(--ui-warn);font-size:12.5px;margin:0}
+.hint{color:var(--ui-muted);font-size:12.5px;margin:0;line-height:1.4}
+.ms{display:flex;flex-direction:column;gap:12px}
+.mi{display:grid;grid-template-columns:26px 1fr;gap:6px 8px;align-items:start}
+.mi .n{font-family:var(--display);font-size:26px;line-height:1;background:var(--geel);color:#111;text-align:center;border-radius:4px}
+.mi .fields{display:flex;flex-direction:column;gap:6px;min-width:0}
+.icons{display:flex;gap:4px;flex-wrap:wrap}
+.icons button{padding:2px;width:34px;height:34px;display:grid;place-items:center;background:#fff}
+.icons button svg{width:26px;height:26px}
+.icons button[aria-pressed=true]{background:var(--geel);border-color:#111}
+.actions{position:sticky;bottom:0;background:var(--ui-bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;flex-wrap:wrap}
+dialog{border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-panel);color:var(--ui-fg);padding:18px;width:min(420px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog form{display:flex;flex-direction:column;gap:10px}
+dialog h3{margin:0;font-family:var(--display);font-size:26px;font-weight:400}
+
+/* ---------- Preview ---------- */
+.stage{min-width:0;display:flex;justify-content:center}
+.scaler{transform-origin:top left}
+.sheet-wrap{box-shadow:0 2px 18px rgba(0,0,0,.18)}
+
+/* ---------- A4-blad ---------- */
+.sheet{width:210mm;height:297mm;background:var(--papier);color:var(--zwart);padding:9mm 10mm 8mm;display:flex;flex-direction:column;gap:5mm;font-family:var(--body);overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.hdr{display:grid;grid-template-columns:24mm 1fr 30mm;gap:5mm;align-items:center}
+.hdr img{width:24mm;height:24mm;object-fit:contain;display:block}
+.kicker{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9.5pt;text-transform:uppercase;margin:0 0 1mm}
+.vs{font-family:var(--display);font-weight:400;font-size:34pt;line-height:.92;margin:0;letter-spacing:.01em}
+.vs .them{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs i{font-style:normal;font-size:20pt;background:var(--geel);padding:0 1.6mm;margin:0 1mm;vertical-align:.25em}
+.chev{width:30mm;height:30mm}
+.infobar{display:grid;grid-template-columns:repeat(4,1fr);background:var(--zwart);color:#fff;border-radius:2mm;overflow:hidden}
+.infobar div{padding:1.6mm 3mm;border-left:.3mm solid #333;min-width:0}
+.infobar div:first-child{border-left:0}
+.infobar b{display:block;font-family:var(--cond);font-size:7.5pt;letter-spacing:.12em;color:var(--geel);font-weight:600;text-transform:uppercase}
+.infobar span{font-family:var(--cond);font-weight:700;font-size:13.5pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.start{display:grid;grid-template-columns:100mm 1fr;gap:7mm;align-items:start}
+.start svg{width:100mm;height:125mm;display:block}
+.side{display:flex;flex-direction:column;gap:5mm;padding-top:2mm;min-width:0}
+.big{font-family:var(--display);font-size:36pt;line-height:.85;margin:0}
+.big small{display:block;font-size:16pt;color:#555;margin-top:1.5mm;letter-spacing:.04em}
+.sublbl{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9pt;text-transform:uppercase;margin:0 0 2mm;color:#555}
+.bench{display:flex;flex-direction:column;gap:1.8mm}
+.bench span{display:flex;align-items:center;gap:2.5mm;font-weight:700;font-size:12.5pt;white-space:nowrap;overflow:hidden}
+.bench span i{font-style:normal;flex:none;width:7.5mm;height:7.5mm;border-radius:50%;border:.4mm solid #111;display:grid;place-items:center;font-family:var(--cond);font-size:9pt}
+.bench.dense span{font-size:11pt}
+.empty{color:#888;font-size:10pt}
+.capt{display:grid;grid-template-columns:11mm 1fr;gap:3mm;align-items:center;background:#111;color:#fff;border-radius:2.5mm;padding:2.5mm 3mm}
+.capt .sublbl{color:var(--geel);margin:0 0 .5mm}
+.capt strong{font-family:var(--display);font-size:22pt;line-height:.95;font-weight:400;display:block}
+.capt .ctask{margin:1mm 0 0;font-family:var(--cond);font-weight:600;font-size:10.5pt;color:#fff}
+.capt .ctask b{color:var(--geel);font-weight:700}
+.capt .band{width:11mm;height:11mm;border-radius:50%;background:var(--geel);color:#111;display:grid;place-items:center;font-family:var(--display);font-size:20pt;line-height:1;padding-top:.6mm}
+.tasks{display:flex;flex-direction:column;gap:3mm;flex:1 1 auto;min-height:0}
+.tasks h4{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9pt;text-transform:uppercase;margin:0}
+#sTasks{display:flex;flex-direction:column;gap:3mm}
+.task{display:grid;grid-template-columns:9mm 17mm 1fr 13mm;gap:3.5mm;align-items:center;border:.5mm solid #111;border-radius:2.5mm;padding:2.6mm 3.5mm}
+.solo .task{padding:6mm 5mm;grid-template-columns:12mm 26mm 1fr 16mm}.solo .task .n{font-size:40pt}.solo .task .ico{width:26mm;height:26mm}.solo .task .ico svg{width:17mm;height:17mm}.solo .task h3{font-size:32pt}.solo .task p{font-size:13pt}.solo .task .ok i{width:11mm;height:11mm}
+.task .n{font-family:var(--display);font-size:28pt;line-height:1;text-align:center}
+.task .ico{width:17mm;height:17mm;border-radius:50%;background:var(--geel);display:grid;place-items:center}
+.task .ico svg{width:11.5mm;height:11.5mm}
+.task h3{font-family:var(--display);font-weight:400;font-size:20pt;line-height:.95;margin:0}
+.task p{margin:.8mm 0 0;font-size:10pt;line-height:1.25}
+.task .ok{display:flex;flex-direction:column;align-items:center;gap:1mm;font-family:var(--cond);font-weight:600;font-size:8pt}
+.task .ok i{width:8mm;height:8mm;border:.5mm solid #111;border-radius:1.5mm;display:block}
+.foot{display:flex;justify-content:space-between;align-items:center;font-family:var(--cond);font-weight:600;font-size:8.5pt;color:#555;border-top:.3mm solid #ddd;padding-top:1.6mm;margin-top:auto}
+.foot .slogan{font-family:var(--display);font-size:18pt;color:#111;background:var(--geel);padding:.4mm 2.5mm 0;line-height:1;letter-spacing:.02em}
+
+@page{size:A4;margin:0}
+@media print{
+  body{background:#fff}
+  .panel,.topbar{display:none!important}
+  .app{display:block;padding:0}
+  .stage{display:block}
+  .scaler{transform:none!important;width:auto!important;height:auto!important}
+  .sheet-wrap{box-shadow:none}
+}
+</style>
+</head>
+<body>
+<nav class="topbar">
+  <a href="../" aria-label="Terug naar het trainersportaal"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Portaal</a>
+  <b>Matchday</b>
+  <img src="../icons/icon-192.png" alt="">
+</nav>
+
+<div class="app">
+  <aside class="panel" aria-label="Invullen">
+    <div>
+      <h1><span>MATCHDAY</span> blad</h1>
+      <p class="lead">Kies je ploeg, vul de match in en druk af op A4. Alles blijft op dit toestel bewaard, dus volgende week pas je enkel aan wat verandert.</p>
+    </div>
+
+    <section class="card">
+      <h2>Ploeg <span class="btns"><button class="small" id="newTeam" type="button">+ ploeg</button><button class="small" id="editTeam" type="button">Wijzig</button></span></h2>
+      <select id="team" aria-label="Kies ploeg"></select>
+      <div>
+        <p class="hint" style="margin-bottom:5px">Spelvorm</p>
+        <div class="seg" id="format" role="group" aria-label="Spelvorm"></div>
+      </div>
+      <label class="f">Opstelling<select id="formation"></select></label>
+    </section>
+
+    <section class="card">
+      <h2>Wedstrijd</h2>
+      <label class="f">Tegenstander<input id="opp" placeholder="bv. KFC Herentals"></label>
+      <div class="row">
+        <label class="f">Datum<input id="date" type="date"></label>
+        <label class="f">Verzamelen<input id="meet" type="time"></label>
+        <label class="f">Aftrap<input id="kick" type="time"></label>
+      </div>
+      <div class="row">
+        <label class="f">Thuis of uit<select id="home"><option value="thuis">Thuis</option><option value="uit">Uit</option></select></label>
+        <label class="f">Terrein / adres<input id="venue" placeholder="bv. Veld 3"></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span>Selectie <span class="count" id="selCount"></span></span><span class="btns"><button class="small" id="paste" type="button">Namen plakken</button><button class="small" id="addP" type="button">+ speler</button></span></h2>
+      <p class="hint">Vink aan wie meespeelt. Naam en rugnummer pas je hier aan.</p>
+      <div class="squad" id="squad"></div>
+    </section>
+
+    <section class="card">
+      <h2>Startopstelling <button class="small" id="clear" type="button">Wis namen</button></h2>
+      <svg class="editor" id="editor" viewBox="0 0 100 125" aria-label="Sleep de posities om de opstelling aan te passen"></svg>
+      <p class="hint">Sleep een bolletje om een positie te verplaatsen. De afkorting links kun je zelf aanpassen.</p>
+      <div class="lu" id="lineup"></div>
+      <p class="warn" id="warn" hidden></p>
+      <p class="hint">Wie aangevinkt is maar niet in de opstelling staat, komt bij de wissels.</p>
+      <div class="row"><label class="f">Kapitein<select id="cap"></select></label><label class="f">Belangrijkste taak<input id="capTask" maxlength="32"></label></div>
+    </section>
+
+    <section class="card">
+      <h2>Opdrachten <span class="seg" id="ntasks" role="group" aria-label="Aantal opdrachten"></span></h2>
+      <p class="hint">Jonge spelers onthouden er één, oudere drie. Kies wat bij je ploeg past.</p>
+      <div class="ms" id="missions"></div>
+    </section>
+
+    <div class="actions">
+      <button class="primary" id="print" type="button">Afdrukken</button>
+      <button id="pdf" type="button">Download PDF</button>
+      <button id="newMatch" type="button">Nieuwe match</button>
+    </div>
+    <p class="hint" id="pdfMsg" hidden></p>
+    <p class="hint">Bij afdrukken: kies A4, marges "geen" en zet "achtergrondafbeeldingen" aan. Of kies als printer "Opslaan als PDF".</p>
+  </aside>
+
+  <main class="stage">
+    <div class="scaler" id="scaler">
+      <div class="sheet-wrap">
+        <article class="sheet" id="sheet">
+          <header class="hdr">
+            <img src="../icons/icon-512.png" alt="OG Vorselaar" crossorigin="anonymous">
+            <div>
+              <p class="kicker" id="sKicker">OG Vorselaar</p>
+              <h2 class="vs" id="sVs"></h2>
+            </div>
+            <svg class="chev" viewBox="0 0 60 60" aria-hidden="true">
+              <rect width="60" height="60" fill="#111"/>
+              <g fill="#FFD400"><path d="M0 16 30 4 60 16v9L30 13 0 25z"/><path d="M0 33 30 21 60 33v9L30 30 0 42z"/><path d="M0 50 30 38 60 50v10H50L30 47 10 60H0z"/></g>
+            </svg>
+          </header>
+          <div class="infobar">
+            <div><b>Datum</b><span id="sDate">–</span></div>
+            <div><b>Verzamelen</b><span id="sMeet">–</span></div>
+            <div><b>Aftrap</b><span id="sKick">–</span></div>
+            <div><b id="sWhereLbl">Waar</b><span id="sWhere">–</span></div>
+          </div>
+          <section class="start">
+            <div id="sPitch"></div>
+            <div class="side">
+              <p class="big">Opstelling<small id="sForm"></small></p>
+              <div class="capt" id="sCapWrap"><span class="band">C</span><div><p class="sublbl">Kapitein</p><strong id="sCap"></strong><p class="ctask" id="sCapTask"></p></div></div>
+              <div>
+                <p class="sublbl">Wissels</p>
+                <div class="bench" id="sBench"></div>
+              </div>
+            </div>
+          </section>
+          <section class="tasks" id="sTasksWrap">
+            <h4 id="sTasksH">Onze opdrachten vandaag</h4>
+            <div id="sTasks"></div>
+          </section>
+          <footer class="foot"><span>Samen spelen, samen winnen, samen verliezen</span><span class="slogan">Komoan OG!</span></footer>
+        </article>
+      </div>
+    </div>
+  </main>
+</div>
+
+<dialog id="teamDlg">
+  <form method="dialog" id="teamForm">
+    <h3 id="teamDlgTitle">Nieuwe ploeg</h3>
+    <label class="f">Naam van de ploeg<input id="tdName" required maxlength="24" placeholder="bv. U11 B, PU9, Eerste ploeg"></label>
+    <label class="f">Spelvorm<select id="tdFormat"></select></label>
+    <p class="hint" id="tdHint"></p>
+    <div class="btns" style="justify-content:space-between">
+      <button type="button" id="tdDelete" class="small" hidden>Ploeg verwijderen</button>
+      <span class="btns"><button value="cancel" formnovalidate>Annuleer</button><button class="primary" value="ok">Bewaar</button></span>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="pasteDlg">
+  <form method="dialog">
+    <h3>Namen plakken</h3>
+    <p class="hint">Eén speler per regel. Zet het rugnummer er gerust voor, bv. "7 Finn". Kopieer de lijst uit je Excel of een bericht.</p>
+    <textarea id="pasteTxt" placeholder="1 Kobe&#10;4 Senn&#10;7 Finn"></textarea>
+    <label class="f"><span><input type="checkbox" id="pasteReplace" style="width:auto"> Huidige spelerslijst vervangen</span></label>
+    <div class="btns" style="justify-content:flex-end"><button value="cancel" formnovalidate>Annuleer</button><button class="primary" value="ok">Toevoegen</button></div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+const KEY='ogv-matchday-v3';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+/* ---------- Spelvormen en opstellingen (veld 100 x 125, eigen doel onderaan) ---------- */
+const FORMATS={
+ '2v2':{label:'2 tegen 2',hint:'U6–U7, zonder keeper',forms:{
+   'Naast elkaar':[['L',30,62],['R',70,62]],
+   'Voor en achter':[['A',50,42],['V',50,90]]}},
+ '3v3':{label:'3 tegen 3',hint:'U6–U7, zonder keeper',forms:{
+   'Driehoek':[['A',50,38],['L',24,86],['R',76,86]],
+   'Omgekeerde driehoek':[['L',26,40],['R',74,40],['V',50,92]]}},
+ '5v5':{label:'5 tegen 5',hint:'U8–U9, keeper + 4',forms:{
+   'Ruit':[['K',50,118],['V',50,92],['ML',20,61],['MR',80,61],['A',50,24]],
+   '2-2':[['K',50,118],['VL',28,88],['VR',72,88],['AL',28,40],['AR',72,40]],
+   '1-2-1 hoog':[['K',50,118],['V',50,96],['ML',22,66],['MR',78,66],['A',50,34]]}},
+ '8v8':{label:'8 tegen 8',hint:'U10–U13, keeper + 7',forms:{
+   '3-3-1':[['K',50,118],['RV',82,92],['CV',50,98],['LV',18,92],['RM',84,58],['CM',50,66],['LM',16,58],['SP',50,24]],
+   'Ruit 2-1-2-1-1':[['K',50,118],['RV',78,96],['LV',22,96],['4',50,82],['RM',86,58],['LM',14,58],['8',50,50],['9',50,22]],
+   '2-3-2':[['K',50,118],['RV',70,94],['LV',30,94],['RM',84,64],['CM',50,68],['LM',16,64],['AR',68,28],['AL',32,28]],
+   '3-2-2':[['K',50,118],['RV',82,92],['CV',50,98],['LV',18,92],['MR',68,64],['ML',32,64],['AR',70,28],['AL',30,28]]}},
+ '11v11':{label:'11 tegen 11',hint:'U14+, keeper + 10',forms:{
+   '4-3-3':[['K',50,118],['RB',86,92],['RCV',62,98],['LCV',38,98],['LB',14,92],['6',50,76],['8',70,62],['10',30,62],['RW',84,32],['SP',50,22],['LW',16,32]],
+   '4-4-2':[['K',50,118],['RB',86,92],['RCV',62,98],['LCV',38,98],['LB',14,92],['RM',86,62],['RCM',62,68],['LCM',38,68],['LM',14,62],['SP',64,26],['SP',36,26]],
+   '4-2-3-1':[['K',50,118],['RB',86,92],['RCV',62,98],['LCV',38,98],['LB',14,92],['6',36,76],['8',64,76],['RW',84,48],['10',50,50],['LW',16,48],['SP',50,22]],
+   '3-5-2':[['K',50,118],['RCV',76,96],['CV',50,100],['LCV',24,96],['RWB',88,64],['6',50,76],['8',68,60],['10',32,60],['LWB',12,64],['SP',64,26],['SP',36,26]]}}
+};
+const FORMAT_KEYS=Object.keys(FORMATS);
+const EIGEN='Eigen opstelling';
+
+const ICONS={
+ dribbel:'<svg viewBox="0 0 48 48"><path d="M6 40c8-2 8-12 16-14s10 6 18-6" fill="none" stroke="#111" stroke-width="3" stroke-dasharray="4 4" stroke-linecap="round"/><circle cx="38" cy="14" r="7" fill="#fff" stroke="#111" stroke-width="3"/><path d="M38 9.5l3.5 2.7-1.3 4.1h-4.4l-1.3-4.1z" fill="#111"/></svg>',
+ jagen:'<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="7" fill="#fff" stroke="#111" stroke-width="3"/><path d="M24 19.5l3.5 2.7-1.3 4.1h-4.4l-1.3-4.1z" fill="#111"/><path d="M3 10l11 8M3 38l11-8M45 10l-11 8M45 38l-11-8" stroke="#111" stroke-width="3.5" stroke-linecap="round"/></svg>',
+ praten:'<svg viewBox="0 0 48 48"><path d="M5 9h38v22H20l-9 9v-9H5z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/><text x="24" y="25" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="14" fill="#111">HIER!</text></svg>',
+ kijken:'<svg viewBox="0 0 48 48"><path d="M3 24s8-13 21-13 21 13 21 13-8 13-21 13S3 24 3 24z" fill="#fff" stroke="#111" stroke-width="3"/><circle cx="24" cy="24" r="7" fill="#111"/><circle cx="26.5" cy="21.5" r="2.2" fill="#fff"/></svg>',
+ duel:'<svg viewBox="0 0 48 48"><path d="M24 4l17 6v12c0 11-7 18-17 22C14 40 7 33 7 22V10z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/><path d="M15 24l6 6 12-13" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ schieten:'<svg viewBox="0 0 48 48"><path d="M20 8h24v30" fill="none" stroke="#111" stroke-width="3"/><path d="M20 8v10M44 38H34" stroke="#111" stroke-width="3"/><path d="M6 40l18-14" stroke="#111" stroke-width="3" stroke-dasharray="3 4" stroke-linecap="round"/><circle cx="30" cy="22" r="7" fill="#fff" stroke="#111" stroke-width="3"/><path d="M30 17.5l3.5 2.7-1.3 4.1h-4.4l-1.3-4.1z" fill="#111"/></svg>',
+ passen:'<svg viewBox="0 0 48 48"><circle cx="10" cy="34" r="5" fill="#fff" stroke="#111" stroke-width="3"/><circle cx="38" cy="14" r="5" fill="#fff" stroke="#111" stroke-width="3"/><path d="M15 30l17-12" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M28 15l6 1-2 6" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ samen:'<svg viewBox="0 0 48 48"><circle cx="15" cy="15" r="6" fill="#fff" stroke="#111" stroke-width="3"/><circle cx="33" cy="15" r="6" fill="#fff" stroke="#111" stroke-width="3"/><path d="M4 40c0-9 5-14 11-14s11 5 11 14M22 40c0-9 5-14 11-14s11 5 11 14" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/></svg>',
+ ster:'<svg viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.5-10.5 9.5 3 14L24 35l-12.5 7 3-14L4 18.5 18 17z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/></svg>'
+};
+const ICON_NAMES={dribbel:'Dribbelen',jagen:'Jagen',praten:'Praten',kijken:'Kijken',duel:'Duel',schieten:'Schieten',passen:'Passen',samen:'Samen',ster:'Ster'};
+
+const defaultTasks=()=>[
+ {icon:'praten',t:'Vraag de bal',h:'Roep "hier!" en maak je vrij.'},
+ {icon:'jagen',t:'Bal kwijt? Meteen jagen',h:'De dichtste speler zet direct druk.'},
+ {icon:'samen',t:'Moedig elkaar aan',h:'Na een fout: "kop op, volgende bal!"'}];
+const newMatch=(team)=>({opp:'',date:'',meet:'',kick:'',home:'thuis',venue:'',sel:team?team.squad.map(p=>p.id):[],lineup:[],cap:'',capTask:'Coaching',ntasks:team&&(team.format==='2v2'||team.format==='3v3'||team.format==='5v5')?1:3,tasks:defaultTasks()});
+function presetPos(format,form){return (FORMATS[format].forms[form]||Object.values(FORMATS[format].forms)[0]).map(([l,x,y])=>({l,x,y}))}
+function newTeam(name,format){
+  const form=Object.keys(FORMATS[format].forms)[0];
+  const t={id:'t'+uid(),name,format,form,pos:presetPos(format,form),squad:[]};
+  t.match=newMatch(t);t.match.ntasks=(format==='2v2'||format==='3v3'||format==='5v5')?1:3;return t;
+}
+
+/* ---------- Opslag ---------- */
+let S;
+function load(){
+  try{const raw=localStorage.getItem(KEY);if(raw){S=JSON.parse(raw);if(S&&S.teams&&S.cur&&S.teams[S.cur])return}}catch(e){}
+  const t=newTeam('Mijn ploeg','5v5');S={teams:{[t.id]:t},cur:t.id,fresh:true};
+}
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},150)}
+load();
+const T=()=>S.teams[S.cur];
+const M=()=>T().match;
+const P=id=>T().squad.find(p=>p.id===id);
+const nm=id=>{const p=P(id);return p?p.name:''};
+function fixLineup(){const n=T().pos.length;const l=M().lineup||[];M().lineup=Array.from({length:n},(_,i)=>l[i]||'')}
+fixLineup();
+
+/* ---------- Ploeg ---------- */
+function renderTeams(){
+  $('team').innerHTML=Object.values(S.teams).map(t=>`<option value="${t.id}" ${t.id===S.cur?'selected':''}>${esc(t.name)} · ${FORMATS[t.format].label}</option>`).join('');
+  $('format').innerHTML=FORMAT_KEYS.map(k=>`<button type="button" data-f="${k}" aria-pressed="${k===T().format}" title="${esc(FORMATS[k].hint)}">${k}</button>`).join('');
+  const forms=[...Object.keys(FORMATS[T().format].forms)];if(T().form===EIGEN)forms.push(EIGEN);
+  $('formation').innerHTML=forms.map(f=>`<option ${f===T().form?'selected':''}>${esc(f)}</option>`).join('');
+}
+$('team').addEventListener('change',e=>{S.cur=e.target.value;fixLineup();save();renderAll()});
+$('format').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.f===T().format)return;setFormat(b.dataset.f)});
+function setFormat(f){const t=T();t.format=f;t.form=Object.keys(FORMATS[f].forms)[0];t.pos=presetPos(f,t.form);fixLineup();save();renderAll()}
+$('formation').addEventListener('change',e=>{const t=T();if(e.target.value===EIGEN)return;t.form=e.target.value;t.pos=presetPos(t.format,t.form);save();renderAll()});
+
+const dlg=$('teamDlg');let dlgMode='new';
+$('tdFormat').innerHTML=FORMAT_KEYS.map(k=>`<option value="${k}">${FORMATS[k].label} (${FORMATS[k].hint})</option>`).join('');
+function openTeamDlg(mode){
+  dlgMode=mode;$('teamDlgTitle').textContent=mode==='new'?'Nieuwe ploeg':'Ploeg wijzigen';
+  $('tdName').value=mode==='new'?'':T().name;$('tdFormat').value=mode==='new'?'8v8':T().format;
+  $('tdDelete').hidden=mode==='new'||Object.keys(S.teams).length<2;
+  $('tdHint').textContent=mode==='new'?'Elke ploeg heeft een eigen spelerslijst en opstelling.':'';
+  dlg.showModal();$('tdName').focus();
+}
+$('newTeam').addEventListener('click',()=>openTeamDlg('new'));
+$('editTeam').addEventListener('click',()=>openTeamDlg('edit'));
+dlg.addEventListener('close',()=>{
+  if(dlg.returnValue!=='ok')return;const name=$('tdName').value.trim()||'Ploeg';const f=$('tdFormat').value;
+  if(dlgMode==='new'){if(S.fresh&&!T().squad.length&&T().name==='Mijn ploeg')delete S.teams[S.cur];const t=newTeam(name,f);S.teams[t.id]=t;S.cur=t.id}
+  else{T().name=name;if(f!==T().format){setFormat(f)}}
+  delete S.fresh;save();renderAll();
+});
+$('tdDelete').addEventListener('click',e=>{
+  const b=e.currentTarget;if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Zeker? Klik opnieuw';return}
+  b.dataset.armed='';b.textContent='Ploeg verwijderen';delete S.teams[S.cur];S.cur=Object.keys(S.teams)[0];fixLineup();save();dlg.close('cancel');renderAll();
+});
+
+/* ---------- Wedstrijd ---------- */
+const fields=['opp','date','meet','kick','home','venue','capTask'];
+function renderFields(){fields.forEach(f=>{$(f).value=M()[f]||''});if(!M().home)$('home').value='thuis'}
+fields.forEach(f=>$(f).addEventListener('input',e=>{M()[f]=e.target.value;save();renderSheet()}));
+
+/* ---------- Selectie ---------- */
+function renderSquad(){
+  const m=M();
+  $('squad').innerHTML=T().squad.length?T().squad.map(p=>`<div class="p">
+    <input type="checkbox" data-sel="${p.id}" ${m.sel.includes(p.id)?'checked':''} aria-label="${esc(p.name)} speelt mee">
+    <input id="name-${p.id}" data-name="${p.id}" value="${esc(p.name)}" aria-label="Naam">
+    <input data-nr="${p.id}" value="${esc(p.nr)}" placeholder="nr" inputmode="numeric" maxlength="3" aria-label="Rugnummer">
+    <button class="x" type="button" data-del="${p.id}" aria-label="Verwijder ${esc(p.name)}">✕</button></div>`).join('')
+    :'<p class="hint">Nog geen spelers. Gebruik "Namen plakken" om in één keer je hele lijst toe te voegen.</p>';
+  $('selCount').textContent=`${m.sel.filter(P).length} van ${T().squad.length}`;
+}
+$('squad').addEventListener('input',e=>{
+  const t=e.target,m=M();
+  if(t.dataset.sel){const id=t.dataset.sel;m.sel=t.checked?[...m.sel,id]:m.sel.filter(x=>x!==id);
+    if(!t.checked){m.lineup=m.lineup.map(x=>x===id?'':x);if(m.cap===id)m.cap=''}
+    $('selCount').textContent=`${m.sel.filter(P).length} van ${T().squad.length}`;renderLineup()}
+  if(t.dataset.name){P(t.dataset.name).name=t.value;renderLineup()}
+  if(t.dataset.nr){P(t.dataset.nr).nr=t.value}
+  save();renderSheet();renderEditor();
+});
+$('squad').addEventListener('click',e=>{
+  const b=e.target.closest('button');const id=b&&b.dataset.del;if(!id)return;
+  if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='zeker?';setTimeout(()=>{if(b.isConnected){b.dataset.armed='';b.textContent='✕'}},2500);return}
+  const m=M();T().squad=T().squad.filter(p=>p.id!==id);m.sel=m.sel.filter(x=>x!==id);m.lineup=m.lineup.map(x=>x===id?'':x);if(m.cap===id)m.cap='';
+  save();renderAll();
+});
+$('addP').addEventListener('click',()=>{const id='p'+uid();T().squad.push({id,name:'Nieuwe speler',nr:''});M().sel.push(id);save();renderAll();const el=$('name-'+id);el.focus();el.select()});
+const pd=$('pasteDlg');
+$('paste').addEventListener('click',()=>{$('pasteTxt').value='';$('pasteReplace').checked=!T().squad.length;pd.showModal();$('pasteTxt').focus()});
+pd.addEventListener('close',()=>{
+  if(pd.returnValue!=='ok')return;
+  const rows=$('pasteTxt').value.split(/\r?\n/).map(s=>s.replace(/\t/g,' ').trim()).filter(Boolean);
+  const ps=rows.map(r=>{const mt=r.match(/^#?(\d{1,3})[\s.:)\-–]+(.+)$/)||r.match(/^(.+?)\s+#?(\d{1,3})$/);
+    if(!mt)return{id:'p'+uid(),name:r,nr:''};return /^\d/.test(mt[1])?{id:'p'+uid(),name:mt[2].trim(),nr:mt[1]}:{id:'p'+uid(),name:mt[1].trim(),nr:mt[2]}});
+  if($('pasteReplace').checked){T().squad=ps;const m=M();m.sel=ps.map(p=>p.id);m.lineup=m.lineup.map(()=>'');m.cap=''}
+  else{T().squad.push(...ps);M().sel.push(...ps.map(p=>p.id))}
+  delete S.fresh;save();renderAll();
+});
+
+/* ---------- Opstelling ---------- */
+function renderLineup(){
+  const m=M(),sel=m.sel.filter(P),pos=T().pos;
+  $('lineup').innerHTML=pos.map((p,r)=>`<input data-l="${r}" value="${esc(p.l)}" maxlength="4" aria-label="Positie ${r+1}"><select id="lu-${r}" data-r="${r}" aria-label="Speler op ${esc(p.l)}"><option value="">– kies speler –</option>${sel.map(id=>`<option value="${id}" ${id===m.lineup[r]?'selected':''}>${esc(nm(id))}</option>`).join('')}</select>`).join('');
+  $('cap').innerHTML='<option value="">– geen kapitein –</option>'+sel.map(id=>`<option value="${id}" ${id===m.cap?'selected':''}>${esc(nm(id))}</option>`).join('');
+  check();
+}
+$('lineup').addEventListener('change',e=>{if(e.target.dataset.r!==undefined){M().lineup[+e.target.dataset.r]=e.target.value;save();check();renderSheet();renderEditor()}});
+$('lineup').addEventListener('input',e=>{if(e.target.dataset.l!==undefined){T().pos[+e.target.dataset.l].l=e.target.value;save();renderSheet();renderEditor()}});
+$('cap').addEventListener('change',e=>{M().cap=e.target.value;save();renderSheet()});
+function check(){
+  const seen={},msgs=[];
+  M().lineup.forEach((id,r)=>{const el=$('lu-'+r);if(el)el.classList.remove('dup');if(id)(seen[id]=seen[id]||[]).push(r)});
+  Object.entries(seen).forEach(([id,rs])=>{if(rs.length>1){rs.forEach(r=>$('lu-'+r).classList.add('dup'));msgs.push(`${nm(id)} staat twee keer in de opstelling.`)}});
+  const n=M().sel.filter(P).length,need=T().pos.length;
+  if(n&&n<need)msgs.push(`Je hebt ${n} spelers aangevinkt, maar ${FORMATS[T().format].label} vraagt er ${need}.`);
+  $('warn').hidden=!msgs.length;$('warn').textContent=msgs.join(' ');
+}
+$('clear').addEventListener('click',()=>{M().lineup=M().lineup.map(()=>'');save();renderLineup();renderSheet();renderEditor()});
+
+/* Veld tekenen: zelfde tekening voor de sleepeditor en het A4-blad */
+function pitchLines(stroke){
+  return `<rect x="2" y="2" width="96" height="121" fill="none" stroke="${stroke}" stroke-width=".6"/>
+  <line x1="2" y1="62.5" x2="98" y2="62.5" stroke="${stroke}" stroke-width=".6"/>
+  <circle cx="50" cy="62.5" r="9" fill="none" stroke="${stroke}" stroke-width=".6"/>
+  <rect x="26" y="2" width="48" height="16" fill="none" stroke="${stroke}" stroke-width=".6"/>
+  <rect x="26" y="107" width="48" height="16" fill="none" stroke="${stroke}" stroke-width=".6"/>
+  <rect x="40" y="0" width="20" height="2" fill="${stroke}"/><rect x="40" y="123" width="20" height="2" fill="${stroke}"/>`;
+}
+function renderEditor(){
+  const pos=T().pos,n=pos.length,r=n>8?4.2:5;
+  $('editor').innerHTML=pitchLines('rgba(255,255,255,.7)')+pos.map((p,i)=>{const id=M().lineup[i];const lab=id?nm(id).split(' ')[0]:'';
+    return `<g><circle class="dot" data-i="${i}" cx="${p.x}" cy="${p.y}" r="${r}" fill="#FFD400" stroke="#111" stroke-width=".7"/>
+    <text x="${p.x}" y="${p.y+1.3}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${n>8?3.2:3.6}" fill="#111" pointer-events="none">${esc(p.l)}</text>
+    ${lab?`<text x="${p.x}" y="${p.y+r+4}" text-anchor="middle" font-family="Barlow,Arial,sans-serif" font-weight="600" font-size="3.6" fill="#fff" pointer-events="none">${esc(lab)}</text>`:''}</g>`}).join('');
+}
+(function drag(){
+  const svg=$('editor');let i=-1;
+  const pt=e=>{const b=svg.getBoundingClientRect();return{x:Math.max(5,Math.min(95,(e.clientX-b.left)/b.width*100)),y:Math.max(5,Math.min(120,(e.clientY-b.top)/b.height*125))}};
+  svg.addEventListener('pointerdown',e=>{const c=e.target.closest('circle.dot');if(!c)return;i=+c.dataset.i;svg.setPointerCapture(e.pointerId);e.preventDefault()});
+  svg.addEventListener('pointermove',e=>{if(i<0)return;const p=pt(e);const q=T().pos[i];q.x=Math.round(p.x);q.y=Math.round(p.y);
+    if(T().form!==EIGEN){T().form=EIGEN;renderTeams()}renderEditor();renderSheet()});
+  const end=()=>{if(i>=0){i=-1;save()}};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+})();
+
+/* ---------- Opdrachten ---------- */
+function renderMissions(){
+  const m=M();
+  $('ntasks').innerHTML=[1,2,3].map(n=>`<button type="button" class="small" data-n="${n}" aria-pressed="${n===m.ntasks}">${n}</button>`).join('');
+  $('missions').innerHTML=m.tasks.slice(0,m.ntasks).map((t,i)=>`<div class="mi"><span class="n">${i+1}</span><div class="fields">
+    <input data-t="${i}" maxlength="34" value="${esc(t.t)}" placeholder="Opdracht ${i+1} (kort!)" aria-label="Titel opdracht ${i+1}">
+    <input data-h="${i}" maxlength="70" value="${esc(t.h)}" placeholder="Hoe doen we dat?" aria-label="Uitleg opdracht ${i+1}">
+    <div class="icons">${Object.keys(ICONS).map(k=>`<button type="button" data-ic="${i}" data-k="${k}" aria-pressed="${t.icon===k}" title="${ICON_NAMES[k]}" aria-label="${ICON_NAMES[k]}">${ICONS[k]}</button>`).join('')}</div>
+  </div></div>`).join('');
+}
+$('ntasks').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;M().ntasks=+b.dataset.n;save();renderMissions();renderSheet()});
+$('missions').addEventListener('input',e=>{const t=e.target;if(t.dataset.t)M().tasks[+t.dataset.t].t=t.value;if(t.dataset.h)M().tasks[+t.dataset.h].h=t.value;save();renderSheet()});
+$('missions').addEventListener('click',e=>{const b=e.target.closest('button[data-ic]');if(!b)return;M().tasks[+b.dataset.ic].icon=b.dataset.k;save();renderMissions();renderSheet()});
+
+/* ---------- A4-blad ---------- */
+/* Lange namen inkorten op het veld: bij 8v8 en 11v11 "Voornaam A." */
+const shortName=(nmv,n)=>{const w=String(nmv).trim().split(/\s+/);if(n<=5||w.length<2)return nmv;return w[0]+' '+w[w.length-1][0]+'.'};
+const fmtDate=d=>{if(!d)return'–';const x=new Date(d+'T12:00');return x.toLocaleDateString('nl-BE',{weekday:'short',day:'numeric',month:'short'})};
+function fitText(el,maxPt,minPt){let s=maxPt;el.style.fontSize=s+'pt';while(el.scrollWidth>el.clientWidth+1&&s>minPt){s-=1;el.style.fontSize=s+'pt'}}
+function renderSheet(){
+  const t=T(),m=M(),pos=t.pos,n=pos.length,F=FORMATS[t.format];
+  $('sKicker').textContent=`OG Vorselaar · ${t.name} · ${F.label}`;
+  const home=m.home!=='uit';const opp=esc(m.opp||'Tegenstander');
+  $('sVs').innerHTML=home?`OG Vorselaar<i>VS</i><span class="them">${opp}</span>`:`${opp}<i>VS</i><span class="them">OG Vorselaar</span>`;
+  $('sDate').textContent=fmtDate(m.date);$('sMeet').textContent=m.meet||'–';$('sKick').textContent=m.kick||'–';
+  $('sWhereLbl').textContent=home?'Thuis':'Uit';$('sWhere').textContent=m.venue||(home?'Vorselaar':'–');
+  $('sForm').textContent=t.form===EIGEN?F.label:`${t.form} · ${F.label}`;
+  const r=n>8?5.2:n>5?6:7,fsN=n>8?3.5:n>5?3.9:4.2;
+  $('sPitch').innerHTML=`<svg viewBox="0 0 100 125" aria-label="Opstelling op het veld"><rect width="100" height="125" fill="#e9f3e6"/>${pitchLines('#7aa874')}
+  ${pos.map((p,i)=>{const id=m.lineup[i],pl=P(id),cap=id&&id===m.cap;const inside=pl&&pl.nr?pl.nr:p.l;
+    const name=pl?shortName(pl.name,n):'';
+    let tx=p.x,ty=p.y+r+4.6,anc='middle';
+    if(p.y>108){tx=p.x+r+1.5;ty=p.y+1.4;anc='start'}
+    else if(p.x<22){tx=Math.max(1.5,p.x-r);anc='start'}
+    else if(p.x>78){tx=Math.min(98.5,p.x+r);anc='end'}
+    return `<g><circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${pl?'#FFD400':'#fff'}" stroke="#111" stroke-width=".8"/>
+    <text x="${p.x}" y="${p.y+1.6}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${String(inside).length>2?3.4:4.4}" fill="#111">${esc(inside)}</text>
+    ${cap?`<circle cx="${p.x+r*.8}" cy="${p.y-r*.8}" r="2.6" fill="#111"/><text x="${p.x+r*.8}" y="${p.y-r*.8+1.1}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="3.4" fill="#FFD400">C</text>`:''}
+    ${name?`<text x="${tx}" y="${ty}" text-anchor="${anc}" font-family="Barlow,Arial,sans-serif" font-weight="700" font-size="${fsN}" fill="#111" paint-order="stroke" stroke="#e9f3e6" stroke-width="1.4">${esc(name)}</text>`:''}</g>`}).join('')}</svg>`;
+  const cp=P(m.cap);$('sCapWrap').hidden=!cp;
+  $('sCap').textContent=cp?cp.name:'';
+  $('sCapTask').innerHTML=(m.capTask||'').trim()?'<b>Belangrijkste taak:</b> '+esc(m.capTask):'';
+  const inLu=new Set(m.lineup.filter(Boolean));
+  const bench=m.sel.filter(id=>P(id)&&!inLu.has(id));
+  $('sBench').className='bench'+(bench.length>6?' dense':'');
+  $('sBench').innerHTML=bench.length?bench.map(id=>{const p=P(id);return `<span><i>${esc(p.nr||'')}</i>${esc(p.name)}${id===m.cap?' (C)':''}</span>`}).join(''):'<span class="empty">Geen wissels</span>';
+  const tasks=m.tasks.slice(0,m.ntasks).filter(x=>x.t||x.h);
+  $('sTasksWrap').hidden=!tasks.length;
+  $('sTasks').className=tasks.length===1?'solo':'';
+  $('sTasksH').textContent=tasks.length===1?'Onze opdracht vandaag':'Onze opdrachten vandaag';
+  $('sTasks').innerHTML=tasks.map((x,i)=>`<div class="task"><span class="n">${i+1}</span><span class="ico">${ICONS[x.icon]||ICONS.ster}</span><div><h3>${esc(x.t)}</h3>${x.h?`<p>${esc(x.h)}</p>`:''}</div><span class="ok"><i></i>Gelukt?</span></div>`).join('');
+  fitText(document.querySelector('#sVs .them'),34,18);
+}
+
+/* ---------- Schalen ---------- */
+function fit(){const st=document.querySelector('.stage'),sc=$('scaler'),sh=$('sheet');
+  const w=sh.offsetWidth,h=sh.offsetHeight,s=Math.min(1,(st.clientWidth)/w);
+  sc.style.transform=`scale(${s})`;sc.style.width=w*s+'px';sc.style.height=h*s+'px'}
+window.addEventListener('resize',fit);
+
+/* ---------- Acties ---------- */
+$('print').addEventListener('click',()=>window.print());
+$('newMatch').addEventListener('click',e=>{
+  const b=e.currentTarget;if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Zeker? Klik opnieuw';setTimeout(()=>{b.dataset.armed='';b.textContent='Nieuwe match'},3000);return}
+  b.dataset.armed='';b.textContent='Nieuwe match';const m=M();
+  Object.assign(m,{opp:'',date:'',venue:'',cap:'',sel:T().squad.map(p=>p.id)});save();renderAll();
+});
+function loadScript(src){return new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+$('pdf').addEventListener('click',async()=>{
+  const msg=$('pdfMsg');msg.hidden=false;msg.textContent='PDF maken…';
+  try{
+    if(!window.html2canvas)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await document.fonts.ready;
+    const sc=$('scaler'),old=sc.style.transform;sc.style.transform='none';
+    const c=await html2canvas($('sheet'),{scale:2.5,backgroundColor:'#fff',useCORS:true});
+    sc.style.transform=old;
+    const pdf=new jspdf.jsPDF({unit:'mm',format:'a4'});pdf.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,0,210,297);
+    const slug=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'-').replace(/^-|-$/g,'');
+    pdf.save(['OGV',slug(T().name),slug(M().opp),M().date].filter(Boolean).join('-')+'.pdf');
+    msg.textContent='PDF staat in je Downloads.';
+  }catch(err){msg.textContent='De PDF lukte niet (geen internet?). Gebruik Afdrukken en kies "Opslaan als PDF".'}
+});
+
+function renderAll(){renderTeams();renderFields();renderSquad();renderLineup();renderEditor();renderMissions();renderSheet();fit()}
+renderAll();
+if(document.fonts)document.fonts.ready.then(()=>{renderSheet();fit()});
+if(S.fresh)setTimeout(()=>openTeamDlg('new'),300);
+})();
+</script>
+</body>
+</html>
