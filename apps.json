@@ -16,6 +16,20 @@
       ]
     },
     {
+      "name": "Trainingsbibliotheek",
+      "url": "trainingen/",
+      "source": "Claude",
+      "category": "Training & tactiek",
+      "icon": "book",
+      "tagline": "Alle trainingen van de club, per leeftijd",
+      "can": [
+        "Thematrainingen per basisprincipe, voor onder-, midden- en bovenbouw",
+        "Oefenstof per thema: techniek, 1v1, passing en meer",
+        "Bekijken, downloaden of aanpassen in Word en PowerPoint"
+      ],
+      "description": "Trainingen en oefeningen van OG Vorselaar per leeftijdsgroep: thematrainingen 1A tot 3B, oefenstof en wedstrijdopwarming."
+    },
+    {
       "name": "Animatiebord",
       "url": "tactiekbord/",
       "source": "Claude",
@@ -146,7 +160,7 @@
       "name": "Oefeningenbank",
       "category": "Training & tactiek",
       "icon": "ball",
-      "description": "Oefeningen van alle trainers, te filteren op leeftijd, speelvorm en basisprincipe."
+      "description": "Trainers voegen zelf oefeningen toe aan de trainingsbibliotheek, met filters op leeftijd, speelvorm en basisprincipe."
     },
     {
       "name": "Clubkalender",

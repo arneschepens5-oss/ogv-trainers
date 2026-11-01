@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trainingsbibliotheek | OGV Trainers</title>
+<meta name="description" content="Alle trainingen en oefeningen van OG Vorselaar, per leeftijdsgroep.">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/favicon.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<style>
+/* Trainingsbibliotheek: zelfde clubstijl als het portaal (zwart, geel, Archivo). */
+html{-webkit-text-size-adjust:100%;background:#000}
+:root{--ink:#F2F2EE;--muted:#9A9C94;--dim:#5E605A;--line:#222420;--card:#0E0F0D;--yellow:#FFD500;
+  --font:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;--gutter:clamp(16px,4vw,56px);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:var(--ink);font:400 16px/1.5 var(--font)}
+a{color:inherit;text-decoration:none}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:max(var(--gutter),env(safe-area-inset-left,0px)) max(var(--gutter),env(safe-area-inset-right,0px))}
+
+/* kop */
+.bar{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.94);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.bar .wrap{display:flex;align-items:center;gap:14px;height:64px}
+.back{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;color:var(--muted);margin-right:auto;white-space:nowrap}
+.back:hover{color:var(--yellow)}
+.back svg{width:18px;height:18px}
+.search{position:relative;width:min(360px,46vw)}
+.search input{width:100%;padding:10px 14px 10px 40px;border-radius:999px;border:1px solid #2E302B;background:#0E0F0D;font-size:15px}
+.search input::placeholder{color:var(--muted)}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--muted);pointer-events:none}
+
+header.intro{padding:clamp(32px,6vh,64px) 0 8px}
+.intro h1{margin:0;font-weight:900;font-stretch:125%;font-size:clamp(40px,7vw,92px);line-height:.88;letter-spacing:-.025em;text-transform:uppercase}
+.intro h1 span{color:var(--yellow);display:block}
+.intro p{margin:16px 0 0;color:#C8CAC2;max-width:56ch}
+
+/* leeftijdsgroepen */
+.bouw{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:28px 0 8px}
+.bouw button{all:unset;box-sizing:border-box;min-width:0;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:18px 20px;border-radius:18px;border:1px solid var(--line);background:var(--card);transition:border-color .15s,background .15s}
+.bouw button:hover{border-color:#3A3D37}
+.bouw button:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+.bouw b{font-weight:800;font-stretch:115%;font-size:24px;line-height:1.05}
+.bouw small{font-size:14px;color:var(--muted)}
+.bouw em{font-style:normal;font-size:13px;color:var(--dim);margin-top:6px}
+.bouw button[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow);color:#000}
+.bouw button[aria-pressed="true"] small,.bouw button[aria-pressed="true"] em{color:#000;opacity:.75}
+
+/* mappen */
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:20px 0 6px;position:sticky;top:64px;z-index:10;background:#000}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:14.5px;font-weight:600;cursor:pointer}
+.tabs button:hover{color:var(--ink);border-color:#3A3D37}
+.tabs button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#000}
+.tabs b{font-weight:500;opacity:.6;margin-left:6px}
+
+section.grp{padding-top:30px}
+.grp h2{margin:0 0 4px;font-weight:800;font-stretch:115%;font-size:clamp(24px,2.6vw,32px);letter-spacing:-.01em}
+.grp>p{margin:0 0 16px;color:var(--muted);font-size:14.5px;max-width:64ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+
+/* trainingskaart */
+.tr{display:flex;flex-direction:column;border-radius:18px;overflow:hidden;background:var(--card);border:1px solid var(--line);cursor:pointer;text-align:left;padding:0;transition:border-color .15s}
+.tr:hover{border-color:var(--yellow)}
+.tr .pic{aspect-ratio:16/10;background:#16180F center/cover no-repeat;position:relative}
+.tr .code{position:absolute;left:12px;top:12px;min-width:38px;height:30px;padding:0 9px;border-radius:9px;background:var(--yellow);color:#000;font-weight:800;font-stretch:110%;font-size:15px;display:grid;place-items:center}
+.tr .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
+.tr h3{margin:0;font-weight:700;font-stretch:108%;font-size:18px;line-height:1.2}
+.tr p{margin:0;color:var(--muted);font-size:14px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:8px}
+.tags span{font-size:12.5px;padding:3px 9px;border-radius:999px;background:#1A1C18;color:#C8CAC2}
+
+.empty{padding:48px 0;color:var(--muted)}
+.empty strong{display:block;color:var(--ink);font-size:22px;font-weight:800;font-stretch:115%;margin-bottom:4px}
+
+/* detail */
+dialog{border:0;padding:0;margin:auto;width:min(1000px,100% - 24px);max-height:calc(100dvh - 24px);border-radius:22px;background:#0E0F0D;color:var(--ink);overflow:auto}
+dialog::backdrop{background:rgba(0,0,0,.75)}
+.dlg{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.dlg img{width:100%;height:100%;object-fit:contain;background:#16180F;display:block;max-height:80dvh}
+.dlg .info{padding:26px;display:flex;flex-direction:column;gap:14px}
+.dlg h2{margin:0;font-weight:800;font-stretch:115%;font-size:28px;line-height:1.05;letter-spacing:-.01em}
+.dlg .lead{margin:0;color:#D8DAD2}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0;font-size:14.5px}
+.facts dt{color:var(--dim)}
+.facts dd{margin:0}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:8px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:var(--yellow);color:#000;font-weight:700;font-size:15px;border:0;cursor:pointer}
+.btn svg{width:17px;height:17px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid #3A3D37}
+.btn.ghost:hover{border-color:var(--yellow)}
+.close{position:absolute;right:14px;top:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(0,0,0,.7);color:#fff;display:grid;place-items:center;cursor:pointer}
+.close svg{width:20px;height:20px}
+.note{font-size:13px;color:var(--dim)}
+
+footer{padding:56px 0 calc(32px + env(safe-area-inset-bottom,0px));color:var(--dim);font-size:13.5px}
+
+@media (max-width:760px){
+  .bouw{grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .bouw button{padding:12px 10px;border-radius:14px}
+  .bouw b{font-size:15.5px;font-stretch:100%;overflow-wrap:anywhere}
+  .bouw small{font-size:12.5px}
+  .bouw em{display:none}
+  .dlg{grid-template-columns:1fr}
+  .dlg img{max-height:42dvh}
+  .dlg .info{padding:20px}
+  .dlg h2{font-size:24px}
+  .search{flex:1;max-width:none}
+  .back span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bar"><div class="wrap">
+  <a class="back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span>Trainersportaal</span></a>
+  <label class="search"><span class="sr">Zoek een training</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Zoek: omschakeling, 1v1, passing…" autocomplete="off"></label>
+</div></div>
+
+<main class="wrap">
+  <header class="intro">
+    <h1>Trainings<span>bibliotheek</span></h1>
+    <p>Alle trainingen en oefeningen van de club. Kies je leeftijdsgroep, open een training en bekijk of download ze.</p>
+  </header>
+  <div class="bouw" id="bouw" role="group" aria-label="Leeftijdsgroep"></div>
+  <nav class="tabs" id="tabs" aria-label="Map"></nav>
+  <div id="list" aria-live="polite"><p class="empty">Trainingen laden…</p></div>
+</main>
+<footer><div class="wrap">Bron: SharePoint OGV Sportief Trainers, map Trainingen. Een oefening die bij meerdere leeftijdsgroepen past, staat bij elke groep.</div></footer>
+
+<dialog id="dlg" aria-labelledby="d-title"></dialog>
+
+<script>
+const I={
+  pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+  dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+};
+const MAPS=[
+  {id:"thema",naam:"Thematrainingen",uitleg:"Volledige trainingen per basisprincipe van het opleidingsplan."},
+  {id:"oefenstof",naam:"Oefenstof",uitleg:"Losse oefeningen om je training mee op te bouwen."},
+  {id:"opwarming",naam:"Opwarming",uitleg:"De vaste wedstrijdopwarming van de club."}
+];
+const THEMAS=["Techniek","Duel 1v1","Passing en balaanname","Handelingssnelheid","Positiespel","Wedstrijdvormen"];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k,d){try{return localStorage.getItem(k)||d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let D=null,bouw=store.get("tb-bouw","middenbouw"),map="alle",q="";
+
+function card(it){
+  return `<button class="tr" type="button" data-id="${esc(it.id)}">
+    <span class="pic" style="background-image:url('${esc(it.img)}')">${it.principe?`<span class="code">${esc(it.principe)}</span>`:""}</span>
+    <span class="body"><h3>${esc(it.title)}</h3><p>${esc(it.bedoeling)}</p>
+    <span class="tags">${[it.vorm,it.veld,it.pages>1?it.pages+" pagina's":""].filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join("")}</span></span></button>`;
+}
+function grp(title,uitleg,its){return its.length?`<section class="grp"><h2>${esc(title)}</h2>${uitleg?`<p>${esc(uitleg)}</p>`:""}<div class="grid">${its.map(card).join("")}</div></section>`:""}
+
+function renderBouw(){
+  document.getElementById("bouw").innerHTML=D.bouwen.map(b=>{const n=D.items.filter(i=>i.bouwen.includes(b.id)).length;
+    return `<button type="button" data-b="${b.id}" aria-pressed="${b.id===bouw}"><b>${esc(b.naam)}</b><small>${esc(b.leeftijd)}</small><em>${esc(b.vorm)} · ${n} trainingen</em></button>`}).join("");
+}
+function renderTabs(){
+  const its=D.items.filter(i=>i.bouwen.includes(bouw));
+  const t=[["alle","Alles",its.length],...MAPS.map(m=>[m.id,m.naam,its.filter(i=>i.map===m.id).length]).filter(x=>x[2])];
+  document.getElementById("tabs").innerHTML=t.map(([id,n,k])=>`<button type="button" data-m="${id}" aria-pressed="${map===id}">${esc(n)}<b>${k}</b></button>`).join("");
+}
+function renderList(){
+  const el=document.getElementById("list"), t=q.trim().toLowerCase();
+  const match=i=>!t||[i.title,i.bedoeling,i.thema,i.vorm,i.principe,D.principes[i.principe]||""].join(" ").toLowerCase().includes(t);
+  let its=D.items.filter(i=>i.bouwen.includes(bouw)&&match(i));
+  if(map!=="alle")its=its.filter(i=>i.map===map);
+  if(!its.length){el.innerHTML=`<div class="empty"><strong>Geen training gevonden</strong>Niets past bij "${esc(q.trim())}" in deze leeftijdsgroep. Probeer een andere groep of een ander woord.</div>`;return}
+  let h="";
+  for(const m of MAPS){
+    if(map!=="alle"&&map!==m.id)continue;
+    const mi=its.filter(i=>i.map===m.id); if(!mi.length)continue;
+    if(m.id==="thema"){
+      const ord=i=>(i.principe||"9")+(i.bron?"z":"a")+i.title;
+      h+=grp(m.naam,m.uitleg,mi.sort((a,b)=>ord(a).localeCompare(ord(b))));
+    }else if(m.id==="oefenstof"){
+      h+=`<section class="grp"><h2>${m.naam}</h2><p>${m.uitleg}</p></section>`;
+      for(const th of THEMAS)h+=grp(th,"",mi.filter(i=>i.thema===th)).replace('<section class="grp">','<section class="grp" style="padding-top:14px">').replace("<h2>","<h2 style=\"font-size:20px;color:#C8CAC2\">");
+    }else h+=grp(m.naam,m.uitleg,mi);
+  }
+  el.innerHTML=h;
+}
+function render(){renderBouw();renderTabs();renderList()}
+
+const dlg=document.getElementById("dlg");
+function open(id){
+  const it=D.items.find(i=>i.id===id); if(!it)return;
+  const bn=it.bouwen.map(b=>D.bouwen.find(x=>x.id===b).naam).join(", ");
+  const ext=it.orig?it.orig.split(".").pop().toUpperCase():"";
+  dlg.innerHTML=`<div class="dlg"><img src="${esc(it.img)}" alt="Veldopstelling van ${esc(it.title)}">
+    <div class="info"><h2 id="d-title">${esc(it.title)}</h2><p class="lead">${esc(it.bedoeling)}</p>
+    <dl class="facts">
+      ${it.principe?`<dt>Basisprincipe</dt><dd>${esc(it.principe)} ${esc(D.principes[it.principe])}</dd>`:""}
+      ${it.map==="oefenstof"?`<dt>Thema</dt><dd>${esc(it.thema)}</dd>`:""}
+      <dt>Leeftijd</dt><dd>${esc(bn)}</dd>
+      ${it.vorm?`<dt>Spelvorm</dt><dd>${esc(it.vorm)}</dd>`:""}
+      ${it.veld?`<dt>Veld</dt><dd>${esc(it.veld)}</dd>`:""}
+      <dt>Document</dt><dd>${it.pages} ${it.pages===1?"pagina":"pagina's"}</dd>
+      ${it.bron?`<dt>Bron</dt><dd>${esc(it.bron)}</dd>`:""}
+    </dl>
+    <div class="acts">
+      <a class="btn" href="${esc(it.pdf)}" target="_blank" rel="noopener">${I.pdf}Training bekijken</a>
+      <a class="btn ghost" href="${esc(it.pdf)}" download>${I.dl}PDF downloaden</a>
+      ${it.orig?`<a class="btn ghost" href="${esc(it.orig)}" download>${I.edit}Aanpasbare versie (${ext})</a>`:""}
+    </div>
+    ${it.orig?`<p class="note">Met de aanpasbare versie maak je in ${ext==="DOCX"?"Word":"PowerPoint"} je eigen variant.</p>`:""}
+    </div></div><button class="close" type="button" aria-label="Sluiten">${I.x}</button>`;
+  dlg.querySelector(".close").onclick=()=>dlg.close();
+  dlg.showModal();
+  history.replaceState(null,"","#"+id);
+}
+dlg.addEventListener("close",()=>history.replaceState(null,"",location.pathname));
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
+
+document.getElementById("bouw").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;bouw=b.dataset.b;store.set("tb-bouw",bouw);map="alle";render()});
+document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;map=b.dataset.m;renderTabs();renderList()});
+document.getElementById("list").addEventListener("click",e=>{const b=e.target.closest(".tr");if(b)open(b.dataset.id)});
+const qi=document.getElementById("q");
+qi.addEventListener("input",()=>{q=qi.value;renderList()});
+document.addEventListener("keydown",e=>{if(e.key==="/"&&document.activeElement!==qi&&!dlg.open){e.preventDefault();qi.focus()}});
+
+fetch("trainingen.json",{cache:"no-cache"}).then(r=>r.json()).then(d=>{D=d;if(!D.bouwen.some(b=>b.id===bouw))bouw="middenbouw";render();
+  const h=location.hash.slice(1); if(h)open(h)})
+  .catch(()=>{document.getElementById("list").innerHTML='<div class="empty"><strong>Trainingen laden mislukt</strong>Er is geen internetverbinding. Verbind opnieuw en vernieuw de pagina.</div>'});
+</script>
+</body>
+</html>

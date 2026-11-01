@@ -1,0 +1,868 @@
+{
+ "bouwen": [
+  {
+   "id": "onderbouw",
+   "naam": "Onderbouw",
+   "leeftijd": "U6 tot U9",
+   "vorm": "2v2, 3v3 en 5v5"
+  },
+  {
+   "id": "middenbouw",
+   "naam": "Middenbouw",
+   "leeftijd": "U10 tot U13",
+   "vorm": "8v8"
+  },
+  {
+   "id": "bovenbouw",
+   "naam": "Bovenbouw",
+   "leeftijd": "U14 en ouder",
+   "vorm": "11v11"
+  }
+ ],
+ "principes": {
+  "1A": "Opbouw van achteruit",
+  "1B": "Opbouw verstoren",
+  "2A": "Doelkans creëren en scoren",
+  "2B": "Doelkans verhinderen en scoren beletten",
+  "3A": "Omschakeling B- naar B+",
+  "3B": "Omschakeling B+ naar B-"
+ },
+ "items": [
+  {
+   "id": "1a-opbouw-van-achteruit-onderbouw",
+   "title": "1A Opbouw van achteruit",
+   "bouwen": [
+    "onderbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1A",
+   "vorm": "5v5",
+   "bedoeling": "Opbouwen van achteruit in 5v5: aanspeelbaar zijn en ruimte voor jezelf maken. Volledige training met opwarming, oefenvormen en wedstrijdvorm.",
+   "pages": 6,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/1a-opbouw-van-achteruit-onderbouw.pdf",
+   "img": "img/1a-opbouw-van-achteruit-onderbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "1b-opbouw-verstoren-onderbouw",
+   "title": "1B Opbouw verstoren",
+   "bouwen": [
+    "onderbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1B",
+   "vorm": "5v5",
+   "bedoeling": "De opbouw van de tegenstander verstoren in 5v5: druk zetten en duels winnen. Volledige training met opwarming, oefenvormen en wedstrijdvorm.",
+   "pages": 4,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/1b-opbouw-verstoren-onderbouw.pdf",
+   "img": "img/1b-opbouw-verstoren-onderbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "2a-doelkans-creeren-en-scoren-onderbouw",
+   "title": "2A Doelkans creëren en scoren",
+   "bouwen": [
+    "onderbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2A",
+   "vorm": "5v5",
+   "bedoeling": "Doelkansen creëren in 5v5: het spel breed openen en ruimte maken voor een medespeler. Volledige training met opwarming, oefenvormen en wedstrijdvorm.",
+   "pages": 4,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/2a-doelkans-creeren-en-scoren-onderbouw.pdf",
+   "img": "img/2a-doelkans-creeren-en-scoren-onderbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "2b-doelkans-verhinderen-en-scoren-beletten-onderbouw",
+   "title": "2B Doelkans verhinderen en scoren beletten",
+   "bouwen": [
+    "onderbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2B",
+   "vorm": "5v5",
+   "bedoeling": "Doelkansen beletten in 5v5: druk zetten, duel aangaan of remmend wijken. Volledige training met opwarming, oefenvormen en wedstrijdvorm.",
+   "pages": 5,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/2b-doelkans-verhinderen-en-scoren-beletten-onderbouw.pdf",
+   "img": "img/2b-doelkans-verhinderen-en-scoren-beletten-onderbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "3a-omschakeling-b-naar-b-onderbouw",
+   "title": "3A Omschakeling B- naar B+",
+   "bouwen": [
+    "onderbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "3A",
+   "vorm": "5v5",
+   "bedoeling": "Snel omschakelen na balverovering in 5v5: openen en doordraaien. Volledige training met opwarming, oefenvormen en wedstrijdvorm.",
+   "pages": 6,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/3a-omschakeling-b-naar-b-onderbouw.pdf",
+   "img": "img/3a-omschakeling-b-naar-b-onderbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "3b-omschakeling-b-naar-b-onderbouw",
+   "title": "3B Omschakeling B+ naar B-",
+   "bouwen": [
+    "onderbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "3B",
+   "vorm": "5v5",
+   "bedoeling": "Snel omschakelen na balverlies in 5v5: meteen druk zetten. Volledige training met opwarming, oefenvormen en wedstrijdvorm.",
+   "pages": 6,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/3b-omschakeling-b-naar-b-onderbouw.pdf",
+   "img": "img/3b-omschakeling-b-naar-b-onderbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "1a-opbouw-van-achteruit-middenbouw",
+   "title": "1A Opbouw van achteruit",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1A",
+   "vorm": "8v8",
+   "bedoeling": "Leren opbouwen van achteruit, breed en diep openen vanaf de keeper. Volledige training met fysieke belasting per oefening.",
+   "pages": 12,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/1a-opbouw-van-achteruit-middenbouw.pdf",
+   "img": "img/1a-opbouw-van-achteruit-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "1b-opbouw-verstoren-middenbouw",
+   "title": "1B Opbouw verstoren",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1B",
+   "vorm": "8v8",
+   "bedoeling": "De opbouw van de tegenstander verstoren met proactieve pressing op de baldrager. Volledige training met fysieke belasting per oefening.",
+   "pages": 12,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/1b-opbouw-verstoren-middenbouw.pdf",
+   "img": "img/1b-opbouw-verstoren-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "2a-doelkans-creeren-en-scoren-middenbouw",
+   "title": "2A Doelkans creëren en scoren",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2A",
+   "vorm": "8v8",
+   "bedoeling": "Doelkansen creëren met een kwaliteitsvolle voorzet en snel afwerken. Volledige training met fysieke belasting per oefening.",
+   "pages": 12,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/2a-doelkans-creeren-en-scoren-middenbouw.pdf",
+   "img": "img/2a-doelkans-creeren-en-scoren-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "2b-doelkans-verhinderen-en-scoren-beletten-middenbouw",
+   "title": "2B Doelkans verhinderen en scoren beletten",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2B",
+   "vorm": "8v8",
+   "bedoeling": "Het centrum dichthouden en schuiven in een defensieve T-vorm (2+1). Volledige training met fysieke belasting per oefening.",
+   "pages": 12,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/2b-doelkans-verhinderen-en-scoren-beletten-middenbouw.pdf",
+   "img": "img/2b-doelkans-verhinderen-en-scoren-beletten-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "3a-omschakeling-b-naar-b-middenbouw",
+   "title": "3A Omschakeling B- naar B+",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "3A",
+   "vorm": "8v8",
+   "bedoeling": "Omschakelen naar balbezit met een eerste pas gericht diep. Volledige training met fysieke belasting per oefening.",
+   "pages": 12,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/3a-omschakeling-b-naar-b-middenbouw.pdf",
+   "img": "img/3a-omschakeling-b-naar-b-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "3b-omschakeling-b-naar-b-middenbouw",
+   "title": "3B Omschakeling B+ naar B-",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "3B",
+   "vorm": "8v8",
+   "bedoeling": "Omschakelen na balverlies om te beletten dat de tegenstander diep speelt. Volledige training met fysieke belasting per oefening.",
+   "pages": 12,
+   "orig": null,
+   "bron": "",
+   "pdf": "docs/3b-omschakeling-b-naar-b-middenbouw.pdf",
+   "img": "img/3b-omschakeling-b-naar-b-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "opbouw-bij-doeltrap-middenbouw",
+   "title": "Opbouw bij doeltrap",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1A",
+   "vorm": "8v8",
+   "bedoeling": "Uitleg per positie hoe we opbouwen vanaf de doeltrap: te zoeken ruimte, diepgang en breedte.",
+   "pages": 34,
+   "orig": "docs/opbouw-bij-doeltrap-middenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/opbouw-bij-doeltrap-middenbouw.pdf",
+   "img": "img/opbouw-bij-doeltrap-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "opbouw-na-lage-balrecuperatie-middenbouw",
+   "title": "Opbouw na lage balrecuperatie",
+   "bouwen": [
+    "middenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "3A",
+   "vorm": "8v8",
+   "bedoeling": "Hoe we opbouwen nadat we de bal laag op het veld veroverd hebben, uitgelegd per positie.",
+   "pages": 46,
+   "orig": "docs/opbouw-na-lage-balrecuperatie-middenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/opbouw-na-lage-balrecuperatie-middenbouw.pdf",
+   "img": "img/opbouw-na-lage-balrecuperatie-middenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "1a-opbouw-van-achteruit-bovenbouw",
+   "title": "1A Opbouw van achteruit",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1A",
+   "vorm": "11v11",
+   "bedoeling": "Opbouwen van achteruit met keeper en verdedigers, naar de zwakke zone. Volledige trainingsvoorbereiding voor U14 tot U17.",
+   "pages": 9,
+   "orig": "docs/1a-opbouw-van-achteruit-bovenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/1a-opbouw-van-achteruit-bovenbouw.pdf",
+   "img": "img/1a-opbouw-van-achteruit-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "1b-opbouw-verstoren-hoog-blok-bovenbouw",
+   "title": "1B Opbouw verstoren: hoog blok",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1B",
+   "vorm": "11v11",
+   "bedoeling": "Pressing vanuit een zo hoog mogelijk, compact blok. Volledige trainingsvoorbereiding voor U14 tot U17.",
+   "pages": 9,
+   "orig": "docs/1b-opbouw-verstoren-hoog-blok-bovenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/1b-opbouw-verstoren-hoog-blok-bovenbouw.pdf",
+   "img": "img/1b-opbouw-verstoren-hoog-blok-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "2a-doelkans-creeren-en-scoren-bovenbouw",
+   "title": "2A Doelkans creëren en scoren",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2A",
+   "vorm": "11v11",
+   "bedoeling": "Dieptespel met oog op scoren, na een dieptepas, individuele actie of voorzet. Volledige trainingsvoorbereiding voor U14 tot U17.",
+   "pages": 9,
+   "orig": "docs/2a-doelkans-creeren-en-scoren-bovenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/2a-doelkans-creeren-en-scoren-bovenbouw.pdf",
+   "img": "img/2a-doelkans-creeren-en-scoren-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "2b-doelkans-verhinderen-en-scoren-beletten-defensieve-t-bovenbouw",
+   "title": "2B Doelkans verhinderen en scoren beletten: defensieve t",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2B",
+   "vorm": "11v11",
+   "bedoeling": "Het centrum dichthouden met een defensieve T, ook bij voorzetten. Volledige trainingsvoorbereiding voor U14 tot U17.",
+   "pages": 9,
+   "orig": "docs/2b-doelkans-verhinderen-en-scoren-beletten-defensieve-t-bovenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/2b-doelkans-verhinderen-en-scoren-beletten-defensieve-t-bovenbouw.pdf",
+   "img": "img/2b-doelkans-verhinderen-en-scoren-beletten-defensieve-t-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "3a-omschakeling-b-naar-b-bovenbouw",
+   "title": "3A Omschakeling B- naar B+",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "3A",
+   "vorm": "11v11",
+   "bedoeling": "Snelle tegenaanval: offensief anticiperen net voor de balverovering. Volledige trainingsvoorbereiding voor U14 tot U17.",
+   "pages": 9,
+   "orig": "docs/3a-omschakeling-b-naar-b-bovenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/3a-omschakeling-b-naar-b-bovenbouw.pdf",
+   "img": "img/3a-omschakeling-b-naar-b-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "3b-omschakeling-b-naar-b-offensive-marking-bovenbouw",
+   "title": "3B Omschakeling B+ naar B-: offensive marking",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "3B",
+   "vorm": "11v11",
+   "bedoeling": "Tegenaanval beletten met offensive marking en snelle tegendruk. Volledige trainingsvoorbereiding voor U14 tot U17.",
+   "pages": 9,
+   "orig": "docs/3b-omschakeling-b-naar-b-offensive-marking-bovenbouw.pptx",
+   "bron": "",
+   "pdf": "docs/3b-omschakeling-b-naar-b-offensive-marking-bovenbouw.pdf",
+   "img": "img/3b-omschakeling-b-naar-b-offensive-marking-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "opbouw-van-achteruit-met-flankwissel-bovenbouw",
+   "title": "Opbouw van achteruit met flankwissel",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "1A",
+   "vorm": "11v11",
+   "bedoeling": "Opbouw via de halfspace met een eerste pas diep, en de flankwissel.",
+   "pages": 10,
+   "orig": "docs/opbouw-van-achteruit-met-flankwissel-bovenbouw.pptx",
+   "bron": "Training IPU14 KFC De Kempen",
+   "pdf": "docs/opbouw-van-achteruit-met-flankwissel-bovenbouw.pdf",
+   "img": "img/opbouw-van-achteruit-met-flankwissel-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "driehoeksspel-en-diep-vrijlopen-bovenbouw",
+   "title": "Driehoeksspel en diep vrijlopen",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2A",
+   "vorm": "11v11",
+   "bedoeling": "Snelle balcirculatie via het derdemansprincipe en vrijlopen in de diepte.",
+   "pages": 7,
+   "orig": "docs/driehoeksspel-en-diep-vrijlopen-bovenbouw.pptx",
+   "bron": "Training IPU14 KFC De Kempen",
+   "pdf": "docs/driehoeksspel-en-diep-vrijlopen-bovenbouw.pdf",
+   "img": "img/driehoeksspel-en-diep-vrijlopen-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "open-en-breed-infiltratie-naar-de-waarheidszone-bovenbouw",
+   "title": "Open en breed: infiltratie naar de waarheidszone",
+   "bouwen": [
+    "bovenbouw"
+   ],
+   "map": "thema",
+   "thema": "Thematrainingen",
+   "principe": "2A",
+   "vorm": "11v11",
+   "bedoeling": "Het spel open en breed maken om de waarheidszone binnen te dringen.",
+   "pages": 7,
+   "orig": "docs/open-en-breed-infiltratie-naar-de-waarheidszone-bovenbouw.pptx",
+   "bron": "Training IPU14 KFC De Kempen",
+   "pdf": "docs/open-en-breed-infiltratie-naar-de-waarheidszone-bovenbouw.pdf",
+   "img": "img/open-en-breed-infiltratie-naar-de-waarheidszone-bovenbouw.jpg",
+   "veld": ""
+  },
+  {
+   "id": "techniek-en-brein-coordinatie",
+   "title": "Techniek en brein: coördinatie",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Techniek",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Techniek en coördinatie in één oefening: dribbelen langs paaltjes met loopladder en hordes.",
+   "pages": 1,
+   "orig": "docs/techniek-en-brein-coordinatie.docx",
+   "bron": "",
+   "pdf": "docs/techniek-en-brein-coordinatie.pdf",
+   "img": "img/techniek-en-brein-coordinatie.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "techniek-en-brein-dualiteit",
+   "title": "Techniek en brein: dualiteit",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Techniek",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Techniek gecombineerd met een denkopdracht: twee dingen tegelijk doen.",
+   "pages": 1,
+   "orig": "docs/techniek-en-brein-dualiteit.docx",
+   "bron": "",
+   "pdf": "docs/techniek-en-brein-dualiteit.pdf",
+   "img": "img/techniek-en-brein-dualiteit.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "techniek-en-brein-passing",
+   "title": "Techniek en brein: passing",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Techniek",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Passing en balcontrole gecombineerd met een denkopdracht.",
+   "pages": 1,
+   "orig": "docs/techniek-en-brein-passing.docx",
+   "bron": "",
+   "pdf": "docs/techniek-en-brein-passing.pdf",
+   "img": "img/techniek-en-brein-passing.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "dribbel-body-move-en-afwerking",
+   "title": "Dribbel, body move en afwerking",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Techniek",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Indribbelen, een body move maken en afwerken in een doeltje. Tien body moves om uit te kiezen.",
+   "pages": 1,
+   "orig": "docs/dribbel-body-move-en-afwerking.docx",
+   "bron": "",
+   "pdf": "docs/dribbel-body-move-en-afwerking.pdf",
+   "img": "img/dribbel-body-move-en-afwerking.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "1v1-met-balaanname",
+   "title": "1v1 met balaanname",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Duel 1v1",
+   "principe": null,
+   "vorm": "1v1",
+   "bedoeling": "Inspelen, goed aannemen en meteen het duel aangaan. Loopt uit in 2v2.",
+   "pages": 1,
+   "orig": "docs/1v1-met-balaanname.docx",
+   "bron": "",
+   "pdf": "docs/1v1-met-balaanname.pdf",
+   "img": "img/1v1-met-balaanname.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "1v1-met-omschakeling",
+   "title": "1v1 met omschakeling",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Duel 1v1",
+   "principe": null,
+   "vorm": "1v1",
+   "bedoeling": "Duel waarbij de verdediger meteen omschakelt zodra hij de bal verovert. Veel herhalingen, veel fun.",
+   "pages": 1,
+   "orig": "docs/1v1-met-omschakeling.docx",
+   "bron": "",
+   "pdf": "docs/1v1-met-omschakeling.pdf",
+   "img": "img/1v1-met-omschakeling.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "1v1-met-reactievermogen",
+   "title": "1v1 met reactievermogen",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Duel 1v1",
+   "principe": null,
+   "vorm": "1v1",
+   "bedoeling": "De verdediger reageert op de poort die de aanvaller kiest. Start eerst als tikkertje zonder bal.",
+   "pages": 1,
+   "orig": "docs/1v1-met-reactievermogen.docx",
+   "bron": "",
+   "pdf": "docs/1v1-met-reactievermogen.pdf",
+   "img": "img/1v1-met-reactievermogen.jpg",
+   "veld": "16 × 16 m"
+  },
+  {
+   "id": "passing-en-balaanname-kaatsen-en-versnellen",
+   "title": "Passing en balaanname: kaatsen en versnellen",
+   "bouwen": [
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Passing en balaanname",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Driehoek met kaatsen, inspelen in de loop en versnellen met de bal.",
+   "pages": 1,
+   "orig": "docs/passing-en-balaanname-kaatsen-en-versnellen.docx",
+   "bron": "",
+   "pdf": "docs/passing-en-balaanname-kaatsen-en-versnellen.pdf",
+   "img": "img/passing-en-balaanname-kaatsen-en-versnellen.jpg",
+   "veld": "Paslijnen 10 en 20 m"
+  },
+  {
+   "id": "passing-en-balaanname-derde-lopende-speler",
+   "title": "Passing en balaanname: derde lopende speler",
+   "bouwen": [
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Passing en balaanname",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Inspelen op de verste voet met een derde lopende speler, afgesloten met een afwerking.",
+   "pages": 1,
+   "orig": "docs/passing-en-balaanname-derde-lopende-speler.docx",
+   "bron": "",
+   "pdf": "docs/passing-en-balaanname-derde-lopende-speler.pdf",
+   "img": "img/passing-en-balaanname-derde-lopende-speler.jpg",
+   "veld": "10 m tussen de potjes"
+  },
+  {
+   "id": "passing-en-balaanname-twee-vierkanten",
+   "title": "Passing en balaanname: twee vierkanten",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Passing en balaanname",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Inspelen op de verste voet en voorwaarts aannemen in twee vierkanten.",
+   "pages": 1,
+   "orig": "docs/passing-en-balaanname-twee-vierkanten.docx",
+   "bron": "",
+   "pdf": "docs/passing-en-balaanname-twee-vierkanten.pdf",
+   "img": "img/passing-en-balaanname-twee-vierkanten.jpg",
+   "veld": "Vierkant van 10 m"
+  },
+  {
+   "id": "handelingssnelheid-kleur-roepen",
+   "title": "Handelingssnelheid: kleur roepen",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Handelingssnelheid",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "De middelste speler vraagt de bal en scoort in het doel van de kleur die geroepen wordt.",
+   "pages": 1,
+   "orig": "docs/handelingssnelheid-kleur-roepen.docx",
+   "bron": "",
+   "pdf": "docs/handelingssnelheid-kleur-roepen.pdf",
+   "img": "img/handelingssnelheid-kleur-roepen.jpg",
+   "veld": "15 × 15 m"
+  },
+  {
+   "id": "handelingssnelheid-dribbelparcours",
+   "title": "Handelingssnelheid: dribbelparcours",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Handelingssnelheid",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Dribbelparcours rond paaltjes met achterwaarts tippen, overstappen en een versnelling.",
+   "pages": 1,
+   "orig": "docs/handelingssnelheid-dribbelparcours.docx",
+   "bron": "",
+   "pdf": "docs/handelingssnelheid-dribbelparcours.pdf",
+   "img": "img/handelingssnelheid-dribbelparcours.jpg",
+   "veld": "Paaltjes op 1 tot 2 m"
+  },
+  {
+   "id": "handelingssnelheid-snel-scoren",
+   "title": "Handelingssnelheid: snel scoren",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Handelingssnelheid",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Aangespeeld worden en zo snel mogelijk scoren in een minidoel of door een poort dribbelen.",
+   "pages": 1,
+   "orig": "docs/handelingssnelheid-snel-scoren.docx",
+   "bron": "",
+   "pdf": "docs/handelingssnelheid-snel-scoren.pdf",
+   "img": "img/handelingssnelheid-snel-scoren.jpg",
+   "veld": "10 × 10 m"
+  },
+  {
+   "id": "handelingssnelheid-en-scanning",
+   "title": "Handelingssnelheid en scanning",
+   "bouwen": [
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Handelingssnelheid",
+   "principe": null,
+   "vorm": "",
+   "bedoeling": "Twee spelers racen: kleur horen of zien, aannemen, door de juiste poort en scoren.",
+   "pages": 1,
+   "orig": "docs/handelingssnelheid-en-scanning.docx",
+   "bron": "",
+   "pdf": "docs/handelingssnelheid-en-scanning.pdf",
+   "img": "img/handelingssnelheid-en-scanning.jpg",
+   "veld": "16 × 16 m"
+  },
+  {
+   "id": "positiespel-rondo-in-vier-vakken",
+   "title": "Positiespel: rondo in vier vakken",
+   "bouwen": [
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Positiespel",
+   "principe": null,
+   "vorm": "3v1",
+   "bedoeling": "Rondo met drie ploegen: na vijf passen inspelen naar een ander vak, bij balverlies verdedigen.",
+   "pages": 1,
+   "orig": "docs/positiespel-rondo-in-vier-vakken.docx",
+   "bron": "",
+   "pdf": "docs/positiespel-rondo-in-vier-vakken.pdf",
+   "img": "img/positiespel-rondo-in-vier-vakken.jpg",
+   "veld": "Vakken van 10 × 10 m"
+  },
+  {
+   "id": "5v5-flankverandering",
+   "title": "5v5 flankverandering",
+   "bouwen": [
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Wedstrijdvormen",
+   "principe": null,
+   "vorm": "5v5",
+   "bedoeling": "Partij waarin iedereen de bal moet raken en de bal elke buitenzone moet passeren.",
+   "pages": 1,
+   "orig": "docs/5v5-flankverandering.docx",
+   "bron": "",
+   "pdf": "docs/5v5-flankverandering.pdf",
+   "img": "img/5v5-flankverandering.jpg",
+   "veld": "50 × 40 m"
+  },
+  {
+   "id": "5v5-voorwaartse-versnelling",
+   "title": "5v5 voorwaartse versnelling",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Wedstrijdvormen",
+   "principe": null,
+   "vorm": "5v5",
+   "bedoeling": "Punten voor een voorwaartse versnelling door een poort, aanspeelbaar zijn en scoren.",
+   "pages": 1,
+   "orig": "docs/5v5-voorwaartse-versnelling.docx",
+   "bron": "",
+   "pdf": "docs/5v5-voorwaartse-versnelling.pdf",
+   "img": "img/5v5-voorwaartse-versnelling.jpg",
+   "veld": "25 × 25 m"
+  },
+  {
+   "id": "3v2-en-1v1-naar-4v3",
+   "title": "3v2 en 1v1 naar 4v3",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Wedstrijdvormen",
+   "principe": null,
+   "vorm": "3v2 → 4v3",
+   "bedoeling": "3v2 met snelle omschakeling, daarna een 1v1 en uiteindelijk 4v3.",
+   "pages": 1,
+   "orig": "docs/3v2-en-1v1-naar-4v3.docx",
+   "bron": "",
+   "pdf": "docs/3v2-en-1v1-naar-4v3.pdf",
+   "img": "img/3v2-en-1v1-naar-4v3.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "3v3-2v2-en-1v1-doorschuiven",
+   "title": "3v3, 2v2 en 1v1 doorschuiven",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Wedstrijdvormen",
+   "principe": null,
+   "vorm": "3v3 · 2v2 · 1v1",
+   "bedoeling": "Drie veldjes naast elkaar: wie scoort, schuift door naar een ander veld.",
+   "pages": 1,
+   "orig": "docs/3v3-2v2-en-1v1-doorschuiven.docx",
+   "bron": "",
+   "pdf": "docs/3v3-2v2-en-1v1-doorschuiven.pdf",
+   "img": "img/3v3-2v2-en-1v1-doorschuiven.jpg",
+   "veld": "30, 20 en 10 m"
+  },
+  {
+   "id": "van-1v1-opbouwen-naar-4v4",
+   "title": "Van 1v1 opbouwen naar 4v4",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Wedstrijdvormen",
+   "principe": null,
+   "vorm": "1v1 → 4v4",
+   "bedoeling": "Telkens dribbelt er een speler bij: van 1v1 tot 4v4, met snelle omschakeling.",
+   "pages": 1,
+   "orig": "docs/van-1v1-opbouwen-naar-4v4.docx",
+   "bron": "",
+   "pdf": "docs/van-1v1-opbouwen-naar-4v4.pdf",
+   "img": "img/van-1v1-opbouwen-naar-4v4.jpg",
+   "veld": "25 × 25 m"
+  },
+  {
+   "id": "omschakeling-in-onderaantal-1v2-tot-3v4",
+   "title": "Omschakeling in onderaantal: 1v2 tot 3v4",
+   "bouwen": [
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "oefenstof",
+   "thema": "Wedstrijdvormen",
+   "principe": null,
+   "vorm": "1v2 → 3v4",
+   "bedoeling": "Aanvallen in onderaantal: na elke actie komt er een speler bij, van 1v2 tot 3v4.",
+   "pages": 1,
+   "orig": "docs/omschakeling-in-onderaantal-1v2-tot-3v4.docx",
+   "bron": "",
+   "pdf": "docs/omschakeling-in-onderaantal-1v2-tot-3v4.pdf",
+   "img": "img/omschakeling-in-onderaantal-1v2-tot-3v4.jpg",
+   "veld": "20 × 20 m"
+  },
+  {
+   "id": "opwarmingsmodel-og-vorselaar",
+   "title": "Opwarmingsmodel OG Vorselaar",
+   "bouwen": [
+    "onderbouw",
+    "middenbouw",
+    "bovenbouw"
+   ],
+   "map": "opwarming",
+   "thema": "Wedstrijdopwarming",
+   "principe": null,
+   "vorm": "5v5 · 8v8 · 11v11",
+   "bedoeling": "De vaste wedstrijdopwarming van de club voor 5v5, 8v8 en 11v11: opwarmfase, functionele fase en afwerkingsfase.",
+   "pages": 14,
+   "orig": "docs/opwarmingsmodel-og-vorselaar.pptx",
+   "bron": "",
+   "pdf": "docs/opwarmingsmodel-og-vorselaar.pdf",
+   "img": "img/opwarmingsmodel-og-vorselaar.jpg",
+   "veld": ""
+  }
+ ]
+}
