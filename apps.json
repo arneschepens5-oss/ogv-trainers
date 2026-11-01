@@ -2,6 +2,20 @@
   "_uitleg": "Voeg een app toe met een blok in 'apps' (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch/sheet/check/chart, description). 'roadmap' toont wat nog gebouwd wordt. 'tagline' is de korte zin op de kaart, 'can' zijn 1 tot 3 dingen die je met de app kan.",
   "apps": [
     {
+      "name": "Mijn ploeg",
+      "url": "ploeg/",
+      "source": "Claude",
+      "category": "Scouting & spelers",
+      "icon": "players",
+      "tagline": "Je spelers en hun fiches",
+      "can": [
+        "Spelerslijst in één keer plakken uit PSD of Excel",
+        "Per speler: aanwezigheid, minuten, cijfers en evaluaties",
+        "Co-trainers toevoegen aan je ploeg"
+      ],
+      "description": "Spelers en ploegen: spelersfiche, contact ouders, statistieken per speler."
+    },
+    {
       "name": "Matchday",
       "url": "matchday/",
       "source": "Claude",
@@ -71,6 +85,34 @@
       ]
     },
     {
+      "name": "Kalender & verslagen",
+      "url": "ploeg/#/kalender",
+      "source": "Claude",
+      "category": "Wedstrijd",
+      "icon": "calendar",
+      "tagline": "Trainingen, wedstrijden en het verslag erbij",
+      "can": [
+        "Trainingen voor het hele seizoen in één keer plannen",
+        "Uitslag, minuten, goals en cijfer per speler",
+        "Kort verslag: wat ging goed, wat kan beter"
+      ],
+      "description": "Kalender met trainingen en wedstrijden, wedstrijdverslag en trainingsverslag."
+    },
+    {
+      "name": "Ploegcijfers",
+      "url": "ploeg/#/cijfers",
+      "source": "Claude",
+      "category": "Wedstrijd",
+      "icon": "chart",
+      "tagline": "Alle statistieken van je ploeg",
+      "can": [
+        "Aanwezigheid, minuten, goals en assists per speler",
+        "Gewonnen, gelijk en verloren, doelsaldo",
+        "Exporteren naar Excel"
+      ],
+      "description": "Statistieken uit aanwezigheden, wedstrijden en evaluaties."
+    },
+    {
       "name": "Coachbord",
       "url": "https://id-preview--46e6a6be-f9cc-43a1-b0a7-920ad6aa9e98.lovable.app",
       "source": "Lovable",
@@ -135,27 +177,37 @@
         "Spelers zoeken op niveau en positie",
         "Eén lijst voor alle trainers"
       ]
-    }
-  ],
-  "roadmap": [
+    },
     {
-      "name": "Spelers & ploegen",
+      "name": "Evaluaties & doelen",
+      "url": "ploeg/#/evaluaties",
+      "source": "Claude",
       "category": "Scouting & spelers",
-      "icon": "players",
-      "description": "Eén spelerslijst per ploeg, waar elke app uit leest. Nooit meer namen overtypen."
+      "icon": "chart",
+      "tagline": "Spelers opvolgen over het seizoen",
+      "can": [
+        "Vier evaluatiemomenten met een score per onderdeel",
+        "Groei per speler in een grafiek",
+        "Persoonlijke doelen per speler opvolgen"
+      ],
+      "description": "Spelersevaluaties volgens de onderdelen van de club en individuele doelen."
     },
     {
       "name": "Aanwezigheden",
+      "url": "ploeg/#/kalender",
+      "source": "Claude",
       "category": "Planning & admin",
       "icon": "check",
-      "description": "Op training in tien seconden afvinken wie er is, met een seizoensoverzicht per speler."
-    },
-    {
-      "name": "Evaluaties",
-      "category": "Scouting & spelers",
-      "icon": "chart",
-      "description": "Spelers beoordelen per periode volgens het opleidingsplan, met de evolutie in één grafiek."
-    },
+      "tagline": "Op training in tien seconden afvinken",
+      "can": [
+        "Aanwezig, te laat, verwittigd, afwezig of blessure",
+        "Iedereen aanwezig in één tik",
+        "Aanwezigheid per speler over het hele seizoen"
+      ],
+      "description": "Aanwezigheden opnemen op trainingen en wedstrijden."
+    }
+  ],
+  "roadmap": [
     {
       "name": "Oefeningenbank",
       "category": "Training & tactiek",
@@ -166,7 +218,19 @@
       "name": "Clubkalender",
       "category": "Planning & admin",
       "icon": "calendar",
-      "description": "Trainingen, wedstrijden en terreinen van alle ploegen in één kalender."
+      "description": "De kalenders van alle ploegen samen, met de bezetting van de terreinen."
+    },
+    {
+      "name": "Fysieke testen",
+      "category": "Scouting & spelers",
+      "icon": "stopwatch",
+      "description": "Sprint-, wendbaarheids- en uithoudingstesten invoeren en vergelijken met leeftijdsgenoten."
+    },
+    {
+      "name": "Coördinatorview",
+      "category": "Planning & admin",
+      "icon": "chart",
+      "description": "Jeugdcoördinatoren zien de cijfers van alle ploegen in hun bouw."
     }
   ]
 }
