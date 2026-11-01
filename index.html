@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -46,8 +46,9 @@
     <div class="caption">Opbouw 8v8: de 4 zakt uit, de backs schuiven door</div>
   </section>
 
-  <section class="index" id="apps" aria-label="Alle apps">
+  <section class="index" id="apps" aria-labelledby="apps-h">
     <div class="wrap">
+      <div class="index-head"><h2 id="apps-h">Jouw apps</h2><p>Kies een app en tik op Open. Apps met dit teken <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg> openen in een nieuw tabblad.</p></div>
       <div class="filters" id="filters" role="group" aria-label="Filter op onderdeel"></div>
       <div id="list" aria-live="polite"><p class="empty">Apps laden…</p></div>
     </div>
@@ -82,7 +83,14 @@ const ICON={
   sheet:`<svg viewBox="0 0 24 24" ${P}><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10h7M8.5 13.5h7M8.5 17h4"/></svg>`,
   board:`<svg viewBox="0 0 24 24" ${P}><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-3 3 2 4-5"/><path d="M9 21h6"/></svg>`,
   scout:`<svg viewBox="0 0 24 24" ${P}><circle cx="10" cy="10" r="6"/><path d="m20 20-5.5-5.5"/></svg>`,
-  open:`<svg viewBox="0 0 24 24" ${P}><path d="M5 12h14M13 6l6 6-6 6"/></svg>`
+  open:`<svg viewBox="0 0 24 24" ${P}><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  ok:`<svg viewBox="0 0 24 24" ${P}><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`,
+  mic:`<svg viewBox="0 0 24 24" ${P}><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`,
+  rotate:`<svg viewBox="0 0 24 24" ${P}><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>`,
+  video:`<svg viewBox="0 0 24 24" ${P}><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>`,
+  field:`<svg viewBox="0 0 24 24" ${P}><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/><path d="M3 9h3v6H3M21 9h-3v6h3"/></svg>`,
+  calendar:`<svg viewBox="0 0 24 24" ${P}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/></svg>`,
+  ball:`<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg>`
 };
 const CATS=["Wedstrijd","Training & tactiek","Scouting & spelers","Planning & admin"];
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -115,12 +123,17 @@ function renderList(){
   const el=document.getElementById("list");
   if(!it.length){el.innerHTML=`<div class="empty"><strong>Geen app gevonden</strong>Niets past bij "${esc(q.trim())}". Probeer opstelling, tactiek of scouting.<br><button type="button" id="clr">Zoekopdracht wissen</button></div>`;
     document.getElementById("clr").onclick=()=>{q="";qi.value="";renderList();qi.focus()};return}
-  el.innerHTML=`<ul class="rows">${it.map(a=>`<li class="row"><a href="${esc(a.url)}"${tgt(a.url)} data-name="${esc(a.name)}">
-    <span class="nm">${esc(a.name)}</span>
-    <span class="ds">${esc(a.description||"")}</span>
-    <span class="ct">${esc(a.category)}</span>
-    <span class="wh">${isExt(a.url)?`${esc(a.source)}${ICON.out}`:`In het portaal${ICON.open}`}</span>
-  </a></li>`).join("")}</ul>`;
+  el.innerHTML=`<div class="cards">${it.map(a=>{const ext=isExt(a.url);return `<a class="card" href="${esc(a.url)}"${tgt(a.url)} data-name="${esc(a.name)}">
+    <span class="head">
+      <span class="appicon" aria-hidden="true">${ICON[a.icon]||ICON.ball}</span>
+      <span><span class="nm">${esc(a.name)}</span><span class="tl">${esc(a.tagline||a.description||"")}</span></span>
+    </span>
+    ${(a.can||[]).length?`<span class="can"><span class="can-h">Hiermee kan je</span>${a.can.map(c=>`<span class="ci">${ICON.ok}${esc(c)}</span>`).join("")}</span>`:""}
+    <span class="foot">
+      <span class="btn ${ext?"ext":""}">Open ${esc(a.name)}${ext?ICON.out:ICON.open}</span>
+      <span class="wh">${ext?`Opent in ${esc(a.source)}`:`Werkt in het portaal`}</span>
+    </span>
+  </a>`}).join("")}</div>`;
 }
 function renderRoad(){
   if(!road.length)return;

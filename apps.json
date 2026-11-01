@@ -1,5 +1,5 @@
 {
-  "_uitleg": "Voeg een app toe met een blok in 'apps' (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch/sheet/check/chart, description). 'roadmap' toont wat nog gebouwd wordt.",
+  "_uitleg": "Voeg een app toe met een blok in 'apps' (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch/sheet/check/chart, description). 'roadmap' toont wat nog gebouwd wordt. 'tagline' is de korte zin op de kaart, 'can' zijn 1 tot 3 dingen die je met de app kan.",
   "apps": [
     {
       "name": "Matchday",
@@ -7,7 +7,13 @@
       "source": "Claude",
       "category": "Wedstrijd",
       "icon": "sheet",
-      "description": "Wedstrijdblad voor de kleedkamer: opstelling, kapitein en opdrachten. Elke ploeg en spelvorm, af te drukken op A4."
+      "description": "Wedstrijdblad voor de kleedkamer: opstelling, kapitein en opdrachten. Elke ploeg en spelvorm, af te drukken op A4.",
+      "tagline": "Het wedstrijdblad voor de kleedkamer",
+      "can": [
+        "Opstelling kiezen of zelf posities slepen",
+        "Kapitein en 1 tot 3 opdrachten kiezen",
+        "Afdrukken op A4"
+      ]
     },
     {
       "name": "Animatiebord",
@@ -15,7 +21,13 @@
       "source": "Claude",
       "category": "Training & tactiek",
       "icon": "board",
-      "description": "Teken en animeer tactieken voor 5v5, 8v8 en 11v11. Maak er een video, afbeelding of PDF van, of deel een bord als link."
+      "description": "Teken en animeer tactieken voor 5v5, 8v8 en 11v11. Maak er een video, afbeelding of PDF van, of deel een bord als link.",
+      "tagline": "Tactiek tekenen en laten bewegen",
+      "can": [
+        "Spelvormen tekenen voor 5v5, 8v8 en 11v11",
+        "Stappen afspelen met coachingspunten",
+        "Opslaan als video, afbeelding of PDF"
+      ]
     },
     {
       "name": "Coach Mic",
@@ -23,7 +35,13 @@
       "source": "Lovable",
       "category": "Wedstrijd",
       "icon": "mic",
-      "description": "Praat tijdens de match: timer, goals, wissels en coaching worden vanzelf bijgehouden."
+      "description": "Praat tijdens de match: timer, goals, wissels en coaching worden vanzelf bijgehouden.",
+      "tagline": "Je wedstrijd bijhouden door te praten",
+      "can": [
+        "Timer en wedstrijdverloop inspreken",
+        "Goals, wissels en coaching noteren",
+        "Samenvatting na de match"
+      ]
     },
     {
       "name": "Mixschema",
@@ -31,7 +49,12 @@
       "source": "Claude",
       "category": "Wedstrijd",
       "icon": "rotate",
-      "description": "Wie speelt bij wie per speeldag in de gemixte wedstrijd."
+      "description": "Wie speelt bij wie per speeldag in de gemixte wedstrijd.",
+      "tagline": "Wie speelt bij wie in de gemixte wedstrijd",
+      "can": [
+        "Per speeldag de ploegen zien",
+        "A- en B-spelers eerlijk laten wisselen"
+      ]
     },
     {
       "name": "Coachbord",
@@ -39,7 +62,13 @@
       "source": "Lovable",
       "category": "Training & tactiek",
       "icon": "calendar",
-      "description": "Trainingen plannen, oefeningen tekenen en opstellingen afdrukken."
+      "description": "Trainingen plannen, oefeningen tekenen en opstellingen afdrukken.",
+      "tagline": "Trainingen voorbereiden",
+      "can": [
+        "Trainingen plannen",
+        "Oefeningen tekenen",
+        "Opstellingen afdrukken"
+      ]
     },
     {
       "name": "Tactiekbord",
@@ -47,7 +76,12 @@
       "source": "Lovable",
       "category": "Training & tactiek",
       "icon": "video",
-      "description": "Spelprincipes per speelvorm met video en kernpunten."
+      "description": "Spelprincipes per speelvorm met video en kernpunten.",
+      "tagline": "De spelprincipes van de club, met video",
+      "can": [
+        "Principes per speelvorm bekijken",
+        "Video en kernpunten per principe"
+      ]
     },
     {
       "name": "Tactiekbord 2",
@@ -55,7 +89,11 @@
       "source": "Claude",
       "category": "Training & tactiek",
       "icon": "board",
-      "description": "Tactiekvideo en wedstrijdbeelden naast elkaar."
+      "description": "Tactiekvideo en wedstrijdbeelden naast elkaar.",
+      "tagline": "Tactiekvideo naast wedstrijdbeelden",
+      "can": [
+        "Tactiekvideo en matchbeelden naast elkaar afspelen"
+      ]
     },
     {
       "name": "Zonekaart 8v8",
@@ -63,7 +101,12 @@
       "source": "Claude",
       "category": "Training & tactiek",
       "icon": "field",
-      "description": "Zones en posities op het 8v8-veld."
+      "description": "Zones en posities op het 8v8-veld.",
+      "tagline": "Zones en posities op het 8v8-veld",
+      "can": [
+        "Zones op het veld bekijken",
+        "Posities per zone uitleggen aan spelers"
+      ]
     },
     {
       "name": "Scouting",
@@ -71,7 +114,13 @@
       "source": "Claude",
       "category": "Scouting & spelers",
       "icon": "scout",
-      "description": "Scoutingsdatabase: spelers opzoeken en beoordelen."
+      "description": "Scoutingsdatabase: spelers opzoeken en beoordelen.",
+      "tagline": "De scoutingsdatabase van de club",
+      "can": [
+        "Een nieuwe speler noteren en beoordelen",
+        "Spelers zoeken op niveau en positie",
+        "Eén lijst voor alle trainers"
+      ]
     }
   ],
   "roadmap": [
