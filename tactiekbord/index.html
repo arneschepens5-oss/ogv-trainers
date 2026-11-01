@@ -54,6 +54,8 @@ header{display:flex;align-items:center;gap:8px;padding-block:9px;border-bottom:1
 .hide-sm{display:none}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--panel);z-index:10}
 body.home::before{background:#111110}
+body.home{overflow-y:auto;-webkit-overflow-scrolling:touch}
+@media (min-width:900px){#selpanel:not(.compact){left:50%;right:auto;transform:translateX(-50%);width:min(620px,calc(100% - 12px))}}
 .titlerow{display:flex;align-items:center;gap:8px;min-width:0}
 .sub{border:0;background:none;padding:0;text-align:left;cursor:pointer;min-width:0;flex:0 1 auto}
 .sub:hover{color:var(--ink)}
