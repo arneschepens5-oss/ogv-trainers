@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>OGV Trainers</title>
 <meta name="description" content="Alle trainersapps van OG Vorselaar op één plek.">
-<meta name="theme-color" content="#111110">
+<meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -14,59 +14,57 @@
 <meta name="apple-mobile-web-app-title" content="OGV Trainers">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css">
-<style>
-:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{margin:0}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:#111110;z-index:10}
-.install{display:none}
-@media (display-mode: standalone){.tip{display:none}}
-</style>
+<link rel="stylesheet" href="style.css?v=5">
+<script>try{const t=localStorage.getItem("ogv-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
-<header class="band">
-  <div class="wrap">
-    <div class="crest">
-      <img class="crest-img" src="icons/icon-192.png" alt="Clublogo OG Vorselaar" width="64" height="64">
-      <div><div class="eyebrow">OG Vorselaar · Jeugdwerking</div><h1>Trainersportaal</h1></div>
-    </div>
-  </div>
-</header>
+<div class="shell">
 
-<main>
-  <div class="wrap">
-    <div class="search">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Zoek een app…" aria-label="Zoek een app">
+  <aside class="rail" aria-label="Hoofdmenu">
+    <a class="brand" href="#/">
+      <img src="icons/icon-192.png" alt="" width="44" height="44">
+      <span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span>
+    </a>
+    <nav class="nav" id="nav"></nav>
+    <div class="rail-foot">
+      <button class="install-btn" id="installRail" type="button">Installeer als app</button>
+      <div class="slogan">Komoan OG</div>
+      <p>Seizoen <span class="season"></span></p>
     </div>
+  </aside>
 
-    <div id="list" aria-live="polite">
-      <div class="empty"><strong>Apps laden…</strong>Je trainersapps verschijnen hier als tegels.</div>
-    </div>
+  <header class="topbar">
+    <img src="icons/icon-192.png" alt="" width="34" height="34">
+    <b>OGV Trainers</b>
+    <button class="theme-btn" type="button" data-theme-toggle aria-label="Wissel licht of donker thema"></button>
+  </header>
 
-    <footer>
-      <div class="legend" aria-label="Gemaakt met">
-        <span><i style="background:var(--lovable)"></i>Lovable</span>
-        <span><i style="background:var(--claude)"></i>Claude</span>
-        <span><i style="background:var(--studio)"></i>Google AI Studio</span>
+  <main id="main">
+    <div class="page">
+      <div class="toolbar">
+        <label class="search">
+          <span class="sr">Zoek een app</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Zoek een app of functie" autocomplete="off">
+          <kbd aria-hidden="true">/</kbd>
+        </label>
+        <button class="theme-btn" type="button" data-theme-toggle aria-label="Wissel licht of donker thema"></button>
       </div>
-      <details class="tip">
-        <summary>Als app op je gsm zetten</summary>
-        <ol>
-          <li><strong>iPhone (Safari):</strong> tik op Delen en kies “Zet op beginscherm”.</li>
-          <li><strong>Android (Chrome):</strong> tik op ⋮ en kies “App installeren” of “Toevoegen aan startscherm”.</li>
-          <li>Het clublogo verschijnt als icoon. Eén tik opent het portaal als app, zonder adresbalk.</li>
-        </ol>
-      </details>
-    </footer>
-  </div>
-</main>
+      <div id="view" aria-live="polite">
+        <div class="empty"><strong>Apps laden</strong>Even geduld.</div>
+      </div>
+    </div>
+  </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Hoofdmenu"></nav>
+</div>
 
 <script>
-const CATS=["Wedstrijd","Training & tactiek","Scouting & spelers","Planning & admin","Andere"];
 const P='fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 const ICONS={
+  home:`<svg viewBox="0 0 24 24" ${P}><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>`,
   mic:`<svg viewBox="0 0 24 24" ${P}><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`,
   rotate:`<svg viewBox="0 0 24 24" ${P}><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>`,
   board:`<svg viewBox="0 0 24 24" ${P}><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-3 3 2 4-5"/><path d="M9 21h6"/></svg>`,
@@ -77,26 +75,148 @@ const ICONS={
   players:`<svg viewBox="0 0 24 24" ${P}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 4.8"/></svg>`,
   ball:`<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg>`,
   sheet:`<svg viewBox="0 0 24 24" ${P}><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10h7M8.5 13.5h7M8.5 17h4"/></svg>`,
-  stopwatch:`<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4M19 6l1.5-1.5"/></svg>`
+  check:`<svg viewBox="0 0 24 24" ${P}><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`,
+  chart:`<svg viewBox="0 0 24 24" ${P}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>`,
+  stopwatch:`<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4M19 6l1.5-1.5"/></svg>`,
+  out:`<svg viewBox="0 0 24 24" ${P}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`,
+  sun:`<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`,
+  moon:`<svg viewBox="0 0 24 24" ${P}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`
 };
-const DEF={"Wedstrijd":"ball","Training & tactiek":"board","Scouting & spelers":"scout","Planning & admin":"calendar","Andere":"ball"};
+/* Elke categorie is een pagina; de slug staat in de adresbalk (#/wedstrijd). */
+const CATS=[
+  {slug:"wedstrijd",name:"Wedstrijd",short:"Wedstrijd",icon:"ball",intro:"Alles voor de matchdag: wedstrijdblad, wissels en verslag."},
+  {slug:"training",name:"Training & tactiek",short:"Training",icon:"board",intro:"Oefeningen, spelprincipes en tactiek uittekenen."},
+  {slug:"spelers",name:"Scouting & spelers",short:"Spelers",icon:"players",intro:"Spelers opvolgen en nieuwe talenten noteren."},
+  {slug:"planning",name:"Planning & admin",short:"Planning",icon:"calendar",intro:"Kalender, schema's en clubafspraken."}
+];
+const catOf=name=>CATS.find(c=>c.name===name)||null;
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let apps=[],q="";
-function tile(a){
-  const tip=esc(a.description?a.name+": "+a.description:a.name);
-  return `<a class="app" href="${esc(a.url)}"${/^https?:/.test(a.url)?' target="_blank" rel="noopener"':''} title="${tip}"><span class="dot" data-s="${esc(a.source)}" aria-hidden="true"></span><span class="icon" aria-hidden="true">${ICONS[a.icon]||ICONS[DEF[a.category]]||ICONS.ball}</span><span class="name">${esc(a.name)}</span></a>`;
+const isExt=u=>/^https?:/.test(u);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+let apps=[],road=[],q="";
+
+/* ---------- seizoen en datum ---------- */
+const now=new Date();
+const sy=now.getMonth()>=6?now.getFullYear():now.getFullYear()-1;
+const season=`${String(sy).slice(2)}-${String(sy+1).slice(2)}`;
+document.querySelectorAll(".season").forEach(e=>e.textContent=season);
+function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)}
+const dateStr=now.toLocaleDateString("nl-BE",{weekday:"long",day:"numeric",month:"long"});
+const greet=(h=>h<12?"Goeiemorgen":h<18?"Goeiemiddag":"Goeieavond")(now.getHours());
+
+/* ---------- bouwstenen ---------- */
+function appCard(a){
+  const ext=isExt(a.url), c=catOf(a.category);
+  const where=ext?(a.source==="Lovable"?"Lovable":a.source==="Google AI Studio"?"Google AI Studio":"Claude")+", opent in nieuw tabblad":"In het portaal";
+  return `<a class="app" href="${esc(a.url)}"${ext?' target="_blank" rel="noopener"':''} data-name="${esc(a.name)}">
+    <span class="ic" aria-hidden="true">${ICONS[a.icon]||ICONS[c?.icon]||ICONS.ball}</span>
+    <div><h3>${esc(a.name)}${ext?`<span class="out" aria-hidden="true">${ICONS.out}</span>`:""}</h3>
+    <p>${esc(a.description||"")}</p>
+    <div class="meta"><span>${ext?`<i data-s="${esc(a.source)}"></i>`:""}<span class="tag ${ext?"":"home"}">${esc(where)}</span></span></div></div>
+  </a>`;
+}
+function roadBlock(items,title,intro,plain){
+  if(!items.length)return"";
+  return `<section class="road" aria-labelledby="road-h">
+    <div class="sec-head"><h2 id="road-h">${title}</h2></div>
+    <p>${intro}</p>
+    <ol${plain?' class="plain"':""}>${items.map(r=>`<li><b>${esc(r.name)}</b><span>${esc(r.description)}</span></li>`).join("")}</ol>
+  </section>`;
+}
+const pitch=`<svg class="pitch" viewBox="0 0 1000 420" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+  <defs><linearGradient id="fade" x1="0" x2="1"><stop offset=".15" stop-color="#000"/><stop offset=".75" stop-color="#000" stop-opacity="0"/></linearGradient></defs>
+  <g fill="none" stroke="currentColor" stroke-width="2" opacity=".55">
+    <rect x="380" y="30" width="580" height="360" rx="2"/>
+    <path d="M670 30v360"/><circle cx="670" cy="210" r="62"/>
+    <path d="M960 120h-90v180h90M960 165h-34v90h34"/>
+    <path d="M380 120h90v180h-90M380 165h34v90h-34"/>
+    <path d="M870 170a50 50 0 0 0 0 80M470 170a50 50 0 0 1 0 80"/>
+  </g>
+  <circle cx="670" cy="210" r="4" fill="currentColor" opacity=".8"/>
+  <rect width="1000" height="420" fill="url(#fade)"/>
+</svg>`;
+
+/* ---------- pagina's ---------- */
+function viewHome(){
+  const recent=store.get("ogv-recent",[]).map(n=>apps.find(a=>a.name===n)).filter(Boolean).slice(0,6);
+  const quick=[["matchday/","Wedstrijdblad maken","sheet"],["tactiekbord/","Tactiek tekenen","board"]];
+  const sc=apps.find(a=>a.category==="Scouting & spelers"); if(sc)quick.push([sc.url,"Speler scouten","scout"]);
+  return `
+  <section class="hero" aria-labelledby="hi">${pitch}
+    <p class="date">${esc(dateStr.charAt(0).toUpperCase()+dateStr.slice(1))}, week ${isoWeek(now)}</p>
+    <h1 id="hi">${greet}, trainer</h1>
+    <div class="quick">${quick.map(([u,l,i])=>`<a href="${esc(u)}"${isExt(u)?' target="_blank" rel="noopener"':''}>${ICONS[i]}${l}</a>`).join("")}</div>
+  </section>
+  ${recent.length?`<section aria-labelledby="rc-h"><div class="sec-head"><h2 id="rc-h">Laatst geopend</h2></div>
+    <div class="recent">${recent.map(a=>`<a class="chip" href="${esc(a.url)}"${isExt(a.url)?' target="_blank" rel="noopener"':''} data-name="${esc(a.name)}"><span class="ic" aria-hidden="true">${ICONS[a.icon]||ICONS.ball}</span>${esc(a.name)}</a>`).join("")}</div></section>`:""}
+  ${CATS.map(c=>{const it=apps.filter(a=>a.category===c.name);if(!it.length)return"";
+    return `<section aria-labelledby="h-${c.slug}"><div class="sec-head"><h2 id="h-${c.slug}">${esc(c.name)}</h2><a href="#/${c.slug}">Alles bekijken</a></div>
+    <div class="apps">${it.map(appCard).join("")}</div></section>`}).join("")}
+  ${roadBlock(road,"Wat eraan komt","We bouwen het portaal uit tot één clubplatform: één spelerslijst die elke app gebruikt, zodat je gegevens maar één keer invult.")}
+  <details class="install-tip"><summary>Het portaal als app op je gsm zetten</summary><ol>
+    <li>iPhone (Safari): tik op Delen en kies Zet op beginscherm.</li>
+    <li>Android (Chrome): tik op het menu en kies App installeren.</li>
+  </ol></details>`;
+}
+function viewCat(c){
+  const it=apps.filter(a=>a.category===c.name), rd=road.filter(r=>r.category===c.name);
+  return `<section aria-labelledby="ch"><div class="sec-head"><h2 id="ch" style="font-size:40px">${esc(c.name)}</h2></div>
+    <p style="margin:-6px 0 18px;color:var(--muted)">${esc(c.intro)}</p>
+    ${it.length?`<div class="apps">${it.map(appCard).join("")}</div>`:`<div class="empty"><strong>Nog geen apps</strong>Hier komen de apps voor ${esc(c.name.toLowerCase())}.</div>`}
+  </section>${roadBlock(rd,"Binnenkort","Deze onderdelen staan op de planning.",1)}`;
+}
+function viewSearch(t){
+  const hit=a=>(a.name+" "+(a.description||"")+" "+a.category+" "+a.source).toLowerCase().includes(t);
+  const it=apps.filter(hit), rd=road.filter(hit);
+  if(!it.length&&!rd.length)return `<div class="empty"><strong>Geen app gevonden</strong>Niets past bij "${esc(q.trim())}". Zoek op een ander woord, bijvoorbeeld opstelling of scouting.<br><button type="button" id="clearQ">Zoekopdracht wissen</button></div>`;
+  return `<section><div class="sec-head"><h2>Resultaten</h2><p>${it.length} ${it.length===1?"app":"apps"}</p></div><div class="apps">${it.map(appCard).join("")}</div></section>${roadBlock(rd,"Binnenkort","",1)}`;
+}
+
+/* ---------- navigatie ---------- */
+function route(){const s=(location.hash.replace(/^#\/?/,"")||"").split("/")[0];return CATS.find(c=>c.slug===s)||null}
+function renderNav(){
+  const cur=route(), cnt=c=>apps.filter(a=>a.category===c.name).length;
+  const items=[{slug:"",name:"Overzicht",short:"Overzicht",icon:"home"},...CATS];
+  document.getElementById("nav").innerHTML=items.map(c=>`<a href="#/${c.slug}"${(cur?.slug||"")===c.slug?' aria-current="page"':""}>${ICONS[c.icon]}${esc(c.name)}${c.slug?`<span class="count">${cnt(c)||""}</span>`:""}</a>`).join("");
+  document.getElementById("tabbar").innerHTML=items.map(c=>`<a href="#/${c.slug}"${(cur?.slug||"")===c.slug?' aria-current="page"':""}>${ICONS[c.icon]}<span>${esc(c.short)}</span></a>`).join("");
 }
 function render(){
-  const t=q.trim().toLowerCase();
-  const list=apps.filter(a=>!t||(a.name+" "+(a.description||"")+" "+a.source+" "+a.category).toLowerCase().includes(t));
-  const el=document.getElementById("list");
-  if(!list.length){el.innerHTML=`<div class="empty"><strong>Niets gevonden</strong>Probeer een ander zoekwoord.</div>`;return}
-  el.innerHTML=CATS.map(c=>{const it=list.filter(a=>a.category===c);return it.length?`<section class="group"><h2>${esc(c)}</h2><div class="grid">${it.map(tile).join("")}</div></section>`:""}).join("");
+  renderNav();
+  const t=q.trim().toLowerCase(), c=route();
+  const v=document.getElementById("view");
+  v.innerHTML=t?viewSearch(t):c?viewCat(c):viewHome();
+  document.title=c&&!t?`${c.name} | OGV Trainers`:"OGV Trainers";
+  const cl=document.getElementById("clearQ"); if(cl)cl.onclick=()=>{q="";qi.value="";render();qi.focus()};
 }
-document.getElementById("q").addEventListener("input",e=>{q=e.target.value;render()});
-fetch("apps.json",{cache:"no-cache"}).then(r=>r.json()).then(d=>{apps=d.apps||[];render()})
-  .catch(()=>{document.getElementById("list").innerHTML=`<div class="empty"><strong>Apps laden mislukt</strong>Controleer je internetverbinding en open het portaal opnieuw.</div>`});
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+const qi=document.getElementById("q");
+qi.addEventListener("input",e=>{q=e.target.value;render()});
+document.addEventListener("keydown",e=>{
+  if(e.key==="/"&&document.activeElement!==qi&&!e.metaKey&&!e.ctrlKey){e.preventDefault();qi.focus()}
+  if(e.key==="Escape"&&document.activeElement===qi){q="";qi.value="";render()}
+});
+addEventListener("hashchange",()=>{q="";qi.value="";render();scrollTo(0,0)});
+/* laatst geopend bijhouden */
+document.addEventListener("click",e=>{const a=e.target.closest("a[data-name]");if(!a)return;
+  const n=a.dataset.name, r=store.get("ogv-recent",[]).filter(x=>x!==n);r.unshift(n);store.set("ogv-recent",r.slice(0,8))});
+
+/* ---------- thema ---------- */
+function themeIcon(){const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  document.querySelectorAll("[data-theme-toggle]").forEach(b=>b.innerHTML=dark?ICONS.sun:ICONS.moon)}
+document.querySelectorAll("[data-theme-toggle]").forEach(b=>b.addEventListener("click",()=>{
+  const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  const t=dark?"light":"dark";document.documentElement.dataset.theme=t;try{localStorage.setItem("ogv-theme",t)}catch(e){}themeIcon()}));
+themeIcon();
+
+/* ---------- installeren (Android/Chrome/desktop) ---------- */
+let deferred=null;const ib=document.getElementById("installRail");
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;ib.classList.add("show")});
+ib.addEventListener("click",async()=>{if(!deferred)return;deferred.prompt();await deferred.userChoice;deferred=null;ib.classList.remove("show")});
+
+/* ---------- data ---------- */
+fetch("apps.json",{cache:"no-cache"}).then(r=>r.json()).then(d=>{apps=d.apps||[];road=d.roadmap||[];render()})
+  .catch(()=>{renderNav();document.getElementById("view").innerHTML=`<div class="empty"><strong>Apps laden mislukt</strong>Er is geen internetverbinding. Verbind opnieuw en vernieuw de pagina.</div>`});
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 </script>
 </body>
 </html>

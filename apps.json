@@ -1,5 +1,5 @@
 {
-  "_uitleg": "Voeg een app toe door hier een blok bij te zetten (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin / Andere, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch/sheet).",
+  "_uitleg": "Voeg een app toe met een blok in 'apps' (name, url, source: Lovable/Claude/Google AI Studio/Ander, category: Wedstrijd / Training & tactiek / Scouting & spelers / Planning & admin, icon: mic/rotate/board/video/field/scout/calendar/players/ball/stopwatch/sheet/check/chart, description). 'roadmap' toont wat nog gebouwd wordt.",
   "apps": [
     {
       "name": "Matchday",
@@ -72,6 +72,38 @@
       "category": "Scouting & spelers",
       "icon": "scout",
       "description": "Scoutingsdatabase: spelers opzoeken en beoordelen."
+    }
+  ],
+  "roadmap": [
+    {
+      "name": "Spelers & ploegen",
+      "category": "Scouting & spelers",
+      "icon": "players",
+      "description": "Eén spelerslijst per ploeg, waar elke app uit leest. Nooit meer namen overtypen."
+    },
+    {
+      "name": "Aanwezigheden",
+      "category": "Planning & admin",
+      "icon": "check",
+      "description": "Op training in tien seconden afvinken wie er is, met een seizoensoverzicht per speler."
+    },
+    {
+      "name": "Evaluaties",
+      "category": "Scouting & spelers",
+      "icon": "chart",
+      "description": "Spelers beoordelen per periode volgens het opleidingsplan, met de evolutie in één grafiek."
+    },
+    {
+      "name": "Oefeningenbank",
+      "category": "Training & tactiek",
+      "icon": "ball",
+      "description": "Oefeningen van alle trainers, te filteren op leeftijd, speelvorm en basisprincipe."
+    },
+    {
+      "name": "Clubkalender",
+      "category": "Planning & admin",
+      "icon": "calendar",
+      "description": "Trainingen, wedstrijden en terreinen van alle ploegen in één kalender."
     }
   ]
 }
