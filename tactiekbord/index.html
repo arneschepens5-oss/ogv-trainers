@@ -1291,7 +1291,7 @@ function pasteClip(){if(!clipboard)return;pushUndo();const fr=frame(),f=F(),off=
 
 /* ========== steps ========== */
 function setCur(i){if(play)stopPlay();cancelBuild();cur=clamp(i,0,doc.frames.length-1);setSel(null);renderStepbar();render();saveDraft();if(tab==='steps')renderPane()}
-function addStep(){if(play)stopPlay();cancelBuild();pushUndo();const nf=nextFrameFrom(frame());doc.frames.splice(cur+1,0,nf);cur++;setSel(null);afterChange(true)}
+function addStep(){if(play)stopPlay();cancelBuild();pushUndo();const nf=nextFrameFrom(frame());doc.frames.splice(cur+1,0,nf);cur++;setSel(null);afterChange(true);toast(`Stap ${cur+1} gemaakt. Wat je tekende staat nog in stap ${cur}: tik op ${cur} om terug te gaan.`)}
 function dupStep(){pushUndo();const nf=clone(frame());nf.items.forEach(i=>i.id=uid());nf.paths={};doc.frames.splice(cur+1,0,nf);cur++;afterChange(true)}
 function delStep(){if(doc.frames.length<2){toast('Een bord heeft minstens één stap.');return}pushUndo();doc.frames.splice(cur,1);cur=Math.min(cur,doc.frames.length-1);afterChange(true);toast('Stap verwijderd. Ongedaan maken kan met ↶.')}
 function moveStep(dir){const j=cur+dir;if(j<0||j>=doc.frames.length)return;pushUndo();const t=doc.frames[cur];doc.frames[cur]=doc.frames[j];doc.frames[j]=t;cur=j;afterChange(true)}
@@ -1465,8 +1465,8 @@ function renderPane(){
     h=`<div class="form">
       <div class="frow"><span class="lbl">Stap ${cur+1}/${doc.frames.length}</span><span class="hint" style="flex:1">Het coachingspunt verschijnt bij afspelen, in de video en in de PDF.</span></div>
       <textarea class="inp" id="stNote" maxlength="200" placeholder="Wat moeten de spelers hier zien of doen?">${esc(fr.note||'')}</textarea>
-      <div class="frow"><button class="btn primary" id="stNext">+ Volgende stap</button><button class="btn" id="stDup">Dupliceer</button><button class="btn" id="stLeft" aria-label="Stap naar voren" ${cur===0?'disabled':''}>◀</button><button class="btn" id="stRight" aria-label="Stap naar achter" ${cur===doc.frames.length-1?'disabled':''}>▶</button><button class="btn danger" id="stDel" ${doc.frames.length<2?'disabled':''}>Verwijder</button></div>
-      <p class="hint">Volgende stap laat spelers en bal de pijlen volgen, ook gebogen. Dupliceer kopieert alles, pijlen inbegrepen. Selecteer een speler in stap 2 of later om zijn looplijn te buigen met het gele bolletje.</p>
+      <div class="frow"><button class="btn" id="stNext">+ Nieuwe stap</button><button class="btn" id="stDup">Dupliceer</button><button class="btn" id="stLeft" aria-label="Stap naar voren" ${cur===0?'disabled':''}>◀</button><button class="btn" id="stRight" aria-label="Stap naar achter" ${cur===doc.frames.length-1?'disabled':''}>▶</button><button class="btn danger" id="stDel" ${doc.frames.length<2?'disabled':''}>Verwijder</button></div>
+      <p class="hint">Je tekst wordt vanzelf bewaard. Nieuwe stap maakt een volgend beeld en laat spelers en bal de pijlen volgen, ook gebogen. Dupliceer kopieert alles, pijlen inbegrepen. Selecteer een speler in stap 2 of later om zijn looplijn te buigen met het gele bolletje.</p>
       <div class="frow"><span class="lbl">Overgang</span><div class="chips" id="stDur">${[[.8,'Snel'],[1.3,'Normaal'],[2,'Traag'],[3,'Heel traag']].map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${(fr.dur||1.3)==v}">${l}</button>`).join('')}</div></div>
       <div class="frow"><span class="lbl">Afspelen</span><div class="chips" id="stSpeed">${[[.6,'0,6×'],[1,'1×'],[1.5,'1,5×']].map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${(doc.speed||1)==v}">${l}</button>`).join('')}</div><button class="chip" id="stLoop" aria-pressed="${!!doc.loop}">Herhalen</button><button class="chip" id="stGhost" aria-pressed="${!!prefs.ghost}">Vorige stap tonen</button></div>
     </div>`;
@@ -1489,7 +1489,7 @@ function bindPane(){
   on('#pfNames',()=>{pushUndo();doc.style.names=!doc.style.names;afterChange(true)}); on('#pfNew',()=>{location.hash='#home'});
   const dims=()=>{const W=clamp(+$('#pfW').value||30,5,120),L=clamp(+$('#pfL').value||20,5,120);if(W===doc.pitch.W&&L===doc.pitch.L)return;pushUndo();rescale(W/doc.pitch.W,L/doc.pitch.L);doc.pitch.W=W;doc.pitch.L=L;afterChange(true)};
   ['#pfW','#pfL'].forEach(s=>{const el=p.querySelector(s);if(el)el.addEventListener('change',dims)});
-  const note=p.querySelector('#stNote'); if(note){let snap=false;note.addEventListener('input',e=>{if(!snap){pushUndo();snap=true}frame().note=e.target.value;saveDraft()});note.addEventListener('blur',()=>snap=false)}
+  const note=p.querySelector('#stNote'); if(note){let snap=false;note.addEventListener('input',e=>{if(!snap){pushUndo();snap=true}frame().note=e.target.value;saveDraft()});note.addEventListener('blur',()=>snap=false);note.addEventListener('focus',()=>{if(sel.objs.size||sel.item){setSel(null);render()}})}
   on('#stNext',addStep); on('#stDup',dupStep); on('#stDel',delStep); on('#stLeft',()=>moveStep(-1)); on('#stRight',()=>moveStep(1));
   chipsOn('stDur',v=>{pushUndo();frame().dur=+v;saveDraft();renderPane()}); chipsOn('stSpeed',v=>{doc.speed=+v;saveDraft();renderPane()});
   on('#stLoop',()=>{doc.loop=!doc.loop;saveDraft();renderPane()}); on('#stGhost',()=>{prefs.ghost=!prefs.ghost;savePrefs();renderPane();render()});
