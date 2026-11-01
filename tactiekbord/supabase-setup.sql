@@ -29,3 +29,6 @@ create policy "eigen borden wijzigen" on public.boards
   for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "eigen borden verwijderen" on public.boards
   for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Ingelogde trainers mogen de tabel gebruiken (RLS beperkt tot eigen borden); anoniem niets.
+grant select, insert, update, delete on public.boards to authenticated;
