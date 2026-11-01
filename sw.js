@@ -1,6 +1,6 @@
 // Bewaart het portaal op de gsm zodat het snel opent. De applijst wordt altijd eerst online opgehaald.
-const CACHE = "ogv-trainers-v2";
-const SHELL = ["./", "index.html", "style.css", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/favicon.png", "matchday/", "icons/icon-512.png"];
+const CACHE = "ogv-trainers-v3";
+const SHELL = ["./", "index.html", "style.css", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/favicon.png", "matchday/", "tactiekbord/", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {
