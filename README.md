@@ -15,3 +15,6 @@ Tactiekbord om spelvormen uit te tekenen en te animeren: 5v5, 8v8, 11v11 of een 
 Spelers, materiaal, pijlen (pass, loopactie, dribbel), zones, verbindingslijnen en tekst; stappen met
 coachingspunt die je afspeelt. Export als video (MP4/WebM), PNG of PDF, en delen als link of .json.
 Borden blijven in de browser van het toestel; maak via het startscherm een back-up van alle borden.
+Inloggen (optioneel) loopt via Supabase: elke trainer ziet alleen zijn eigen borden, op elk toestel.
+Accounts maakt de beheerder aan in Supabase (Authentication → Users → Add user). De tabel staat in
+`tactiekbord/supabase-setup.sql`.
