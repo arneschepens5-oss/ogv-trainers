@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -158,6 +158,6 @@ fetch("apps.json",{cache:"no-cache"}).then(r=>r.json()).then(d=>{apps=d.apps||[]
   .catch(()=>{document.getElementById("list").innerHTML=`<div class="empty"><strong>Apps laden mislukt</strong>Er is geen internetverbinding. Verbind opnieuw en vernieuw de pagina.</div>`});
 if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 </script>
-<script src="pitch.js?v=6" defer></script>
+<script src="pitch.js?v=8" defer></script>
 </body>
 </html>

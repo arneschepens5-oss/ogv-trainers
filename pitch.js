@@ -140,7 +140,7 @@
 
   function resize() {
     const r = cv.getBoundingClientRect();
-    dpr = Math.min(2, devicePixelRatio || 1); w = r.width; h = r.height;
+    dpr = Math.min(1.5, devicePixelRatio || 1); w = r.width; h = r.height;
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     if (reduce || !running) draw(clock);
   }
@@ -151,12 +151,16 @@
     draw(clock); raf = requestAnimationFrame(loop);
   }
   function setRun() {
-    const want = !reduce && visible && !document.hidden;
+    const want = !reduce && visible && !scrolling && !document.hidden;
     if (want && !running) { running = true; last = 0; raf = requestAnimationFrame(loop); }
     if (!want && running) { running = false; cancelAnimationFrame(raf); }
   }
   new ResizeObserver(resize).observe(cv);
-  new IntersectionObserver(e => { visible = e[0].isIntersecting; setRun(); }).observe(cv);
+  // stoppen zodra het veld grotendeels uit beeld is
+  new IntersectionObserver(e => { visible = e[0].intersectionRatio > 0.25; setRun(); }, { threshold: [0, 0.25, 0.5] }).observe(cv);
+  // pauzeren zolang er gescrold wordt, zodat het scrollen vlot blijft
+  let scrolling = false, st = 0;
+  addEventListener("scroll", () => { if (!scrolling) { scrolling = true; setRun(); } clearTimeout(st); st = setTimeout(() => { scrolling = false; setRun(); }, 140); }, { passive: true });
   document.addEventListener("visibilitychange", setRun);
   resize(); setRun();
 })();
