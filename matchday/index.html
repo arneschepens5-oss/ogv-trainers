@@ -136,6 +136,7 @@ dialog h3{margin:0;font-family:var(--display);font-size:26px;font-weight:400}
   .scaler{transform:none!important;width:auto!important;height:auto!important}
   .sheet-wrap{box-shadow:none}
 }
+html.in-platform a[href="../"]{display:none!important}
 </style>
 </head>
 <body>
@@ -339,6 +340,15 @@ function load(){
 }
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},150)}
 load();
+/* Platform: ploeg en spelers overnemen uit "Mijn ploeg" (het platform zet ze klaar in ogv-matchday-import). */
+(function(){try{const imp=JSON.parse(localStorage.getItem('ogv-matchday-import')||'null');if(!imp||!imp.id||!FORMATS[imp.format])return;
+  localStorage.removeItem('ogv-matchday-import');const tid='ogv-'+imp.id;let t=S.teams[tid];
+  if(!t){t=newTeam(imp.name,imp.format);delete S.teams[t.id];t.id=tid;S.teams[tid]=t;if(S.fresh&&S.teams[S.cur]&&!S.teams[S.cur].squad.length)delete S.teams[S.cur];}
+  t.name=imp.name;const old=t.squad||[];t.squad=imp.squad.map(p=>{const o=old.find(x=>x.id===p.id);return {id:p.id,name:p.name,nr:p.nr??(o?o.nr:'')}});
+  if(t.match){t.match.sel=(t.match.sel||[]).filter(id=>t.squad.some(p=>p.id===id));if(!t.match.sel.length)t.match.sel=imp.sel&&imp.sel.length?imp.sel.filter(id=>t.squad.some(p=>p.id===id)):t.squad.map(p=>p.id);
+    if(imp.opp&&!t.match.opp)t.match.opp=imp.opp;if(imp.date)t.match.date=imp.date;if(imp.kick)t.match.kick=imp.kick;if(imp.home)t.match.home=imp.home;}
+  S.cur=tid;delete S.fresh;save();}catch(e){console.warn(e)}})();
+if(window.self!==window.top)document.documentElement.classList.add('in-platform');
 const T=()=>S.teams[S.cur];
 const M=()=>T().match;
 const P=id=>T().squad.find(p=>p.id===id);

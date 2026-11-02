@@ -165,3 +165,64 @@ grant select, insert, update, delete on public.teams, public.team_trainers, publ
   public.attendance, public.evaluations, public.goals to authenticated;
 grant execute on function public.is_trainer(uuid), public.add_trainer(uuid, text) to authenticated;
 revoke all on function public.add_trainer(uuid, text) from anon;
+
+-- =====================================================================
+-- Versie 2: één platform. Uitgebreid wedstrijdverslag, live coachen,
+-- club-uitslagen voor alle trainers, trainingsplan, scouting en mixschema.
+-- =====================================================================
+alter table public.teams      add column if not exists share_ratings  boolean not null default false;
+alter table public.teams      add column if not exists periods        integer;
+alter table public.teams      add column if not exists period_minutes integer;
+alter table public.events     add column if not exists report jsonb not null default '{}';
+alter table public.events     add column if not exists live   jsonb;
+alter table public.events     add column if not exists plan   jsonb;
+alter table public.events     add column if not exists lineup jsonb;
+alter table public.attendance add column if not exists position    text;
+alter table public.attendance add column if not exists scores      jsonb not null default '{}';
+alter table public.attendance add column if not exists strengths   jsonb not null default '[]';
+alter table public.attendance add column if not exists player_name text;
+
+-- Alle trainers zien de namen van alle ploegen, en alle wedstrijden met uitslag en verslag.
+drop policy if exists "ploeg lezen" on public.teams;
+create policy "ploeg lezen" on public.teams for select to authenticated using (true);
+drop policy if exists "uitslagen club" on public.events;
+create policy "uitslagen club" on public.events for select to authenticated using (type = 'wedstrijd');
+
+-- Spelersbeoordelingen van een wedstrijd: alleen zichtbaar voor andere trainers als de ploeg dat aanzet.
+create or replace function public.shares_ratings(t uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select share_ratings from public.teams where id = t), false);
+$$;
+drop policy if exists "beoordelingen club" on public.attendance;
+create policy "beoordelingen club" on public.attendance for select to authenticated
+  using (public.shares_ratings(team_id) and exists (select 1 from public.events e where e.id = event_id and e.type = 'wedstrijd'));
+grant execute on function public.shares_ratings(uuid) to authenticated;
+
+-- Scouting: één gedeelde database voor alle trainers. Verwijderen kan alleen wie de speler toevoegde.
+create table if not exists public.scouting (
+  id         text primary key,
+  data       jsonb not null,
+  created_by uuid default auth.uid(),
+  updated_at timestamptz not null default now()
+);
+alter table public.scouting enable row level security;
+drop policy if exists "scouting lezen" on public.scouting;
+drop policy if exists "scouting toevoegen" on public.scouting;
+drop policy if exists "scouting wijzigen" on public.scouting;
+drop policy if exists "scouting verwijderen" on public.scouting;
+create policy "scouting lezen"       on public.scouting for select to authenticated using (true);
+create policy "scouting toevoegen"   on public.scouting for insert to authenticated with check (true);
+create policy "scouting wijzigen"    on public.scouting for update to authenticated using (true) with check (true);
+create policy "scouting verwijderen" on public.scouting for delete to authenticated using (created_by = auth.uid() or created_by is null);
+grant select, insert, update, delete on public.scouting to authenticated;
+
+-- Clubdocumenten (bv. de namen in het mixschema): leesbaar en aanpasbaar voor alle trainers.
+create table if not exists public.club_docs (
+  key        text primary key,
+  data       jsonb not null default '{}',
+  updated_at timestamptz not null default now()
+);
+alter table public.club_docs enable row level security;
+drop policy if exists "clubdocs" on public.club_docs;
+create policy "clubdocs" on public.club_docs for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on public.club_docs to authenticated;

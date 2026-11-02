@@ -1,10 +1,13 @@
-// Bewaart het portaal op de gsm zodat het snel opent. De applijst wordt altijd eerst online opgehaald.
-const CACHE = "ogv-trainers-v10";
-const SHELL = ["./", "index.html", "style.css?v=8", "pitch.js?v=8", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/favicon.png", "matchday/", "tactiekbord/", "trainingen/", "ploeg/", "tactiekbord/vendor/supabase-2.118.0.js", "icons/icon-512.png"];
+// Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
+const CACHE = "ogv-platform-v10";
+const SHELL = ["./", "index.html", "app/app.css?v=10", "app/core.js?v=10", "app/ploeg.js?v=10", "app/wedstrijd.js?v=10", "app/kennis.js?v=10", "pitch.js?v=10",
+  "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
+  "trainingen/trainingen.json", "matchday/", "tactiekbord/"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
-  e.respondWith(fetch(e.request).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; }).catch(() => caches.match(e.request)));
+  if (/\.(mp4|pdf|docx|pptx)$/i.test(url.pathname)) return; // grote bestanden niet in de cache
+  e.respondWith(fetch(e.request).then(r => { const copy = r.clone(); if (r.ok) caches.open(CACHE).then(c => c.put(e.request, copy)); return r; }).catch(() => caches.match(e.request)));
 });

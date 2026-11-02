@@ -1,31 +1,26 @@
-# OGV Trainersportaal
+# OGV Trainers — platform van OG Vorselaar
 
-Startscherm met alle trainersapps van OG Vorselaar. Installeer het op je gsm via
-"Zet op beginscherm" (iPhone) of "App installeren" (Android).
+Eén website voor alle jeugdtrainers: ploeg, kalender, aanwezigheden, uitgebreide wedstrijdverslagen,
+live coachen, opstelling per kwart, evaluaties, cijfers, uitslagen van de club, trainingsbibliotheek,
+trainingen plannen, spelprincipes, zonekaart, videoanalyse, animatiebord, wedstrijdblad, mixschema en scouting.
 
-Een app toevoegen: zet een blok bij in `apps.json`.
+## Opbouw
+- `index.html` + `app/` — het platform (één pagina, navigatie via `#/...`).
+  - `app/core.js` gegevens (Supabase of demo), aanmelden, navigatie
+  - `app/ploeg.js` start, ploeg, spelers, evaluaties, cijfers, instellingen
+  - `app/wedstrijd.js` kalender, trainingsplan, wedstrijdverslag, opstelling per kwart, live coachen, uitslagen club
+  - `app/kennis.js` bibliotheek, spelprincipes, zonekaart, videoanalyse, ingebouwde tools, mixschema, scouting
+- `trainingen/` trainingsbibliotheek (PDF's, aanpasbare versies, `trainingen.json`)
+- `media/` animaties van de spelprincipes en de zonekaart
+- `tactiekbord/` animatiebord, `matchday/` wedstrijdblad (ingebouwd in het platform)
 
-## Matchday-blad (`matchday/`)
-Wedstrijdblad voor de kleedkamer voor elke ploeg van de club: kies 2v2, 3v3, 5v5, 8v8 of 11v11,
-een opstelling (of sleep zelf de posities), vink de selectie aan, kies kapitein en 1 tot 3 opdrachten,
-en druk af op A4. Gegevens blijven in de browser van het toestel; een trainer kan meerdere ploegen bewaren.
+## Database (Supabase)
+Eenmalig, en opnieuw na elke update van het script: voer `ploeg/supabase-setup.sql` uit in Supabase → SQL Editor.
+Elke trainer ziet alleen de ploegen waar hij trainer van is. Uitslagen en wedstrijdverslagen zijn zichtbaar
+voor alle trainers; spelersbeoordelingen alleen als de ploeg dat aanzet. Accounts maak je aan in
+Supabase → Authentication → Users → Add user.
 
-## Animatiebord (`tactiekbord/`)
-Tactiekbord om spelvormen uit te tekenen en te animeren: 5v5, 8v8, 11v11 of een oefenzone op maat.
-Spelers, materiaal, pijlen (pass, loopactie, dribbel), zones, verbindingslijnen en tekst; stappen met
-coachingspunt die je afspeelt. Export als video (MP4/WebM), PNG of PDF, en delen als link of .json.
-Borden blijven in de browser van het toestel; maak via het startscherm een back-up van alle borden.
-Inloggen (optioneel) loopt via Supabase: elke trainer ziet alleen zijn eigen borden, op elk toestel.
-Accounts maakt de beheerder aan in Supabase (Authentication → Users → Add user). De tabel staat in
-`tactiekbord/supabase-setup.sql`.
+Gegevens van kinderen (spelers, scouting) staan nooit in deze (openbare) repository, alleen in Supabase.
 
-## Mijn ploeg (`ploeg/`)
-Ploegapp naar het voorbeeld van PSD: spelers, kalender, aanwezigheden, wedstrijd- en trainingsverslag,
-evaluaties (4 momenten, score 1-5 per onderdeel), persoonlijke doelen en ploegcijfers met export naar Excel.
-Gegevens staan in Supabase; elke trainer ziet alleen de ploegen waaraan hij gekoppeld is. Dezelfde login
-als het Animatiebord. Eenmalig klaarzetten: voer `ploeg/supabase-setup.sql` uit in Supabase → SQL Editor.
-Uitproberen zonder account: open `ploeg/?demo` (verzonnen spelers, alleen op dat toestel).
-
-## Trainingsbibliotheek (`trainingen/`)
-Alle trainingen uit SharePoint (OGV Sportief Trainers → Trainingen) per leeftijdsgroep, met PDF en aanpasbare
-versie. De lijst staat in `trainingen/trainingen.json`.
+## Uitproberen
+Open de site met `?demo` voor een demo met verzonnen spelers (alleen op dat toestel).

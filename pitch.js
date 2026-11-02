@@ -1,9 +1,8 @@
 /* 3D-veld voor het portaal: een 8v8-veld in perspectief waarop OGV een opbouw speelt.
    Opbouw: keeper -> de 4 zakt uit -> switch naar de hoge back -> flank -> spits.
    Getekend met canvas 2D en een eigen perspectiefprojectie (geen 3D-bibliotheek nodig). */
-(function () {
-  const cv = document.getElementById("pitch3d");
-  if (!cv) return;
+window.mountPitch = function (cv) {
+  if (!cv) return null;
   const ctx = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const L = 64, W = 42, HL = L / 2, HW = W / 2;            // veld 64 x 42 m
@@ -155,12 +154,14 @@
     if (want && !running) { running = true; last = 0; raf = requestAnimationFrame(loop); }
     if (!want && running) { running = false; cancelAnimationFrame(raf); }
   }
-  new ResizeObserver(resize).observe(cv);
+  const ro = new ResizeObserver(resize); ro.observe(cv);
   // stoppen zodra het veld grotendeels uit beeld is
-  new IntersectionObserver(e => { visible = e[0].intersectionRatio > 0.25; setRun(); }, { threshold: [0, 0.25, 0.5] }).observe(cv);
+  const io = new IntersectionObserver(e => { visible = e[0].intersectionRatio > 0.25; setRun(); }, { threshold: [0, 0.25, 0.5] }); io.observe(cv);
   // pauzeren zolang er gescrold wordt, zodat het scrollen vlot blijft
   let scrolling = false, st = 0;
-  addEventListener("scroll", () => { if (!scrolling) { scrolling = true; setRun(); } clearTimeout(st); st = setTimeout(() => { scrolling = false; setRun(); }, 140); }, { passive: true });
+  const onScroll = () => { if (!scrolling) { scrolling = true; setRun(); } clearTimeout(st); st = setTimeout(() => { scrolling = false; setRun(); }, 140); };
+  addEventListener("scroll", onScroll, { passive: true });
   document.addEventListener("visibilitychange", setRun);
   resize(); setRun();
-})();
+  return function stop() { running = false; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); removeEventListener("scroll", onScroll); document.removeEventListener("visibilitychange", setRun); };
+};
