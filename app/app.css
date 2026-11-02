@@ -159,8 +159,8 @@ dialog h2{font-size:24px;margin:0}
 /* tabs binnen een pagina */
 .ptabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 22px;overflow-x:auto;scrollbar-width:none}
 .ptabs::-webkit-scrollbar{display:none}
-.ptabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;font-weight:700;font-size:15px;color:var(--muted);cursor:pointer;white-space:nowrap;margin-bottom:-1px}
-.ptabs button[aria-selected="true"]{color:var(--ink);border-color:var(--yellow)}
+.ptabs button,.ptabs a{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;font-weight:700;font-size:15px;color:var(--muted);cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+.ptabs button[aria-selected="true"],.ptabs a[aria-selected="true"]{color:var(--ink);border-color:var(--yellow)}
 
 /* tabellen */
 .tbl{width:100%;border-collapse:collapse;font-size:14.5px}
@@ -700,3 +700,6 @@ html.theming,html.theming *{transition:background-color .3s ease,border-color .3
 .flt select,.flt input{font-size:14px;padding:8px 10px;min-height:38px;font-weight:500}
 .excard .chips .pill:not(.g){border:1px solid var(--line);color:var(--muted);font-weight:500}
 .shdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--yellow);margin-right:6px;vertical-align:1px}
+
+.libtabs{margin:4px 0 18px}
+.libtabs a{text-decoration:none;color:inherit;display:inline-flex;align-items:center}

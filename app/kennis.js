@@ -27,7 +27,7 @@ route("bibliotheek", { title: "Trainingsbibliotheek", render: async (v, id) => {
     $$(".tr", v).forEach(b => b.onclick = () => libDetail(L, b.dataset.id));
     $$("#bouw button", v).forEach(b => b.setAttribute("aria-pressed", b.dataset.b === libBouw));
   };
-  v.innerHTML = head("Trainingsbibliotheek", "Alle trainingen en oefeningen van de club. Kies je leeftijdsgroep, open een training en bekijk, download of plan ze.", `<input id="lq" type="search" placeholder="Zoek: omschakeling, 1v1, passing…" style="width:min(340px,100%)" value="${esc(libQ)}">`) +
+  v.innerHTML = head("Trainingsbibliotheek", "De uitgewerkte trainingen van de club per leeftijdsgroep. Open een training en bekijk, download of plan ze.", `<input id="lq" type="search" placeholder="Zoek: omschakeling, 1v1, passing…" style="width:min(340px,100%)" value="${esc(libQ)}">`) + libTabs("bibliotheek") +
     `<div class="bouw" id="bouw" role="group" aria-label="Leeftijdsgroep">${L.bouwen.map(b => `<button type="button" data-b="${b.id}"><b>${b.naam}</b><small>${b.leeftijd} · ${b.vorm}</small></button>`).join("")}</div><div id="libv"></div>`;
   $$("#bouw button", v).forEach(b => b.onclick = () => { libBouw = b.dataset.b; try { localStorage.setItem("tb-bouw", libBouw); } catch (e) {} libMap = "alle"; draw(); });
   $("#lq").oninput = e => { libQ = e.target.value; draw(); };

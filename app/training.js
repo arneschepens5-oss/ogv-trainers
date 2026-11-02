@@ -111,7 +111,7 @@ route("trainingen", { title: "Trainingen maken", auth: true, team: true, render:
     return `<div class="item" data-go="#/activiteit/${e.id}/plan"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(pl.theme || e.theme || "Training zonder thema")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${pl.intensity ? " · intensiteit " + pl.intensity : ""}</small></span>
     <span class="val">${n ? `<b>${n} oef.</b>${mins} min` : `<b style="color:var(--warn)">Maken</b>nog leeg`}</span></div>`; };
   v.innerHTML = head("Trainingen maken", "Stel elke training samen als een volledige fiche: oefeningen met categorie, duur, inspanning, rust, herhalingen, organisatie, aandachtspunten en een veldtekening.",
-    `<a class="btn ghost" href="#/oefeningen">${IC.ball}Oefenstof</a><button class="btn" type="button" id="addEv">${IC.plus}Training</button>`) +
+    `<a class="btn ghost" href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a><button class="btn" type="button" id="addEv">${IC.plus}Training</button>`) +
     (up.length ? `<div class="list">${up.map(it).join("")}</div>` : `<div class="empty"><b>Geen trainingen gepland</b>Voeg een training toe en herhaal ze wekelijks.</div>`) +
     (tpls.length ? `<div class="sec"><div class="row"><h2 style="margin:0">Sjablonen</h2><span class="spacer"></span><a class="link" href="#/sjablonen">Alle ${tpls.length} sjablonen bekijken</a></div><div class="list" style="margin-top:10px">${tpls.slice().sort((a, b) => (a.data.source === "PSD") - (b.data.source === "PSD")).slice(0, 4).map(x => `<div class="item static"><span class="num">${IC.copy}</span><span class="main"><b>${esc(x.title)}</b><small>${(normPlan(x.data).items || []).length} oefeningen · ${planMinutes(x.data)} min${x.data.source === "PSD" ? " · PSD" : ""}</small></span><button class="btn ghost small" type="button" data-tpl="${x.id}">Inplannen</button></div>`).join("")}</div></div>` : "") +
     (done.length ? `<div class="sec"><h2>Vorige trainingen</h2><div class="list">${done.map(it).join("")}</div></div>` : "");
@@ -323,10 +323,10 @@ async function printPlan(e) {
 /* ============ oefenstof: eigen oefeningen en de gedeelde clubdatabank ============ */
 const srcLine = (m, x) => { const by = x.source === "PSD" ? "PSD-databank" + (x.author ? " · " + x.author : "") : !items.mine(m) ? "Gedeeld door " + (x.shared_by || "een clubtrainer") : m.shared ? "Jij deelt dit met de club" : "Alleen voor jou";
   return `<small class="hint">${m.shared ? `<span class="shdot" aria-hidden="true"></span>` : ""}${esc(by)}</small>`; };
-route("oefeningen", { title: "Oefenstof", auth: true, render: async v => {
-  v.innerHTML = head("Oefenstof", "Laden…"); const mine = await items.listAll("oefening");
+route("oefeningen", { title: "Oefenstof · Trainingsbibliotheek", auth: true, render: async v => {
+  v.innerHTML = head("Trainingsbibliotheek", "Laden…") + libTabs("oefeningen"); const mine = await items.listAll("oefening");
   const f = exFilterState(); let shown = 36;
-  v.innerHTML = head("Oefenstof", "Alle oefeningen van de club op één plek: de PSD-databank, wat andere trainers delen en je eigen oefeningen. Gedeelde oefeningen kan iedere clubtrainer gebruiken; aanpassen doe je in een eigen kopie.", `<button class="btn" type="button" id="new">${IC.plus}Nieuwe oefening</button>`) +
+  v.innerHTML = head("Trainingsbibliotheek", "Alle losse oefeningen: de PSD-databank, wat andere trainers delen en je eigen oefeningen. Gedeelde oefeningen kan iedere clubtrainer gebruiken; aanpassen doe je in een eigen kopie.", `<button class="btn" type="button" id="new">${IC.plus}Nieuwe oefening</button>`) + libTabs("oefeningen") +
     `<div id="fb"></div><p class="hint" id="cnt" style="margin:10px 0"></p><div id="grid"></div>`;
   const card = m => { const x = m.data, th = exThemes(x), own = items.mine(m);
     return `<article class="excard"><div class="pic">${exPic(x, `<span class="ph0">${IC.field}</span>`)}</div><div class="bd"><b style="font-size:17px">${esc(m.title)}</b>
@@ -372,13 +372,13 @@ function tplView(x) {
     <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button><button class="btn" type="button" id="tv-plan">${IC.plus}Inplannen</button></div></div>`, "wide xl");
   $("#tv-plan", d).onclick = () => { d.close(); tplSchedule(x); };
 }
-route("sjablonen", { title: "Trainingssjablonen", auth: true, team: true, render: async v => {
-  v.innerHTML = head("Trainingssjablonen", "Laden…"); const tpls = await items.listAll("training").catch(() => []);
+route("sjablonen", { title: "Sjablonen · Trainingsbibliotheek", auth: true, team: true, render: async v => {
+  v.innerHTML = head("Trainingsbibliotheek", "Laden…") + libTabs("sjablonen"); const tpls = await items.listAll("training").catch(() => []);
   tpls.forEach(x => { x.data = normPlan(x.data); });
   const f = (() => { const s = exFilterState(); return { q: "", band: s.band || "", theme: "", src: "", author: "" }; })(); let shown = 30;
   const authors = [...new Set(tpls.map(x => x.data.author).filter(Boolean))].sort((a, b) => a.localeCompare(b, "nl"));
   const themesOf = x => [...new Set(x.data.items.flatMap(exThemes))].filter(t => t !== "Overige");
-  v.innerHTML = head("Trainingssjablonen", "Volledige trainingen die je in één keer op een training in je kalender zet: je eigen sjablonen, wat andere trainers delen en de trainingen uit de PSD-databank van de club.", `<a class="btn ghost" href="#/trainingen">${IC.plan}Trainingen maken</a>`) +
+  v.innerHTML = head("Trainingsbibliotheek", "Volledige trainingen die je in één keer op een training in je kalender zet: je eigen sjablonen, wat andere trainers delen en de trainingen uit de PSD-databank.", `<a class="btn ghost" href="#/trainingen">${IC.plan}Trainingen maken</a>`) + libTabs("sjablonen") +
     `<div class="filters"><label class="flt grow"><span>Zoeken</span><input type="search" data-f="q" placeholder="Thema, oefening…"></label>
       <label class="flt"><span>Leeftijd</span><select data-f="band"><option value="">Alle</option>${EX_BANDS.map(([k, l]) => `<option value="${k}"${f.band === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="flt"><span>Thema</span><select data-f="theme"><option value="">Alle</option>${EX_THEMES.map(t => `<option>${esc(t[0])}</option>`).join("")}</select></label>

@@ -69,8 +69,9 @@ const items = {
   async save(row) { row.updated_at = new Date().toISOString(); if (!row.id) row.id = uid(); if (mode === "demo") row.user_id = "demo"; else row.user_id = user.id; await db.save("trainer_items", row); return row; },
   async del(row) { if (row.file_path) await files.remove(row.file_path).catch(() => {}); await db.del("trainer_items", { id: row.id }); },
   /* eigen items plus wat andere trainers van de club gedeeld hebben */
-  async listAll(kind) { const own = await this.list(kind); if (mode === "demo") return own;
+  async listAll(kind) { const own = await this.list(kind); if (mode === "demo") { own.forEach(r => { if (r.data && !r.data.name && kind === "oefening") r.data.name = r.title; }); return own; }
     let sh = []; try { sh = await db.list("trainer_items", { kind, shared: true }); } catch (e) { /* ogv-update-v7 nog niet uitgevoerd */ }
+    own.concat(sh).forEach(r => { if (r.data && !r.data.name && kind === "oefening") r.data.name = r.title; });
     const ids = new Set(own.map(r => r.id)); return own.concat(sh.filter(r => !ids.has(r.id)).sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))); },
   mine: r => mode === "demo" || !r.user_id || r.user_id === user?.id,
   async share(row, on) { const was = row.shared; row.shared = on;
@@ -249,11 +250,11 @@ const NAV = [
   { g: null, items: [["start", "Start", "home"]] },
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
-  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["oefeningen", "Oefenstof", "ball"], ["sjablonen", "Trainings\u00ADsjablonen", "copy"], ["animatiebord", "Animatiebord", "board"]] },
+  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Scouting", items: [["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
-const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "oefeningen", sjabloon: "sjablonen", zonekaart: "opslag" };
+const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "bibliotheek", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
 let teardown = null;
@@ -307,6 +308,9 @@ async function render() {
 addEventListener("hashchange", render);
 
 function backLink(href, label) { return `<a class="crumb" href="${href}">${IC.back}${esc(label)}</a>`; }
+/* één trainingsbibliotheek met drie tabbladen */
+const LIB_TABS = [["bibliotheek", "Clubtrainingen"], ["oefeningen", "Oefenstof"], ["sjablonen", "Trainingssjablonen"]];
+const libTabs = curT => `<div class="ptabs libtabs" role="tablist">${LIB_TABS.map(([k, l]) => `<a role="tab" href="#/${k}" aria-selected="${k === curT}">${l}</a>`).join("")}</div>`;
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }
 
 /* ============ ploeg kiezen ============ */
