@@ -682,3 +682,20 @@ html.theming,html.theming *{transition:background-color .3s ease,border-color .3
 .item .main .notefull{display:block;white-space:normal;font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:3px}
 @media print{.mplayers .rate.on{border:1px solid #000}}
 .mplayers .rate{min-width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-stretch:115%;font-size:20px;background:var(--card3);color:var(--muted)}
+
+/* filters oefenstof en sjablonen */
+.filters{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end;padding:12px 14px;border-radius:var(--r);background:var(--card);border:1px solid var(--line)}
+.flt{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--muted);min-width:0}
+.flt select,.flt input{width:auto;min-width:130px;max-width:240px}
+.flt.grow{flex:1 1 220px}.flt.grow input{width:100%;max-width:none}
+.filters .link{align-self:center;margin-left:auto}
+@media (max-width:640px){.flt{flex:1 1 calc(50% - 8px)}.flt select,.flt input{min-width:0;max-width:none;width:100%}}
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.tplcard{display:flex;flex-direction:column;border-radius:var(--r);background:var(--card);border:1px solid var(--line);overflow:hidden}
+.tplcard .tstrip{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;background:#1E5A2E;aspect-ratio:3/1}
+.tplcard .tstrip>div{display:grid;place-items:center;overflow:hidden;background:#fff}
+.tplcard .tstrip>div.ph0{background:#1E5A2E;color:rgba(255,255,255,.5)}
+.tplcard .tstrip img,.tplcard .tstrip svg{width:100%;height:100%;object-fit:cover}
+.tplcard .bd{padding:12px 14px;display:flex;flex-direction:column;gap:7px;flex:1}
+.flt select,.flt input{font-size:14px;padding:8px 10px;min-height:38px;font-weight:500}
+.excard .chips .pill:not(.g){border:1px solid var(--line);color:var(--muted);font-weight:500}

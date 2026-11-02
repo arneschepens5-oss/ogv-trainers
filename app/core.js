@@ -50,6 +50,20 @@ const files = {
   },
   async remove(path) { if (!path || /^(https?:|media\/)/.test(path)) return; if (mode === "demo") { demoFiles.delete(path); return; } await sb.storage.from(BUCKET).remove([path]); }
 };
+/* afbeeldingen uit de privé-opslag: <img data-fp="pad"> krijgt automatisch een tijdelijke link (in groep opgevraagd) */
+const fpCache = new Map();
+async function hydrateImgs(root = document) {
+  const els = [...root.querySelectorAll("img[data-fp]:not([src])")]; if (!els.length) return;
+  const fresh = p => { const c = fpCache.get(p); return c && Date.now() - c.t < 50 * 60e3; };
+  const need = [...new Set(els.map(e => e.dataset.fp))].filter(p => !fresh(p));
+  if (need.length) {
+    if (mode === "demo" || !sb) need.forEach(p => fpCache.set(p, { u: demoFiles.get(p) || "", t: Date.now() }));
+    else for (let i = 0; i < need.length; i += 100) { const { data } = await sb.storage.from(BUCKET).createSignedUrls(need.slice(i, i + 100), 3600);
+      (data || []).forEach(d => d.signedUrl && fpCache.set(d.path, { u: d.signedUrl, t: Date.now() })); }
+  }
+  els.forEach(e => { const c = fpCache.get(e.dataset.fp); if (c?.u) e.src = c.u; });
+}
+let hyT; new MutationObserver(() => { clearTimeout(hyT); hyT = setTimeout(() => hydrateImgs().catch(() => {}), 40); }).observe(document.documentElement, { childList: true, subtree: true });
 const items = {
   async list(kind) { const rows = await db.list("trainer_items", mode === "demo" ? { kind } : { kind, user_id: user.id }); return rows.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || "")); },
   async save(row) { row.updated_at = new Date().toISOString(); if (!row.id) row.id = uid(); if (mode === "demo") row.user_id = "demo"; else row.user_id = user.id; await db.save("trainer_items", row); return row; },
@@ -227,11 +241,11 @@ const NAV = [
   { g: null, items: [["start", "Start", "home"]] },
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
-  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["oefeningen", "Mijn oefeningen", "ball"], ["animatiebord", "Animatiebord", "board"]] },
+  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["oefeningen", "Mijn oefeningen", "ball"], ["sjablonen", "Trainings\u00ADsjablonen", "copy"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Scouting", items: [["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
-const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "oefeningen", zonekaart: "opslag" };
+const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "oefeningen", sjabloon: "sjablonen", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
 let teardown = null;
