@@ -268,3 +268,15 @@ create policy "eigen bestanden wijzigen" on storage.objects for update to authen
   using (bucket_id = 'trainer-files' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "eigen bestanden verwijderen" on storage.objects for delete to authenticated
   using (bucket_id = 'trainer-files' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- =====================================================================
+-- Versie 4: wedstrijden automatisch overnemen van RBFA en link naar het officiële wedstrijdblad.
+-- =====================================================================
+alter table public.teams  add column if not exists rbfa_team_id   text;
+alter table public.teams  add column if not exists rbfa_synced_at timestamptz;
+alter table public.teams  add column if not exists sheet_url      text;
+alter table public.events add column if not exists rbfa_id        text;
+alter table public.events add column if not exists rbfa_state     text;
+alter table public.events add column if not exists rbfa_loc       boolean;
+alter table public.events add column if not exists sheet_url      text;
+create unique index if not exists events_rbfa on public.events(team_id, rbfa_id) where rbfa_id is not null;

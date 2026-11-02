@@ -70,8 +70,8 @@ const DEMO_PRINCIPLES = [
 /* ============ ingebouwde tools ============ */
 function embed(v, src, title) { v.innerHTML = `<iframe class="embed" src="${src}" title="${esc(title)}" allow="clipboard-write; fullscreen" loading="eager"></iframe>`; }
 route("animatiebord", { title: "Animatiebord", wide: true, render: (v, id) => embed(v, "tactiekbord/" + (id ? "#b-" + encodeURIComponent(id) : ""), "Animatiebord") });
-route("matchday", { title: "Wedstrijdblad", wide: true, render: v => {
-  if (S.team) { const next = S.events.find(e => e.type === "wedstrijd" && e.date >= todayIso());
+route("matchday", { title: "Wedstrijdblad", wide: true, render: (v, id) => {
+  if (S.team) { const next = (id && S.events.find(e => e.id === id)) || S.events.find(e => e.type === "wedstrijd" && e.date >= todayIso());
     const sel = next ? active().filter(p => { const a = attOf(next.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; }).map(p => p.id) : [];
     try { localStorage.setItem("ogv-matchday-import", JSON.stringify({ id: S.team.id, name: S.team.name, format: S.team.format || "5v5",
       squad: active().map(p => ({ id: p.id, name: pname(p), nr: p.number ?? "" })), sel, opp: next?.opponent || "", date: next?.date || "", kick: tm(next?.start_time), home: next ? (next.home === false ? "uit" : "thuis") : "" })); } catch (e) {} }

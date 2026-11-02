@@ -189,6 +189,7 @@ async function loadTeam(id) {
   const m = { team_id: id };
   [S.players, S.events, S.att, S.evals, S.goals, S.trainers] = await Promise.all(["players","events","attendance","evaluations","goals","team_trainers"].map(t => db.list(t, m)));
   sortPlayers(); sortEvents();
+  if (typeof rbfaAuto === "function") setTimeout(rbfaAuto, 800);
 }
 const sortPlayers = () => S.players.sort((a, b) => (a.number ?? 99) - (b.number ?? 99) || pname(a).localeCompare(pname(b)));
 const sortEvents = () => S.events.sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || "")));

@@ -37,7 +37,7 @@ route("start", { title: "Start", render: async v => {
 
 function evItem(e) {
   const as = S.att.filter(a => a.event_id === e.id), inn = as.filter(a => a.status === "aanwezig" || a.status === "te laat").length, r = res(e);
-  const right = e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
+  const right = e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast</span>` : e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
     : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : "";
   return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
     <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, "OGV") : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span></b>
@@ -228,8 +228,9 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
    <div class="panel"><h2>Evaluatie-onderdelen</h2><textarea id="crit" style="min-height:150px">${esc((t.criteria || DEF_CRIT).join("\n"))}</textarea><p class="hint">Eén onderdeel per regel.</p>
     <h2 style="margin-top:14px">Werkpunten bij wedstrijden</h2><textarea id="tags" style="min-height:150px">${esc((t.worktags || DEF_TAGS).join("\n"))}</textarea>
     <div class="row" style="margin-top:10px"><span class="spacer"></span><button class="btn" type="button" id="saveLists">Opslaan</button></div></div></div>
+  <div class="sec panel" id="rbfaP"></div>
   <div class="sec panel"><h2>Ploeg verwijderen</h2><p class="hint">Verwijdert de ploeg met alle spelers, activiteiten, aanwezigheden, evaluaties en doelen. Dit kan je niet ongedaan maken.</p><button class="btn danger" type="button" id="delT">Ploeg verwijderen</button></div>`;
-  $("#editT").onclick = () => teamForm(t);
+  $("#editT").onclick = () => teamForm(t); rbfaPanel($("#rbfaP"));
   $("#shareR").onchange = e => { t.share_ratings = e.target.checked; safe(() => db.save("teams", t), t.share_ratings ? "Spelersbeoordelingen worden gedeeld met alle trainers." : "Spelersbeoordelingen blijven privé."); };
   $("#saveLists").onclick = () => { t.criteria = $("#crit").value.split("\n").map(s => s.trim()).filter(Boolean); t.worktags = $("#tags").value.split("\n").map(s => s.trim()).filter(Boolean); safe(() => db.save("teams", t), "Opgeslagen."); };
   $("#addTr").onsubmit = async e => { e.preventDefault(); const mail = e.target.mail.value.trim();

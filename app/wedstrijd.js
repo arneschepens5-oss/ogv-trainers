@@ -17,14 +17,15 @@ route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   const t = todayIso();
   let list = calFilter !== "voorbij" ? S.events.filter(e => e.date >= t) : [...S.events.filter(e => e.date < t)].reverse();
   if (calType) list = list.filter(e => e.type === calType);
-  v.innerHTML = head("Kalender", "Trainingen en wedstrijden. Open een activiteit voor aanwezigheden, trainingsplan of wedstrijdverslag.", `<button class="btn" type="button" id="addEv">${IC.plus}Activiteit</button>`) +
+  v.innerHTML = head("Kalender", "Trainingen en wedstrijden. Open een activiteit voor aanwezigheden, trainingsplan of wedstrijdverslag.", (S.team.rbfa_team_id ? `<button class="btn ghost" type="button" id="rbSync">${IC.rotate}RBFA bijwerken</button>` : `<a class="btn ghost" href="#/ploeg-instellingen">${IC.rotate}Wedstrijden van RBFA</a>`) + `<button class="btn" type="button" id="addEv">${IC.plus}Activiteit</button>`) +
   `<div class="row" style="margin-bottom:14px"><div class="chips"><button class="chip" type="button" data-f="week" aria-pressed="${calFilter === "week"}">Mijn planning</button><button class="chip" type="button" data-f="komend" aria-pressed="${calFilter === "komend"}">Komend</button><button class="chip" type="button" data-f="voorbij" aria-pressed="${calFilter === "voorbij"}">Voorbij</button></div>
    <span class="spacer"></span><div class="chips"><button class="chip" type="button" data-t="" aria-pressed="${!calType}">Alles</button><button class="chip" type="button" data-t="training" aria-pressed="${calType === "training"}">Trainingen</button><button class="chip" type="button" data-t="wedstrijd" aria-pressed="${calType === "wedstrijd"}">Wedstrijden</button></div></div>
   ${calFilter === "week" ? weekView(calType ? S.events.filter(e => e.type === calType) : S.events) : list.length ? `<div class="list">${list.map(e => evItem(e)).join("")}</div>` : `<div class="empty"><b>${calFilter === "komend" ? "Niets gepland" : "Nog niets voorbij"}</b>Voeg een training of wedstrijd toe. Trainingen herhaal je meteen voor het hele seizoen.</div>`}`;
   $$("[data-f]", v).forEach(b => b.onclick = () => { calFilter = b.dataset.f; render(); });
   $$("[data-t]", v).forEach(b => b.onclick = () => { calType = b.dataset.t; render(); });
   $$("[data-wk]", v).forEach(b => b.onclick = () => { calWeek = b.dataset.wk === "0" ? 0 : calWeek + +b.dataset.wk; render(); });
-  $("#addEv").onclick = () => eventForm(); $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
+  $("#addEv").onclick = () => eventForm();
+  const rs = $("#rbSync"); if (rs) rs.onclick = async () => { rs.disabled = true; rs.innerHTML = '<span class="spin"></span>Ophalen…'; const r = await safe(() => rbfaSync(S.team)); if (r) { toast(r.added || r.changed ? `${r.added} nieuw, ${r.changed} bijgewerkt.` : "Alles is al up-to-date."); render(); } else { rs.disabled = false; rs.innerHTML = IC.rotate + "RBFA bijwerken"; } }; $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
 function eventForm(e, forceNew) {
   const n = !e || forceNew; e = e || { type: "training", date: todayIso(), start_time: "18:00", end_time: "19:15" };
@@ -34,6 +35,7 @@ function eventForm(e, forceNew) {
   <label class="f">Begin<input type="time" name="start_time" value="${esc(tm(e.start_time))}"></label><label class="f">Einde<input type="time" name="end_time" value="${esc(tm(e.end_time))}"></label>
   <label class="f">Plaats<input name="location" value="${esc(e.location || "")}" placeholder="bv. Terrein 3"></label>
   <label class="f wo">Tegenstander<input name="opponent" value="${esc(e.opponent || "")}"></label>
+  <label class="f full wo">Link officieel wedstrijdblad <span class="hint">(optioneel)</span><input type="url" name="sheet_url" value="${esc(e.sheet_url || "")}" placeholder="https://"></label>
   <label class="f wo">Thuis of uit<select name="home"><option value="1"${e.home !== false ? " selected" : ""}>Thuis</option><option value="0"${e.home === false ? " selected" : ""}>Uit</option></select></label>
   <label class="f full to">Thema<input name="theme" list="themes" value="${esc(e.theme || "")}" placeholder="bv. 1A Opbouw van achteruit"><datalist id="themes">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
   ${n ? `<label class="f full to">Wekelijks herhalen tot <span class="hint">(leeg laten voor één keer)</span><input type="date" name="until"></label>` : ""}</div>
@@ -45,6 +47,7 @@ function eventForm(e, forceNew) {
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
     const base = { team_id: S.team.id, type, start_time: f.start_time || null, end_time: f.end_time || null, location: f.location || null,
       opponent: type === "wedstrijd" ? f.opponent || null : null, home: type === "wedstrijd" ? f.home === "1" : null, theme: type === "training" ? f.theme || null : null };
+    if (type === "wedstrijd" && (f.sheet_url || e.sheet_url)) base.sheet_url = f.sheet_url ? (/^https?:\/\//i.test(f.sheet_url) ? f.sheet_url : "https://" + f.sheet_url) : null;
     const dates = [f.date]; if (n && type === "training" && f.until) { let x = parse(f.date); for (;;) { x = addDays(x, 7); if (iso(x) > f.until || dates.length > 60) break; dates.push(iso(x)); } }
     let firstId;
     await safe(async () => { for (const dt of dates) { const row = { ...(n ? { id: uid(), report: {} } : e), ...base, date: dt }; firstId = firstId || row.id; await putEvent(row); }
@@ -114,8 +117,10 @@ function viewMatch(v, e, tab) {
   v.innerHTML = backLink("#/kalender", "Kalender") + head(matchTitle(e, S.team.name),
     `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) : ""}${e.location ? " · " + esc(e.location) : ""}${r ? ` · <span class="pill ${r}">${RES_L[r]}</span>` : ""}`,
     `<span class="hint" id="saved"></span><a class="btn noprint" href="#/live/${e.id}">${IC.mic}Live coachen</a><button class="btn ghost small noprint" type="button" id="editEv">Bewerken</button><button class="btn ghost small noprint" type="button" onclick="print()">${IC.print}Afdrukken</button>`) +
-    tabsHtml(e.id, [["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"]], tab) + `<div id="tabv"></div>`;
+    matchLinks(e) + tabsHtml(e.id, [["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"]], tab) + `<div id="tabv"></div>`;
   $("#editEv").onclick = () => eventForm(e); bindTabs(v);
+  const as = $("#addSheet"); if (as) as.onclick = async () => { const u = (prompt("Plak de link naar het officiële wedstrijdblad van deze wedstrijd:", "") || "").trim(); if (!u) return;
+    e.sheet_url = /^https?:\/\//i.test(u) ? u : "https://" + u; if (await safe(async () => { await rbfaPut(e); return true; }, "Link bewaard.")) render(); else delete e.sheet_url; };
   const tv = $("#tabv");
   ({ verslag: reportTab, spelers: playersTab, momenten: momentsTab, opstelling: lineupTab, aanwezig: attendanceView }[tab] || reportTab)(tv, e);
 }
