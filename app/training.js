@@ -221,39 +221,48 @@ async function minePicker(onPick) {
 const exPic = (x, ph) => x.diagram && x.diagram.objs?.length ? diagramSVG(x.diagram) : x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : x.img_path ? `<img data-fp="${esc(x.img_path)}" alt="" loading="lazy">` : x.diagram ? diagramSVG(x.diagram) : (ph ?? `<span class="ph0">${IC.field}</span>`);
 /* thema's sluiten aan bij de basisprincipes van de club (1A opbouw, 1B/2A verdedigen, 2B doelkansen, 3 omschakeling) */
 const EX_THEMES = [
+  ["Balgevoel en techniek", /^basics$/, /jongle|techniek|tecnhiek|balgevoel|voetenwerk|kap- en draai|kappen en draai|hoekje trappen|kopspel|senseball|balvaardig/],
   ["Dribbelen en 1v1", /leiden en dribbelen|individuele actie|met bal: leiden/, /dribbel|\bleiden\b|kapbeweg|schijnbeweg|\b1\s*(v|tegen|vs)\s*1\b|passeer/],
   ["Passen en aannemen", /passing|balcontrole|balaanname/, /\bpass|passing|aanname|balcontrole|\bkaats|trap(techniek|vorm)/],
   ["Afwerken", /doelpoging|afwerken/, /afwerk|\bschiet|\bschot|scoren|doelpoging|finish|kopbal/],
-  ["Vrijlopen en aanspeelbaar zijn", /vrijlopen|aanspeelbaar|ruimte creëren/, /vrijlop|aanspeelbaar|driehoek|vrij (lopen|staan)|steunen|ingedraaid/],
-  ["Opbouw en balcirculatie", /het spel openen|balcirculatie/, /opbouw|openen|balcirculatie|rondo|positiespel|balbezit|possession|uitbouw/],
+  ["Vrijlopen en aanspeelbaar zijn", /vrijlopen|aanspeelbaar|ruimte creëren/, /vrijlop|aanspeelbaar|driehoek|vrij (lopen|staan)|steunen|ingedraaid|scann/],
+  ["Opbouw en balcirculatie", /het spel openen|balcirculatie/, /opbouw|openen|balcirculatie|rondo|ronde|positiespel|balbezit|possession|uitbouw|uitvoetbal|lijnen breken|derde man/],
   ["Doelkansen creëren", /infiltratie|doelkans creëren|voorzet|bezetting voor doel/, /doelkans|infiltr|voorzet|give.?(&|and|en).?go|overtal|\b[23]\s*(v|tegen|vs)\s*[12]\b|aanval/],
   ["Verdedigen en druk zetten", /balverlies > (?!pressing > onmiddellijk|bal recupereren door interceptie > onmiddellijk)|balverlies$/, /verdedig|druk zetten|pressing|drukzet|afblok|dekking|verstoren|storen|remmen|duel/],
   ["Omschakelen", /onmiddellijk druk na balverlies|balrecuperatie|onmiddellijk na balverlies/, /omschakel|counter|transitie|balrecup|na balverlies|omschakeling/],
   ["Coördinatie en fysiek", /^fysiek/, /coördinatie|coordinatie|loopschol|snelheid|sprint|kracht|ladder|lenig|reactie|wendbaar|uithouding/],
-  ["Blessurepreventie", /blessure/, /preventie|rompstab|\bcore\b|11\+|stabilisatie/],
-  ["Mentaal en spel", /^mentaal/, /tikker|estafette|stoelendans|kat en muis|spelletje|plezier|teambuilding/],
-  ["Keepers", /^keepers/, /keeper|doelman|doelverdedig/]];
+  ["Blessurepreventie", /blessure/, /preventie|rompstab|\bcore\b|11\+|stabilisatie|cool(ing)?[ -]?down|stretch/],
+  ["Mentaal en spel", /^mentaal/, /tikker|estafette|stoelendans|kat en muis|spelletje|plezier|teambuilding|rivier|astronaut|alien|piraat|haai|multisport|basket|klappen|tegengestelde/],
+  ["Keepers", /^keepers/, /keeper|doelman|doelverdedig/],
+  ["Liniegerichte training", /^$/, /\blin+ie/],
+  ["Vrij spel en wedstrijdvormen", /^$/, /\bwv\d?\b|wedstrijd|\bmatch\b|\d\s*(v|vs|tegen|\/)\s*\d/]];
 function exThemes(x) {
   if (x._th) return x._th;
   const cats = (x.cats || []).map(c => c.toLowerCase()), txt = [x.name, x.goal].filter(Boolean).join(" ").toLowerCase(), out = [];
   EX_THEMES.forEach(([n, rc]) => { if (cats.some(c => rc.test(c))) out.push(n); });
-  if (!out.length) EX_THEMES.forEach(([n, , rt]) => { if (rt.test(txt)) out.push(n); });
+  const VS = EX_THEMES[EX_THEMES.length - 1];
+  if (!out.length) EX_THEMES.forEach(([n, , rt]) => { if (n !== VS[0] && rt.test(txt)) out.push(n); });
+  if (!out.length && VS[2].test(txt)) out.push(VS[0]);
   if (!out.length && cats.some(c => /teamtactics/.test(c))) out.push("Opbouw en balcirculatie");
   if (!out.length && x.phase === "Opwarming") out.push("Coördinatie en fysiek");
+  if (!out.length && x.phase === "Wedstrijdvorm") out.push("Vrij spel en wedstrijdvormen");
   Object.defineProperty(x, "_th", { value: out.length ? out : ["Overige"], enumerable: false }); return x._th;
 }
-const EX_FORMS = ["Duelvorm (1v1 tot 2v2)", "Kleine partijvorm (3v3 tot 5v5)", "Grote partijvorm (6v6 en meer)", "Rondo en positiespel", "Passingvorm", "Afwerkvorm", "Circuit en loopscholing", "Spelvorm", "Oefening"];
+const EX_FORMS = ["Duelvorm (1v1 tot 2v2)", "Kleine partijvorm (3v3 tot 5v5)", "Grote partijvorm (6v6 en meer)", "Rondo en positiespel", "Passingvorm", "Afwerkvorm", "Opbouwpatroon", "Technische activatie", "Circuit en loopscholing", "Spelvorm", "Oefening"];
 function exForm(x) {
-  const txt = [x.name, x.org].filter(Boolean).join(" ").toLowerCase(), n = (x.name || "").toLowerCase(), m = n.match(/(\d+)\s*\+?\s*k?\s*(?:v|tegen|vs\.?|x)\s*(\d+)/);
-  if (/rondo|positiespel|possession/.test(n)) return EX_FORMS[3];
-  if (m) { const tot = +m[1] + +m[2]; return tot <= 4 ? EX_FORMS[0] : tot <= 10 ? EX_FORMS[1] : EX_FORMS[2]; }
-  if (/partij|wedstrijdvorm|wedstrijd/.test(n) || x.phase === "Wedstrijdvorm") return EX_FORMS[1];
-  if (/afwerk|schot|scoren|shoot/.test(n)) return EX_FORMS[5];
-  if (/pass|ruit|driehoek|vierkant|kaats|y-vorm|passingvorm/.test(n)) return EX_FORMS[4];
-  if (/circuit|parcours|loopschol|ladder|coördinatie|coordinatie|horde/.test(txt)) return EX_FORMS[6];
-  if (/tikker|estafette|spel\b|spelletje|kat en muis|stoelendans/.test(n)) return EX_FORMS[7];
-  if (/duel|1\s*v\s*1/.test(txt)) return EX_FORMS[0];
-  return EX_FORMS[8];
+  const F = n => EX_FORMS.find(f => f.startsWith(n)), txt = [x.name, x.org].filter(Boolean).join(" ").toLowerCase(), n = (x.name || "").toLowerCase();
+  const nn = n.replace(/\b(g?k)\s*\+\s*/g, "").replace(/\s*\+\s*g?k\b/g, ""), m = nn.match(/(\d+)\s*(?:v|vs\.?|tegen|\/|x)\s*(\d+)/);
+  if (/rondo|ronde|positiespel|possession/.test(n)) return F("Rondo");
+  if (m) { const tot = +m[1] + +m[2]; return tot <= 4 ? F("Duel") : tot <= 10 ? F("Kleine") : F("Grote"); }
+  if (/partij|wedstrijd|\bwv\d?\b|\bmatch\b/.test(n) || x.phase === "Wedstrijdvorm") return F("Kleine");
+  if (/afwerk|schot|scoren|shoot/.test(n)) return F("Afwerk");
+  if (/patroon|patronen|uitvoetbal|opbouw/.test(n)) return F("Opbouw");
+  if (/pass|pas(\b|activ|vorm| en| open)|ruit|driehoek|vierkant|kaats|y-vorm|give|stervorm|kruis/.test(n)) return F("Passing");
+  if (/activatie|techniek|tecnhiek|jongle|voetenwerk|kap|draai|hoekje|kopspel|senseball/.test(n)) return F("Technische");
+  if (/circuit|parcours|loopschol|ladder|coördinatie|coordinatie|horde|preventie/.test(txt)) return F("Circuit");
+  if (/tikker|estafette|spel\b|spelletje|kat en muis|stoelendans|rivier|astronaut|alien|klappen|tegengestelde|blinde|multisport/.test(n)) return F("Spelvorm");
+  if (/duel|1\s*v\s*1|1\/1/.test(txt)) return F("Duel");
+  return F("Oefening");
 }
 const EX_BANDS = [["onder", "U6 – U9 (2v2 en 5v5)", 6, 9], ["mid", "U10 – U13 (8v8)", 10, 13], ["boven", "U14 en ouder (11v11)", 14, 99]];
 const ageNum = a => /senior/i.test(a) ? 99 : +String(a).replace(/\D/g, "") || 0;
