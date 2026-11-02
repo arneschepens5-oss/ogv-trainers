@@ -671,3 +671,14 @@ html.theming,html.theming *{transition:background-color .3s ease,border-color .3
   .prep footer{margin-top:10px;font-size:8pt;color:#666}
 }
 @media (max-width:700px){.evmoments button:last-child:nth-child(odd){grid-column:1/-1}}
+
+/* ---------- spelers per wedstrijd ---------- */
+.mplayers .mp{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.mplayers .rate,.pcard .rate{flex:none}
+.mplayers .rate.on{background:var(--rc,var(--yellow));color:#000;border-color:transparent}
+.mpb{flex:1;min-width:0}.mph{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}.mph b{font-size:15.5px}
+.mpb p{margin:4px 0 0;font-size:14.5px;line-height:1.5;color:var(--ink)}
+.notepv{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px;color:var(--muted);margin:2px 0;white-space:normal}
+.item .main .notefull{display:block;white-space:normal;font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+@media print{.mplayers .rate.on{border:1px solid #000}}
+.mplayers .rate{min-width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-stretch:115%;font-size:20px;background:var(--card3);color:var(--muted)}

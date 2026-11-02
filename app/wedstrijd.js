@@ -130,11 +130,12 @@ function reportTab(tv, e) {
   const draw = () => {
     const gf = R.goals.filter(g => g.side === "for").length, ga = R.goals.filter(g => g.side === "against").length;
     tv.innerHTML = `<div class="share noprint" style="margin-bottom:14px">${IC.eye}<div>De uitslag en dit verslag zijn zichtbaar voor alle trainers van de club. ${S.team.share_ratings ? "Ook de spelersbeoordelingen worden gedeeld." : "De spelersbeoordelingen blijven privé (aanpassen bij Ploeg en trainers)."}</div></div>
-    <div class="score"><div class="side-t"><b>${e.home === false ? esc(e.opponent || "Tegenstander") : esc(S.team.name)}</b><small>${e.home === false ? "Thuis" : "OGV"}</small></div>
+    <div class="score"><div class="side-t"><b>${e.home === false ? esc(e.opponent || "Tegenstander") : esc(e.report?.squad ? "OGV " + e.report.squad : S.team.name)}</b><small>${e.home === false ? "Thuis" : "OGV"}</small></div>
       <div><div class="nums"><input type="number" min="0" inputmode="numeric" id="s1" value="${(e.home === false ? e.score_against : e.score_for) ?? ""}" aria-label="Score thuisploeg"><span>–</span><input type="number" min="0" inputmode="numeric" id="s2" value="${(e.home === false ? e.score_for : e.score_against) ?? ""}" aria-label="Score bezoekers"></div>
       <div class="half">Rust <input id="h1" type="number" min="0" style="width:52px;padding:4px;font-size:14px;text-align:center" value="${(e.home === false ? R.half_against : R.half_for) ?? ""}"> – <input id="h2" type="number" min="0" style="width:52px;padding:4px;font-size:14px;text-align:center" value="${(e.home === false ? R.half_for : R.half_against) ?? ""}"></div></div>
-      <div class="side-t"><b>${e.home === false ? esc(S.team.name) : esc(e.opponent || "Tegenstander")}</b><small>${e.home === false ? "OGV" : "Bezoekers"}</small></div></div>
+      <div class="side-t"><b>${e.home === false ? esc(e.report?.squad ? "OGV " + e.report.squad : S.team.name) : esc(e.opponent || "Tegenstander")}</b><small>${e.home === false ? "OGV" : "Bezoekers"}</small></div></div>
     ${R.goals.length && (gf !== (e.score_for ?? gf) || ga !== (e.score_against ?? ga)) ? `<p class="hint" style="color:var(--warn);text-align:center">Let op: de doelpunten hieronder (${gf}-${ga}) komen niet overeen met de uitslag. <button class="link" type="button" id="fixsc">Uitslag gelijkzetten</button></p>` : ""}
+    ${matchPlayersPanel(e)}
     <div class="grid2 sec">
       <div class="panel"><h2>Wedstrijdgegevens</h2><div class="fields">
         <label class="f">Soort<select data-r="kind">${["","Competitie","Beker","Vriendschappelijk","Tornooi"].map(x => `<option${(R.kind || "") === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>
@@ -174,6 +175,18 @@ function reportTab(tv, e) {
   };
   draw();
 }
+/* overzicht van cijfer, minuten en commentaar per speler, bovenaan het verslag */
+const isCaptain = (e, p, a) => e.report?.captain === p.id || (a?.strengths || []).includes("Kapitein");
+function matchPlayersPanel(e) {
+  const rows = active().map(p => ({ p, a: attOf(e.id, p.id) })).filter(x => x.a && (x.a.status === "aanwezig" || x.a.status === "te laat"));
+  if (!rows.length) return "";
+  const rated = rows.filter(x => x.a.rating), av = rated.length ? rated.reduce((s, x) => s + x.a.rating, 0) / rated.length : null;
+  rows.sort((x, y) => (y.a.rating || 0) - (x.a.rating || 0) || pname(x.p).localeCompare(pname(y.p)));
+  return `<div class="sec panel mplayers"><div class="row" style="margin-bottom:6px"><h2 style="margin:0;margin-right:auto">Spelers</h2><span class="hint">${rows.length} gespeeld${av != null ? " · gemiddeld cijfer " + f1(av) : ""}</span><a class="btn ghost small noprint" href="#/activiteit/${e.id}/spelers">${IC.pen}Beoordelen</a></div>
+    ${rows.map(({ p, a }) => `<div class="mp"><span class="rate${a.rating ? " on" : ""}" style="${a.rating ? `--rc:${a.rating >= 8 ? "#34D17A" : a.rating >= 6 ? "#A3D63B" : a.rating >= 5 ? "#FFD500" : "#F2615A"}` : ""}">${a.rating ?? "–"}</span>
+      <div class="mpb"><div class="mph"><b>${esc(pname(p))}</b>${isCaptain(e, p, a) ? '<span class="pill w">Kapitein</span>' : ""}${e.report?.motm === p.id ? '<span class="pill w">Man van de match</span>' : ""}<small class="muted">${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : ""].filter(Boolean).join(" · "))}</small></div>
+      ${a.note ? `<p>${esc(a.note).replace(/\n/g, "<br>")}</p>` : `<p class="hint">Nog geen commentaar.</p>`}</div></div>`).join("")}</div>`;
+}
 /* doelpunten en assists uit de lijst overnemen bij de spelers */
 async function syncGoalStats(e) {
   const R = e.report, cnt = (k) => { const m = {}; R.goals.forEach(g => { if (g.side === "for" && g[k]) m[g[k]] = (m[g[k]] || 0) + 1; }); return m; };
@@ -186,8 +199,8 @@ function playersTab(tv, e) {
   const ps = active().filter(p => { const a = attOf(e.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; });
   const absent = active().filter(p => !ps.includes(p));
   const card = p => { const a = attOf(e.id, p.id) || {};
-    return `<details class="pcard" data-p="${p.id}"><summary><span class="num">${p.number ?? ""}</span><span style="flex:1;min-width:0"><b style="display:block">${esc(pname(p))}${e.report.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}</b>
-      <small class="muted">${esc([a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld")}</small></span>
+    return `<details class="pcard" data-p="${p.id}"><summary><span class="num">${p.number ?? ""}</span><span style="flex:1;min-width:0"><b style="display:block">${esc(pname(p))}${e.report.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b>
+      ${a.note ? `<span class="notepv">${esc(a.note)}</span>` : ""}<small class="muted">${esc([a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld")}</small></span>
       <span class="rate${a.rating ? " on" : ""}">${a.rating ?? "–"}</span></summary>
     <div class="bd"><div class="stats">
       <label class="f">Rol<select data-k="role"><option value="">–</option><option${a.role === "basis" ? " selected" : ""}>basis</option><option${a.role === "wissel" ? " selected" : ""}>wissel</option></select></label>
