@@ -106,12 +106,12 @@ const planMinutes = pl => (normPlan(pl).items || []).reduce((s, x) => s + exMinu
 
 route("trainingen", { title: "Trainingen maken", auth: true, team: true, render: async v => {
   const t = todayIso(), up = S.events.filter(e => e.type === "training" && e.date >= t), done = S.events.filter(e => e.type === "training" && e.date < t).reverse().slice(0, 10);
-  const tpls = await items.list("training").catch(() => []);
+  const tpls = await items.listAll("training").catch(() => []);
   const it = e => { const pl = normPlan(e.plan), n = pl.items.length, mins = planMinutes(e.plan);
     return `<div class="item" data-go="#/activiteit/${e.id}/plan"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(pl.theme || e.theme || "Training zonder thema")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${pl.intensity ? " · intensiteit " + pl.intensity : ""}</small></span>
     <span class="val">${n ? `<b>${n} oef.</b>${mins} min` : `<b style="color:var(--warn)">Maken</b>nog leeg`}</span></div>`; };
   v.innerHTML = head("Trainingen maken", "Stel elke training samen als een volledige fiche: oefeningen met categorie, duur, inspanning, rust, herhalingen, organisatie, aandachtspunten en een veldtekening.",
-    `<a class="btn ghost" href="#/oefeningen">${IC.ball}Mijn oefeningen</a><button class="btn" type="button" id="addEv">${IC.plus}Training</button>`) +
+    `<a class="btn ghost" href="#/oefeningen">${IC.ball}Oefenstof</a><button class="btn" type="button" id="addEv">${IC.plus}Training</button>`) +
     (up.length ? `<div class="list">${up.map(it).join("")}</div>` : `<div class="empty"><b>Geen trainingen gepland</b>Voeg een training toe en herhaal ze wekelijks.</div>`) +
     (tpls.length ? `<div class="sec"><div class="row"><h2 style="margin:0">Sjablonen</h2><span class="spacer"></span><a class="link" href="#/sjablonen">Alle ${tpls.length} sjablonen bekijken</a></div><div class="list" style="margin-top:10px">${tpls.slice().sort((a, b) => (a.data.source === "PSD") - (b.data.source === "PSD")).slice(0, 4).map(x => `<div class="item static"><span class="num">${IC.copy}</span><span class="main"><b>${esc(x.title)}</b><small>${(normPlan(x.data).items || []).length} oefeningen · ${planMinutes(x.data)} min${x.data.source === "PSD" ? " · PSD" : ""}</small></span><button class="btn ghost small" type="button" data-tpl="${x.id}">Inplannen</button></div>`).join("")}</div></div>` : "") +
     (done.length ? `<div class="sec"><h2>Vorige trainingen</h2><div class="list">${done.map(it).join("")}</div></div>` : "");
@@ -132,7 +132,7 @@ async function planEditor(tv, e) {
       <label class="f full">Materiaal<input data-p="material" value="${esc(pl.material || "")}" placeholder="bv. 2 grote goals, potjes, kegels, ballen, hesjes"></label>
       <label class="f full">Doel van de training<input data-p="goal" value="${esc(pl.goal || "")}" placeholder="Wat moeten de spelers na deze training beter kunnen?"></label></div>
       <p class="muted" style="margin:12px 0 0">Totaal <b style="color:var(--ink)">${total} minuten</b>${dur ? ` van ${dur} minuten training` + (total > dur ? ' <span class="pill loss">te lang</span>' : "") : ""} · ${pl.items.length} ${pl.items.length === 1 ? "oefening" : "oefeningen"}</p></div>
-    <div class="row noprint" style="margin:16px 0 4px"><button class="btn" type="button" id="exNew">${IC.plus}Nieuwe oefening</button><button class="btn ghost" type="button" id="exMine">${IC.ball}Uit mijn oefeningen</button><button class="btn ghost" type="button" id="exLib">${IC.book}Uit clubbibliotheek</button>
+    <div class="row noprint" style="margin:16px 0 4px"><button class="btn" type="button" id="exNew">${IC.plus}Nieuwe oefening</button><button class="btn ghost" type="button" id="exMine">${IC.ball}Uit de oefenstof</button><button class="btn ghost" type="button" id="exLib">${IC.book}Uit clubbibliotheek</button>
       <span class="spacer"></span><button class="btn ghost" type="button" id="tplSave">${IC.copy}Opslaan als sjabloon</button><button class="btn ghost" type="button" id="prt">${IC.print}Trainingsfiche afdrukken</button></div>
     ${EX_PHASES.map(ph => { const xs = pl.items.map((x, i) => [x, i]).filter(([x]) => x.phase === ph); if (!xs.length) return "";
       return `<div class="sec"><h2>${ph} <span class="hint" style="font-weight:500">${xs.reduce((s, [x]) => s + exMinutes(x), 0)} min</span></h2><div class="exs">${xs.map(([x, i]) => exCard(x, i)).join("")}</div></div>`; }).join("") ||
@@ -150,7 +150,7 @@ async function planEditor(tv, e) {
       if (act === "down" && k < arr.length - 1) { [arr[k + 1], arr[k]] = [arr[k], arr[k + 1]]; sv(); draw(); }
       if (act === "dup") { arr.splice(k + 1, 0, { ...JSON.parse(JSON.stringify(arr[k])), id: uid() }); sv(); draw(); }
       if (act === "del" && confirm(`"${arr[k].name || "Oefening"}" verwijderen uit deze training?`)) { arr.splice(k, 1); sv(); draw(); }
-      if (act === "mine") safe(() => items.save({ kind: "oefening", title: arr[k].name || "Oefening", data: exData(arr[k]) }), "Opgeslagen bij Mijn oefeningen."); });
+      if (act === "mine") safe(() => items.save({ kind: "oefening", title: arr[k].name || "Oefening", data: exData(arr[k]) }), "Opgeslagen bij je oefenstof."); });
   };
   draw();
 }
@@ -208,9 +208,9 @@ function exEditor(x, onSave, saveLabel) {
     d.close(); onSave(x); };
 }
 async function minePicker(onPick) {
-  const mine = await items.list("oefening").catch(() => []);
-  if (!mine.length) { toast("Je hebt nog geen eigen oefeningen. Maak er een bij Mijn oefeningen of bewaar een oefening uit een training."); return; }
-  const f = exFilterState(), d = dialog(`<div class="dlg"><h2>Uit mijn oefeningen</h2><div id="mf"></div><div id="ml" class="exs" style="max-height:58dvh;overflow:auto"></div><div class="row"><span class="hint" id="mc"></span><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`, "wide xl");
+  const mine = await items.listAll("oefening").catch(() => []);
+  if (!mine.length) { toast("Er is nog geen oefenstof. Maak er een bij Oefenstof of bewaar een oefening uit een training."); return; }
+  const f = exFilterState(), d = dialog(`<div class="dlg"><h2>Uit de oefenstof</h2><div id="mf"></div><div id="ml" class="exs" style="max-height:58dvh;overflow:auto"></div><div class="row"><span class="hint" id="mc"></span><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`, "wide xl");
   const drawL = () => { const list = exFilter(mine, f); $("#mc", d).textContent = `${list.length} van ${mine.length} oefeningen${list.length > 60 ? " · eerste 60 getoond, verfijn met de filters" : ""}`;
     $("#ml", d).innerHTML = list.slice(0, 60).map(m => `<button class="excard pickable" type="button" data-m="${m.id}"><div class="pic">${exPic(m.data, "")}</div><div class="bd"><b>${esc(m.title)}</b><small class="muted">${esc(exMeta(m.data))}</small></div></button>`).join("") || `<div class="empty"><b>Niets gevonden</b>Pas de filters aan.</div>`;
     $$("[data-m]", d).forEach(b => b.onclick = () => { const m = mine.find(z => z.id === b.dataset.m); onPick({ ...JSON.parse(JSON.stringify(m.data)), id: uid(), name: m.data.name || m.title }); d.close(); toast("Oefening toegevoegd."); }); };
@@ -278,19 +278,19 @@ function exFilter(list, f) {
     if (f.band && !exBands(x).includes(f.band)) return false;
     if (f.theme && !exThemes(x).includes(f.theme)) return false;
     if (f.form && exForm(x) !== f.form) return false;
-    if (f.src === "psd" && x.source !== "PSD") return false; if (f.src === "eigen" && x.source === "PSD") return false;
-    if (f.author && x.author !== f.author) return false;
-    return !t || [m.title, x.name, (x.cats || []).join(" "), x.org, x.goal, x.criteria, x.author].filter(Boolean).join(" ").toLowerCase().includes(t); });
+    if (f.src === "psd" && x.source !== "PSD") return false; if (f.src === "eigen" && !(items.mine(m) && !m.shared)) return false; if (f.src === "club" && !m.shared) return false;
+    if (f.author && (x.author || x.shared_by) !== f.author) return false;
+    return !t || [m.title, x.name, (x.cats || []).join(" "), x.org, x.goal, x.criteria, x.author, x.shared_by].filter(Boolean).join(" ").toLowerCase().includes(t); });
 }
 function exFilterBar(host, list, f, onChange, compact) {
-  const authors = [...new Set(list.map(m => (m.data || m).author).filter(Boolean))].sort((a, b) => a.localeCompare(b, "nl"));
+  const authors = [...new Set(list.map(m => (m.data || m).author || (m.data || m).shared_by).filter(Boolean))].sort((a, b) => a.localeCompare(b, "nl"));
   const cnt = (k, val) => list.filter(m => { const x = m.data || m; return k === "theme" ? exThemes(x).includes(val) : k === "form" ? exForm(x) === val : exBands(x).includes(val); }).length;
   const sel = (k, label, opts) => `<label class="flt"><span>${label}</span><select data-f="${k}"><option value="">Alle</option>${opts.map(([v, l]) => `<option value="${esc(v)}"${f[k] === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
   host.innerHTML = `<div class="filters"><label class="flt grow"><span>Zoeken</span><input type="search" data-f="q" value="${esc(f.q || "")}" placeholder="Naam, categorie, aandachtspunt…"></label>
     ${sel("phase", "Onderdeel", EX_PHASES.map(p => [p, p]))}${sel("band", "Leeftijd", EX_BANDS.map(([k, l]) => [k, `${l} (${cnt("band", k)})`]))}
     ${sel("theme", "Thema", [...EX_THEMES.map(t => t[0]), "Overige"].map(t => [t, `${t} (${cnt("theme", t)})`]).filter(o => !/\(0\)$/.test(o[1])))}
     ${sel("form", "Vorm", EX_FORMS.map(t => [t, `${t} (${cnt("form", t)})`]).filter(o => !/\(0\)$/.test(o[1])))}
-    ${compact ? "" : sel("src", "Bron", [["eigen", "Eigen oefeningen"], ["psd", "PSD-databank"]]) + (authors.length > 1 ? sel("author", "Gemaakt door", authors.map(a => [a, a])) : "")}
+    ${compact ? "" : sel("src", "Bron", [["eigen", "Alleen van mij (niet gedeeld)"], ["club", "Gedeeld met de club"], ["psd", "PSD-databank"]]) + (authors.length > 1 ? sel("author", "Gemaakt door", authors.map(a => [a, a])) : "")}
     ${Object.keys(f).some(k => k !== "q" && f[k]) || f.q ? `<button class="link" type="button" data-reset>Filters wissen</button>` : ""}</div>`;
   const save = () => { try { const { q, ...rest } = f; localStorage.setItem(FILTER_KEY, JSON.stringify(rest)); } catch (e) {} };
   $$("[data-f]", host).forEach(el => { const k = el.dataset.f;
@@ -320,26 +320,33 @@ async function printPlan(e) {
   addEventListener("afterprint", done); setTimeout(() => print(), 150);
 }
 
-/* ============ mijn oefeningen ============ */
-route("oefeningen", { title: "Mijn oefeningen", auth: true, render: async v => {
-  v.innerHTML = head("Mijn oefeningen", "Laden…"); const mine = await items.list("oefening");
+/* ============ oefenstof: eigen oefeningen en de gedeelde clubdatabank ============ */
+const srcLine = (m, x) => { const by = x.source === "PSD" ? "PSD-databank" + (x.author ? " · " + x.author : "") : !items.mine(m) ? "Gedeeld door " + (x.shared_by || "een clubtrainer") : m.shared ? "Jij deelt dit met de club" : "Alleen voor jou";
+  return `<small class="hint">${m.shared ? `<span class="shdot" aria-hidden="true"></span>` : ""}${esc(by)}</small>`; };
+route("oefeningen", { title: "Oefenstof", auth: true, render: async v => {
+  v.innerHTML = head("Oefenstof", "Laden…"); const mine = await items.listAll("oefening");
   const f = exFilterState(); let shown = 36;
-  v.innerHTML = head("Mijn oefeningen", "Je persoonlijke oefenstof, ingedeeld per onderdeel, leeftijd, thema en vorm. Alleen jij ziet deze oefeningen en je kan ze in elke training gebruiken.", `<button class="btn" type="button" id="new">${IC.plus}Nieuwe oefening</button>`) +
+  v.innerHTML = head("Oefenstof", "Alle oefeningen van de club op één plek: de PSD-databank, wat andere trainers delen en je eigen oefeningen. Gedeelde oefeningen kan iedere clubtrainer gebruiken; aanpassen doe je in een eigen kopie.", `<button class="btn" type="button" id="new">${IC.plus}Nieuwe oefening</button>`) +
     `<div id="fb"></div><p class="hint" id="cnt" style="margin:10px 0"></p><div id="grid"></div>`;
-  const card = m => { const x = m.data, th = exThemes(x);
+  const card = m => { const x = m.data, th = exThemes(x), own = items.mine(m);
     return `<article class="excard"><div class="pic">${exPic(x, `<span class="ph0">${IC.field}</span>`)}</div><div class="bd"><b style="font-size:17px">${esc(m.title)}</b>
       <div class="chips">${th.slice(0, 2).map(c => `<span class="pill g">${esc(c)}</span>`).join("")}<span class="pill">${esc(exForm(x))}</span></div>
-      <small class="muted">${esc(exMeta(x))}</small>${x.goal || x.org ? `<p class="clamp">${esc(x.goal || x.org)}</p>` : ""}
-      ${x.source === "PSD" ? `<small class="hint">PSD-databank${x.author ? " · " + esc(x.author) : ""}</small>` : ""}
-      <div class="row" style="margin-top:auto;gap:6px"><button class="btn small" type="button" data-ed="${m.id}">Bekijken en bewerken</button><button class="link" type="button" data-cp="${m.id}">Kopie</button><span class="spacer"></span><button class="link" type="button" data-del="${m.id}" aria-label="Verwijderen">✕</button></div></div></article>`; };
+      <small class="muted">${esc(exMeta(x))}</small>${x.goal || x.org ? `<p class="clamp">${esc(x.goal || x.org)}</p>` : ""}${srcLine(m, x)}
+      <div class="row" style="margin-top:auto;gap:6px"><button class="btn small" type="button" data-ed="${m.id}">${own ? "Bekijken en bewerken" : "Bekijken"}</button><button class="link" type="button" data-cp="${m.id}">${own ? "Kopie" : "Eigen kopie"}</button>
+        <span class="spacer"></span>${own && mode !== "demo" ? `<button class="link" type="button" data-sh="${m.id}">${m.shared ? "Niet meer delen" : "Delen met club"}</button>` : ""}${own ? `<button class="link" type="button" data-del="${m.id}" aria-label="Verwijderen">✕</button>` : ""}</div></div></article>`; };
+  const copyOf = async (m, x) => { const d = exData(x || { ...m.data, name: m.title + " (kopie)" }); delete d.shared_by;
+    const r = await safe(() => items.save({ kind: "oefening", title: d.name || m.title, data: d }), items.mine(m) ? "Kopie gemaakt." : "Opgeslagen als eigen kopie. Die kan je vrij aanpassen."); if (r) { mine.unshift(r); grid(); } };
   const grid = () => { const list = exFilter(mine, f);
     $("#cnt", v).textContent = mine.length ? `${list.length} van ${mine.length} oefeningen` : "";
     $("#grid", v).innerHTML = list.length ? `<div class="exs">${list.slice(0, shown).map(card).join("")}</div>${list.length > shown ? `<div class="row" style="justify-content:center;margin-top:16px"><button class="btn ghost" type="button" id="more">Meer tonen (nog ${list.length - shown})</button></div>` : ""}`
-      : `<div class="empty"><b>${mine.length ? "Niets gevonden" : "Nog geen eigen oefeningen"}</b>${mine.length ? "Pas de filters aan of wis ze." : 'Maak een oefening met een veldtekening, of klik op "Bewaar" bij een oefening in een training.'}</div>`;
+      : `<div class="empty"><b>${mine.length ? "Niets gevonden" : "Nog geen oefenstof"}</b>${mine.length ? "Pas de filters aan of wis ze." : 'Maak een oefening met een veldtekening, of klik op "Bewaar" bij een oefening in een training.'}</div>`;
     const mo = $("#more", v); if (mo) mo.onclick = () => { shown += 36; grid(); };
-    $$("[data-ed]", v).forEach(b => b.onclick = () => { const m = mine.find(z => z.id === b.dataset.ed); exEditor({ ...JSON.parse(JSON.stringify(m.data)), name: m.data.name || m.title }, async x => { m.title = x.name; m.data = exData(x); await safe(() => items.save(m), "Oefening opgeslagen."); grid(); }); });
-    $$("[data-cp]", v).forEach(b => b.onclick = async () => { const m = mine.find(z => z.id === b.dataset.cp); const r = await safe(() => items.save({ kind: "oefening", title: m.title + " (kopie)", data: { ...JSON.parse(JSON.stringify(m.data)), name: m.title + " (kopie)" } }), "Kopie gemaakt."); if (r) { mine.unshift(r); grid(); } });
-    $$("[data-del]", v).forEach(b => b.onclick = async () => { const m = mine.find(z => z.id === b.dataset.del); if (!confirm(`"${m.title}" verwijderen?`)) return;
+    $$("[data-ed]", v).forEach(b => b.onclick = () => { const m = mine.find(z => z.id === b.dataset.ed), own = items.mine(m);
+      exEditor({ ...JSON.parse(JSON.stringify(m.data)), name: m.data.name || m.title }, async x => { if (!own) return copyOf(m, x); m.title = x.name; m.data = { ...exData(x), shared_by: m.data.shared_by }; await safe(() => items.save(m), "Oefening opgeslagen."); grid(); }, own ? null : "Opslaan als eigen kopie"); });
+    $$("[data-cp]", v).forEach(b => b.onclick = () => copyOf(mine.find(z => z.id === b.dataset.cp)));
+    $$("[data-sh]", v).forEach(b => b.onclick = async () => { const m = mine.find(z => z.id === b.dataset.sh);
+      await safe(() => items.share(m, !m.shared), m.shared ? "Niet meer gedeeld." : "Gedeeld: elke clubtrainer kan deze oefening nu gebruiken."); grid(); });
+    $$("[data-del]", v).forEach(b => b.onclick = async () => { const m = mine.find(z => z.id === b.dataset.del); if (!confirm(`"${m.title}" verwijderen?${m.shared ? " Andere trainers kunnen ze dan ook niet meer gebruiken." : ""}`)) return;
       const shared = m.data.img_path && mine.some(z => z !== m && z.data.img_path === m.data.img_path); if (!shared && m.data.img_path) await files.remove(m.data.img_path).catch(() => {});
       await safe(() => items.del(m), "Oefening verwijderd."); mine.splice(mine.indexOf(m), 1); grid(); }); };
   exFilterBar($("#fb", v), mine, f, () => { shown = 36; grid(); });
@@ -366,34 +373,35 @@ function tplView(x) {
   $("#tv-plan", d).onclick = () => { d.close(); tplSchedule(x); };
 }
 route("sjablonen", { title: "Trainingssjablonen", auth: true, team: true, render: async v => {
-  v.innerHTML = head("Trainingssjablonen", "Laden…"); const tpls = await items.list("training").catch(() => []);
+  v.innerHTML = head("Trainingssjablonen", "Laden…"); const tpls = await items.listAll("training").catch(() => []);
   tpls.forEach(x => { x.data = normPlan(x.data); });
   const f = (() => { const s = exFilterState(); return { q: "", band: s.band || "", theme: "", src: "", author: "" }; })(); let shown = 30;
   const authors = [...new Set(tpls.map(x => x.data.author).filter(Boolean))].sort((a, b) => a.localeCompare(b, "nl"));
   const themesOf = x => [...new Set(x.data.items.flatMap(exThemes))].filter(t => t !== "Overige");
-  v.innerHTML = head("Trainingssjablonen", "Volledige trainingen die je in één keer op een training in je kalender zet: je eigen sjablonen en de trainingen uit de PSD-databank van de club.", `<a class="btn ghost" href="#/trainingen">${IC.plan}Trainingen maken</a>`) +
+  v.innerHTML = head("Trainingssjablonen", "Volledige trainingen die je in één keer op een training in je kalender zet: je eigen sjablonen, wat andere trainers delen en de trainingen uit de PSD-databank van de club.", `<a class="btn ghost" href="#/trainingen">${IC.plan}Trainingen maken</a>`) +
     `<div class="filters"><label class="flt grow"><span>Zoeken</span><input type="search" data-f="q" placeholder="Thema, oefening…"></label>
       <label class="flt"><span>Leeftijd</span><select data-f="band"><option value="">Alle</option>${EX_BANDS.map(([k, l]) => `<option value="${k}"${f.band === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="flt"><span>Thema</span><select data-f="theme"><option value="">Alle</option>${EX_THEMES.map(t => `<option>${esc(t[0])}</option>`).join("")}</select></label>
-      <label class="flt"><span>Bron</span><select data-f="src"><option value="">Alle</option><option value="eigen">Mijn sjablonen</option><option value="psd">PSD-databank</option></select></label>
+      <label class="flt"><span>Bron</span><select data-f="src"><option value="">Alle</option><option value="eigen">Alleen van mij</option><option value="club">Gedeeld met de club</option><option value="psd">PSD-databank</option></select></label>
       ${authors.length > 1 ? `<label class="flt"><span>Gemaakt door</span><select data-f="author"><option value="">Alle</option>${authors.map(a => `<option>${esc(a)}</option>`).join("")}</select></label>` : ""}</div>
     <p class="hint" id="cnt" style="margin:10px 0"></p><div id="grid"></div>`;
   const draw = () => { const t = f.q.toLowerCase().trim();
     const list = tpls.filter(x => (!f.band || exBands(x.data).includes(f.band)) && (!f.theme || themesOf(x).includes(f.theme)) && (!f.author || x.data.author === f.author)
-      && (f.src !== "psd" || x.data.source === "PSD") && (f.src !== "eigen" || x.data.source !== "PSD")
+      && (f.src !== "psd" || x.data.source === "PSD") && (f.src !== "eigen" || (items.mine(x) && !x.shared)) && (f.src !== "club" || x.shared)
       && (!t || [x.title, x.data.goal, ...x.data.items.map(i => i.name)].join(" ").toLowerCase().includes(t)));
     $("#cnt", v).textContent = tpls.length ? `${list.length} van ${tpls.length} sjablonen` : "";
     $("#grid", v).innerHTML = list.length ? `<div class="tpls">${list.slice(0, shown).map(x => { const pics = x.data.items.filter(i => i.img || i.img_path || i.diagram?.objs?.length).slice(0, 3), th = themesOf(x);
       return `<article class="tplcard"><div class="tstrip">${pics.map(i => `<div>${exPic(i, "")}</div>`).join("") || `<div class="ph0">${IC.field}</div>`}</div><div class="bd">
         <b>${esc(x.title)}</b><small class="muted">${esc([agesTxt(x.data.ages), x.data.items.length + " oefeningen", planMinutes(x.data) ? planMinutes(x.data) + " min" : ""].filter(Boolean).join(" · "))}</small>
         ${th.length ? `<div class="chips">${th.slice(0, 3).map(c => `<span class="pill g">${esc(c)}</span>`).join("")}</div>` : ""}
-        <small class="hint">${x.data.source === "PSD" ? "PSD-databank" + (x.data.author ? " · " + esc(x.data.author) : "") : "Mijn sjabloon"}</small>
-        <div class="row" style="margin-top:auto;gap:6px"><button class="btn small" type="button" data-tpl="${x.id}">Inplannen</button><button class="btn ghost small" type="button" data-view="${x.id}">Bekijken</button><span class="spacer"></span><button class="link" type="button" data-tdel="${x.id}" aria-label="Verwijderen">✕</button></div></div></article>`; }).join("")}</div>
+        ${srcLine(x, x.data)}
+        <div class="row" style="margin-top:auto;gap:6px"><button class="btn small" type="button" data-tpl="${x.id}">Inplannen</button><button class="btn ghost small" type="button" data-view="${x.id}">Bekijken</button><span class="spacer"></span>${items.mine(x) && mode !== "demo" ? `<button class="link" type="button" data-tsh="${x.id}">${x.shared ? "Niet meer delen" : "Delen met club"}</button><button class="link" type="button" data-tdel="${x.id}" aria-label="Verwijderen">✕</button>` : ""}</div></div></article>`; }).join("")}</div>
       ${list.length > shown ? `<div class="row" style="justify-content:center;margin-top:16px"><button class="btn ghost" type="button" id="more">Meer tonen (nog ${list.length - shown})</button></div>` : ""}`
       : `<div class="empty"><b>${tpls.length ? "Niets gevonden" : "Nog geen sjablonen"}</b>${tpls.length ? "Pas de filters aan." : 'Open een training en kies "Opslaan als sjabloon".'}</div>`;
     const mo = $("#more", v); if (mo) mo.onclick = () => { shown += 30; draw(); };
     $$("[data-tpl]", v).forEach(b => b.onclick = () => tplSchedule(tpls.find(z => z.id === b.dataset.tpl)));
     $$("[data-view]", v).forEach(b => b.onclick = () => tplView(tpls.find(z => z.id === b.dataset.view)));
+    $$("[data-tsh]", v).forEach(b => b.onclick = async () => { const x = tpls.find(z => z.id === b.dataset.tsh); await safe(() => items.share(x, !x.shared), x.shared ? "Niet meer gedeeld." : "Gedeeld met alle clubtrainers."); draw(); });
     $$("[data-tdel]", v).forEach(b => b.onclick = async () => { const x = tpls.find(z => z.id === b.dataset.tdel); if (!confirm(`Sjabloon "${x.title}" verwijderen?`)) return; await safe(() => items.del(x), "Sjabloon verwijderd."); tpls.splice(tpls.indexOf(x), 1); draw(); }); };
   $$("[data-f]", v).forEach(el => { const k = el.dataset.f; el[k === "q" ? "oninput" : "onchange"] = () => { f[k] = el.value; shown = 30; draw(); }; });
   draw();

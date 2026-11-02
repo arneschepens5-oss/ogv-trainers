@@ -67,7 +67,15 @@ let hyT; new MutationObserver(() => { clearTimeout(hyT); hyT = setTimeout(() => 
 const items = {
   async list(kind) { const rows = await db.list("trainer_items", mode === "demo" ? { kind } : { kind, user_id: user.id }); return rows.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || "")); },
   async save(row) { row.updated_at = new Date().toISOString(); if (!row.id) row.id = uid(); if (mode === "demo") row.user_id = "demo"; else row.user_id = user.id; await db.save("trainer_items", row); return row; },
-  async del(row) { if (row.file_path) await files.remove(row.file_path).catch(() => {}); await db.del("trainer_items", { id: row.id }); }
+  async del(row) { if (row.file_path) await files.remove(row.file_path).catch(() => {}); await db.del("trainer_items", { id: row.id }); },
+  /* eigen items plus wat andere trainers van de club gedeeld hebben */
+  async listAll(kind) { const own = await this.list(kind); if (mode === "demo") return own;
+    let sh = []; try { sh = await db.list("trainer_items", { kind, shared: true }); } catch (e) { /* ogv-update-v7 nog niet uitgevoerd */ }
+    const ids = new Set(own.map(r => r.id)); return own.concat(sh.filter(r => !ids.has(r.id)).sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))); },
+  mine: r => mode === "demo" || !r.user_id || r.user_id === user?.id,
+  async share(row, on) { const was = row.shared; row.shared = on;
+    if (on && !row.data.shared_by) row.data.shared_by = user?.user_metadata?.name || user?.user_metadata?.full_name || (user?.email || "").split("@")[0];
+    try { await this.save(row); } catch (e) { row.shared = was; throw /shared|column|schema/i.test(e.message || "") ? new Error("Voer eerst het databasescript ogv-update-v7.sql uit in Supabase.") : e; } }
 };
 const fmtSize = b => b == null ? "" : b < 1024 * 1024 ? Math.max(1, Math.round(b / 1024)) + " kB" : (b / 1048576).toFixed(1).replace(".", ",") + " MB";
 
@@ -241,7 +249,7 @@ const NAV = [
   { g: null, items: [["start", "Start", "home"]] },
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
-  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["oefeningen", "Mijn oefeningen", "ball"], ["sjablonen", "Trainings\u00ADsjablonen", "copy"], ["animatiebord", "Animatiebord", "board"]] },
+  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["oefeningen", "Oefenstof", "ball"], ["sjablonen", "Trainings\u00ADsjablonen", "copy"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Scouting", items: [["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];

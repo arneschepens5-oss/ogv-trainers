@@ -461,3 +461,22 @@ alter table public.evaluations add column if not exists details jsonb not null d
 -- vijf momenten: start, herfst, winterstop (verplicht), maart, einde seizoen (verplicht)
 alter table public.evaluations drop constraint if exists evaluations_moment_check;
 alter table public.evaluations add constraint evaluations_moment_check check (moment between 1 and 5);
+
+-- =====================================================================
+-- Versie 7: oefenstof en trainingssjablonen delen met alle trainers van de club.
+-- Een gedeeld item kan elk clublid lezen (en kopiëren); alleen de maker kan het wijzigen of verwijderen.
+-- De veldtekening van een gedeelde oefening wordt automatisch mee leesbaar.
+-- =====================================================================
+alter table public.trainer_items add column if not exists shared boolean not null default false;
+create index if not exists trainer_items_shared on public.trainer_items(kind) where shared;
+create index if not exists trainer_items_img on public.trainer_items((data->>'img_path')) where shared;
+drop policy if exists "gedeelde items lezen" on public.trainer_items;
+create policy "gedeelde items lezen" on public.trainer_items for select to authenticated
+  using (shared and public.is_member());
+drop policy if exists "gedeelde afbeeldingen lezen" on storage.objects;
+create policy "gedeelde afbeeldingen lezen" on storage.objects for select to authenticated
+  using (bucket_id = 'trainer-files' and public.is_member()
+         and exists (select 1 from public.trainer_items t where t.shared and t.data->>'img_path' = storage.objects.name));
+-- de overgenomen PSD-oefendatabank meteen delen met de club
+update public.trainer_items set shared = true, data = data || jsonb_build_object('shared_by', 'Arne Schepens')
+  where data->>'source' = 'PSD' and not shared;
