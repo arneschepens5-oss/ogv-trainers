@@ -7,32 +7,6 @@ let LIB = null;
 async function loadLib() { if (LIB) return LIB; LIB = await fetch("trainingen/trainingen.json", { cache: "no-cache" }).then(r => r.json()); return LIB; }
 const LIB_MAPS = [["thema", "Thematrainingen", "Volledige trainingen per basisprincipe van het opleidingsplan."], ["oefenstof", "Oefenstof", "Losse oefeningen om je training mee op te bouwen."], ["opwarming", "Opwarming", "De vaste wedstrijdopwarming van de club."]];
 const LIB_THEMAS = ["Techniek", "Duel 1v1", "Passing en balaanname", "Handelingssnelheid", "Positiespel", "Wedstrijdvormen"];
-let libBouw = null, libMap = "alle", libQ = "";
-route("bibliotheek", { title: "Trainingsbibliotheek", render: async (v, id) => {
-  const L = await loadLib();
-  if (!libBouw) { try { libBouw = localStorage.getItem("tb-bouw"); } catch (e) {} if (!libBouw) { const c = parseInt(String(S.team?.category || "").replace(/\D/g, "")); libBouw = !c ? "middenbouw" : c <= 9 ? "onderbouw" : c <= 13 ? "middenbouw" : "bovenbouw"; } }
-  const card = it => `<button class="tr" type="button" data-id="${esc(it.id)}"><span class="pic" style="background-image:url('trainingen/${esc(it.img)}')">${it.principe ? `<span class="code">${esc(it.principe)}</span>` : ""}</span>
-    <span class="body"><h3>${esc(it.title)}</h3><p>${esc(it.bedoeling)}</p><span class="tags">${[it.vorm, it.veld, it.pages > 1 ? it.pages + " pagina's" : ""].filter(Boolean).map(t => `<span>${esc(t)}</span>`).join("")}</span></span></button>`;
-  const draw = () => {
-    const t = libQ.trim().toLowerCase(), match = i => !t || [i.title, i.bedoeling, i.thema, i.vorm, i.principe, PRINC[i.principe] || ""].join(" ").toLowerCase().includes(t);
-    let its = L.items.filter(i => i.bouwen.includes(libBouw) && match(i)); const all = L.items.filter(i => i.bouwen.includes(libBouw));
-    if (libMap !== "alle") its = its.filter(i => i.map === libMap);
-    let body = "";
-    for (const [mid, mn, mu] of LIB_MAPS) { if (libMap !== "alle" && libMap !== mid) continue; const mi = its.filter(i => i.map === mid); if (!mi.length) continue;
-      if (mid === "oefenstof") { body += `<div class="sec"><h2>${mn}</h2><p class="muted" style="margin:-6px 0 6px">${mu}</p>` + LIB_THEMAS.map(th => { const x = mi.filter(i => i.thema === th); return x.length ? `<h3 class="muted" style="margin:16px 0 10px">${th}</h3><div class="cards">${x.map(card).join("")}</div>` : ""; }).join("") + "</div>"; }
-      else body += `<div class="sec"><h2>${mn}</h2><p class="muted" style="margin:-6px 0 14px">${mu}</p><div class="cards">${mi.sort((a, b) => ((a.principe || "9") + (a.bron ? "z" : "a") + a.title).localeCompare((b.principe || "9") + (b.bron ? "z" : "a") + b.title)).map(card).join("")}</div></div>`; }
-    $("#libv").innerHTML = `<div class="scrollx" style="margin:18px 0 0">${[["alle", "Alles", all.length], ...LIB_MAPS.map(([k, n]) => [k, n, all.filter(i => i.map === k).length]).filter(x => x[2])].map(([k, n, c]) => `<button class="chip" type="button" data-m="${k}" aria-pressed="${libMap === k}">${n}<b>${c}</b></button>`).join("")}</div>` +
-      (body || `<div class="empty sec"><b>Geen training gevonden</b>Niets past bij "${esc(libQ)}" in deze leeftijdsgroep.</div>`);
-    $$("[data-m]", v).forEach(b => b.onclick = () => { libMap = b.dataset.m; draw(); });
-    $$(".tr", v).forEach(b => b.onclick = () => libDetail(L, b.dataset.id));
-    $$("#bouw button", v).forEach(b => b.setAttribute("aria-pressed", b.dataset.b === libBouw));
-  };
-  v.innerHTML = head("Trainingsbibliotheek", "De uitgewerkte trainingen van de club per leeftijdsgroep. Open een training en bekijk, download of plan ze.", `<input id="lq" type="search" placeholder="Zoek: omschakeling, 1v1, passing…" style="width:min(340px,100%)" value="${esc(libQ)}">`) + libTabs("bibliotheek") +
-    `<div class="bouw" id="bouw" role="group" aria-label="Leeftijdsgroep">${L.bouwen.map(b => `<button type="button" data-b="${b.id}"><b>${b.naam}</b><small>${b.leeftijd} · ${b.vorm}</small></button>`).join("")}</div><div id="libv"></div>`;
-  $$("#bouw button", v).forEach(b => b.onclick = () => { libBouw = b.dataset.b; try { localStorage.setItem("tb-bouw", libBouw); } catch (e) {} libMap = "alle"; draw(); });
-  $("#lq").oninput = e => { libQ = e.target.value; draw(); };
-  draw(); if (id) libDetail(L, id);
-} });
 function libDetail(L, id) {
   const it = L.items.find(i => i.id === id); if (!it) return;
   const ext = it.orig ? it.orig.split(".").pop().toUpperCase() : "", bn = it.bouwen.map(b => L.bouwen.find(x => x.id === b).naam).join(", ");

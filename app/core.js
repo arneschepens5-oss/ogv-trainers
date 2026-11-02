@@ -308,9 +308,6 @@ async function render() {
 addEventListener("hashchange", render);
 
 function backLink(href, label) { return `<a class="crumb" href="${href}">${IC.back}${esc(label)}</a>`; }
-/* één trainingsbibliotheek met drie tabbladen */
-const LIB_TABS = [["bibliotheek", "Clubtrainingen"], ["oefeningen", "Oefenstof"], ["sjablonen", "Trainingssjablonen"]];
-const libTabs = curT => `<div class="ptabs libtabs" role="tablist">${LIB_TABS.map(([k, l]) => `<a role="tab" href="#/${k}" aria-selected="${k === curT}">${l}</a>`).join("")}</div>`;
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }
 
 /* ============ ploeg kiezen ============ */

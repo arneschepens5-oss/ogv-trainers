@@ -96,21 +96,6 @@ function attendanceView(tv, e) {
   $("#allIn").onclick = () => safe(async () => { for (const p of ps) { const a = attOf(e.id, p.id); if (!a || a.status !== "aanwezig") await putAtt({ ...(a || { event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {} }), status: "aanwezig" }); } render(); }, "Iedereen staat op aanwezig.");
 }
 
-function libPicker(lib, onPick) {
-  if (!lib) { toast("De trainingsbibliotheek kon niet geladen worden."); return; }
-  const bouwOf = () => { const c = parseInt(String(S.team?.category || "").replace(/\D/g, "")) || 9; return c <= 9 ? "onderbouw" : c <= 13 ? "middenbouw" : "bovenbouw"; };
-  let q = "", b = bouwOf();
-  const d = dialog(`<div class="dlg"><h2>Uit de trainingsbibliotheek</h2><input id="lq" type="search" placeholder="Zoek: omschakeling, 1v1, passing…">
-    <div class="chips" id="lb">${lib.bouwen.map(x => `<button class="chip" type="button" data-b="${x.id}">${x.naam}</button>`).join("")}</div>
-    <div id="ll" style="max-height:52dvh;overflow:auto"></div><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`, "wide");
-  const draw = () => { $$("#lb button", d).forEach(x => x.setAttribute("aria-pressed", x.dataset.b === b));
-    const t = q.toLowerCase(), its = lib.items.filter(i => i.bouwen.includes(b) && (!t || [i.title, i.bedoeling, i.thema, i.principe].join(" ").toLowerCase().includes(t)));
-    $("#ll", d).innerHTML = its.length ? `<div class="list">${its.map(i => `<div class="item" data-lpick="${i.id}"><img src="trainingen/${esc(i.img)}" alt="" style="width:64px;height:42px;object-fit:cover;border-radius:8px;flex:none">
-      <span class="main"><b>${i.principe ? esc(i.principe) + " · " : ""}${esc(i.title)}</b><small>${esc(i.bedoeling)}</small></span>${IC.plus}</div>`).join("")}</div>` : `<p class="muted">Niets gevonden.</p>`;
-    $$("[data-lpick]", d).forEach(x => x.onclick = () => { onPick(lib.items.find(i => i.id === x.dataset.lpick)); d.close(); toast("Oefening toegevoegd."); }); };
-  $("#lq", d).oninput = ev => { q = ev.target.value; draw(); }; $$("#lb button", d).forEach(x => x.onclick = () => { b = x.dataset.b; draw(); }); draw();
-}
-
 /* ---------- wedstrijd ---------- */
 function viewMatch(v, e, tab) {
   const r = res(e);

@@ -701,5 +701,33 @@ html.theming,html.theming *{transition:background-color .3s ease,border-color .3
 .excard .chips .pill:not(.g){border:1px solid var(--line);color:var(--muted);font-weight:500}
 .shdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--yellow);margin-right:6px;vertical-align:1px}
 
-.libtabs{margin:4px 0 18px}
-.libtabs a{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+
+/* trainingsbibliotheek */
+.libtype{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:18px;background:var(--card);border:1px solid var(--line);margin:4px 0 14px}
+.libtype button{all:unset;box-sizing:border-box;cursor:pointer;padding:12px 16px;border-radius:14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.libtype button b{font-size:17px;font-weight:800}.libtype button b span{font-weight:600;color:var(--muted);font-size:14px;margin-left:4px}
+.libtype button small{font-size:13px;color:var(--muted)}
+.libtype button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.libtype button[aria-selected="true"] small,.libtype button[aria-selected="true"] b span{color:var(--bg);opacity:.7}
+.libtype button:focus-visible,.pickable:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.bouw.b4{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+.bouw.b4 button{padding:12px 14px}.bouw.b4 b{font-size:18px}
+@media (max-width:640px){.bouw.b4{grid-template-columns:repeat(2,minmax(0,1fr))}.libtype button small{display:none}}
+.filters .fmore{display:contents}
+.excard .lt,.tplcard .lt{font-size:16.5px;line-height:1.25}
+.tplcard.pickable{all:unset;box-sizing:border-box;display:flex;flex-direction:column;border-radius:var(--r);background:var(--card);border:1px solid var(--line);overflow:hidden;cursor:pointer}
+.tplcard.pickable:hover,.excard.pickable:hover{border-color:var(--yellow)}
+.lsrc.src-club{color:var(--yellow)}
+.exview .exvgrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;align-items:start}
+.exview .exvpic{border-radius:14px;overflow:hidden;background:#1E5A2E}
+.exview .exvpic img{width:100%;display:block;background:#fff}
+.exview .exvinfo{display:flex;flex-direction:column;gap:10px}
+.exview h3{margin:6px 0 0;font-size:15px}
+.exview .pre{white-space:pre-line;margin:0;color:var(--muted);line-height:1.5}
+.exview .facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.exview .facts dt{color:var(--muted)}.exview .facts dd{margin:0}
+.exview .exvact{position:sticky;bottom:-1px;background:var(--card);padding-top:10px;border-top:1px solid var(--line)}
+@media (max-width:760px){.exview .exvgrid{grid-template-columns:1fr}}
+.exview .exvpic:has(.ph0){aspect-ratio:16/10;display:grid;place-items:center;color:rgba(255,255,255,.5)}
+.exview .exvpic svg{display:block;width:100%;height:auto}
+.exview .chips .pill:not(.g){border:1px solid var(--line);color:var(--muted);font-weight:500}
