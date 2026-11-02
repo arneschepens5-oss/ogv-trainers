@@ -256,8 +256,12 @@ function viewLogin(v, msg) {
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><button class="link" type="button" id="demo">Bekijk de demo</button></div>
   <p class="hint">Nog geen account? Vraag het aan de beheerder van het trainersplatform. Trainingsbibliotheek, spelprincipes en zonekaart werken ook zonder account.</p></div>`;
   $("#lf").onsubmit = async e => { e.preventDefault(); if (!sb) { $("#lerr").textContent = "Geen verbinding met de database."; return; }
-    $("#lerr").textContent = ""; const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
-    if (error) $("#lerr").textContent = error.message === "Invalid login credentials" ? "E-mailadres of wachtwoord klopt niet." : error.message; };
+    const btn = $("button", e.target); btn.disabled = true; btn.textContent = "Bezig met aanmelden…"; $("#lerr").textContent = "";
+    try { const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
+      if (error) $("#lerr").textContent = error.message === "Invalid login credentials" ? "E-mailadres of wachtwoord klopt niet." : error.message === "Email not confirmed" ? "Je account is nog niet bevestigd. Vraag de beheerder om het te bevestigen in Supabase." : error.message;
+      else btn.textContent = "Je ploegen worden geladen…"; }
+    catch (x) { $("#lerr").textContent = "Aanmelden lukt niet: controleer je internetverbinding."; }
+    finally { if ($("#lerr").textContent) { btn.disabled = false; btn.textContent = "Aanmelden"; } } };
   $("#forgot").onclick = async () => { const m = $("#lf").email.value.trim(); if (!m) { $("#lerr").textContent = "Vul eerst je e-mailadres in."; return; }
     if (sb) await sb.auth.resetPasswordForEmail(m, { redirectTo: location.origin + location.pathname }); $("#lerr").textContent = "Als dit adres een account heeft, staat er nu een mail in je mailbox."; };
   $("#demo").onclick = startDemo;
@@ -336,7 +340,8 @@ function boot() {
     sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: "tb_auth" } });
     let started = false;
     sb.auth.onAuthStateChange((ev, session) => { if (mode === "demo") return;
-      if (session?.user) { user = session.user; if (!started) { started = true; startCloud(); } }
+      /* Supabase houdt tijdens deze melding een slot vast: databaseoproepen moeten erna gebeuren, anders blijft alles hangen. */
+      if (session?.user) { user = session.user; if (!started) { started = true; setTimeout(startCloud, 0); } }
       else if (started || ev === "SIGNED_OUT") { started = false; user = null; db = null; mode = null; render(); } });
   }
   if (demo) { startDemo(); return; }
