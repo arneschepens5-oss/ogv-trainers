@@ -15,13 +15,14 @@ route("start", { title: "Start", render: async v => {
     <div class="quick">${next ? `<a href="#/activiteit/${next.id}">${next.type === "wedstrijd" ? IC.ball : IC.check}${next.date === todayIso() ? (next.type === "wedstrijd" ? "Wedstrijd van vandaag" : "Aanwezigheden van vandaag") : (next.type === "wedstrijd" ? "Volgende wedstrijd" : "Volgende training")}</a>` : ""}
       ${next && next.type === "wedstrijd" ? `<a href="#/live/${next.id}">${IC.mic}Live coachen</a>` : `<a href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a>`}
       <a href="#/uitslagen">${IC.trophy}Uitslagen club</a>${logged ? "" : `<a href="#/aanmelden">Aanmelden</a>`}</div></section>
+  ${t ? evReminder() : ""}
   ${todo.length ? `<div class="sec"><h2>Nog in te vullen</h2><div class="list">${todo.map(e => evItem(e)).join("")}</div></div>` : ""}
   ${recent.length ? `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Laatste uitslagen van de club</h2><a class="link" href="#/uitslagen">Alle uitslagen</a></div><div class="list">${recent.map(clubItem).join("")}</div></div>` : ""}
   <div class="sec"><h2>Alles op één plek</h2><div class="tiles">${[
     ["kalender", "cal", "Kalender en aanwezigheden", "Trainingen en wedstrijden plannen, aanwezigheden afvinken."],
     ["live", "mic", "Live coachen", "Klok, goals en wissels tijdens de match, met spraak. Speeltijd wordt vanzelf berekend."],
     ["uitslagen", "trophy", "Uitslagen en verslagen", "Alle wedstrijden van de club met het verslag erbij."],
-    ["evaluaties", "star", "Evaluaties", "Vier momenten per seizoen, met de groei per speler."],
+    ["evaluaties", "star", "Evaluaties", "Uitgebreide fiche per speler, met winterstop en einde seizoen als vaste momenten."],
     ["bibliotheek", "book", "Trainingsbibliotheek", "Alle clubtrainingen per leeftijd, met PDF en aanpasbare versie."],
     ["trainingen", "plan", "Trainingen maken", "Volledige trainingsfiches met veldtekening, belasting en duur per oefening."],
     ["videoanalyse", "cam", "Videoanalyse", "Teken pijlen, zones en spotlights op je eigen beelden en exporteer als video."],
@@ -32,6 +33,7 @@ route("start", { title: "Start", render: async v => {
     ["scouting", "scout", "Scouting", "De gedeelde scoutingsdatabase van de club."]
   ].map(([h, i, b, s]) => `<a class="tile" href="#/${h}"><span class="ic">${IC[i]}</span><span><b>${b}</b><small>${s}</small></span></a>`).join("")}</div></div>`;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
+  $$("[data-em]", v).forEach(a => a.onclick = () => { evMoment = +a.dataset.em; });
   return window.mountPitch ? window.mountPitch($("#pitch3d")) : null;
 } });
 
@@ -155,47 +157,20 @@ function goalForm(p) {
 }
 const evalAvg = e => avg(Object.values(e.scores || {}).map(Number));
 function evalChart(ev) {
-  const W = 320, H = 130, pad = 26, xs = m => pad + (m - 1) * (W - 2 * pad) / 3, ys = val => H - 18 - (val - 1) * (H - 36) / 4;
-  const pts = ev.map(e => [e.moment, evalAvg(e)]).filter(x => x[1] != null);
+  const names = evItems(), W = 320, H = 130, pad = 26, xs = m => pad + (m - 1) * (W - 2 * pad) / 3, ys = val => H - 18 - (val - 1) * (H - 36) / 4;
+  const pts = ev.map(e => [e.moment, evAvgOf(e, names)]).filter(x => x[1] != null);
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Evolutie gemiddelde evaluatie">
   ${[1,2,3,4,5].map(n => `<line x1="${pad}" x2="${W - pad}" y1="${ys(n)}" y2="${ys(n)}" style="stroke:var(--line)"/><text x="6" y="${ys(n) + 4}" style="fill:var(--dim)" font-size="10">${n}</text>`).join("")}
-  ${[1,2,3,4].map(m => `<text x="${xs(m)}" y="${H - 2}" text-anchor="middle" style="fill:var(--dim)" font-size="10">Eval ${m}</text>`).join("")}
+  ${EV_MOMENTS.map(x => `<text x="${xs(x.m)}" y="${H - 2}" text-anchor="middle" style="fill:var(--dim)" font-size="10">${x.kort}</text>`).join("")}
   <polyline fill="none" stroke="#FFD500" stroke-width="2.5" points="${pts.map(([m, n]) => xs(m) + "," + ys(n)).join(" ")}"/>
   ${pts.map(([m, n]) => `<circle cx="${xs(m)}" cy="${ys(n)}" r="4" fill="#FFD500"/><text x="${xs(m)}" y="${ys(n) - 9}" text-anchor="middle" style="fill:var(--ink)" font-size="11" font-weight="700">${f1(n)}</text>`).join("")}</svg>`;
 }
-function evalDetail(ev) { const a0 = ev[0], b0 = ev[ev.length - 1];
-  return `<table class="tbl" style="margin-top:8px"><tr><th>Onderdeel</th><th>Eval ${a0.moment}</th>${ev.length > 1 ? `<th>Eval ${b0.moment}</th><th>Groei</th>` : ""}</tr>
-  ${(S.team.criteria || DEF_CRIT).map(c => { const a = +a0.scores?.[c], b = +b0.scores?.[c], dl = ev.length > 1 && !isNaN(a) && !isNaN(b) ? b - a : null;
-    return `<tr><td>${esc(c)}</td><td>${isNaN(a) ? "–" : f1(a)}</td>${ev.length > 1 ? `<td>${isNaN(b) ? "–" : f1(b)}</td><td style="color:${dl > 0 ? "var(--ok)" : dl < 0 ? "var(--bad)" : "var(--muted)"}">${dl == null ? "–" : (dl > 0 ? "+" : "") + f1(dl)}</td>` : ""}</tr>`; }).join("")}</table>`; }
-
-/* ============ evaluaties ============ */
-let evMoment = 1;
-route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: v => {
-  const cr = S.team.criteria || DEF_CRIT, ps = active(), opts = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
-  const done = ps.filter(p => S.evals.some(e => e.player_id === p.id && e.moment === evMoment && Object.keys(e.scores || {}).length)).length;
-  v.innerHTML = head("Evaluaties", "Vier keer per seizoen een score van 1 tot 5 per onderdeel. Elke wijziging wordt meteen bewaard.") +
-  `<div class="chips">${[1,2,3,4].map(m => `<button class="chip" type="button" data-m="${m}" aria-pressed="${m === evMoment}">Evaluatie ${m}</button>`).join("")}</div>
-  <p class="hint" style="margin:10px 0 16px">${done} van ${ps.length} spelers ingevuld voor evaluatie ${evMoment}.</p>
-  ${ps.length ? `<div class="panel wrapx" style="padding:8px 12px"><table class="tbl"><thead><tr><th>Speler</th>${cr.map(c => `<th style="white-space:normal;min-width:80px;text-align:center">${esc(c)}</th>`).join("")}<th>Gem.</th><th></th></tr></thead><tbody>
-  ${ps.map(p => { const e = S.evals.find(x => x.player_id === p.id && x.moment === evMoment);
-    return `<tr data-p="${p.id}"><td><a href="#/speler/${p.id}">${esc(pname(p))}</a></td>${cr.map(c => `<td style="text-align:center"><select data-c="${esc(c)}" aria-label="${esc(c)} voor ${esc(pname(p))}"><option value="">–</option>${opts.map(o => `<option value="${o}"${+e?.scores?.[c] === o ? " selected" : ""}>${String(o).replace(".", ",")}</option>`).join("")}</select></td>`).join("")}
-    <td class="avg" style="font-weight:800">${f1(e ? evalAvg(e) : null)}</td><td><button class="link" type="button" data-cm="${p.id}">${e?.comment ? "Opmerking" : "+ opmerking"}</button></td></tr>`; }).join("")}</tbody></table></div>`
-  : `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`}
-  <p class="hint" style="margin-top:12px">De onderdelen pas je aan bij <a class="link" href="#/ploeg-instellingen">Ploeg en trainers</a>.</p>`;
-  $$("[data-m]", v).forEach(b => b.onclick = () => { evMoment = +b.dataset.m; render(); });
-  const getE = pid => S.evals.find(x => x.player_id === pid && x.moment === evMoment) || null;
-  const put = async e => { await db.save("evaluations", e); const i = S.evals.findIndex(x => x.player_id === e.player_id && x.moment === e.moment); if (i >= 0) S.evals[i] = e; else S.evals.push(e); };
-  $$("tr[data-p] select", v).forEach(sel => sel.onchange = async () => { const tr = sel.closest("tr"), pid = tr.dataset.p, old = getE(pid);
-    const e = old ? { ...old, scores: { ...old.scores } } : { id: uid(), team_id: S.team.id, player_id: pid, moment: evMoment, date: todayIso(), scores: {}, comment: null };
-    if (sel.value === "") delete e.scores[sel.dataset.c]; else e.scores[sel.dataset.c] = +sel.value;
-    await safe(async () => { await put(e); $(".avg", tr).textContent = f1(evalAvg(e)); }); });
-  $$("[data-cm]", v).forEach(b => b.onclick = () => { const pid = b.dataset.cm, p = S.players.find(x => x.id === pid), e = getE(pid);
-    const d = dialog(`<form><h2>Opmerking bij evaluatie ${evMoment}</h2><p class="muted" style="margin:0">${esc(pname(p))}</p><textarea id="cmt">${esc(e?.comment || "")}</textarea>
-      <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
-    $("form", d).onsubmit = async ev => { ev.preventDefault(); const c = $("#cmt", d).value.trim();
-      const row = e ? { ...e, comment: c || null } : { id: uid(), team_id: S.team.id, player_id: pid, moment: evMoment, date: todayIso(), scores: {}, comment: c || null };
-      await safe(async () => { await put(row); d.close(); b.textContent = row.comment ? "Opmerking" : "+ opmerking"; }, "Opmerking bewaard."); }; });
-} });
+function evalDetail(ev) { const a0 = ev[0], b0 = ev[ev.length - 1], two = ev.length > 1, nm = m => EV_MOMENTS[m - 1].kort;
+  const cell = (a, b) => { const dl = two && a != null && b != null ? b - a : null; return `<td>${a == null ? "–" : f1(a)}</td>${two ? `<td>${b == null ? "–" : f1(b)}</td><td style="color:${dl > 0 ? "var(--ok)" : dl < 0 ? "var(--bad)" : "var(--muted)"}">${dl == null ? "–" : (dl > 0 ? "+" : "") + f1(dl)}</td>` : ""}`; };
+  return `<table class="tbl" style="margin-top:8px"><tr><th style="text-align:left">Onderdeel</th><th>${nm(a0.moment)}</th>${two ? `<th>${nm(b0.moment)}</th><th>Groei</th>` : ""}</tr>
+  ${evGroups().map(g => { const n = g.items.map(i => i.name); return `<tr class="grow"><td style="text-align:left"><b>${esc(g.name)}</b></td>${cell(evAvgOf(a0, n), evAvgOf(b0, n))}</tr>` +
+    g.items.map(i => `<tr><td style="text-align:left;padding-left:18px" class="muted">${esc(i.name)}</td>${cell(evScore(a0, i.name), evScore(b0, i.name))}</tr>`).join(""); }).join("")}</table>
+  <a class="btn ghost small" style="margin-top:10px" href="#/evaluaties/${a0.player_id}/${b0.moment}">Evaluatie openen</a>`; }
 
 /* ============ cijfers ============ */
 let sortK = "name", sortD = 1;
@@ -225,7 +200,7 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
   <div class="grid2"><div class="panel"><h2>Trainers van deze ploeg</h2><div class="list">${S.trainers.map(x => `<div class="item static"><span class="main"><b>${esc(x.email || "Trainer")}</b>${x.user_id === user?.id ? "<small>jij</small>" : ""}</span></div>`).join("")}</div>
     <form id="addTr" class="row" style="margin-top:12px"><input type="email" name="mail" required placeholder="e-mailadres co-trainer" style="flex:1;min-width:180px"><button class="btn">Toevoegen</button></form>
     <p class="hint">De co-trainer moet al een account hebben. Accounts maakt de beheerder aan in Supabase.</p></div>
-   <div class="panel"><h2>Evaluatie-onderdelen</h2><textarea id="crit" style="min-height:150px">${esc((t.criteria || DEF_CRIT).join("\n"))}</textarea><p class="hint">Eén onderdeel per regel.</p>
+   <div class="panel"><h2>Evaluatie-onderdelen</h2><p class="hint" style="margin-top:0">Eén onderdeel per regel. Begin een regel met # voor een groep, en zet uitleg achter een |, bv. "Passing | zuiver passen met beide voeten".</p><textarea id="crit" style="min-height:220px">${esc((t.criteria || DEF_CRIT).join("\n"))}</textarea>
     <h2 style="margin-top:14px">Werkpunten bij wedstrijden</h2><textarea id="tags" style="min-height:150px">${esc((t.worktags || DEF_TAGS).join("\n"))}</textarea>
     <div class="row" style="margin-top:10px"><span class="spacer"></span><button class="btn" type="button" id="saveLists">Opslaan</button></div></div></div>
   <div class="sec panel" id="rbfaP"></div>

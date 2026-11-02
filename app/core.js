@@ -316,7 +316,7 @@ function teamForm(t) {
     <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">${n ? "Ploeg aanmaken" : "Opslaan"}</button></div></form>`);
   $("form", d).onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
     const row = { ...(n ? { id: uid() } : S.team), name: f.name.trim(), category: f.category.trim(), format: f.format, season: f.season.trim(), periods: +f.periods || null, period_minutes: +f.period_minutes || null };
-    if (n && mode === "demo") { row.criteria = DEF_CRIT; row.worktags = DEF_TAGS; }
+    if (n) row.criteria = EV_TEMPLATE.slice(); if (n && mode === "demo") row.worktags = DEF_TAGS;
     await safe(async () => { if (n) { await db.insert("teams", row); if (mode === "demo") await db.save("team_trainers", { team_id: row.id, user_id: "demo", email: "demo@ogvorselaar.be" }); } else await db.save("teams", row);
       await loadTeams(); await loadTeam(row.id); d.close(); go(n ? "#/spelers" : "#/ploeg-instellingen"); }, n ? "Ploeg aangemaakt. Voeg nu je spelers toe." : "Ploeg opgeslagen."); };
 }
@@ -358,7 +358,7 @@ function demoSeed() {
   let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280, pick = a => a[Math.floor(rnd() * a.length)];
   const today = new Date(), d = { teams: [], team_trainers: [], players: [], events: [], attendance: [], evaluations: [], goals: [], scouting: [], club_docs: [] };
   const mk = (name, cat, format, mine, names) => {
-    const team = { id: uid(), name, category: cat, format, season: seasonNow(), criteria: DEF_CRIT, worktags: DEF_TAGS, share_ratings: !mine, periods: FORMAT_DEF[format][0], period_minutes: FORMAT_DEF[format][1] };
+    const team = { id: uid(), name, category: cat, format, season: seasonNow(), criteria: EV_TEMPLATE.slice(), worktags: DEF_TAGS, share_ratings: !mine, periods: FORMAT_DEF[format][0], period_minutes: FORMAT_DEF[format][1] };
     d.teams.push(team); if (mine) d.team_trainers.push({ team_id: team.id, user_id: "demo", email: "demo@ogvorselaar.be" });
     const pos = ["Keeper","Verdediger","Verdediger","Middenvelder","Middenvelder","Middenvelder","Aanvaller","Aanvaller","Verdediger","Aanvaller","Middenvelder","Verdediger"];
     const ps = names.map((n, i) => ({ id: uid(), team_id: team.id, first_name: n[0], last_name: n[1], birthdate: (format === "5v5" ? "2018" : "2016") + "-0" + (1 + i % 9) + "-1" + (i % 9), number: i + 1, position: pos[i], foot: i % 4 ? "Rechts" : "Links", active: true }));
@@ -398,7 +398,8 @@ function demoSeed() {
   const a = mk("Demoploeg U9", "U9", "5v5", true, [["Lio","Peeters"],["Mats","Janssens"],["Odin","Maes"],["Juul","Claes"],["Remi","Wouters"],["Staf","Goossens"],["Nore","Mertens"],["Lou","Willems"],["Bas","Jacobs"],["Fien","Hermans"]]);
   mk("Demoploeg U11", "U11", "8v8", false, [["Wout","Aerts"],["Kas","Smets"],["Jef","Vermeulen"],["Mil","Pauwels"],["Tibo","Dubois"],["Vic","Lambrechts"],["Gust","Michiels"],["Ward","Cools"],["Rob","Segers"],["Lars","Hendrickx"],["Tuur","Verbeke"]]);
   const pr = a.ps;
-  d.evaluations = pr.flatMap(p => [1, 2].map(m => ({ id: uid(), team_id: a.team.id, player_id: p.id, moment: m, date: iso(addDays(today, m === 1 ? -70 : -14)), scores: Object.fromEntries(DEF_CRIT.map(c => [c, Math.min(5, Math.round((2 + rnd() * 2 + (m - 1) * .5) * 2) / 2)])), comment: "" })));
+  d.evaluations = pr.flatMap(p => [1, 2].map(m => ({ id: uid(), team_id: a.team.id, player_id: p.id, moment: m, date: iso(addDays(today, m === 1 ? -70 : -14)), scores: Object.fromEntries(evItems({ criteria: EV_TEMPLATE }).map(c => [c, Math.min(5, Math.round((2 + rnd() * 2 + (m - 1) * .5) * 2) / 2)])), comment: "",
+    details: m === 2 ? { strengths: "Inzet, Passing", workpoints: "Zelfvertrouwen, Coaching", goals: "Elke training minstens één keer de bal vragen" } : {} })));
   d.goals = [{ id: uid(), team_id: a.team.id, player_id: pr[3].id, text: "Met links leren passen over 10 meter", area: "Techniek", term: "kort", status: "bezig" },
              { id: uid(), team_id: a.team.id, player_id: pr[6].id, text: "Na balverlies meteen druk zetten", area: "Tactiek", term: "middellang", status: "bezig" }];
   d.scouting = [["Voorbeeldspeler A","FC Voorbeeld U13","Centrale middenvelder",[8,7,8.5,8,7.5]],["Voorbeeldspeler B","SK Demo U13","Spits",[6,8,6.5,7,6]],["Voorbeeldspeler C","VV Proef U12","Linksachter",[7,6,7,6.5,8]]]

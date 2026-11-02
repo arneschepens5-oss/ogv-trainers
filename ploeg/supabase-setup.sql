@@ -453,3 +453,8 @@ begin
   return true;
 end $$;
 grant execute on function public.parent_view(uuid), public.parent_rsvp(uuid, uuid, text, text) to anon, authenticated;
+
+-- =====================================================================
+-- Versie 6: uitgebreide evaluaties (sterktes, werkpunten, doelen, oudergesprek).
+-- =====================================================================
+alter table public.evaluations add column if not exists details jsonb not null default '{}';

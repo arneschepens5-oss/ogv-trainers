@@ -139,5 +139,5 @@ function historyHtml(p) {
   const avgE = e => { const v = Object.values(e.scores || {}).map(Number).filter(x => !isNaN(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   return `<div class="sec"><h2>Vorige seizoenen</h2><div class="grid2">${h.slice().reverse().map(x => `<div class="panel"><div class="row" style="margin-bottom:8px"><b style="font-size:17px">${esc(x.team)}</b><span class="spacer"></span><span class="pill g">${esc(x.season)}</span></div>
     <div class="hstats">${[["Training", x.stats?.trainingPct != null ? x.stats.trainingPct + "%" : "–"], ["Wedstrijden", x.stats?.matches ?? "–"], ["Minuten", x.stats?.minutes ?? "–"], ["Goals", x.stats?.goals ?? "–"], ["Gem. cijfer", f1(x.stats?.rating)]].map(([k, val]) => `<div><small>${k}</small><b>${val}</b></div>`).join("")}</div>
-    ${x.evals?.length ? `<p class="hint" style="margin:10px 0 4px">Evaluaties (gemiddelde op 5)</p><div class="chips">${x.evals.map(e => `<span class="pill g">E${e.moment}: ${f1(avgE(e))}</span>`).join("")}</div>` : ""}</div>`).join("")}</div></div>`;
+    ${x.evals?.length ? `<p class="hint" style="margin:10px 0 4px">Evaluaties (gemiddelde op 5)</p><div class="chips">${x.evals.map(e => `<span class="pill g">${EV_MOMENTS[e.moment - 1]?.naam || "E" + e.moment}: ${f1(avgE(e))}</span>`).join("")}</div>` : ""}</div>`).join("")}</div></div>`;
 }
