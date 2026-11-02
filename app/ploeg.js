@@ -157,7 +157,7 @@ function goalForm(p) {
 }
 const evalAvg = e => avg(Object.values(e.scores || {}).map(Number));
 function evalChart(ev) {
-  const names = evItems(), W = 320, H = 130, pad = 26, xs = m => pad + (m - 1) * (W - 2 * pad) / 3, ys = val => H - 18 - (val - 1) * (H - 36) / 4;
+  const names = evItems(), W = 320, H = 130, pad = 26, xs = m => pad + (m - 1) * (W - 2 * pad) / (EV_MOMENTS.length - 1), ys = val => H - 18 - (val - 1) * (H - 36) / 4;
   const pts = ev.map(e => [e.moment, evAvgOf(e, names)]).filter(x => x[1] != null);
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Evolutie gemiddelde evaluatie">
   ${[1,2,3,4,5].map(n => `<line x1="${pad}" x2="${W - pad}" y1="${ys(n)}" y2="${ys(n)}" style="stroke:var(--line)"/><text x="6" y="${ys(n) + 4}" style="fill:var(--dim)" font-size="10">${n}</text>`).join("")}

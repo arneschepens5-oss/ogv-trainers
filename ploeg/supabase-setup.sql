@@ -458,3 +458,6 @@ grant execute on function public.parent_view(uuid), public.parent_rsvp(uuid, uui
 -- Versie 6: uitgebreide evaluaties (sterktes, werkpunten, doelen, oudergesprek).
 -- =====================================================================
 alter table public.evaluations add column if not exists details jsonb not null default '{}';
+-- vijf momenten: start, herfst, winterstop (verplicht), maart, einde seizoen (verplicht)
+alter table public.evaluations drop constraint if exists evaluations_moment_check;
+alter table public.evaluations add constraint evaluations_moment_check check (moment between 1 and 5);

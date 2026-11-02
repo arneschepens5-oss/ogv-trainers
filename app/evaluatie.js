@@ -6,7 +6,9 @@ const EV_MOMENTS = [
   { m: 1, naam: "Start seizoen", kort: "Start", periode: "augustus – september", from: [0, 7, 1], to: [0, 8, 30] },
   { m: 2, naam: "Herfst", kort: "Herfst", periode: "oktober – november", from: [0, 9, 1], to: [0, 10, 30] },
   { m: 3, naam: "Winterstop", kort: "Winter", periode: "december – januari", from: [0, 11, 1], to: [1, 0, 31], verplicht: true },
-  { m: 4, naam: "Einde seizoen", kort: "Einde", periode: "mei – juni", from: [1, 4, 1], to: [1, 5, 30], verplicht: true }];
+  { m: 4, naam: "Maart", kort: "Maart", periode: "half februari – half april", from: [1, 1, 15], to: [1, 3, 15] },
+  { m: 5, naam: "Einde seizoen", kort: "Einde", periode: "mei – juni", from: [1, 4, 1], to: [1, 5, 30], verplicht: true }];
+const EV_LAST = EV_MOMENTS.length;
 const EV_LEVELS = { 1: "Nog niet", 1.5: "Nog niet tot soms", 2: "Soms", 2.5: "Soms tot meestal", 3: "Meestal", 3.5: "Meestal tot bijna altijd", 4: "Bijna altijd", 4.5: "Bijna altijd tot uitblinker", 5: "Uitblinker" };
 const EV_TEMPLATE = ["# Techniek",
   "Techniek (controle over de bal) | Houdt de bal dicht bij de voet, met beide voeten, ook onder druk",
@@ -55,7 +57,7 @@ const evStarted = e => !!e && Object.keys(e.scores || {}).length > 0;
 function evWindow(mo, t = S.team) { const y = parseInt(String(t?.season || seasonNow())) || new Date().getFullYear();
   const mk = ([dy, mm, dd]) => new Date(y + dy, mm, dd, 12); return { from: mk(mo.from), to: mk(mo.to) }; }
 function evCurrent(t = S.team) { const now = new Date();
-  for (const mo of EV_MOMENTS) { const w = evWindow(mo, t); if (now <= w.to) return mo.m; } return 4; }
+  for (const mo of EV_MOMENTS) { const w = evWindow(mo, t); if (now <= w.to) return mo.m; } return EV_LAST; }
 const evDelta = d => d == null ? "" : `<span class="dl ${d > 0.04 ? "up" : d < -0.04 ? "down" : ""}">${d > 0.04 ? "▲ +" : d < -0.04 ? "▼ " : "= "}${f1(Math.abs(d) < 0.05 ? 0 : d).replace(/^-/, "−")}</span>`;
 const evColor = v => v == null ? "var(--card3)" : v >= 4 ? "#34D17A" : v >= 3 ? "#A3D63B" : v >= 2.5 ? "#FFD500" : v >= 2 ? "#F59E0B" : "#F2615A";
 async function evPut(e) {
@@ -68,11 +70,11 @@ const evNew = (pid, m) => ({ id: uid(), team_id: S.team.id, player_id: pid, mome
 let evMoment = null, evView = "spelers";
 route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, pid, sub) => {
   if (evMoment == null) evMoment = evCurrent();
-  if (pid) { if (+sub >= 1 && +sub <= 4) evMoment = +sub; return evForm(v, pid, evMoment); }
+  if (pid) { if (+sub >= 1 && +sub <= EV_LAST) evMoment = +sub; return evForm(v, pid, evMoment); }
   const ps = active(), groups = evGroups(), names = evItems(), mo = EV_MOMENTS[evMoment - 1], w = evWindow(mo);
   const done = ps.filter(p => evDone(evOf(p.id, evMoment), names)).length, started = ps.filter(p => evStarted(evOf(p.id, evMoment))).length;
   const now = new Date(), open = now >= w.from && now <= w.to, late = now > w.to && done < ps.length, dfmt = d => d.toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
-  v.innerHTML = head("Evaluaties", `${esc(S.team.name)} · vier momenten per seizoen. De winterstop en het einde van het seizoen zijn verplicht.`,
+  v.innerHTML = head("Evaluaties", `${esc(S.team.name)} · vijf momenten per seizoen. De winterstop en het einde van het seizoen zijn verplicht.`,
     `<button class="btn ghost" type="button" id="evPrintAll">${IC.print}Alle rapporten</button>`) +
   (evLegacy(S.team) ? `<div class="panel hl row" style="margin-bottom:14px"><span style="flex:1;min-width:220px"><b>Uitgebreide evaluatie beschikbaar</b><br><span class="hint">${groups[0].items.length} onderdelen nu, straks ${EV_TEMPLATE.filter(l => !l.startsWith("#")).length} in vijf groepen met uitleg per onderdeel. Je huidige scores blijven staan.</span></span><button class="btn small" type="button" id="evUpgrade">Overschakelen</button></div>` : "") +
   `<div class="evmoments" role="tablist">${EV_MOMENTS.map(x => { const ww = evWindow(x), dn = ps.filter(p => evDone(evOf(p.id, x.m), names)).length, st = ps.filter(p => evStarted(evOf(p.id, x.m))).length;
@@ -151,7 +153,7 @@ function evForm(v, pid, m) {
       <div class="evstats"><div><small>Training</small><b>${s.trTot ? s.trPct + "%" : "–"}</b></div><div><small>Wedstrijden</small><b>${s.matches}</b></div><div><small>Minuten</small><b>${s.minutes}</b></div><div><small>Matchcijfer</small><b>${f1(s.rating)}</b></div></div></section>
     <section class="panel"><h3>Positie en niveau</h3><div class="fields"><label class="f full">Beste positie(s)<input data-d="position" value="${esc(D.position || p.position || "")}" placeholder="bv. Piloot, staart"></label>
       <label class="f full">Niveau t.o.v. de ploeg<select data-d="level"><option value="">–</option>${EV_LEVEL_TEAM.map(x => `<option${D.level === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>
-      ${m === 4 ? `<label class="f full">Advies volgend seizoen<select data-d="advice"><option value="">–</option>${EV_ADVICE.map(x => `<option${D.advice === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>` : ""}</div></section>
+      ${m === EV_LAST ? `<label class="f full">Advies volgend seizoen<select data-d="advice"><option value="">–</option>${EV_ADVICE.map(x => `<option${D.advice === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>` : ""}</div></section>
     <section class="panel"><h3>Oudergesprek</h3><div class="fields"><label class="f full">Boodschap voor speler en ouders <span class="hint">komt op het rapport</span><textarea data-d="parents" rows="4" placeholder="Wat wil je zeker meegeven?">${esc(D.parents || "")}</textarea></label>
       <label class="check"><input type="checkbox" data-d="talk"${D.talk ? " checked" : ""}> Gesprek gevoerd</label></div></section>
     <section class="panel"><h3>Privénotitie</h3><textarea id="evNote" rows="4" placeholder="Alleen voor trainers, niet op het rapport">${esc(e.comment || "")}</textarea></section>
@@ -192,7 +194,7 @@ function evPrint(players, m) {
         <dl><dt>Aanwezig op training</dt><dd>${s.trTot ? s.trPct + "%" : "–"}</dd><dt>Wedstrijden</dt><dd>${s.matches}</dd>${D.position ? `<dt>Beste positie</dt><dd>${esc(D.position)}</dd>` : ""}</dl></div>
       <div class="pgroups">${groups.map(g => `<div class="pg"><h2>${esc(g.name)} <span>${f1(evAvgOf(e, g.items.map(i => i.name)))}</span></h2>${g.items.map(i => { const c = evScore(e, i.name), b = pr ? evScore(pr, i.name) : null;
         return `<div class="pr"><span>${esc(i.name)}</span><span class="pb"><i style="width:${c == null ? 0 : c / 5 * 100}%"></i>${b != null ? `<em style="left:${b / 5 * 100}%"></em>` : ""}</span><b>${c == null ? "–" : f1(c)}</b></div>`; }).join("")}</div>`).join("")}</div>
-      <div class="ptexts">${[["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen tot de volgende evaluatie", D.goals], ["Boodschap van de trainer", D.parents], m === 4 && D.advice ? ["Advies volgend seizoen", D.advice] : null].filter(x => x && x[1]).map(([k, t]) => `<div><h3>${k}</h3><p>${esc(t).replace(/\n/g, "<br>")}</p></div>`).join("")}</div>
+      <div class="ptexts">${[["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen tot de volgende evaluatie", D.goals], ["Boodschap van de trainer", D.parents], m === EV_LAST && D.advice ? ["Advies volgend seizoen", D.advice] : null].filter(x => x && x[1]).map(([k, t]) => `<div><h3>${k}</h3><p>${esc(t).replace(/\n/g, "<br>")}</p></div>`).join("")}</div>
       <footer>Schaal: 1 nog niet · 2 soms · 3 meestal · 4 bijna altijd · 5 uitblinker. Het streepje is de vorige evaluatie. · OG Vorselaar jeugdwerking</footer></div>`; }).join("");
   document.body.appendChild(el); document.documentElement.classList.add("printing");
   const done = () => { el.remove(); document.documentElement.classList.remove("printing"); removeEventListener("afterprint", done); };
