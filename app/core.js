@@ -3,7 +3,7 @@
 "use strict";
 const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -188,6 +188,7 @@ async function loadTeam(id) {
   try { localStorage.setItem(TEAM_KEY, id); } catch (e) {}
   const m = { team_id: id };
   [S.players, S.events, S.att, S.evals, S.goals, S.trainers] = await Promise.all(["players","events","attendance","evaluations","goals","team_trainers"].map(t => db.list(t, m)));
+  try { S.rsvp = await db.list("rsvp", m); } catch (e) { S.rsvp = []; } /* tabel bestaat pas vanaf databaseversie 5 */
   sortPlayers(); sortEvents();
   if (typeof rbfaAuto === "function") setTimeout(rbfaAuto, 800);
 }
@@ -237,7 +238,7 @@ let teardown = null;
 
 function shell() {
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
-  const navHtml = NAV.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
+  const navHtml = (S.admin ? [...NAV, { g: "Beheer", items: [["clubbeheer", "Clubbeheer", "gear"]] }] : NAV).map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
     `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")).join("");
   const who = mode === "demo" ? "Demomodus" : (user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : "Trainer OG Vorselaar"}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
@@ -274,6 +275,7 @@ async function render() {
   if (def.wide) v.classList.add("wide");
   const logged = !!db && (mode === "demo" || !!user);
   if (def.auth && !logged) { viewLogin(v, "Meld je aan om dit onderdeel te gebruiken."); return; }
+  if (def.auth && mode === "cloud" && S.member === false) { viewJoin(v); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   try { const td = await def.render(v, r.id, r.sub); if (typeof td === "function") teardown = td; }
   catch (e) { console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
@@ -326,7 +328,7 @@ function viewLogin(v, msg) {
   <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><button class="link" type="button" id="demo">Bekijk de demo</button></div>
-  <p class="hint">Nog geen account? Vraag het aan de beheerder van het trainersplatform. De trainingsbibliotheek en het animatiebord werken ook zonder account.</p></div>`;
+  <div class="panel" style="padding:14px 16px"><b>Nog geen account?</b><p class="hint" style="margin:4px 0 10px">Maak er zelf een aan met de clubcode die je van de jeugdcoördinator kreeg.</p><button class="btn ghost small" type="button" id="reg">Account aanmaken</button></div></div>`;
   $("#lf").onsubmit = async e => { e.preventDefault(); if (!sb) { $("#lerr").textContent = "Geen verbinding met de database."; return; }
     const btn = $("button", e.target); btn.disabled = true; btn.textContent = "Bezig met aanmelden…"; $("#lerr").textContent = "";
     try { const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
@@ -336,19 +338,20 @@ function viewLogin(v, msg) {
     finally { if ($("#lerr").textContent) { btn.disabled = false; btn.textContent = "Aanmelden"; } } };
   $("#forgot").onclick = async () => { const m = $("#lf").email.value.trim(); if (!m) { $("#lerr").textContent = "Vul eerst je e-mailadres in."; return; }
     if (sb) await sb.auth.resetPasswordForEmail(m, { redirectTo: location.origin + location.pathname }); $("#lerr").textContent = "Als dit adres een account heeft, staat er nu een mail in je mailbox."; };
-  $("#demo").onclick = startDemo;
+  $("#demo").onclick = startDemo; $("#reg").onclick = () => viewRegister(v);
 }
 async function startCloud() {
   mode = "cloud"; db = SBDB;
+  await clubStatus(); if (!S.member) { render(); return; }
   try { await loadTeams(); const last = (() => { try { return localStorage.getItem(TEAM_KEY); } catch (e) {} })();
     const pick = myTeams().find(t => t.id === last) || (myTeams().length === 1 ? myTeams()[0] : null); if (pick) await loadTeam(pick.id); }
   catch (e) { console.error(e); db = null; mode = null; shell(); viewLogin($("#view"), /relation|does not exist|schema cache|column/i.test(e.message || "") ? "De database is nog niet klaargezet. De beheerder moet eerst supabase-setup.sql uitvoeren." : "Laden mislukt: " + (e.message || e)); return; }
   if (cur().page === "aanmelden") location.hash = "#/start"; else render();
 }
-async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", email: "demo" }; try { sessionStorage.setItem("ogv-mode", "demo"); } catch (e) {}
+async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", email: "demo" }; S.member = true; S.admin = true; try { sessionStorage.setItem("ogv-mode", "demo"); } catch (e) {}
   await loadTeams(); await loadTeam(myTeams()[0].id); if (cur().page === "aanmelden") location.hash = "#/start"; else render(); }
 async function logout() { if (mode === "demo") { try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } else if (sb) await sb.auth.signOut();
-  mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null }); go("#/start"); }
+  mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
 /* ============ demo-gegevens (verzonnen) ============ */
 function demoSeed() {

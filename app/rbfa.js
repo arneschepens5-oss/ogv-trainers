@@ -53,7 +53,7 @@ async function rbfaSync(team) {
   team.rbfa_synced_at = new Date().toISOString(); await db.save("teams", team);
   return { added, changed, total: cal.length };
 }
-async function rbfaPut(e) { try { await putEvent(e); } catch (err) { throw /rbfa_|sheet_url|column/i.test(err.message || "") ? new Error("Voer eerst het databasescript ogv-update-v4.sql uit in Supabase.") : err; } }
+async function rbfaPut(e) { try { await putEvent(e); } catch (err) { throw /rbfa_|sheet_url|column/i.test(err.message || "") ? new Error("Voer eerst het databasescript ogv-update-v5.sql uit in Supabase.") : err; } }
 /* stil op de achtergrond bijwerken als de laatste synchronisatie meer dan 6 uur oud is */
 let rbfaBusy = false;
 function rbfaAuto() {
@@ -68,13 +68,13 @@ async function rbfaPanel(host) {
   const t = S.team;
   host.innerHTML = `<h2>Wedstrijden van RBFA</h2><p class="hint" style="margin-top:0">Koppel je ploeg aan haar ploeg op de RBFA-website. De wedstrijden komen dan vanzelf in je kalender, met uur en adres, en wijzigingen (verplaatst, afgelast) worden overgenomen. Je verslag en opstelling blijven altijd van jou.</p>
     <div class="fields"><label class="f full">Ploeg bij RBFA<select id="rbt"><option value="">Laden…</option></select></label>
-    <label class="f full">Link officieel wedstrijdblad <span class="hint">voor alle wedstrijden van deze ploeg</span><input id="rbs" type="url" value="${esc(t.sheet_url || "")}" placeholder="${RBFA_SHEET_DEFAULT}"></label></div>
+    <label class="f full">Link om wedstrijdbladen in te vullen <span class="hint">leeg = wedstrijdbladen.be</span><input id="rbs" type="url" value="${esc(t.sheet_url || "")}" placeholder="${RBFA_SHEET_DEFAULT}"></label></div>
     <div class="row" style="margin-top:12px"><button class="btn" type="button" id="rbgo">${IC.rotate}${t.rbfa_team_id ? "Nu bijwerken" : "Koppelen en wedstrijden ophalen"}</button>${t.rbfa_team_id ? `<button class="link" type="button" id="rboff">Ontkoppelen</button>` : ""}<span class="spacer"></span><span class="hint" id="rbst">${t.rbfa_synced_at ? "Laatst bijgewerkt " + new Date(t.rbfa_synced_at).toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" }) : ""}</span></div>`;
   const sel = $("#rbt", host);
   try { const ts = await rbfaTeams(), guess = !t.rbfa_team_id && ts.find(x => (t.category || t.name || "").toUpperCase().includes(x.name.split(" ")[0].toUpperCase()));
     sel.innerHTML = `<option value="">Kies je ploeg</option>` + ts.map(x => `<option value="${esc(x.id)}"${(t.rbfa_team_id || guess?.id) === x.id ? " selected" : ""}>${esc(x.name)}</option>`).join(""); }
   catch (e) { sel.innerHTML = `<option value="">RBFA is niet bereikbaar</option>`; }
-  $("#rbs", host).onchange = e => { const u = e.target.value.trim(); t.sheet_url = u ? (/^https?:\/\//i.test(u) ? u : "https://" + u) : null; safe(() => db.save("teams", t).catch(err => { throw /column/i.test(err.message) ? new Error("voer eerst ogv-update-v4.sql uit in Supabase") : err; }), "Link bewaard."); };
+  $("#rbs", host).onchange = e => { const u = e.target.value.trim(); t.sheet_url = u ? (/^https?:\/\//i.test(u) ? u : "https://" + u) : null; safe(() => db.save("teams", t).catch(err => { throw /column/i.test(err.message) ? new Error("voer eerst ogv-update-v5.sql uit in Supabase") : err; }), "Link bewaard."); };
   $("#rbgo", host).onclick = async ev => { const id = sel.value; if (!id) { toast("Kies eerst je ploeg bij RBFA."); return; }
     const b = ev.currentTarget; b.disabled = true; b.innerHTML = `<span class="spin"></span>Ophalen…`;
     const old = t.rbfa_team_id; t.rbfa_team_id = id;
@@ -85,9 +85,9 @@ async function rbfaPanel(host) {
 }
 /* knoppen bovenaan een wedstrijd */
 function matchLinks(e) {
-  const sheet = e.sheet_url || S.team?.sheet_url;
+  const sheet = S.team?.sheet_url || RBFA_SHEET_DEFAULT;
   return `<div class="mlinks noprint"><a class="btn ghost small" href="#/matchday/${e.id}">${IC.sheet}Wedstrijdblad invullen</a>
-    ${sheet ? `<a class="btn ghost small" href="${esc(sheet)}" target="_blank" rel="noopener">${IC.out}Officieel wedstrijdblad</a>` : `<button class="btn ghost small" type="button" id="addSheet">${IC.plus}Link officieel wedstrijdblad</button>`}
+    <a class="btn ghost small" href="${esc(sheet)}" target="_blank" rel="noopener">${IC.out}Officieel wedstrijdblad</a>
     ${e.rbfa_id ? `<a class="btn ghost small" href="${rbfaMatchUrl(e.rbfa_id)}" target="_blank" rel="noopener">${IC.out}Bekijk op RBFA</a>` : ""}
     ${e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast volgens RBFA</span>` : ""}</div>`;
 }

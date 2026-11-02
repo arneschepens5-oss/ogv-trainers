@@ -35,7 +35,6 @@ function eventForm(e, forceNew) {
   <label class="f">Begin<input type="time" name="start_time" value="${esc(tm(e.start_time))}"></label><label class="f">Einde<input type="time" name="end_time" value="${esc(tm(e.end_time))}"></label>
   <label class="f">Plaats<input name="location" value="${esc(e.location || "")}" placeholder="bv. Terrein 3"></label>
   <label class="f wo">Tegenstander<input name="opponent" value="${esc(e.opponent || "")}"></label>
-  <label class="f full wo">Link officieel wedstrijdblad <span class="hint">(optioneel)</span><input type="url" name="sheet_url" value="${esc(e.sheet_url || "")}" placeholder="https://"></label>
   <label class="f wo">Thuis of uit<select name="home"><option value="1"${e.home !== false ? " selected" : ""}>Thuis</option><option value="0"${e.home === false ? " selected" : ""}>Uit</option></select></label>
   <label class="f full to">Thema<input name="theme" list="themes" value="${esc(e.theme || "")}" placeholder="bv. 1A Opbouw van achteruit"><datalist id="themes">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
   ${n ? `<label class="f full to">Wekelijks herhalen tot <span class="hint">(leeg laten voor één keer)</span><input type="date" name="until"></label>` : ""}</div>
@@ -47,7 +46,6 @@ function eventForm(e, forceNew) {
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
     const base = { team_id: S.team.id, type, start_time: f.start_time || null, end_time: f.end_time || null, location: f.location || null,
       opponent: type === "wedstrijd" ? f.opponent || null : null, home: type === "wedstrijd" ? f.home === "1" : null, theme: type === "training" ? f.theme || null : null };
-    if (type === "wedstrijd" && (f.sheet_url || e.sheet_url)) base.sheet_url = f.sheet_url ? (/^https?:\/\//i.test(f.sheet_url) ? f.sheet_url : "https://" + f.sheet_url) : null;
     const dates = [f.date]; if (n && type === "training" && f.until) { let x = parse(f.date); for (;;) { x = addDays(x, 7); if (iso(x) > f.until || dates.length > 60) break; dates.push(iso(x)); } }
     let firstId;
     await safe(async () => { for (const dt of dates) { const row = { ...(n ? { id: uid(), report: {} } : e), ...base, date: dt }; firstId = firstId || row.id; await putEvent(row); }
@@ -84,15 +82,17 @@ function viewTraining(v, e, tab) {
 function attendanceView(tv, e) {
   const ps = active(), as = S.att.filter(a => a.event_id === e.id), c = s => as.filter(a => a.status === s).length;
   tv.innerHTML = `<div class="row" style="margin-bottom:12px"><span class="muted" style="margin-right:auto" id="cnts">${c("aanwezig") + c("te laat")} aanwezig · ${c("verwittigd")} verwittigd · ${c("afwezig")} afwezig · ${c("geblesseerd")} geblesseerd · ${ps.length - as.length} nog niet ingevuld</span>
-    <button class="btn small" type="button" id="allIn">Iedereen aanwezig</button></div>
+    ${(rs => rs ? `<button class="btn ghost small" type="button" id="rsApply" title="Wie nog niet ingevuld is: komt = aanwezig, komt niet = verwittigd">Antwoorden ouders overnemen</button>` : "")(rsvpSummary(e))}<button class="btn small" type="button" id="allIn">Iedereen aanwezig</button></div>
+    ${(rs => rs ? `<div class="rsvpbar"><b>Ouders:</b> <span class="rsvp ja">${rs.ja} komen</span> <span class="rsvp nee">${rs.nee} komen niet</span> <span class="rsvp none">${rs.open} geen antwoord</span></div>` : "")(rsvpSummary(e))}
     ${ps.length ? `<div class="list">${ps.map(p => { const a = attOf(e.id, p.id);
-      return `<div class="item static" data-p="${p.id}" style="flex-wrap:wrap"><span class="num">${p.number ?? ""}</span><span class="main" style="min-width:140px"><b>${esc(pname(p))}</b></span>
+      return `<div class="item static" data-p="${p.id}" style="flex-wrap:wrap"><span class="num">${p.number ?? ""}</span><span class="main" style="min-width:140px"><b>${esc(pname(p))}</b>${rsvpSummary(e) ? rsvpBadge(e, p) : ""}</span>
       <div class="seg">${STATUS.map(s => `<button type="button" data-s="${s}" aria-pressed="${a?.status === s}">${STATUS_L[s]}</button>`).join("")}</div></div>`; }).join("")}</div>`
      : `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`}`;
   const recount = () => { const as2 = S.att.filter(a => a.event_id === e.id), c2 = s => as2.filter(a => a.status === s).length;
     $("#cnts").textContent = `${c2("aanwezig") + c2("te laat")} aanwezig · ${c2("verwittigd")} verwittigd · ${c2("afwezig")} afwezig · ${c2("geblesseerd")} geblesseerd · ${ps.length - as2.length} nog niet ingevuld`; };
   $$("[data-p]", tv).forEach(row => $$(".seg button", row).forEach(b => b.onclick = async () => { const pid = row.dataset.p, old = attOf(e.id, pid) || { event_id: e.id, player_id: pid, team_id: S.team.id, tags: [], strengths: [], scores: {} };
     const a = { ...old, status: b.dataset.s }; await safe(async () => { await putAtt(a); $$(".seg button", row).forEach(x => x.setAttribute("aria-pressed", x === b)); recount(); }); }));
+  const ra = $("#rsApply"); if (ra) ra.onclick = async () => { const n = await safe(() => rsvpApply(e)); if (n != null) { toast(n ? n + (n === 1 ? " antwoord" : " antwoorden") + " overgenomen." : "Iedereen met een antwoord is al ingevuld."); render(); } };
   $("#allIn").onclick = () => safe(async () => { for (const p of ps) { const a = attOf(e.id, p.id); if (!a || a.status !== "aanwezig") await putAtt({ ...(a || { event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {} }), status: "aanwezig" }); } render(); }, "Iedereen staat op aanwezig.");
 }
 
@@ -119,8 +119,6 @@ function viewMatch(v, e, tab) {
     `<span class="hint" id="saved"></span><a class="btn noprint" href="#/live/${e.id}">${IC.mic}Live coachen</a><button class="btn ghost small noprint" type="button" id="editEv">Bewerken</button><button class="btn ghost small noprint" type="button" onclick="print()">${IC.print}Afdrukken</button>`) +
     matchLinks(e) + tabsHtml(e.id, [["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"]], tab) + `<div id="tabv"></div>`;
   $("#editEv").onclick = () => eventForm(e); bindTabs(v);
-  const as = $("#addSheet"); if (as) as.onclick = async () => { const u = (prompt("Plak de link naar het officiële wedstrijdblad van deze wedstrijd:", "") || "").trim(); if (!u) return;
-    e.sheet_url = /^https?:\/\//i.test(u) ? u : "https://" + u; if (await safe(async () => { await rbfaPut(e); return true; }, "Link bewaard.")) render(); else delete e.sheet_url; };
   const tv = $("#tabv");
   ({ verslag: reportTab, spelers: playersTab, momenten: momentsTab, opstelling: lineupTab, aanwezig: attendanceView }[tab] || reportTab)(tv, e);
 }

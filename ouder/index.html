@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Komt je kind? | OG Vorselaar</title>
+<link rel="icon" href="../icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght,wdth@400..900,100..125&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F3EE;--card:#fff;--ink:#121311;--muted:#585A52;--line:#E0E0D8;--yellow:#FFD500;--ok:#15803D;--okbg:#DCF5E3;--bad:#C2261D;--badbg:#FDE2E0;--chip:#F1F1EA;color-scheme:light}
+@media (prefers-color-scheme:dark){.act button[aria-pressed="true"].ja,.act button[aria-pressed="true"].nee{color:#000}:root{--bg:#000;--card:#0D0E0C;--ink:#F2F2EE;--muted:#9EA098;--line:#24261F;--ok:#4ADE80;--okbg:#132619;--bad:#F87171;--badbg:#2E1414;--chip:#1C1E19;color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Archivo",system-ui,-apple-system,sans-serif}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.top{background:#000;color:#F2F2EE;padding:calc(18px + env(safe-area-inset-top,0px)) 16px 22px}
+.top .in,.wrap{max-width:560px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;font-size:13px;color:#B8BAB2}
+.brand img{width:30px;height:30px;border-radius:50%;background:#fff;padding:2px}
+h1{margin:14px 0 4px;font-weight:900;font-stretch:118%;font-size:clamp(30px,8vw,40px);line-height:1;letter-spacing:-.01em}
+h1 span{color:var(--yellow)}
+.top p{margin:0;color:#B8BAB2}
+.wrap{padding:16px 16px calc(32px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.ev{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;display:grid;grid-template-columns:54px 1fr;gap:4px 12px}
+.ev.cancel{opacity:.6}
+.date{grid-row:span 2;width:54px;height:58px;border-radius:12px;background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
+.date b{font-size:22px;font-weight:800}.date small{font-size:12px;color:var(--muted);text-transform:capitalize}
+.ev .t{font-weight:800;font-size:17px;line-height:1.2}
+.ev .m{font-size:14px;color:var(--muted)}
+.ev .m a{color:inherit}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted);margin-right:4px;vertical-align:1px}
+.tag.match{background:var(--yellow);color:#000}
+.act{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.act button{min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:transparent;font-weight:700;font-size:16px;cursor:pointer}
+.act button[aria-pressed="true"].ja{background:var(--ok);border-color:var(--ok);color:#fff}
+.act button[aria-pressed="true"].nee{background:var(--bad);border-color:var(--bad);color:#fff}
+.why{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.why button{border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
+.why button[aria-pressed="true"]{border-color:var(--bad);color:var(--bad)}
+.why input{flex:1;min-width:160px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px}
+.state{grid-column:1/-1;font-size:13px;color:var(--muted);min-height:1em;margin-top:2px}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;text-align:center}
+.msg b{display:block;font-size:19px;margin-bottom:4px}
+.foot{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
+.sk{height:120px;border-radius:18px;background:var(--card);border:1px solid var(--line);animation:p 1.2s ease-in-out infinite alternate}
+@keyframes p{to{opacity:.5}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="in"><div class="brand"><img src="../icons/icon-192.png" alt=""><span>OG Vorselaar · jeugdwerking</span></div>
+  <h1 id="h">Komt je kind<span>?</span></h1><p id="sub">Even laden…</p></div></header>
+<main class="wrap" id="list"><div class="sk"></div><div class="sk"></div></main>
+<script src="../tactiekbord/vendor/supabase-2.118.0.js"></script>
+<script>
+"use strict";
+const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
+const tok = decodeURIComponent(location.hash.slice(1)).trim(), demo = /[?&]demo\b/.test(location.search);
+const $ = s => document.querySelector(s), esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const WHY = ["Ziek", "Geblesseerd", "Andere activiteit", "Op reis"];
+let sb = null, data = null;
+/* demomodus: leest en schrijft de demo-gegevens van het platform in deze browser */
+const DK = "ogv-platform-demo-v2", dget = () => { try { return JSON.parse(localStorage.getItem(DK)); } catch (e) { return null; } };
+async function view() {
+  if (demo) { const d = dget(), p = d?.players?.find(x => x.parent_token === tok); if (!p) return null;
+    const today = new Date().toISOString().slice(0, 10), lim = new Date(Date.now() + 42 * 864e5).toISOString().slice(0, 10);
+    return { player: p.first_name, team: d.teams.find(t => t.id === p.team_id)?.name, events: d.events.filter(e => e.team_id === p.team_id && e.date >= today && e.date <= lim)
+      .sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || ""))).map(e => { const r = (d.rsvp || []).find(x => x.event_id === e.id && x.player_id === p.id);
+        return { id: e.id, type: e.type, date: e.date, start: (e.start_time || "").slice(0, 5), end: (e.end_time || "").slice(0, 5), location: e.location, opponent: e.opponent, home: e.home, state: e.rbfa_state, rsvp: r?.status || null, note: r?.note || null }; }) }; }
+  const { data, error } = await sb.rpc("parent_view", { tok }); if (error) throw error; return data;
+}
+async function answer(ev, st, msg) {
+  if (demo) { const d = dget(), p = d.players.find(x => x.parent_token === tok); d.rsvp = (d.rsvp || []).filter(x => !(x.event_id === ev && x.player_id === p.id));
+    if (st) d.rsvp.push({ event_id: ev, player_id: p.id, team_id: p.team_id, status: st, note: msg || null, updated_at: new Date().toISOString() }); localStorage.setItem(DK, JSON.stringify(d)); return true; }
+  const { data, error } = await sb.rpc("parent_rsvp", { tok, ev, st, msg: msg || null }); if (error) throw error; return data;
+}
+const dayFmt = s => new Date(s + "T12:00:00");
+function draw() {
+  const n = data.player;
+  $("#h").innerHTML = `Komt ${esc(n)}<span>?</span>`;
+  $("#sub").textContent = `${data.team || ""} · tik per activiteit aan of ${n} erbij is.`;
+  if (!data.events.length) { $("#list").innerHTML = `<div class="msg"><b>Niets gepland</b>De komende zes weken staan er nog geen trainingen of wedstrijden in de kalender. Kom later nog eens kijken.</div>`; return; }
+  $("#list").innerHTML = data.events.map(e => { const d = dayFmt(e.date), cancel = e.state === "afgelast";
+    const title = e.type === "wedstrijd" ? `${e.opponent ? (e.home === false ? "Uit bij " : "Thuis tegen ") + esc(e.opponent) : "Wedstrijd"}` : "Training";
+    const maps = e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location.split(" · ").pop())}" target="_blank" rel="noopener">${esc(e.location)}</a>` : "";
+    return `<article class="ev${cancel ? " cancel" : ""}" data-e="${e.id}"><div class="date"><small>${d.toLocaleDateString("nl-BE", { weekday: "short" })}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString("nl-BE", { month: "short" })}</small></div>
+      <div class="t">${e.type === "wedstrijd" ? '<span class="tag match">Wedstrijd</span>' : ""}${cancel ? "Afgelast · " : ""}${title}</div>
+      <div class="m">${e.start ? e.start + (e.end ? "–" + e.end : "") : "Uur volgt"}${maps ? " · " + maps : ""}</div>
+      ${cancel ? "" : `<div class="act"><button type="button" class="ja" aria-pressed="${e.rsvp === "ja"}">Komt</button><button type="button" class="nee" aria-pressed="${e.rsvp === "nee"}">Komt niet</button></div>
+      <div class="why"${e.rsvp === "nee" ? "" : " hidden"}>${WHY.map(w => `<button type="button" data-w="${w}" aria-pressed="${e.note === w}">${w}</button>`).join("")}<input placeholder="Of schrijf een korte reden" maxlength="200" value="${esc(WHY.includes(e.note) ? "" : e.note || "")}"></div>
+      <div class="state" aria-live="polite">${e.rsvp ? "Doorgegeven aan de trainer." : ""}</div>`}</article>`; }).join("") +
+    `<p class="foot">Deze pagina is persoonlijk voor ${esc(n)}. Stuur de link niet door.</p>`;
+  document.querySelectorAll(".ev[data-e]").forEach(card => {
+    const e = data.events.find(x => x.id === card.dataset.e), st = card.querySelector(".state"); if (!st) return;
+    const save = async (status, note) => { st.textContent = "Bewaren…";
+      try { const ok = await answer(e.id, status, note); if (!ok) throw new Error();
+        e.rsvp = status; e.note = note || null; st.textContent = status === "ja" ? "Doorgegeven: komt." : status === "nee" ? "Doorgegeven: komt niet." : "Antwoord gewist."; }
+      catch (x) { st.textContent = "Bewaren lukte niet. Controleer je internet en probeer opnieuw."; } };
+    const [bj, bn] = card.querySelectorAll(".act button"), why = card.querySelector(".why"), inp = why.querySelector("input");
+    bj.onclick = () => { const on = e.rsvp !== "ja"; bj.setAttribute("aria-pressed", on); bn.setAttribute("aria-pressed", false); why.hidden = true; save(on ? "ja" : null, null); };
+    bn.onclick = () => { const on = e.rsvp !== "nee"; bn.setAttribute("aria-pressed", on); bj.setAttribute("aria-pressed", false); why.hidden = !on; save(on ? "nee" : null, on ? e.note : null); };
+    why.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { const on = b.getAttribute("aria-pressed") !== "true"; why.querySelectorAll("[data-w]").forEach(x => x.setAttribute("aria-pressed", x === b && on)); inp.value = ""; save("nee", on ? b.dataset.w : null); });
+    let t; inp.oninput = () => { why.querySelectorAll("[data-w]").forEach(x => x.setAttribute("aria-pressed", false)); clearTimeout(t); t = setTimeout(() => save("nee", inp.value.trim()), 700); };
+  });
+}
+function fail(title, text) { $("#h").innerHTML = `Oeps<span>.</span>`; $("#sub").textContent = ""; $("#list").innerHTML = `<div class="msg"><b>${title}</b>${text}</div>`; }
+(async () => {
+  if (!/^[0-9a-f-]{36}$/i.test(tok)) { fail("Deze link is niet volledig", "Open de link precies zoals de trainer hem stuurde, of vraag de trainer om een nieuwe."); return; }
+  if (!demo) { if (!window.supabase) { fail("Geen verbinding", "Controleer je internetverbinding en probeer opnieuw."); return; }
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "ogv_ouder" } }); }
+  try { data = await view(); } catch (e) { fail("Laden lukte niet", "Probeer het over enkele minuten opnieuw."); return; }
+  if (!data) { fail("Deze link werkt niet meer", "De trainer heeft misschien een nieuwe link gemaakt. Vraag hem om de juiste link."); return; }
+  draw();
+})();
+</script>
+</body>
+</html>

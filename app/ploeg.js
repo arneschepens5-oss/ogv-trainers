@@ -38,7 +38,7 @@ route("start", { title: "Start", render: async v => {
 function evItem(e) {
   const as = S.att.filter(a => a.event_id === e.id), inn = as.filter(a => a.status === "aanwezig" || a.status === "te laat").length, r = res(e);
   const right = e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast</span>` : e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
-    : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : "";
+    : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : ((rs => rs && e.date >= todayIso() ? `<b style="color:var(--ok)">${rs.ja} komen</b>${rs.nee ? rs.nee + " niet · " : ""}${rs.open} open` : "")(rsvpSummary(e)) || (e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : ""));
   return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
     <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, "OGV") : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span></b>
     <small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.theme ? " · " + esc(e.theme) : e.location ? " · " + esc(e.location) : ""}</small></span><span class="val">${right}</span></div>`;
@@ -83,10 +83,10 @@ route("spelers", { title: "Spelers", auth: true, team: true, render: v => {
   const ps = active(), old = S.players.filter(p => p.active === false);
   const it = p => { const s = playerStats(p); return `<div class="item" data-go="#/speler/${p.id}"><span class="num">${p.number ?? ""}</span><span class="main"><b>${esc(pname(p))}</b><small>${esc([p.position, p.foot ? p.foot + "voetig" : ""].filter(Boolean).join(" · ") || "Geen positie")}</small></span>
     <span class="val hide-m"><b>${s.trTot ? s.trPct + "%" : "–"}</b>aanwezig</span><span class="val hide-m"><b>${s.minutes}</b>minuten</span><span class="val"><b>${f1(s.rating)}</b>gem. cijfer</span></div>`; };
-  v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
+  v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="plinks">${IC.link}Ouderlinks</button><button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
     (ps.length ? `<div class="list">${ps.map(it).join("")}</div>` : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
     (old.length ? `<div class="sec"><h2>Niet meer actief</h2><div class="list">${old.map(it).join("")}</div></div>` : "");
-  $("#addP").onclick = () => playerForm(); $("#bulk").onclick = bulkForm;
+  $("#addP").onclick = () => playerForm(); $("#bulk").onclick = bulkForm; $("#plinks").onclick = parentLinks;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
 function playerForm(p) {
@@ -139,7 +139,7 @@ route("speler", { title: "Speler", auth: true, team: true, render: (v, id) => {
      : `<p class="hint">Zet een of twee concrete doelen per periode, bijvoorbeeld "met links leren passen over 10 meter".</p>`}</div></div>
   ${ms.length ? `<div class="sec"><h2>Wedstrijden</h2><div class="list">${ms.map(({ e, a }) => `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
     <span class="main"><b>${esc(e.opponent || "Wedstrijd")}${e.report?.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}</b><small>${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · "))}${a.note ? " · " + esc(a.note) : ""}</small></span><span class="val"><b>${a.rating ?? "–"}</b>cijfer</span></div>`).join("")}</div></div>` : ""}
-  ${p.notes || p.parent_contact ? `<div class="sec panel"><h2>Fiche</h2>${p.parent_contact ? `<p style="margin:0 0 6px"><span class="muted">Contact ouders:</span> ${esc(p.parent_contact)}</p>` : ""}${p.notes ? `<p style="margin:0;white-space:pre-wrap">${esc(p.notes)}</p>` : ""}</div>` : ""}`;
+  ${p.notes || p.parent_contact ? `<div class="sec panel"><h2>Fiche</h2>${p.parent_contact ? `<p style="margin:0 0 6px"><span class="muted">Contact ouders:</span> ${esc(p.parent_contact)}</p>` : ""}${p.notes ? `<p style="margin:0;white-space:pre-wrap">${esc(p.notes)}</p>` : ""}</div>` : ""}${historyHtml(p)}`;
   $("#editP").onclick = () => playerForm(p); $("#addG").onclick = () => goalForm(p);
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
   $$("[data-gs]", v).forEach(sel => sel.onchange = async () => { const g = S.goals.find(x => x.id === sel.dataset.gs); g.status = sel.value; await safe(() => db.save("goals", g), "Doel bijgewerkt."); });
@@ -229,8 +229,9 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
     <h2 style="margin-top:14px">Werkpunten bij wedstrijden</h2><textarea id="tags" style="min-height:150px">${esc((t.worktags || DEF_TAGS).join("\n"))}</textarea>
     <div class="row" style="margin-top:10px"><span class="spacer"></span><button class="btn" type="button" id="saveLists">Opslaan</button></div></div></div>
   <div class="sec panel" id="rbfaP"></div>
+  <div class="sec panel"><h2>Nieuw seizoen</h2><p class="hint" style="margin-top:0">Schuif je spelers door naar een nieuwe ploeg voor volgend seizoen. Evaluaties en cijfers gaan mee als geschiedenis; deze ploeg blijft bewaard.</p><button class="btn ghost" type="button" id="season">${IC.rotate}Naar een nieuw seizoen</button></div>
   <div class="sec panel"><h2>Ploeg verwijderen</h2><p class="hint">Verwijdert de ploeg met alle spelers, activiteiten, aanwezigheden, evaluaties en doelen. Dit kan je niet ongedaan maken.</p><button class="btn danger" type="button" id="delT">Ploeg verwijderen</button></div>`;
-  $("#editT").onclick = () => teamForm(t); rbfaPanel($("#rbfaP"));
+  $("#editT").onclick = () => teamForm(t); $("#season").onclick = seasonForm; rbfaPanel($("#rbfaP"));
   $("#shareR").onchange = e => { t.share_ratings = e.target.checked; safe(() => db.save("teams", t), t.share_ratings ? "Spelersbeoordelingen worden gedeeld met alle trainers." : "Spelersbeoordelingen blijven privé."); };
   $("#saveLists").onclick = () => { t.criteria = $("#crit").value.split("\n").map(s => s.trim()).filter(Boolean); t.worktags = $("#tags").value.split("\n").map(s => s.trim()).filter(Boolean); safe(() => db.save("teams", t), "Opgeslagen."); };
   $("#addTr").onsubmit = async e => { e.preventDefault(); const mail = e.target.mail.value.trim();
