@@ -204,7 +204,7 @@ async function putEvent(e) { await db.save("events", e); const i = S.events.find
 async function loadClub(force) { if (S.club && !force) return S.club; S.club = (await db.list("events", { type: "wedstrijd" })).sort((a, b) => (b.date + (b.start_time || "")).localeCompare(a.date + (a.start_time || ""))); return S.club; }
 const res = e => e.score_for == null || e.score_against == null ? null : e.score_for > e.score_against ? "win" : e.score_for < e.score_against ? "loss" : "draw";
 const RES_L = { win: "Gewonnen", loss: "Verloren", draw: "Gelijk" };
-const matchTitle = (e, tname) => { const us = tname || "OGV"; return e.opponent ? (e.home === false ? esc(e.opponent) + " – " + esc(us) : esc(us) + " – " + esc(e.opponent)) : "Wedstrijd"; };
+const matchTitle = (e, tname) => { const us = e.report?.squad ? "OGV " + e.report.squad : tname || "OGV"; return e.opponent ? (e.home === false ? esc(e.opponent) + " – " + esc(us) : esc(us) + " – " + esc(e.opponent)) : "Wedstrijd"; };
 
 function playerStats(p) {
   const tr = past("training").filter(e => S.att.some(a => a.event_id === e.id));
