@@ -65,7 +65,13 @@ function applyTheme(t) { t = t || getTheme(); const eff = t === "system" ? (matc
 function setTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(t); }
 matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => { if (getTheme() === "system") applyTheme("system"); });
 applyTheme();
-const themeSwitch = () => `<div class="themesw" role="group" aria-label="Weergave">${[["light","Licht"],["dark","Donker"],["system","Toestel"]].map(([k, l]) => `<button type="button" data-theme-set="${k}" aria-pressed="${getTheme() === k}">${l}</button>`).join("")}</div>`;
+const THEME_OPTS = [["light", "Licht"], ["dark", "Donker"], ["system", "Automatisch"]];
+const themeSwitch = labels => { const cur = getTheme(), i = Math.max(0, THEME_OPTS.findIndex(o => o[0] === cur));
+  return `<div class="themesw${labels ? " lbl" : ""}" role="radiogroup" aria-label="Weergave" style="--i:${i}"><span class="thumb" aria-hidden="true"></span>${THEME_OPTS.map(([k, l], j) =>
+    `<button type="button" role="radio" data-theme-set="${k}" data-ti="${j}" aria-checked="${cur === k}" title="${l}${k === "system" ? " (volgt je toestel)" : ""}" aria-label="${l}">${IC["th_" + k]}${labels ? `<span>${l}</span>` : ""}</button>`).join("")}</div>`; };
+function bindThemeSwitch() { $$("[data-theme-set]").forEach(b => b.onclick = () => {
+  const root = document.documentElement; root.classList.add("theming"); setTheme(b.dataset.themeSet); setTimeout(() => root.classList.remove("theming"), 350);
+  $$(".themesw").forEach(w => w.style.setProperty("--i", b.dataset.ti)); $$("[data-theme-set]").forEach(x => x.setAttribute("aria-checked", x.dataset.themeSet === getTheme())); }); }
 
 /* ============ hulpfuncties ============ */
 const $ = (s, r = document) => r.querySelector(s);
@@ -95,6 +101,10 @@ const csvCell = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
 
 const P = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 const IC = {
+  th_light: `<svg class="i" viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`,
+  th_dark: `<svg class="i" viewBox="0 0 24 24" ${P}><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>`,
+  th_system: `<svg class="i" viewBox="0 0 24 24" ${P}><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>`,
+  logout: `<svg class="i" viewBox="0 0 24 24" ${P}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg>`,
   link: `<svg class="i" viewBox="0 0 24 24" ${P}><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>`,
   home:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>`,
   cal:`<svg class="i" viewBox="0 0 24 24" ${P}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`,
@@ -204,7 +214,7 @@ function playerStats(p) {
   const top = Object.entries(tagc).sort((a, b) => b[1] - a[1])[0];
   const motm = S.events.filter(e => e.report?.motm === p.id).length;
   return { trTot: tr.length, trIn, trPct: pct(trIn, tr.length), matches: ms.length, basis: ms.filter(a => a.role === "basis").length,
-    minutes: ms.reduce((s, a) => s + (+a.minutes || 0), 0), goals: ms.reduce((s, a) => s + (+a.goals || 0), 0), assists: ms.reduce((s, a) => s + (+a.assists || 0), 0),
+    minutes: Math.round(ms.reduce((s, a) => s + (+a.minutes || 0), 0)), goals: ms.reduce((s, a) => s + (+a.goals || 0), 0), assists: ms.reduce((s, a) => s + (+a.assists || 0), 0),
     rating: avg(ms.map(a => a.rating).filter(Boolean)), evalAvg: last, topTag: top ? `${top[0]} (${top[1]}×)` : "", motm };
 }
 
@@ -215,9 +225,9 @@ const NAV = [
   { g: null, items: [["start", "Start", "home"]] },
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
-  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainingsbibliotheek", "book"], ["oefeningen", "Mijn oefeningen", "ball"], ["animatiebord", "Animatiebord", "board"]] },
+  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["oefeningen", "Mijn oefeningen", "ball"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
-  { g: "Scouting", items: [["scouting", "Scoutingsdatabase", "scout"]] }
+  { g: "Scouting", items: [["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
 const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "oefeningen", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
@@ -227,14 +237,17 @@ let teardown = null;
 function shell() {
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const navHtml = NAV.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
-    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}${l}</a>`).join("")).join("");
+    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")).join("");
+  const who = mode === "demo" ? "Demomodus" : (user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
+  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : "Trainer OG Vorselaar"}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
+    : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
   const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc((t.category || "OGV").slice(0, 4))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   $("#app").innerHTML = `<div class="shell">
   <aside class="side" aria-label="Hoofdmenu">
     <a class="brand" href="#/start"><img src="icons/icon-192.png" alt=""><span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
     ${teamBtn}
-    <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}Ploeg en trainers</a>` : ""}</nav>
-    <div class="foot"><div class="slogan">Komoan OG</div>${themeSwitch()}${logged ? `<b>${mode === "demo" ? "Demomodus" : esc(user?.email || "")}</b><button type="button" data-logout>${mode === "demo" ? "Demo verlaten" : "Afmelden"}</button>` : `<button type="button" data-login>Aanmelden</button>`}</div>
+    <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+    <div class="foot">${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
     <header class="topbar"><img src="icons/icon-192.png" alt="">${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -244,11 +257,11 @@ function shell() {
     ${[["start","Start","home"],["kalender","Kalender","cal"],["spelers","Spelers","ppl"],["uitslagen","Uitslagen","ball"]].map(([k,l,i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
-  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div><nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}Ploeg en trainers</a>` : ""}</nav>
-    <div style="margin-top:14px;padding:0 8px">${themeSwitch()}</div><div class="row" style="margin-top:14px;padding:0 8px">${logged ? `<span class="hint" style="margin-right:auto">${mode === "demo" ? "Demomodus" : esc(user?.email || "")}</span><button class="btn ghost small" type="button" data-logout>${mode === "demo" ? "Demo verlaten" : "Afmelden"}</button>` : `<button class="btn small" type="button" data-login>Aanmelden</button>`}</div></div></div>
+  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div><nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+    <div class="sheetfoot"><div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
-  $$("[data-theme-set]").forEach(b => b.onclick = () => { setTheme(b.dataset.themeSet); $$("[data-theme-set]").forEach(x => x.setAttribute("aria-pressed", x.dataset.themeSet === getTheme())); });
+  bindThemeSwitch();
   $$("[data-logout]").forEach(b => b.onclick = logout);
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
