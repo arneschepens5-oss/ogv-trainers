@@ -3,29 +3,28 @@
 "use strict";
 
 /* ============ kalender ============ */
-let calFilter = "komend", calType = "";
+let calFilter = "week", calType = "", calWeek = 0;
+function weekView(evs) { /* "Mijn planning": maandag tot zondag, zoals in PSD */
+  const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) + calWeek * 7), t = todayIso();
+  const days = [...Array(7)].map((_, i) => iso(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i)));
+  const wk = (() => { const d = new Date(Date.UTC(mon.getFullYear(), mon.getMonth(), mon.getDate() + 3)), y = new Date(Date.UTC(d.getUTCFullYear(), 0, 4)); return 1 + Math.round(((d - y) / 864e5 - 3 + (y.getUTCDay() + 6) % 7) / 7); })();
+  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost small" type="button" data-wk="-1" aria-label="Vorige week">‹</button><b style="font-size:17px">Week ${wk} · ${dShort(days[0])} – ${dShort(days[6])}</b><button class="btn ghost small" type="button" data-wk="1" aria-label="Volgende week">›</button>${calWeek ? `<button class="link" type="button" data-wk="0">Deze week</button>` : ""}</div>
+  <div class="week">${days.map(d => { const es = evs.filter(e => e.date === d).sort((a, b) => tm(a.start_time).localeCompare(tm(b.start_time)));
+    return `<div class="wd${d === t ? " today" : ""}"><div class="wh"><span>${parse(d).toLocaleDateString("nl-BE", { weekday: "short" })}</span><b>${dDay(d)}</b></div>${es.map(e => { const r = res(e);
+      return `<button type="button" class="wev ${e.type}" data-go="#/activiteit/${e.id}"><small>${tm(e.start_time)}${e.end_time ? "–" + tm(e.end_time) : ""}</small><b>${e.type === "wedstrijd" ? esc((e.home === false ? "@ " : "vs ") + (e.opponent || "Wedstrijd")) : esc(e.theme || "Training")}</b>${r ? `<span class="pill ${r}">${e.score_for}-${e.score_against}</span>` : e.location ? `<small>${esc(e.location)}</small>` : ""}</button>`; }).join("")}</div>`; }).join("")}</div>`;
+}
 route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   const t = todayIso();
-  let list = calFilter === "komend" ? S.events.filter(e => e.date >= t) : [...S.events.filter(e => e.date < t)].reverse();
+  let list = calFilter !== "voorbij" ? S.events.filter(e => e.date >= t) : [...S.events.filter(e => e.date < t)].reverse();
   if (calType) list = list.filter(e => e.type === calType);
   v.innerHTML = head("Kalender", "Trainingen en wedstrijden. Open een activiteit voor aanwezigheden, trainingsplan of wedstrijdverslag.", `<button class="btn" type="button" id="addEv">${IC.plus}Activiteit</button>`) +
-  `<div class="row" style="margin-bottom:14px"><div class="chips"><button class="chip" type="button" data-f="komend" aria-pressed="${calFilter === "komend"}">Komend</button><button class="chip" type="button" data-f="voorbij" aria-pressed="${calFilter === "voorbij"}">Voorbij</button></div>
+  `<div class="row" style="margin-bottom:14px"><div class="chips"><button class="chip" type="button" data-f="week" aria-pressed="${calFilter === "week"}">Mijn planning</button><button class="chip" type="button" data-f="komend" aria-pressed="${calFilter === "komend"}">Komend</button><button class="chip" type="button" data-f="voorbij" aria-pressed="${calFilter === "voorbij"}">Voorbij</button></div>
    <span class="spacer"></span><div class="chips"><button class="chip" type="button" data-t="" aria-pressed="${!calType}">Alles</button><button class="chip" type="button" data-t="training" aria-pressed="${calType === "training"}">Trainingen</button><button class="chip" type="button" data-t="wedstrijd" aria-pressed="${calType === "wedstrijd"}">Wedstrijden</button></div></div>
-  ${list.length ? `<div class="list">${list.map(e => evItem(e)).join("")}</div>` : `<div class="empty"><b>${calFilter === "komend" ? "Niets gepland" : "Nog niets voorbij"}</b>Voeg een training of wedstrijd toe. Trainingen herhaal je meteen voor het hele seizoen.</div>`}`;
+  ${calFilter === "week" ? weekView(calType ? S.events.filter(e => e.type === calType) : S.events) : list.length ? `<div class="list">${list.map(e => evItem(e)).join("")}</div>` : `<div class="empty"><b>${calFilter === "komend" ? "Niets gepland" : "Nog niets voorbij"}</b>Voeg een training of wedstrijd toe. Trainingen herhaal je meteen voor het hele seizoen.</div>`}`;
   $$("[data-f]", v).forEach(b => b.onclick = () => { calFilter = b.dataset.f; render(); });
   $$("[data-t]", v).forEach(b => b.onclick = () => { calType = b.dataset.t; render(); });
+  $$("[data-wk]", v).forEach(b => b.onclick = () => { calWeek = b.dataset.wk === "0" ? 0 : calWeek + +b.dataset.wk; render(); });
   $("#addEv").onclick = () => eventForm(); $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
-} });
-route("trainingen", { title: "Trainingen plannen", auth: true, team: true, render: v => {
-  const t = todayIso(), up = S.events.filter(e => e.type === "training" && e.date >= t), done = S.events.filter(e => e.type === "training" && e.date < t).reverse().slice(0, 12);
-  const it = e => { const n = (e.plan?.phases || []).reduce((s, ph) => s + ph.items.length, 0), mins = planMinutes(e.plan);
-    return `<div class="item" data-go="#/activiteit/${e.id}/plan"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${e.theme ? esc(e.theme) : "Training zonder thema"}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.location ? " · " + esc(e.location) : ""}</small></span>
-    <span class="val">${n ? `<b>${n} oef.</b>${mins} min` : `<b style="color:var(--warn)">Plannen</b>nog leeg`}</span></div>`; };
-  v.innerHTML = head("Trainingen plannen", "Bouw elke training op in fases met oefeningen uit de clubbibliotheek of je eigen oefeningen, en druk ze af.", `<button class="btn" type="button" id="addEv">${IC.plus}Training</button>`) +
-    (up.length ? `<div class="list">${up.map(it).join("")}</div>` : `<div class="empty"><b>Geen trainingen gepland</b>Voeg een training toe en herhaal ze wekelijks.</div>`) +
-    (done.length ? `<div class="sec"><h2>Vorige trainingen</h2><div class="list">${done.map(it).join("")}</div></div>` : "");
-  $("#addEv").onclick = () => eventForm({ type: "training", date: todayIso(), start_time: "18:00", end_time: "19:15" }, true);
-  $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
 function eventForm(e, forceNew) {
   const n = !e || forceNew; e = e || { type: "training", date: todayIso(), start_time: "18:00", end_time: "19:15" };
@@ -94,48 +93,6 @@ function attendanceView(tv, e) {
   $("#allIn").onclick = () => safe(async () => { for (const p of ps) { const a = attOf(e.id, p.id); if (!a || a.status !== "aanwezig") await putAtt({ ...(a || { event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {} }), status: "aanwezig" }); } render(); }, "Iedereen staat op aanwezig.");
 }
 
-/* ---------- trainingsplan (vervangt Coachbord) ---------- */
-const PHASES = [["Opwarming", 15], ["Kern 1", 20], ["Kern 2", 20], ["Wedstrijdvorm", 15], ["Afsluiting", 5]];
-const planMinutes = pl => (pl?.phases || []).reduce((s, ph) => s + ph.items.reduce((x, i) => x + (+i.minutes || 0), 0), 0);
-async function planEditor(tv, e) {
-  e.plan = e.plan && e.plan.phases ? e.plan : { phases: PHASES.map(([name]) => ({ name, items: [] })), goal: "" };
-  const lib = await loadLib().catch(() => null);
-  const dur = e.start_time && e.end_time ? (() => { const [a, b] = [e.start_time, e.end_time].map(s => { const [h, m] = tm(s).split(":"); return +h * 60 + +m; }); return b - a; })() : null;
-  const sv = saver(e);
-  const draw = () => {
-    const total = planMinutes(e.plan);
-    tv.innerHTML = `<div class="panel" style="margin-bottom:14px"><div class="fields"><label class="f full">Doel van de training<input id="pgoal" value="${esc(e.plan.goal || "")}" placeholder="bv. Leren opbouwen via de keeper en de backs breed zetten"></label></div>
-      <p class="muted" style="margin:10px 0 0">Totaal <b style="color:var(--ink)">${total} minuten</b>${dur ? ` van ${dur} minuten training` + (total > dur ? ' <span class="pill loss">te lang</span>' : "") : ""}</p></div>
-      ${e.plan.phases.map((ph, pi) => `<div class="phase"><div class="h"><b>${esc(ph.name)}</b><span class="hint">${ph.items.reduce((x, i) => x + (+i.minutes || 0), 0)} min</span><span class="spacer"></span>
-        <button class="btn ghost small noprint" type="button" data-addlib="${pi}">${IC.book}Uit bibliotheek</button><button class="btn ghost small noprint" type="button" data-addown="${pi}">${IC.plus}Eigen oefening</button></div>
-        ${ph.items.length ? ph.items.map((it, ii) => { const L = it.lib && lib ? lib.items.find(x => x.id === it.lib) : null;
-          return `<div class="ex">${L ? `<img src="trainingen/${esc(L.img)}" alt="">` : `<span class="ph0">${IC.note}</span>`}
-          <div style="min-width:0"><b>${esc(it.title)}</b><small>${esc([L ? L.thema || (L.principe ? L.principe + " " + PRINC[L.principe] : "") : "Eigen oefening", it.sets ? it.sets + " reeksen" : "", it.reps ? it.reps + " herhalingen" : "", it.rest ? it.rest + " rust" : ""].filter(Boolean).join(" · "))}</small>
-            ${it.note ? `<small style="display:block;color:var(--ink)">${esc(it.note)}</small>` : ""}${L ? `<a class="link noprint" href="trainingen/${esc(L.pdf)}" target="_blank" rel="noopener" style="font-size:13px">Fiche openen</a>` : ""}</div>
-          <div class="ctl noprint"><input type="number" min="0" value="${it.minutes || ""}" data-min="${pi}:${ii}" aria-label="Minuten" placeholder="min"><button class="link" type="button" data-edit="${pi}:${ii}">Details</button><button class="link" type="button" data-up="${pi}:${ii}" aria-label="Omhoog">↑</button><button class="link" type="button" data-rm="${pi}:${ii}" aria-label="Verwijderen">✕</button></div></div>`; }).join("")
-          : `<p class="hint" style="margin:0">Nog geen oefeningen in deze fase.</p>`}</div>`).join("")}
-      <div class="row noprint" style="margin-top:14px"><a class="btn ghost" href="#/animatiebord">${IC.board}Oefening tekenen op het animatiebord</a></div>`;
-    $("#pgoal").oninput = ev => { e.plan.goal = ev.target.value; sv(); };
-    $$("[data-min]", tv).forEach(x => x.onchange = () => { const [p, i] = x.dataset.min.split(":").map(Number); e.plan.phases[p].items[i].minutes = +x.value || null; sv(); draw(); });
-    $$("[data-rm]", tv).forEach(x => x.onclick = () => { const [p, i] = x.dataset.rm.split(":").map(Number); e.plan.phases[p].items.splice(i, 1); sv(); draw(); });
-    $$("[data-up]", tv).forEach(x => x.onclick = () => { const [p, i] = x.dataset.up.split(":").map(Number); const arr = e.plan.phases[p].items;
-      if (i > 0) [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; else if (p > 0) e.plan.phases[p - 1].items.push(arr.splice(i, 1)[0]); sv(); draw(); });
-    $$("[data-edit]", tv).forEach(x => x.onclick = () => { const [p, i] = x.dataset.edit.split(":").map(Number); itemForm(e.plan.phases[p].items[i], () => { sv(); draw(); }); });
-    $$("[data-addown]", tv).forEach(x => x.onclick = () => { const it = { id: uid(), title: "", minutes: 10 }; itemForm(it, () => { e.plan.phases[+x.dataset.addown].items.push(it); sv(); draw(); }, true); });
-    $$("[data-addlib]", tv).forEach(x => x.onclick = () => libPicker(lib, L => { e.plan.phases[+x.dataset.addlib].items.push({ id: uid(), lib: L.id, title: L.title, minutes: L.map === "thema" ? 60 : 15 }); sv(); draw(); }));
-  };
-  draw();
-}
-function itemForm(it, done, isNew) {
-  const d = dialog(`<form><h2>${isNew ? "Eigen oefening" : "Oefening"}</h2><div class="fields">
-    <label class="f full">Naam<input name="title" required value="${esc(it.title || "")}" placeholder="bv. Rondo 4v1"></label>
-    <label class="f">Minuten<input name="minutes" type="number" min="0" value="${it.minutes || ""}"></label><label class="f">Reeksen<input name="sets" type="number" min="0" value="${it.sets || ""}"></label>
-    <label class="f">Herhalingen<input name="reps" value="${esc(it.reps || "")}" placeholder="bv. 4 × 2 min"></label><label class="f">Rust<input name="rest" value="${esc(it.rest || "")}" placeholder="bv. 1 min"></label>
-    <label class="f full">Organisatie, regels en coachingspunten<textarea name="note">${esc(it.note || "")}</textarea></label></div>
-    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
-  $("form", d).onsubmit = ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
-    Object.assign(it, { title: f.title.trim(), minutes: +f.minutes || null, sets: +f.sets || null, reps: f.reps || null, rest: f.rest || null, note: f.note || null }); d.close(); done(); };
-}
 function libPicker(lib, onPick) {
   if (!lib) { toast("De trainingsbibliotheek kon niet geladen worden."); return; }
   const bouwOf = () => { const c = parseInt(String(S.team?.category || "").replace(/\D/g, "")) || 9; return c <= 9 ? "onderbouw" : c <= 13 ? "middenbouw" : "bovenbouw"; };

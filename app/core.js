@@ -3,7 +3,7 @@
 "use strict";
 const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -31,6 +31,41 @@ const DEMODB = {
     this._save(); },
   async addTrainer() { return "geen_account"; }
 };
+
+/* ============ bestanden (privé map per trainer in Supabase Storage) ============ */
+const BUCKET = "trainer-files", demoFiles = new Map();
+const files = {
+  async upload(file, onProgress) {
+    const safeName = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w.-]+/g, "_").slice(-80);
+    const path = `${mode === "demo" ? "demo" : user.id}/${uid()}-${safeName}`;
+    if (mode === "demo") { demoFiles.set(path, URL.createObjectURL(file)); return path; }
+    const { error } = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+    if (error) throw new Error(/exceeded|too large|size/i.test(error.message) ? "Bestand is te groot (maximaal 50 MB)." : /bucket not found/i.test(error.message) ? "De opslag is nog niet klaargezet: voer het databasescript opnieuw uit." : error.message);
+    return path;
+  },
+  async url(path, download) {
+    if (!path) return null; if (/^(https?:|media\/|trainingen\/|blob:)/.test(path)) return path;
+    if (mode === "demo") return demoFiles.get(path) || null;
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600, download ? { download } : undefined); if (error) throw error; return data.signedUrl;
+  },
+  async remove(path) { if (!path || /^(https?:|media\/)/.test(path)) return; if (mode === "demo") { demoFiles.delete(path); return; } await sb.storage.from(BUCKET).remove([path]); }
+};
+const items = {
+  async list(kind) { const rows = await db.list("trainer_items", mode === "demo" ? { kind } : { kind, user_id: user.id }); return rows.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || "")); },
+  async save(row) { row.updated_at = new Date().toISOString(); if (!row.id) row.id = uid(); if (mode === "demo") row.user_id = "demo"; else row.user_id = user.id; await db.save("trainer_items", row); return row; },
+  async del(row) { if (row.file_path) await files.remove(row.file_path).catch(() => {}); await db.del("trainer_items", { id: row.id }); }
+};
+const fmtSize = b => b == null ? "" : b < 1024 * 1024 ? Math.max(1, Math.round(b / 1024)) + " kB" : (b / 1048576).toFixed(1).replace(".", ",") + " MB";
+
+/* ============ thema: licht, donker of volgens het toestel ============ */
+const THEME_KEY = "ogv-theme";
+function getTheme() { try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; } }
+function applyTheme(t) { t = t || getTheme(); const eff = t === "system" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : t;
+  document.documentElement.dataset.theme = eff; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = eff === "light" ? "#F4F4EF" : "#000000"; }
+function setTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(t); }
+matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => { if (getTheme() === "system") applyTheme("system"); });
+applyTheme();
+const themeSwitch = () => `<div class="themesw" role="group" aria-label="Weergave">${[["light","Licht"],["dark","Donker"],["system","Toestel"]].map(([k, l]) => `<button type="button" data-theme-set="${k}" aria-pressed="${getTheme() === k}">${l}</button>`).join("")}</div>`;
 
 /* ============ hulpfuncties ============ */
 const $ = (s, r = document) => r.querySelector(s);
@@ -60,6 +95,7 @@ const csvCell = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
 
 const P = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 const IC = {
+  link: `<svg class="i" viewBox="0 0 24 24" ${P}><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>`,
   home:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>`,
   cal:`<svg class="i" viewBox="0 0 24 24" ${P}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`,
   ppl:`<svg class="i" viewBox="0 0 24 24" ${P}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 4.8"/></svg>`,
@@ -93,7 +129,27 @@ const IC = {
   check:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`,
   eye:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
   out:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`,
-  dl:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>`
+  dl:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>`,
+  folder:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
+  up:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>`,
+  file:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`,
+  img:`<svg class="i" viewBox="0 0 24 24" ${P}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>`,
+  pen:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M3 21c3-1 5-3 7-6l7-7a2 2 0 0 0-3-3l-7 7c-3 2-4 4-4 9"/></svg>`,
+  arrow:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M4 20 19 5M10 5h9v9"/></svg>`,
+  dash:`<svg class="i" viewBox="0 0 24 24" ${P} stroke-dasharray="3 3"><path d="M4 20 19 5"/><path d="M10 5h9v9" stroke-dasharray="0"/></svg>`,
+  wave:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M3 17c2-3 3 1 5-2s3 1 5-2 3 1 5-2M15 5h5v5"/></svg>`,
+  circle:`<svg class="i" viewBox="0 0 24 24" ${P}><ellipse cx="12" cy="14" rx="9" ry="5"/></svg>`,
+  spot:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 2v4M5 5l2 2M19 5l-2 2"/><ellipse cx="12" cy="17" rx="7" ry="3.5"/></svg>`,
+  rect:`<svg class="i" viewBox="0 0 24 24" ${P}><rect x="4" y="6" width="16" height="12" rx="1"/></svg>`,
+  text:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg>`,
+  line:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M5 19 19 5"/></svg>`,
+  cursor:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="m5 3 14 7-6 2-2 6z"/></svg>`,
+  trash:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`,
+  tag:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>`,
+  cam:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+  stepb:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M18 5 9 12l9 7zM6 5v14"/></svg>`,
+  stepf:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="m6 5 9 7-9 7zM18 5v14"/></svg>`,
+  copy:`<svg class="i" viewBox="0 0 24 24" ${P}><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>`
 };
 
 /* ============ clubconstanten ============ */
@@ -158,11 +214,12 @@ function route(name, def) { ROUTES[name] = def; }
 const NAV = [
   { g: null, items: [["start", "Start", "home"]] },
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"]] },
-  { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["mixschema", "Mixschema", "rotate"]] },
-  { g: "Training", items: [["bibliotheek", "Trainingsbibliotheek", "book"], ["trainingen", "Trainingen plannen", "plan"], ["principes", "Spelprincipes", "video"], ["animatiebord", "Animatiebord", "board"], ["zonekaart", "Zonekaart 8v8", "field"], ["videoanalyse", "Videoanalyse", "split"]] },
+  { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
+  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainingsbibliotheek", "book"], ["oefeningen", "Mijn oefeningen", "ball"], ["animatiebord", "Animatiebord", "board"]] },
+  { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Scouting", items: [["scouting", "Scoutingsdatabase", "scout"]] }
 ];
-const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen" };
+const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "oefeningen", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
 let teardown = null;
@@ -177,7 +234,7 @@ function shell() {
     <a class="brand" href="#/start"><img src="icons/icon-192.png" alt=""><span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}Ploeg en trainers</a>` : ""}</nav>
-    <div class="foot"><div class="slogan">Komoan OG</div>${logged ? `<b>${mode === "demo" ? "Demomodus" : esc(user?.email || "")}</b><button type="button" data-logout>${mode === "demo" ? "Demo verlaten" : "Afmelden"}</button>` : `<button type="button" data-login>Aanmelden</button>`}</div>
+    <div class="foot"><div class="slogan">Komoan OG</div>${themeSwitch()}${logged ? `<b>${mode === "demo" ? "Demomodus" : esc(user?.email || "")}</b><button type="button" data-logout>${mode === "demo" ? "Demo verlaten" : "Afmelden"}</button>` : `<button type="button" data-login>Aanmelden</button>`}</div>
   </aside>
   <main>
     <header class="topbar"><img src="icons/icon-192.png" alt="">${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -188,9 +245,10 @@ function shell() {
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div><nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}Ploeg en trainers</a>` : ""}</nav>
-    <div class="row" style="margin-top:14px;padding:0 8px">${logged ? `<span class="hint" style="margin-right:auto">${mode === "demo" ? "Demomodus" : esc(user?.email || "")}</span><button class="btn ghost small" type="button" data-logout>${mode === "demo" ? "Demo verlaten" : "Afmelden"}</button>` : `<button class="btn small" type="button" data-login>Aanmelden</button>`}</div></div></div>
+    <div style="margin-top:14px;padding:0 8px">${themeSwitch()}</div><div class="row" style="margin-top:14px;padding:0 8px">${logged ? `<span class="hint" style="margin-right:auto">${mode === "demo" ? "Demomodus" : esc(user?.email || "")}</span><button class="btn ghost small" type="button" data-logout>${mode === "demo" ? "Demo verlaten" : "Afmelden"}</button>` : `<button class="btn small" type="button" data-login>Aanmelden</button>`}</div></div></div>
   </div>`;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
+  $$("[data-theme-set]").forEach(b => b.onclick = () => { setTheme(b.dataset.themeSet); $$("[data-theme-set]").forEach(x => x.setAttribute("aria-pressed", x.dataset.themeSet === getTheme())); });
   $$("[data-logout]").forEach(b => b.onclick = logout);
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
@@ -254,7 +312,7 @@ function viewLogin(v, msg) {
   <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><button class="link" type="button" id="demo">Bekijk de demo</button></div>
-  <p class="hint">Nog geen account? Vraag het aan de beheerder van het trainersplatform. Trainingsbibliotheek, spelprincipes en zonekaart werken ook zonder account.</p></div>`;
+  <p class="hint">Nog geen account? Vraag het aan de beheerder van het trainersplatform. De trainingsbibliotheek en het animatiebord werken ook zonder account.</p></div>`;
   $("#lf").onsubmit = async e => { e.preventDefault(); if (!sb) { $("#lerr").textContent = "Geen verbinding met de database."; return; }
     const btn = $("button", e.target); btn.disabled = true; btn.textContent = "Bezig met aanmelden…"; $("#lerr").textContent = "";
     try { const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
@@ -328,7 +386,14 @@ function demoSeed() {
              { id: uid(), team_id: a.team.id, player_id: pr[6].id, text: "Na balverlies meteen druk zetten", area: "Tactiek", term: "middellang", status: "bezig" }];
   d.scouting = [["Voorbeeldspeler A","FC Voorbeeld U13","Centrale middenvelder",[8,7,8.5,8,7.5]],["Voorbeeldspeler B","SK Demo U13","Spits",[6,8,6.5,7,6]],["Voorbeeldspeler C","VV Proef U12","Linksachter",[7,6,7,6.5,8]]]
     .map(([naam, club, p1, k], i) => ({ id: "demo" + i, data: { naam, club, p1, p2: "", p3: "", geb: "2013-0" + (i + 3) + "-12", voet: ["Rechts","Links","Beide"][i], k0: k[0], k1: k[1], k2: k[2], k3: k[3], k4: k[4], stat: ["Nieuw","Blijven volgen","Uitnodigen"][i], sterk: "Verzonnen voorbeeld om de demo te tonen.", werk: "", ctx: "", dat: iso(addDays(today, -i * 9)), bron: "Demowedstrijd", scout: "Demo", ts: Date.now() - i } }));
-  d.club_docs = [{ key: "mixschema", data: { names: ["Speler 1","Speler 2","Speler 3","Speler 4","Speler 5","Speler 6","Speler 7","Speler 8","Speler 9","Speler 10","Speler 11","Speler 12","Speler 13","Speler 14"] } }];
+  d.club_docs = [];
+  const now = new Date().toISOString(), it = (kind, title, data, extra = {}) => ({ id: uid(), user_id: "demo", kind, title, data, created_at: now, updated_at: now, ...extra });
+  d.trainer_items = [
+    ...DEMO_PRINCIPLES.map(p => it("principe", p.t, { format: p.f, moment: p.m, kern: p.k, video_url: "media/principes/" + p.v + ".mp4", poster: "media/principes/" + p.v + ".jpg" })),
+    it("mixschema", "Gemengde wedstrijd U9", mixMake(pr.map((p, i) => ({ name: p.first_name, group: i < 5 ? "A" : "B" })), 12, 2)),
+    it("oefening", "Rondo 4v1 met omschakeling", { phase: "Kern", cats: ["BASICS > Balbezit > Passing"], intensity: 5, work: "03:00", rest: 60, reps: 4, org: "Vier spelers rond een vierkant van 8 op 8 meter, één verdediger in het midden.", criteria: "Bal in de voet spelen.\nNa de pass meteen opnieuw aanspeelbaar worden.", material: "4 kegels, ballen, hesjes", size: "8 × 8 m",
+      diagram: { field: "square", objs: [{ t: "cone", x: 25, y: 25 }, { t: "cone", x: 75, y: 25 }, { t: "cone", x: 25, y: 75 }, { t: "cone", x: 75, y: 75 }, { t: "p1", x: 25, y: 18, n: "1" }, { t: "p1", x: 82, y: 50, n: "2" }, { t: "p1", x: 50, y: 82, n: "3" }, { t: "p1", x: 18, y: 50, n: "4" }, { t: "p2", x: 50, y: 50, n: "" }, { t: "pass", x: 25, y: 18, x2: 80, y2: 48 }, { t: "run", x: 50, y: 50, x2: 70, y2: 40 }] } })
+  ];
   return d;
 }
 

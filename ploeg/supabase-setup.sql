@@ -226,3 +226,45 @@ alter table public.club_docs enable row level security;
 drop policy if exists "clubdocs" on public.club_docs;
 create policy "clubdocs" on public.club_docs for all to authenticated using (true) with check (true);
 grant select, insert, update, delete on public.club_docs to authenticated;
+
+-- =====================================================================
+-- Versie 3: persoonlijke opslag per trainer.
+-- Documenten, spelprincipes, oefeningen, mixschema's en videoprojecten: alleen zichtbaar voor de trainer zelf.
+-- =====================================================================
+create table if not exists public.trainer_items (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  kind       text not null check (kind in ('document','principe','oefening','mixschema','videoproject','training')),
+  title      text not null default '',
+  folder     text,
+  data       jsonb not null default '{}',
+  file_path  text,
+  file_name  text,
+  file_type  text,
+  file_size  bigint,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists trainer_items_user on public.trainer_items(user_id, kind);
+alter table public.trainer_items enable row level security;
+drop policy if exists "eigen items" on public.trainer_items;
+create policy "eigen items" on public.trainer_items for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.trainer_items to authenticated;
+
+-- Bestanden: privé map per trainer (map = zijn gebruikers-id), maximaal 50 MB per bestand.
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('trainer-files', 'trainer-files', false, 52428800)
+on conflict (id) do update set public = false, file_size_limit = 52428800;
+drop policy if exists "eigen bestanden lezen" on storage.objects;
+drop policy if exists "eigen bestanden toevoegen" on storage.objects;
+drop policy if exists "eigen bestanden wijzigen" on storage.objects;
+drop policy if exists "eigen bestanden verwijderen" on storage.objects;
+create policy "eigen bestanden lezen" on storage.objects for select to authenticated
+  using (bucket_id = 'trainer-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "eigen bestanden toevoegen" on storage.objects for insert to authenticated
+  with check (bucket_id = 'trainer-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "eigen bestanden wijzigen" on storage.objects for update to authenticated
+  using (bucket_id = 'trainer-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "eigen bestanden verwijderen" on storage.objects for delete to authenticated
+  using (bucket_id = 'trainer-files' and (storage.foldername(name))[1] = auth.uid()::text);

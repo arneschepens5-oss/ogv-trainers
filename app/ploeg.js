@@ -23,8 +23,10 @@ route("start", { title: "Start", render: async v => {
     ["uitslagen", "trophy", "Uitslagen en verslagen", "Alle wedstrijden van de club met het verslag erbij."],
     ["evaluaties", "star", "Evaluaties", "Vier momenten per seizoen, met de groei per speler."],
     ["bibliotheek", "book", "Trainingsbibliotheek", "Alle clubtrainingen per leeftijd, met PDF en aanpasbare versie."],
-    ["trainingen", "plan", "Trainingen plannen", "Bouw je training op uit de bibliotheek en druk ze af."],
-    ["principes", "video", "Spelprincipes", "Animaties van de clubprincipes voor 5v5 en 8v8, met kernpunten."],
+    ["trainingen", "plan", "Trainingen maken", "Volledige trainingsfiches met veldtekening, belasting en duur per oefening."],
+    ["videoanalyse", "cam", "Videoanalyse", "Teken pijlen, zones en spotlights op je eigen beelden en exporteer als video."],
+    ["principes", "video", "Mijn spelprincipes", "Jouw speelwijze als animatie of video, met kernpunten."],
+    ["opslag", "folder", "Mijn opslag", "Je eigen documenten, video's, links en notities."],
     ["animatiebord", "board", "Animatiebord", "Teken en animeer tactieken en exporteer als video."],
     ["matchday", "sheet", "Wedstrijdblad", "Opstelling, kapitein en opdrachten voor de kleedkamer."],
     ["scouting", "scout", "Scouting", "De gedeelde scoutingsdatabase van de club."]
@@ -156,10 +158,10 @@ function evalChart(ev) {
   const W = 320, H = 130, pad = 26, xs = m => pad + (m - 1) * (W - 2 * pad) / 3, ys = val => H - 18 - (val - 1) * (H - 36) / 4;
   const pts = ev.map(e => [e.moment, evalAvg(e)]).filter(x => x[1] != null);
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Evolutie gemiddelde evaluatie">
-  ${[1,2,3,4,5].map(n => `<line x1="${pad}" x2="${W - pad}" y1="${ys(n)}" y2="${ys(n)}" stroke="#23251F"/><text x="6" y="${ys(n) + 4}" fill="#686A63" font-size="10">${n}</text>`).join("")}
-  ${[1,2,3,4].map(m => `<text x="${xs(m)}" y="${H - 2}" text-anchor="middle" fill="#686A63" font-size="10">Eval ${m}</text>`).join("")}
+  ${[1,2,3,4,5].map(n => `<line x1="${pad}" x2="${W - pad}" y1="${ys(n)}" y2="${ys(n)}" style="stroke:var(--line)"/><text x="6" y="${ys(n) + 4}" style="fill:var(--dim)" font-size="10">${n}</text>`).join("")}
+  ${[1,2,3,4].map(m => `<text x="${xs(m)}" y="${H - 2}" text-anchor="middle" style="fill:var(--dim)" font-size="10">Eval ${m}</text>`).join("")}
   <polyline fill="none" stroke="#FFD500" stroke-width="2.5" points="${pts.map(([m, n]) => xs(m) + "," + ys(n)).join(" ")}"/>
-  ${pts.map(([m, n]) => `<circle cx="${xs(m)}" cy="${ys(n)}" r="4" fill="#FFD500"/><text x="${xs(m)}" y="${ys(n) - 9}" text-anchor="middle" fill="#F2F2EE" font-size="11" font-weight="700">${f1(n)}</text>`).join("")}</svg>`;
+  ${pts.map(([m, n]) => `<circle cx="${xs(m)}" cy="${ys(n)}" r="4" fill="#FFD500"/><text x="${xs(m)}" y="${ys(n) - 9}" text-anchor="middle" style="fill:var(--ink)" font-size="11" font-weight="700">${f1(n)}</text>`).join("")}</svg>`;
 }
 function evalDetail(ev) { const a0 = ev[0], b0 = ev[ev.length - 1];
   return `<table class="tbl" style="margin-top:8px"><tr><th>Onderdeel</th><th>Eval ${a0.moment}</th>${ev.length > 1 ? `<th>Eval ${b0.moment}</th><th>Groei</th>` : ""}</tr>
@@ -218,7 +220,7 @@ route("cijfers", { title: "Cijfers", auth: true, team: true, render: v => {
 route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true, render: v => {
   const t = S.team, mf = matchFormat(t);
   v.innerHTML = head("Ploeg en trainers", `${esc(t.name)} · ${esc([t.category, t.format, t.season].filter(Boolean).join(" · "))} · ${mf.periods} × ${mf.minutes} minuten`, `<button class="btn ghost" type="button" id="editT">Ploeg bewerken</button>`) +
-  `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:#fff">Wat zien andere trainers?</b><br>De uitslag en het wedstrijdverslag van elke wedstrijd zijn zichtbaar voor alle trainers van de club. Spelersfiches, trainingen, aanwezigheden en evaluaties blijven privé voor de trainers van deze ploeg.
+  `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Wat zien andere trainers?</b><br>De uitslag en het wedstrijdverslag van elke wedstrijd zijn zichtbaar voor alle trainers van de club. Spelersfiches, trainingen, aanwezigheden en evaluaties blijven privé voor de trainers van deze ploeg.
     <label class="check" style="margin-top:10px"><input type="checkbox" id="shareR"${t.share_ratings ? " checked" : ""}> Ook de spelersbeoordelingen van wedstrijden (cijfer, pijlers, notities) delen met alle trainers</label></div></div>
   <div class="grid2"><div class="panel"><h2>Trainers van deze ploeg</h2><div class="list">${S.trainers.map(x => `<div class="item static"><span class="main"><b>${esc(x.email || "Trainer")}</b>${x.user_id === user?.id ? "<small>jij</small>" : ""}</span></div>`).join("")}</div>
     <form id="addTr" class="row" style="margin-top:12px"><input type="email" name="mail" required placeholder="e-mailadres co-trainer" style="flex:1;min-width:180px"><button class="btn">Toevoegen</button></form>
