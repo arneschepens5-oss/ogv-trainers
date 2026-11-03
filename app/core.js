@@ -303,6 +303,7 @@ function shell() {
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · OG Vorselaar" : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
   const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc((t.category || "OGV").slice(0, 4))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
+  const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell">
   <aside class="side" aria-label="Hoofdmenu">
     <a class="brand" href="#/start"><img src="icons/icon-192.png" alt=""><span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
@@ -321,6 +322,7 @@ function shell() {
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div><nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
+  const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   bindThemeSwitch();
   $$("[data-logout]").forEach(b => b.onclick = logout);

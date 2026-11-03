@@ -65,7 +65,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   const link = location.origin + location.pathname + "#/aanmelden";
   host.innerHTML = `<div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan met deze code. Deel ze alleen met trainers van de club.</p>
       <div class="codebox"><b id="code">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
-      <div class="row" style="margin-top:12px"><button class="btn ghost small" type="button" id="share">${IC.out}Uitnodiging delen</button><button class="link" type="button" id="newcode">Nieuwe code maken</button><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a></div>
+      <div class="row" style="margin-top:12px"><a class="btn small" id="wa" target="_blank" rel="noopener">${IC.wa}Delen via WhatsApp</a><button class="btn ghost small" type="button" id="share">${IC.out}Anders delen</button><button class="link" type="button" id="newcode">Nieuwe code maken</button><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a></div>
       <p class="hint">Een nieuwe code maken stopt de oude. Wie al lid is, blijft lid.</p></div>
     <div class="panel"><div class="row"><h2 style="margin:0">Wachten op toegang</h2>${info.waiting?.length ? `<span class="pill w">${info.waiting.length}</span>` : ""}</div>${info.waiting?.length ? `<div class="list" style="margin-top:10px">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
       : `<p class="hint" style="margin:8px 0 0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
@@ -74,7 +74,9 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
       ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : ""}<button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button></div>`).join("")}</div></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
-  $("#share").onclick = () => { const txt = `Je bent uitgenodigd voor OGV Trainers, het trainersplatform van OG Vorselaar.\nMaak je account aan op ${link} met de clubcode ${info.code}`;
+  const txt = `Je bent uitgenodigd voor OGV Trainers, het trainersplatform van OG Vorselaar.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${info.code}\n\nDeel deze code niet buiten de club.`;
+  $("#wa").href = "https://wa.me/?text=" + encodeURIComponent(txt);
+  $("#share").onclick = () => {
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else { navigator.clipboard?.writeText(txt); toast("Uitnodiging gekopieerd."); } };
   $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 6 tekens):", "OGV-" + Math.random().toString(36).slice(2, 8).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
   $$("[data-ok]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.ok, r: "trainer" }, "Toegelaten."));

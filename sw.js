@@ -1,6 +1,6 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v42";
-const SHELL = ["./", "index.html", "app/app.css?v=42", "app/core.js?v=42", "app/ploeg.js?v=42", "app/cijfers.js?v=42", "app/wedstrijd.js?v=42", "app/leerplan.js?v=42", "app/teken.js?v=42", "app/training.js?v=42", "app/video.js?v=42", "app/map.js?v=42", "app/rbfa.js?v=42", "app/club.js?v=42", "app/evaluatie.js?v=42", "app/kennis.js?v=42", "pitch.js?v=42",
+const CACHE = "ogv-platform-v43";
+const SHELL = ["./", "index.html", "app/app.css?v=43", "app/core.js?v=43", "app/ploeg.js?v=43", "app/cijfers.js?v=43", "app/wedstrijd.js?v=43", "app/leerplan.js?v=43", "app/teken.js?v=43", "app/training.js?v=43", "app/video.js?v=43", "app/map.js?v=43", "app/rbfa.js?v=43", "app/club.js?v=43", "app/evaluatie.js?v=43", "app/kennis.js?v=43", "pitch.js?v=43",
   "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
   "trainingen/trainingen.json", "matchday/", "tactiekbord/"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
