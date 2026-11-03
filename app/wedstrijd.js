@@ -194,7 +194,6 @@ function playersTab(tv, e) {
       <label class="f">Goals<input data-k="goals" data-n type="number" min="0" inputmode="numeric" value="${a.goals ?? ""}"></label>
       <label class="f">Assists<input data-k="assists" data-n type="number" min="0" inputmode="numeric" value="${a.assists ?? ""}"></label></div>
       <div><span class="muted" style="font-size:13.5px;font-weight:600">Cijfer op 10</span><div class="scale" style="margin-top:6px">${[1,2,3,4,5,6,7,8,9,10].map(n => `<button type="button" data-rate="${n}" aria-pressed="${a.rating === n}">${n}</button>`).join("")}</div></div>
-      <div class="pill4">${PILLARS.map(k => `<div class="p"><span>${k}</span><div class="scale five">${[1,2,3,4,5].map(n => `<button type="button" data-pil="${k}" data-v="${n}" aria-pressed="${+a.scores?.[k] === n}">${n}</button>`).join("")}</div></div>`).join("")}</div>
       <div><span class="muted" style="font-size:13.5px;font-weight:600">Sterke punten</span><div class="chips" style="margin-top:6px">${STRENGTHS.map(t => `<button type="button" class="tag good" data-str="${esc(t)}" aria-pressed="${(a.strengths || []).includes(t)}">${esc(t)}</button>`).join("")}</div></div>
       <div><span class="muted" style="font-size:13.5px;font-weight:600">Werkpunten</span><div class="chips" style="margin-top:6px">${(S.team.worktags || DEF_TAGS).map(t => `<button type="button" class="tag" data-tag="${esc(t)}" aria-pressed="${(a.tags || []).includes(t)}">${esc(t)}</button>`).join("")}</div></div>
       <label class="f">Notities over deze speler<textarea data-k="note" placeholder="Wat viel op? Wat bespreek je met hem of haar?">${esc(a.note || "")}</textarea></label></div></details>`; };
@@ -210,8 +209,6 @@ function playersTab(tv, e) {
     const save = debounce(() => safe(() => putAtt({ ...attOf(e.id, pid) })), 500);
     $$("[data-k]", c).forEach(x => x.oninput = x.onchange = () => { const a = get(); a[x.dataset.k] = x.hasAttribute("data-n") ? (x.value === "" ? null : +x.value) : (x.value || null); local(a); save(); });
     $$("[data-rate]", c).forEach(b => b.onclick = () => { const a = get(); a.rating = a.rating === +b.dataset.rate ? null : +b.dataset.rate; $$("[data-rate]", c).forEach(x => x.setAttribute("aria-pressed", +x.dataset.rate === a.rating)); local(a); save(); });
-    $$("[data-pil]", c).forEach(b => b.onclick = () => { const a = get(), k = b.dataset.pil, n = +b.dataset.v; a.scores = { ...(a.scores || {}) }; a.scores[k] = a.scores[k] === n ? undefined : n; if (a.scores[k] === undefined) delete a.scores[k];
-      $$(`[data-pil="${k}"]`, c).forEach(x => x.setAttribute("aria-pressed", +x.dataset.v === a.scores[k])); local(a); save(); });
     const tog = (attr, field) => $$(`[${attr}]`, c).forEach(b => b.onclick = () => { const a = get(), t = b.getAttribute(attr); a[field] = (a[field] || []).includes(t) ? a[field].filter(x => x !== t) : [...(a[field] || []), t]; b.setAttribute("aria-pressed", a[field].includes(t)); local(a); save(); });
     tog("data-str", "strengths"); tog("data-tag", "tags");
   });
