@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Uitgebreide handleiding OGV Trainers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<style>
+:root{--y:#FFD500;--k:#0E0E0C;--ink:#16160F;--mut:#5B5B52;--line:#E4E3DA;--card:#F6F5EE}
+*{box-sizing:border-box}html,body{margin:0;background:#fff;color:var(--ink);font-family:Archivo,Arial,sans-serif;font-size:10.5pt;line-height:1.5}
+.doc{max-width:190mm;margin:0 auto;padding:12mm 0 16mm}
+.cover{background:var(--k);color:#fff;border-radius:6mm;padding:10mm;margin-bottom:8mm;display:flex;gap:8mm;align-items:center}
+.cover img{width:18mm;height:18mm;border-radius:4mm;background:#fff}
+.cover h1{margin:0;font-size:26pt;line-height:1;font-weight:900;font-stretch:118%}.cover h1 span{color:var(--y)}
+.cover p{margin:2mm 0 0;color:#dcdcd2;font-size:10.5pt}
+.search{display:flex;gap:3mm;margin:0 0 6mm}.search input{flex:1;font:inherit;font-size:12pt;padding:3mm 4mm;border:1.5px solid var(--line);border-radius:3mm}
+.toc{columns:2;column-gap:8mm;padding:5mm 6mm;background:var(--card);border-radius:4mm;margin-bottom:8mm;font-size:10pt}
+.toc h2{column-span:all;margin:0 0 2mm;font-size:13pt}
+.toc a{display:block;color:var(--ink);text-decoration:none;padding:.6mm 0;break-inside:avoid}.toc a b{display:inline-block;width:8mm;color:var(--mut)}
+section{margin:0 0 7mm;break-inside:auto}
+section>h2{display:flex;align-items:center;gap:3mm;font-size:16pt;font-weight:900;font-stretch:112%;margin:0 0 2.5mm;padding-bottom:2mm;border-bottom:2.5px solid var(--c,var(--y));break-after:avoid}
+section>h2 .no{display:inline-grid;place-items:center;min-width:9mm;height:9mm;border-radius:2.5mm;background:var(--c,var(--y));color:#000;font-size:11pt}
+.where{display:inline-block;font-size:9pt;font-weight:700;color:var(--mut);background:var(--card);border-radius:99px;padding:.6mm 3mm;margin-bottom:2mm}
+h3{font-size:11.5pt;margin:4mm 0 1.2mm;break-after:avoid}
+p{margin:0 0 2mm}ul,ol{margin:0 0 2mm;padding-left:5.5mm}li{margin:.6mm 0}
+.tip{border-left:3.5px solid var(--y);background:#FFFBE0;padding:2.5mm 4mm;border-radius:0 3mm 3mm 0;margin:2.5mm 0;font-size:10pt;break-inside:avoid}
+.warn{border-left:3.5px solid #E11D48;background:#FFF0F3;padding:2.5mm 4mm;border-radius:0 3mm 3mm 0;margin:2.5mm 0;font-size:10pt;break-inside:avoid}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:2mm 0}
+.card{border:1.2px solid var(--line);border-radius:3mm;padding:3mm 3.5mm;break-inside:avoid}.card>b:first-child{display:block;margin-bottom:.8mm}
+.k{display:inline-block;border:1px solid #bbb;border-bottom-width:2px;border-radius:1.5mm;padding:0 1.6mm;font-size:9pt;font-weight:700;background:#fff}
+.faq dt{font-weight:800;margin-top:3mm;break-after:avoid}.faq dd{margin:.5mm 0 0}
+footer{margin-top:10mm;font-size:8.5pt;color:var(--mut);border-top:1px solid var(--line);padding-top:3mm;display:flex;justify-content:space-between}
+.hide{display:none}
+@page{size:A4;margin:14mm 12mm 14mm}
+@media print{.doc{padding:0;max-width:none}.search{display:none}.cover{margin-bottom:6mm}section>h2{break-before:auto}.pb{break-before:page}}
+@media screen and (max-width:760px){.doc{padding:16px}.toc{columns:1}.grid{grid-template-columns:1fr}.cover{flex-direction:column;align-items:flex-start}}
+</style></head><body>
+<div class="doc">
+<div class="cover"><img src="../icons/icon-192.png" alt=""><div><h1>OGV <span>Trainers</span> — uitgebreide handleiding</h1><p>Alles wat je met de app kan, per onderdeel. Zoek op een woord of spring via de inhoud naar wat je nodig hebt.</p></div></div>
+<div class="search"><input id="q" type="search" placeholder="Zoek in de handleiding, bv. ouderlink, opstelling, wachtwoord…" aria-label="Zoeken in de handleiding"></div>
+
+<nav class="toc"><h2>Inhoud</h2>
+<a href="#s1"><b>1</b>Aan de slag</a><a href="#s2"><b>2</b>Start en overzicht</a><a href="#s3"><b>3</b>Kalender</a><a href="#s4"><b>4</b>Aanwezigheden en ouderlinks</a>
+<a href="#s5"><b>5</b>Spelers</a><a href="#s6"><b>6</b>Trainingen maken</a><a href="#s7"><b>7</b>Een oefening maken</a><a href="#s8"><b>8</b>De tekentool</a>
+<a href="#s9"><b>9</b>Trainingsbibliotheek</a><a href="#s10"><b>10</b>Wedstrijden</a><a href="#s11"><b>11</b>Live coachen en wedstrijdblad</a><a href="#s12"><b>12</b>Evaluaties</a>
+<a href="#s13"><b>13</b>Cijfers</a><a href="#s14"><b>14</b>Uitslagen club</a><a href="#s15"><b>15</b>Animatiebord en videoanalyse</a><a href="#s16"><b>16</b>Mijn map</a>
+<a href="#s17"><b>17</b>Scouting</a><a href="#s18"><b>18</b>Ploeg en trainers</a><a href="#s19"><b>19</b>Voor beheerders</a><a href="#s20"><b>20</b>Vragen en problemen</a></nav>
+
+<section id="s1" style="--c:#FFD500"><h2><span class="no">1</span>Aan de slag</h2>
+<h3>Account aanmaken</h3><ol><li>Open de app via de link of QR-code en tik op <b>Account aanmaken</b>.</li><li>Vul je voornaam en naam, je e-mailadres, een wachtwoord (minstens 8 tekens) en de <b>clubcode</b> in. De code krijg je van de jeugdcoördinator.</li><li>Krijg je een mail? Tik op de link om je e-mailadres te bevestigen en meld je daarna aan.</li></ol>
+<h3>De app op je gsm zetten</h3><div class="grid"><div class="card"><b>iPhone</b>Open de link in <b>Safari</b> (niet vanuit WhatsApp) → deelknop (vierkant met pijl) → <b>Zet op beginscherm</b>.</div><div class="card"><b>Android</b>Open de link in <b>Chrome</b> → de drie puntjes → <b>App installeren</b> of <b>Toevoegen aan startscherm</b>.</div></div>
+<p>Updates komen vanzelf binnen. Zie je iets nieuws nog niet, sluit de app dan volledig en open ze opnieuw.</p>
+<h3>Je ploeg kiezen</h3><p>Normaal koppelt de beheerder je aan je ploeg. Zie je na het aanmelden nog geen ploeg, dan vraagt de app of een collega de ploeg al aanmaakte. Kies <b>Ja</b> en stuur je e-mailadres via WhatsApp naar je collega of de beheerder. Zodra je toegevoegd bent, tik je op <b>Ik ben toegevoegd, kijk opnieuw</b>. Ben je trainer van meer ploegen, dan wissel je via de ploegknop bovenaan het menu.</p>
+<h3>Het menu</h3><ul><li><b>Computer:</b> het menu staat links.</li><li><b>Gsm:</b> onderaan staan Start, Kalender, Training en Wedstrijdblad; alles anders vind je onder <b>Meer</b>.</li><li>Onderaan het menu: <b>Probleem melden</b>, je naam (tik erop om ze te wijzigen), afmelden en <b>Weergave</b> (licht, donker of automatisch).</li></ul>
+<div class="tip"><b>Geen bereik langs het veld?</b> Wat je aanpast, blijft veilig op je gsm. Een oranje balk toont hoeveel wijzigingen wachten; ze worden vanzelf verstuurd zodra je weer online bent.</div></section>
+
+<section id="s2" style="--c:#38BDF8"><h2><span class="no">2</span>Start en overzicht</h2><span class="where">Menu → Start · Menu → Overzicht</span>
+<p><b>Start</b> toont je volgende activiteit, herinneringen (bv. dat de evaluaties van de winterstop open staan) en de laatste uitslagen van de club. <b>Overzicht</b> geeft een samenvatting van je ploeg: resultaten, komende activiteiten en snelkoppelingen naar spelers, evaluaties en cijfers.</p></section>
+
+<section id="s3" style="--c:#38BDF8"><h2><span class="no">3</span>Kalender</h2><span class="where">Menu of onderbalk → Kalender</span>
+<h3>Bekijken</h3><ul><li><b>Mijn planning</b> toont de week met al je trainingen en wedstrijden; blader met de pijlen naar een andere week.</li><li>Filter op trainingen of wedstrijden, of bekijk de voorbije activiteiten.</li><li>Tik op een activiteit om ze te openen.</li></ul>
+<h3>Activiteit toevoegen</h3><ol><li>Tik op <b>+ Activiteit</b> en kies Training of Wedstrijd.</li><li>Vul datum, uur, plaats en (bij een training) een thema in.</li><li>Een training kan je <b>wekelijks herhalen tot een datum</b>: zo zet je het hele seizoen in één keer klaar.</li></ol>
+<h3>Wedstrijden van RBFA</h3><p>Is je ploeg gekoppeld aan RBFA (zie hoofdstuk 18), dan komen de wedstrijden vanzelf in je kalender, met uur en adres. Uitgestelde of afgelaste wedstrijden worden aangepast. Met <b>RBFA bijwerken</b> haal je de laatste wijzigingen meteen op. Je eigen verslag en opstelling blijven altijd bewaard.</p></section>
+
+<section id="s4" style="--c:#38BDF8"><h2><span class="no">4</span>Aanwezigheden en ouderlinks</h2><span class="where">Activiteit openen → Aanwezigheden (bij een wedstrijd: Selectie)</span>
+<h3>Aanduiden</h3><p>Per speler kies je <b>Aanwezig</b>, <b>Te laat</b>, <b>Verwittigd</b>, <b>Afwezig</b> of <b>Blessure</b>. Alles wordt meteen bewaard. De aanwezigheden tellen mee in de cijfers en op de spelersfiche.</p>
+<h3>Ouders laten bevestigen</h3><ol><li>Ga naar <b>Spelers → Ouderlinks</b>.</li><li>Stuur elke ouder <b>de link van zijn eigen kind</b> via WhatsApp of kopieer hem.</li><li>Ouders zien de activiteiten van de komende weken en tikken aan of hun kind komt, eventueel met een korte boodschap.</li><li>Bij de aanwezigheden zie je hun antwoorden; met <b>Antwoorden ouders overnemen</b> vul je alles in één keer in.</li></ol>
+<div class="warn">Elke ouderlink is persoonlijk. Stuur hem nooit in de groepschat. Is een link toch verkeerd terechtgekomen, tik dan op <b>Nieuwe link</b>: de oude werkt dan niet meer.</div></section>
+
+<section id="s5" style="--c:#38BDF8"><h2><span class="no">5</span>Spelers</h2><span class="where">Menu → Spelers</span>
+<ul><li><b>+ Speler</b> voegt een speler toe met naam, rugnummer, geboortedatum, positie en voorkeursvoet.</li><li>Tik op een speler voor zijn <b>spelersfiche</b>: aanwezigheid, wedstrijden, minuten, doelpunten, cijfers per wedstrijd met de opmerkingen, evaluaties en geschiedenis van vorige seizoenen.</li><li><b>Doelen:</b> geef een speler persoonlijke doelen (techniek, tactiek, fysiek of mentaal; korte of langere termijn) en volg ze op.</li><li>Met <b>Fiche bewerken</b> pas je gegevens aan of vink je <b>Speelt nog in deze ploeg</b> uit als een speler stopt; zijn gegevens blijven bewaard.</li></ul></section>
+
+<section id="s6" style="--c:#FFD500"><h2><span class="no">6</span>Trainingen maken</h2><span class="where">Onderbalk → Training · Menu → Trainingen maken</span>
+<p>Bovenaan kies je wat je wil maken:</p><div class="grid"><div class="card"><b>Eén oefening maken</b>Teken een oefening en bewaar ze in je bibliotheek. Daarna kan je ze meteen op een geplande training zetten.</div><div class="card"><b>Een hele training maken</b>Kies een geplande training, maak een nieuwe in de kalender, of kies <b>Zonder datum</b> om ze nu te maken en later in te plannen.</div></div>
+<h3>Het trainingsplan</h3><ul><li>Bovenaan vul je het <b>thema</b> in. Via <i>Doel, spelers, materiaal en intensiteit</i> voeg je extra info toe.</li><li>De gekleurde balk toont hoeveel minuten je gepland hebt tegenover de duur van de training, met een melding als je te lang zit.</li><li>Elke oefening toont het uur (bv. 18:15 – 18:30), de soort, een voorbeeld van de tekening en de uitleg.</li></ul>
+<h3>Oefeningen toevoegen en ordenen</h3><ul><li><b>Nieuwe oefening</b>, <b>Uit de bibliotheek</b> of <b>☕ Pauze</b> onderaan het plan.</li><li><b>Je bepaalt zelf de volgorde.</b> Op de computer sleep je met de ⋮⋮; op de gsm gebruik je ↑ en ↓.</li><li><b>− en +</b> naast een oefening passen de duur aan per 5 minuten.</li><li>Per oefening: kopie maken, bewaren in je bibliotheek of verwijderen.</li></ul>
+<h3>Andere handige knoppen</h3><ul><li><b>Overnemen van andere training:</b> zet de oefeningen van een vorige training onderaan dit plan.</li><li><b>Bewaren in de bibliotheek:</b> maakt van deze training een volledige training die je en (als je deelt) je collega's opnieuw kunnen gebruiken.</li><li><b>Afdrukken:</b> een nette trainingsfiche met tekeningen, om mee te nemen naar het veld.</li><li>Een training <b>zonder datum</b> vind je terug bij <i>Trainingen zonder datum</i>; met <b>Inplannen</b> zet je ze op een training in je kalender.</li></ul></section>
+
+<section id="s7" style="--c:#FFD500"><h2><span class="no">7</span>Een oefening maken</h2>
+<p>De oefening opent schermvullend: de tekening groot in het midden, de uitleg rechts. Op de gsm wissel je met <b>Tekening</b> en <b>Uitleg en duur</b>.</p>
+<ul><li><b>Naam</b> bovenaan (verplicht).</li><li><b>Duur:</b> tik 5′ tot 30′ of typ zelf het aantal minuten.</li><li><b>Soort oefening:</b> opwarming, tussenvorm, wedstrijdvorm, afwerkvorm, pasvorm, positiespel, duelvorm, techniekvorm, coördinatie, activatie met band, stretching of cooling down. Op de soort kan je zoeken in de bibliotheek.</li><li><b>Aantal spelers</b> en <b>afmetingen</b> van het veld.</li><li><b>Organisatie en verloop</b> en <b>aandachtspunten</b> (één per regel).</li><li><b>Meer details:</b> doel, intensiteit, herhalingen met duur en rust, materiaal, categorie uit het leerplan en leeftijd.</li><li>Liever een foto of afbeelding? Kies <b>Afbeelding kiezen</b> onder de tekening.</li></ul>
+<div class="tip">Sluit je zonder te bewaren, dan vraagt de app eerst of je je wijzigingen echt wil weggooien.</div></section>
+
+<section id="s8" style="--c:#FFD500"><h2><span class="no">8</span>De tekentool</h2>
+<h3>Het veld</h3><ul><li>Kies het soort veld: 5v5, 8v8, groot veld, half veld, strafschopgebied, klein veldje of een vrij vlak.</li><li><b>Kantelen</b> zet het veld staand (handig op de gsm); alles wat er al staat, draait mee.</li><li><b>Grasveld / Wit blad</b>: wit is handiger om af te drukken.</li><li><b>Snel plaatsen</b>: opstellingen 5v5 en 8v8 (eigen ploeg en tegenstander), rondo 4 tegen 1, vierkant met kegels, twee grote doelen, vier minidoelen of ballen bij de start.</li></ul>
+<h3>Voorwerpen plaatsen</h3><div class="grid"><div class="card"><b>Spelers</b>Speler (kies eerst de kleur), keeper, trainer, bal, stapnummers 1-2-3.</div><div class="card"><b>Materiaal</b>Kegel, potje, rij potjes, poortje, paal, hoepel, pop, ladder, horde, groot doel, minidoel, kaatsmuur, ballen, vlag.</div><div class="card"><b>Lijnen</b>Pass, loopactie, dribbel, schot, hoge bal, lijn, vrij tekenen, afstand (bv. 20 m).</div><div class="card"><b>Vlakken</b>Zone, cirkel en tekst.</div></div>
+<p>Tik een voorwerp aan en tik op het veld: je kan er meteen meer plaatsen. Lijnen en vlakken trek je door te slepen. Spelers krijgen automatisch een volgnummer per kleur.</p>
+<h3>Aanpassen</h3><p>Tik op <b>Kiezen</b> en dan op een voorwerp. In de balk onder het veld kan je:</p><ul><li>het <b>nummer</b> en de <b>naam</b> van een speler invullen (de namen van je spelers worden voorgesteld);</li><li>de <b>kleur</b> en de <b>grootte</b> (S, M, L) kiezen;</li><li><b>draaien</b> (doelen, ladders, horden…);</li><li>bij lijnen: <b>Bocht</b>, <b>Omdraaien</b>, stippellijn of pijlpunt; de gele bolletjes verslepen het begin en einde, het witte bolletje maakt de bocht;</li><li><b>naar voren/achteren</b> zetten, een <b>kopie</b> maken of <b>weg</b>doen.</li></ul>
+<p><b>↶ en ↷</b> maken ongedaan en opnieuw. <b>Afbeelding</b> bewaart de tekening als foto, handig voor WhatsApp.</p>
+<div class="tip"><b>Sneltoetsen op de computer:</b> <span class="k">Ctrl</span>+<span class="k">Z</span> ongedaan maken · <span class="k">Ctrl</span>+<span class="k">Y</span> opnieuw · <span class="k">Ctrl</span>+<span class="k">D</span> kopie · <span class="k">Delete</span> verwijderen · <span class="k">R</span> draaien · pijltjestoetsen verschuiven · <span class="k">Esc</span> terug naar Kiezen.</div></section>
+
+<section id="s9" style="--c:#22C55E"><h2><span class="no">9</span>Trainingsbibliotheek</h2><span class="where">Menu → Trainingsbibliotheek</span>
+<p>Alle oefeningen en trainingen van de club op één plek: de clubtrainingen, de PSD-databank, wat andere trainers delen en je eigen oefeningen.</p>
+<ul><li>Kies bovenaan <b>Oefeningen</b> of <b>Volledige trainingen</b>.</li><li>Kies de <b>leeftijd</b>: onderbouw (U6–U9), middenbouw (U10–U13) of bovenbouw (U14+).</li><li>Tik een <b>soort</b> aan (bv. Pasvorm) en/of kies een <b>thema</b> (bv. Afwerken, Omschakelen).</li><li><b>Zoeken</b> werkt op naam, uitleg en aandachtspunten.</li><li><b>Meer filters</b>: bron (van mij, gedeeld door trainers, PSD-databank) en gemaakt door.</li></ul>
+<h3>Een oefening gebruiken</h3><ul><li>Tik op een kaart om alles te zien: tekening, duur, spelers, organisatie en aandachtspunten.</li><li><b>Toevoegen aan een training</b> zet ze op een geplande training.</li><li>Van iemand anders? Met <b>Eigen kopie maken</b> pas je ze aan zonder het origineel te wijzigen.</li><li>Van jou? <b>Delen met club</b> maakt ze zichtbaar voor alle trainers. <b>Niet meer delen</b> zet dat terug.</li></ul>
+<h3>Volledige trainingen</h3><p>Bekijk een training en tik op <b>Inplannen</b> om ze op een training in je kalender te zetten. Het bestaande plan van die training wordt vervangen.</p></section>
+
+<section id="s10" style="--c:#FB7185"><h2><span class="no">10</span>Wedstrijden</h2><span class="where">Kalender → tik op de wedstrijd</span>
+<p>Bovenaan een wedstrijd staan knoppen naar het <b>wedstrijdblad</b>, het <b>officiële wedstrijdblad</b> (wedstrijdbladen.be) en de wedstrijd <b>op RBFA</b>. Daaronder vijf tabbladen:</p>
+<div class="grid"><div class="card"><b>Verslag</b>Uitslag, doelpunten (minuut, maker, assist, soort: open spel, counter, stilstaande fase…), man van de match en je verslag. Onderaan zie je per speler het cijfer en de opmerking.</div>
+<div class="card"><b>Spelers beoordelen</b>Per speler minuten, doelpunten, assists, een cijfer op 10, sterke punten, werkpunten en een opmerking. Ook kapitein aanduiden.</div>
+<div class="card"><b>Hoofdmomenten</b>Hoe speelde de ploeg in elk hoofdmoment van het opleidingsplan (opbouw, opbouw verstoren, doelkansen, omschakelingen)? Score van 1 tot 5 met een korte toelichting.</div>
+<div class="card"><b>Opstelling per kwart</b>Wie speelt waar in elk kwart. De speeltijd per speler wordt vanzelf berekend.</div>
+<div class="card"><b>Selectie</b>Wie is er, wie niet, met de antwoorden van de ouders.</div></div>
+<div class="tip">Hoe vollediger je het verslag invult (minuten, minuut van de doelpunten, soort doelpunt), hoe meer je uit <b>Cijfers</b> haalt.</div>
+<div class="warn">Schrijf opmerkingen over spelers respectvol en feitelijk: het gaat over kinderen. Geen medische of gevoelige info.</div></section>
+
+<section id="s11" style="--c:#FB7185"><h2><span class="no">11</span>Live coachen en wedstrijdblad</h2>
+<h3>Live coachen</h3><span class="where">Menu → Live coachen</span><p>Kies de wedstrijd. Tijdens de match houd je de klok, doelpunten en wissels bij, met de knoppen of met je stem (microfoon). De speeltijd per speler wordt vanzelf berekend en komt in het verslag.</p>
+<h3>Wedstrijdblad</h3><span class="where">Onderbalk → Wedstrijdblad</span><p>Een handig blad voor langs de lijn: je selectie, opstelling en wissels per periode. Je opent het ook rechtstreeks vanuit een wedstrijd via <b>Wedstrijdblad invullen</b>. Het officiële digitale wedstrijdblad van de bond vul je in via de knop <b>Officieel wedstrijdblad</b>.</p></section>
+
+<section id="s12" style="--c:#A78BFA"><h2><span class="no">12</span>Evaluaties</h2><span class="where">Menu → Evaluaties</span>
+<h3>De momenten</h3><ul><li>Start seizoen (aug–sep) en herfst (okt–nov): vrijwillig.</li><li><b>Winterstop (dec–jan): verplicht.</b></li><li>Maart (half feb – half apr): vrijwillig.</li><li><b>Einde seizoen (mei–jun): verplicht.</b></li></ul><p>Op de startpagina krijg je een herinnering wanneer een verplicht moment open staat.</p>
+<h3>Invullen</h3><ul><li><b>Per speler:</b> scoor elk onderdeel op de schaal, vul sterke punten, werkpunten, doelen, positie en niveau in, een advies (bij het einde van het seizoen) en notities voor het oudergesprek.</li><li><b>Snel invullen:</b> een tabel met alle spelers onder elkaar, ideaal om een moment in één keer af te werken.</li><li><b>Ploeganalyse:</b> het gemiddelde van de ploeg per onderdeel en hoe het evolueert.</li><li><b>Rapport:</b> druk per speler een rapport af voor het oudergesprek.</li></ul>
+<p>De onderdelen zelf pas je aan bij <i>Ploeg en trainers</i>.</p></section>
+
+<section id="s13" style="--c:#F97316"><h2><span class="no">13</span>Cijfers</h2><span class="where">Menu → Cijfers</span>
+<p>Kies bovenaan de <b>periode</b> (heel seizoen, najaar, voorjaar, laatste 5 wedstrijden, laatste 30 dagen) en, als je ploeg in meer reeksen speelt, de <b>reeks</b>.</p>
+<ul><li><b>Overzicht:</b> resultaten, doelsaldo, vorm, doelpunten per wedstrijd, thuis en uit, uitblinkers en aanwezigheid per training.</li><li><b>Spelers:</b> tabel met alles per speler; tik op een kolom om te sorteren.</li><li><b>Speeltijd:</b> minuten per speler tegenover het gemiddelde. Rood = duidelijk minder speeltijd.</li><li><b>Doelpunten:</b> topschutters, assists, soort doelpunt en in welke periode ze vallen.</li><li><b>Werkpunten:</b> welke werkpunten en sterke punten het vaakst terugkomen, met een voorstel voor je trainingsfocus.</li></ul><p>Met <b>Exporteren naar Excel</b> download je de tabel.</p></section>
+
+<section id="s14" style="--c:#38BDF8"><h2><span class="no">14</span>Uitslagen club</h2><span class="where">Menu → Uitslagen club</span>
+<p>Alle wedstrijden van OG Vorselaar met uitslag en verslag, zichtbaar voor alle trainers. Handig om te zien hoe andere ploegen spelen. Spelersbeoordelingen van een andere ploeg zie je alleen als die trainer dat deelt.</p></section>
+
+<section id="s15" style="--c:#14B8A6"><h2><span class="no">15</span>Animatiebord en videoanalyse</h2>
+<h3>Animatiebord</h3><p>Maak bewegende tactische animaties: zet spelers en bal op het veld en laat ze stap voor stap bewegen. Je kan ze afspelen en gebruiken bij je spelprincipes.</p>
+<h3>Videoanalyse</h3><p>Laad een clip, teken pijlen, looplijnen, zones en spotlights rechtstreeks op het beeld, zet belangrijke momenten vast en exporteer het resultaat als video voor je spelers.</p></section>
+
+<section id="s16" style="--c:#14B8A6"><h2><span class="no">16</span>Mijn map</h2><p>Alleen jij ziet wat hier staat.</p>
+<ul><li><b>Mijn opslag:</b> je persoonlijke map voor documenten, video's, links en notities.</li><li><b>Mijn spelprincipes:</b> jouw speelwijze, per principe met een animatie of video en de kernpunten die je aan je spelers uitlegt.</li><li><b>Mixschema:</b> vul namen in en de app maakt gemengde ploegen per speeldag, zodat iedereen zo vaak mogelijk met iemand anders speelt.</li></ul></section>
+
+<section id="s17" style="--c:#E879F9"><h2><span class="no">17</span>Scouting</h2><span class="where">Menu → Scoutingsdatabase</span>
+<p>Eén gedeelde database voor alle trainers om interessante spelers bij te houden: gegevens, positie, beoordeling en notities.</p><div class="warn">Deze gegevens gaan over minderjarigen: deel ze enkel binnen de club.</div></section>
+
+<section id="s18" style="--c:#FFD500"><h2><span class="no">18</span>Ploeg en trainers</h2><span class="where">Menu → Ploeg en trainers</span>
+<ul><li><b>Ploeg bewerken:</b> naam, categorie, spelvorm, seizoen, aantal periodes en minuten per periode.</li><li><b>Co-trainer toevoegen:</b> vul het e-mailadres in van iemand die al een account heeft.</li><li><b>Wedstrijden van RBFA:</b> kies je ploeg bij RBFA en tik op <i>Koppelen</i>; je kan ook de link naar het officiële wedstrijdblad aanpassen.</li><li><b>Evaluatie-onderdelen</b> en <b>werkpunten bij wedstrijden</b> aanpassen voor jouw ploeg.</li><li><b>Spelersbeoordelingen delen</b> met alle trainers (staat standaard uit).</li><li><b>Nieuw seizoen:</b> schuif je spelers door naar een nieuwe ploeg; evaluaties en cijfers gaan mee als geschiedenis.</li></ul>
+<div class="warn"><b>Ploeg verwijderen</b> wist alle spelers, activiteiten, aanwezigheden en evaluaties van die ploeg. Dit kan niet ongedaan gemaakt worden.</div></section>
+
+<section id="s19" style="--c:#0E0E0C"><h2><span class="no" style="color:#fff">19</span>Voor beheerders</h2><span class="where">Menu → Beheer</span>
+<div class="grid"><div class="card"><b>Meldingen</b>Alle meldingen van trainers via <i>Probleem melden</i>, met wie, wanneer en op welke pagina. Open de pagina, antwoord via mail en zet ze op <i>Afgehandeld</i>. Het rode getal in het menu toont de open meldingen.</div>
+<div class="card"><b>Toegang en leden</b>De clubcode (kopiëren, uitnodiging delen, nieuwe code maken), wie op toegang wacht, en alle leden: beheerder maken of toegang intrekken.</div>
+<div class="card"><b>Ploegen en trainers</b>Alle ploegen van de club in één keer aanmaken vanuit RBFA, en per ploeg trainers toevoegen, verplaatsen of weghalen.</div>
+<div class="card"><b>Systeem</b>Databasecontrole: toont of alle onderdelen klaarstaan in de database en wat er ontbreekt.</div></div></section>
+
+<section id="s20" style="--c:#E11D48"><h2><span class="no">20</span>Vragen en problemen</h2>
+<dl class="faq">
+<dt>Ik krijg geen bevestigingsmail.</dt><dd>Kijk in je spam. Nog niets na 10 minuten? Meld het aan de beheerder.</dd>
+<dt>Ik ben mijn wachtwoord vergeten.</dt><dd>Tik op het aanmeldscherm op <b>Wachtwoord vergeten</b>; je krijgt een mail om een nieuw te kiezen.</dd>
+<dt>Ik zie mijn ploeg niet.</dt><dd>Je bent nog niet aan de ploeg gekoppeld. Vraag het aan de beheerder of een collega-trainer (zie hoofdstuk 1).</dd>
+<dt>De app vraagt een clubcode.</dt><dd>Je account heeft nog geen toegang tot de club. Vraag de code aan de jeugdcoördinator.</dd>
+<dt>Ik zie een nieuwe functie nog niet.</dt><dd>Sluit de app volledig en open ze opnieuw, of ververs de pagina.</dd>
+<dt>Er staat een oranje balk onderaan.</dt><dd>Je hebt geen verbinding; je wijzigingen wachten veilig op je gsm en worden vanzelf verstuurd. Met <b>Nu proberen</b> verstuur je ze meteen.</dd>
+<dt>Kunnen ouders of andere trainers mijn evaluaties zien?</dt><dd>Nee. Spelers, evaluaties, trainingen en aanwezigheden zie je alleen met de trainers van je eigen ploeg. Ouders zien enkel de activiteiten via hun persoonlijke link.</dd>
+<dt>Een wedstrijd staat er niet of verkeerd in.</dt><dd>Tik op <b>RBFA bijwerken</b> in de kalender. Nog fout? Voeg ze zelf toe of pas ze aan via <i>Bewerken</i>.</dd>
+<dt>Iets anders werkt niet?</dt><dd>Gebruik <b>Probleem melden</b> onderaan het menu en beschrijf kort wat je deed. De beheerder krijgt de melding met de pagina waar het misliep.</dd>
+</dl></section>
+</div>
+<script>
+(function(){var q=document.getElementById("q");if(!q)return;q.oninput=function(){var t=q.value.trim().toLowerCase();document.querySelectorAll("section").forEach(function(s){s.classList.toggle("hide",!!t&&s.textContent.toLowerCase().indexOf(t)<0)});document.querySelector(".toc").classList.toggle("hide",!!t)}})();
+</script>
+</body></html>

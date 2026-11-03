@@ -988,3 +988,5 @@ dialog.exfull .exf{height:100%;padding:0;gap:0;display:flex;flex-direction:colum
 .fbmeta{display:flex;gap:10px;align-items:center}.fbmeta span{display:flex;flex-direction:column}.fbmeta small{color:var(--muted);font-size:12.5px}
 .fbacts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:auto}
 .fbinfo{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}.fbinfo dt{color:var(--muted)}.fbinfo dd{margin:0;word-break:break-word}
+
+a.navbtn{text-decoration:none}
