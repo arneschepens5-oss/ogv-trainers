@@ -19,60 +19,91 @@ const planMinutes = pl => (normPlan(pl).items || []).reduce((s, x) => s + exMinu
 
 route("trainingen", { title: "Trainingen maken", auth: true, team: true, render: async v => {
   const t = todayIso(), up = S.events.filter(e => e.type === "training" && e.date >= t), done = S.events.filter(e => e.type === "training" && e.date < t).reverse().slice(0, 10);
-  const tpls = await items.listAll("training").catch(() => []);
+  const tpls = (await items.listAll("training").catch(() => [])).filter(x => items.mine(x) && x.data?.source !== "PSD");
   const it = e => { const pl = normPlan(e.plan), n = pl.items.length, mins = planMinutes(e.plan);
-    return `<div class="item" data-go="#/activiteit/${e.id}/plan"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(pl.theme || e.theme || "Training zonder thema")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${pl.intensity ? " · intensiteit " + pl.intensity : ""}</small></span>
+    return `<div class="item" data-go="#/activiteit/${e.id}/plan"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(pl.theme || e.theme || "Training zonder thema")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}</small></span>
     <span class="val">${n ? `<b>${n} oef.</b>${mins} min` : `<b style="color:var(--warn)">Maken</b>nog leeg`}</span></div>`; };
-  v.innerHTML = head("Trainingen maken", "Stel elke training samen als een volledige fiche: oefeningen met categorie, duur, inspanning, rust, herhalingen, organisatie, aandachtspunten en een veldtekening.",
-    `<a class="btn ghost" href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a><button class="btn" type="button" id="addEv">${IC.plus}Training</button>`) +
-    (up.length ? `<div class="list">${up.map(it).join("")}</div>` : `<div class="empty"><b>Geen trainingen gepland</b>Voeg een training toe en herhaal ze wekelijks.</div>`) +
-    (tpls.length ? `<div class="sec"><div class="row"><h2 style="margin:0">Sjablonen</h2><span class="spacer"></span><a class="link" href="#/sjablonen">Alle ${tpls.length} volledige trainingen in de bibliotheek</a></div><div class="list" style="margin-top:10px">${tpls.slice().sort((a, b) => (a.data.source === "PSD") - (b.data.source === "PSD")).slice(0, 4).map(x => `<div class="item static"><span class="num">${IC.copy}</span><span class="main"><b>${esc(x.title)}</b><small>${(normPlan(x.data).items || []).length} oefeningen · ${planMinutes(x.data)} min${x.data.source === "PSD" ? " · PSD" : ""}</small></span><button class="btn ghost small" type="button" data-tpl="${x.id}">Inplannen</button></div>`).join("")}</div></div>` : "") +
+  v.innerHTML = head("Trainingen maken", "Maak één oefening of stel een hele training samen, helemaal zoals jij ze wil opbouwen.", `<a class="btn ghost" href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a>`) +
+    `<div class="startpick"><button type="button" id="mk1"><span class="sp-ic">${toolIcon("cone")}</span><b>Eén oefening maken</b><small>Teken een oefening en bewaar ze in je bibliotheek. Je kan ze later in elke training gebruiken.</small></button>
+      <button type="button" id="mkT"><span class="sp-ic">${IC.plan}</span><b>Een hele training maken</b><small>Zet oefeningen in de volgorde die jij kiest, met de tijd per oefening. Op een datum of zonder datum.</small></button></div>` +
+    `<div class="sec"><h2>Geplande trainingen</h2>${up.length ? `<div class="list">${up.slice(0, 12).map(it).join("")}</div>` : `<div class="empty"><b>Geen trainingen gepland</b>Kies "Een hele training maken" om er een in te plannen.</div>`}</div>` +
+    (tpls.length ? `<div class="sec"><div class="row"><h2 style="margin:0">Trainingen zonder datum</h2><span class="spacer"></span><a class="link" href="#/sjablonen">Alle volledige trainingen in de bibliotheek</a></div><div class="list" style="margin-top:10px">${tpls.slice(0, 6).map(x => `<div class="item" data-go="#/sjabloon/${x.id}"><span class="num">${IC.copy}</span><span class="main"><b>${esc(x.title)}</b><small>${(normPlan(x.data).items || []).length} oefeningen · ${planMinutes(x.data)} min</small></span><button class="btn ghost small" type="button" data-tpl="${x.id}">Inplannen</button></div>`).join("")}</div></div>` : "") +
     (done.length ? `<div class="sec"><h2>Vorige trainingen</h2><div class="list">${done.map(it).join("")}</div></div>` : "");
-  $("#addEv").onclick = () => eventForm({ type: "training", date: todayIso(), start_time: "18:00", end_time: "19:15" }, true);
-  $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
-  $$("[data-tpl]", v).forEach(b => b.onclick = () => tplSchedule(tpls.find(z => z.id === b.dataset.tpl)));
+  $("#mk1").onclick = () => exEditor({ id: uid(), phase: "", name: "", cats: [], minutes: 15, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } }, async x => {
+    const r = await safe(() => items.save({ kind: "oefening", title: x.name, data: exData(x) }), "Bewaard in je bibliotheek bij Van mij."); if (!r) return;
+    if (S.events.some(e => e.type === "training" && e.date >= todayIso())) toTraining({ ...JSON.parse(JSON.stringify(x)), id: uid() }, "Ook op een training zetten?"); });
+  $("#mkT").onclick = () => { const cand = up.slice(0, 8);
+    const d = dialog(`<div class="dlg"><h2>Een hele training maken</h2><p class="muted" style="margin:0">Voor welke training maak je het plan?</p>
+      <div class="list">${cand.map(e => { const n = normPlan(e.plan).items.length; return `<div class="item" data-e="${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(normPlan(e.plan).theme || e.theme || "Training")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${n ? " · heeft al " + n + " oefeningen" : " · nog leeg"}</small></span>${IC.plus}</div>`; }).join("")}
+        <div class="item" id="mkNew"><span class="num">${IC.cal || IC.plus}</span><span class="main"><b>Nieuwe training in de kalender</b><small>Kies een dag en uur, eventueel elke week</small></span>${IC.plus}</div>
+        <div class="item" id="mkFree"><span class="num">${IC.copy}</span><span class="main"><b>Zonder datum</b><small>Maak de training nu en plan ze later in. Ze komt in je bibliotheek.</small></span>${IC.plus}</div></div>
+      <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button></div></div>`);
+    $$("[data-e]", d).forEach(y => y.onclick = () => { d.close(); go("#/activiteit/" + y.dataset.e + "/plan"); });
+    $("#mkNew", d).onclick = () => eventForm({ type: "training", date: todayIso(), start_time: "18:00", end_time: "19:15" }, true);
+    $("#mkFree", d).onclick = async () => { const r = await safe(() => items.save({ kind: "training", title: "Nieuwe training", data: { v: 2, theme: "", items: [], ages: S.team?.category ? [S.team.category.toUpperCase().replace(/^P/, "")] : [] } })); d.close(); if (r) go("#/sjabloon/" + r.id); }; };
+  $$("[data-go]", v).forEach(x => x.onclick = ev => { if (ev.target.closest("[data-tpl]")) return; go(x.dataset.go); });
+  $$("[data-tpl]", v).forEach(b => b.onclick = ev => { ev.stopPropagation(); tplSchedule(tpls.find(z => z.id === b.dataset.tpl)); });
 } });
 
-/* ============ trainingsplan: tijdlijn per onderdeel ============ */
+/* training zonder datum: zelfde plan-editor, bewaard als training in de bibliotheek */
+route("sjabloon", { title: "Training zonder datum", auth: true, team: true, render: async (v, id) => {
+  v.innerHTML = head("Training", "Laden…"); const row = (await items.listAll("training").catch(() => [])).find(x => x.id === id);
+  if (!row) { v.innerHTML = `<div class="empty"><b>Training niet gevonden</b><a class="btn" href="#/trainingen">Naar trainingen maken</a></div>`; return; }
+  if (!items.mine(row)) { go("#/bibliotheek"); setTimeout(() => tplView(row), 300); return; }
+  const pseudo = { id: row.id, plan: normPlan(row.data), start_time: null, end_time: null, date: null };
+  v.innerHTML = backLink("#/trainingen", "Trainingen maken") + head(esc(row.title), "Training zonder datum. Ze staat in je bibliotheek en je plant ze in wanneer je wil.",
+    `<span class="hint" id="saved"></span><button class="btn" type="button" id="tplan">${IC.plus}Inplannen</button><button class="btn ghost small" type="button" id="tdel">Verwijderen</button>`) + `<div id="tabv"></div>`;
+  const save = debounce(async () => { row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) }; if (pseudo.plan.theme) { row.title = pseudo.plan.theme; const h1 = $("h1.pg"); if (h1) h1.textContent = row.title; }
+    const ok = await safe(() => items.save(row)); const s2 = $("#saved"); if (ok && s2) { s2.textContent = "Opgeslagen"; setTimeout(() => s2 && (s2.textContent = ""), 1500); } }, 700);
+  planEditor($("#tabv"), pseudo, { save, tpl: true });
+  $("#tplan").onclick = () => { row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) }; tplSchedule(row); };
+  $("#tdel").onclick = async () => { if (!confirm("Deze training verwijderen?")) return; await safe(() => items.del(row), "Verwijderd."); go("#/trainingen"); };
+} });
+
+/* ============ trainingsplan: één lijst in de volgorde die de trainer zelf kiest ============ */
 const PHASE_COL = { Opwarming: "#38BDF8", Kern: "#FFD500", Wedstrijdvorm: "#22C55E", Afsluiting: "#A78BFA" };
+const LABEL_SUG = ["Opwarming", "Techniek", "Tussenvorm", "Kern", "Partijvorm", "Wedstrijdvorm", "Afwerking", "Afsluiting", "Cooling down"];
+const LPAL = ["#38BDF8", "#FFD500", "#22C55E", "#A78BFA", "#FB7185", "#F97316", "#14B8A6", "#E879F9"];
+const labelCol = l => !l ? "var(--line2)" : PHASE_COL[l] || LPAL[[...l.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % LPAL.length];
 const hm = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const toMin = s => { const [h, m] = tm(s).split(":"); return +h * 60 + +m; };
-async function planEditor(tv, e) {
-  e.plan = normPlan(e.plan); const pl = e.plan, sv = saver(e);
+async function planEditor(tv, e, opts = {}) {
+  e.plan = normPlan(e.plan); const pl = e.plan, sv = opts.save || saver(e);
   const dur = e.start_time && e.end_time ? toMin(e.end_time) - toMin(e.start_time) : null, start = e.start_time ? toMin(e.start_time) : null;
-  let dragId = null, details = !pl.theme && !pl.items.length;
-  const sortPh = () => pl.items.sort((a, b) => EX_PHASES.indexOf(a.phase) - EX_PHASES.indexOf(b.phase));
-  const change = () => { sortPh(); sv(); draw(); };
-  const row = (x, t0) => { const m = exMinutes(x), clock = start != null ? `${hm(start + t0)} – ${hm(start + t0 + m)}` : `${t0}′ – ${t0 + m}′`;
-    if (x.pause) return `<article class="pl-row pause" draggable="true" data-id="${x.id}"><span class="grip" aria-hidden="true">⋮⋮</span><span class="pl-pic ph">☕</span>
+  let dragId = null, details = false;
+  const change = () => { sv(); draw(); };
+  const newEx = () => ({ id: uid(), phase: "", name: "", cats: [], minutes: 15, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } });
+  const row = (x, t0, k) => { const m = exMinutes(x), clock = start != null ? `${hm(start + t0)} – ${hm(start + t0 + m)}` : `${t0}′ – ${t0 + m}′`;
+    const lab = x.phase ? `<span class="pl-lab">${esc(x.phase)}</span>` : "";
+    if (x.pause) return `<article class="pl-row pause" draggable="true" data-id="${x.id}" style="--pc:var(--line2)"><span class="grip" aria-hidden="true">⋮⋮</span><span class="pl-pic ph">☕</span>
       <div class="pl-main"><span class="pl-clock">${clock}</span><b>${esc(x.name || "Drinkpauze")}</b></div>${durCtl(x, m)}<div class="pl-acts">${moveBtns(x)}<button class="ib" type="button" data-act="del" data-id="${x.id}" aria-label="Verwijderen">${IC.trash}</button></div></article>`;
-    const facts = [x.players ? x.players + " spelers" : "", x.size, x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? " · " + x.rest + " s rust" : ""}` : "", x.intensity ? "intensiteit " + x.intensity : ""].filter(Boolean).join(" · ");
-    return `<article class="pl-row" draggable="true" data-id="${x.id}"><span class="grip" title="Sleep om te verplaatsen" aria-hidden="true">⋮⋮</span>
+    const facts = [x.players ? x.players + " spelers" : "", x.size, x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? " · " + x.rest + " s rust" : ""}` : ""].filter(Boolean).join(" · ");
+    return `<article class="pl-row" draggable="true" data-id="${x.id}" style="--pc:${labelCol(x.phase)}"><span class="grip" title="Sleep om te verplaatsen" aria-hidden="true">⋮⋮</span>
       <button class="pl-pic" type="button" data-act="edit" data-id="${x.id}" aria-label="Oefening openen">${exPic(x)}</button>
-      <div class="pl-main" data-act="edit" data-id="${x.id}"><span class="pl-clock">${clock}</span><b>${esc(x.name || "Naamloze oefening")}</b>${facts ? `<small>${esc(facts)}</small>` : ""}${x.org ? `<p class="clamp2">${esc(x.org)}</p>` : `<p class="hint" style="margin:0">Nog geen uitleg. Tik om aan te vullen.</p>`}</div>
+      <div class="pl-main" data-act="edit" data-id="${x.id}"><span class="pl-clock"><span class="pl-no">${k + 1}</span>${clock}${lab}</span><b>${esc(x.name || "Naamloze oefening")}</b>${facts ? `<small>${esc(facts)}</small>` : ""}${x.org ? `<p class="clamp2">${esc(x.org)}</p>` : `<p class="hint" style="margin:0">Nog geen uitleg. Tik om aan te vullen.</p>`}</div>
       ${durCtl(x, m)}<div class="pl-acts">${moveBtns(x)}<button class="ib" type="button" data-act="dup" data-id="${x.id}" title="Kopie" aria-label="Kopie">${IC.copy}</button>
       <button class="ib" type="button" data-act="mine" data-id="${x.id}" title="Bewaren in de bibliotheek" aria-label="Bewaren in de bibliotheek">${IC.book}</button><button class="ib" type="button" data-act="del" data-id="${x.id}" title="Verwijderen" aria-label="Verwijderen">${IC.trash}</button></div></article>`; };
-  const durCtl = (x, m) => `<div class="pl-dur"><button type="button" data-act="minus" data-id="${x.id}" aria-label="5 minuten korter">−</button><span><b>${m || "–"}</b><small>min</small></span><button type="button" data-act="plus" data-id="${x.id}" aria-label="5 minuten langer">+</button></div>`;
+  const durCtl = (x, m) => `<div class="pl-dur"><button type="button" data-act="minus" data-id="${x.id}" aria-label="Korter">−</button><span><b>${m || "–"}</b><small>min</small></span><button type="button" data-act="plus" data-id="${x.id}" aria-label="Langer">+</button></div>`;
   const moveBtns = x => `<button class="ib" type="button" data-act="up" data-id="${x.id}" title="Omhoog" aria-label="Omhoog">↑</button><button class="ib" type="button" data-act="down" data-id="${x.id}" title="Omlaag" aria-label="Omlaag">↓</button>`;
   const draw = () => {
-    sortPh(); const total = planMinutes(pl), over = dur ? total - dur : 0; let acc = 0;
-    const segs = pl.items.map(x => { const m = exMinutes(x); return m ? `<span style="flex:${m};background:${x.pause ? "var(--line2)" : PHASE_COL[x.phase]}" title="${esc((x.name || x.phase) + " · " + m + " min")}"></span>` : ""; }).join("");
+    const total = planMinutes(pl), over = dur ? total - dur : 0, n = pl.items.filter(x => !x.pause).length, labs = [...new Set(pl.items.filter(x => !x.pause && x.phase).map(x => x.phase))];
+    const segs = pl.items.map(x => { const m = exMinutes(x); return m ? `<span style="flex:${m};background:${x.pause ? "var(--line2)" : labelCol(x.phase) === "var(--line2)" ? "var(--muted)" : labelCol(x.phase)}" title="${esc((x.name || "Oefening") + " · " + m + " min")}"></span>` : ""; }).join("");
+    let acc = 0;
     tv.innerHTML = `<div class="pl-top noprint">
       <input class="pl-theme" data-p="theme" value="${esc(pl.theme || e.theme || "")}" list="themes2" placeholder="Thema van de training, bv. Opbouw van achteruit" aria-label="Thema"><datalist id="themes2">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist>
-      <div class="pl-sum"><div class="pl-bar" role="img" aria-label="${total} van ${dur || total} minuten gepland">${segs}${dur && total < dur ? `<span class="free" style="flex:${dur - total}"></span>` : ""}</div>
-        <p><b>${total} min</b>${dur ? ` van ${dur} min` : ""} · ${pl.items.filter(x => !x.pause).length} ${pl.items.filter(x => !x.pause).length === 1 ? "oefening" : "oefeningen"}${dur ? over > 0 ? ` · <span class="pill loss">${over} min te veel</span>` : total ? ` · nog ${dur - total} min vrij` : "" : ""}
-        <span class="pl-legend">${EX_PHASES.map(p2 => `<i style="--pc:${PHASE_COL[p2]}"></i>${p2}`).join("")}</span></p></div>
+      <div class="pl-sum"><div class="pl-bar" role="img" aria-label="${total} minuten gepland">${segs}${dur && total < dur ? `<span class="free" style="flex:${dur - total}"></span>` : ""}${!segs && !dur ? `<span class="free" style="flex:1"></span>` : ""}</div>
+        <p><b>${total} min</b>${dur ? ` van ${dur} min` : ""} · ${n} ${n === 1 ? "oefening" : "oefeningen"}${dur ? over > 0 ? ` · <span class="pill loss">${over} min te veel</span>` : total ? ` · nog ${dur - total} min vrij` : "" : ""}
+        ${labs.length ? `<span class="pl-legend">${labs.map(l => `<i style="--pc:${labelCol(l)}"></i>${esc(l)}`).join("")}</span>` : ""}</p></div>
       <button class="link" type="button" id="pl-det" aria-expanded="${details}">${details ? "Details verbergen" : "Doel, spelers, materiaal en intensiteit"}</button>
       ${details ? `<div class="fields pl-fields"><label class="f full">Doel van de training<input data-p="goal" value="${esc(pl.goal || "")}" placeholder="Wat moeten de spelers na deze training beter kunnen?"></label>
         <label class="f">Aantal spelers<input data-p="players" value="${esc(pl.players || "")}" placeholder="bv. 8-10 + 1K"></label>
-        <label class="f">Intensiteit<select data-p="intensity" data-num>${["", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<option value="${n}"${String(pl.intensity ?? "") === String(n) ? " selected" : ""}>${n ? n + " – " + INTENS[n] : "–"}</option>`).join("")}</select></label>
+        <label class="f">Intensiteit<select data-p="intensity" data-num>${["", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(k => `<option value="${k}"${String(pl.intensity ?? "") === String(k) ? " selected" : ""}>${k ? k + " – " + INTENS[k] : "–"}</option>`).join("")}</select></label>
         <label class="f full">Materiaal<input data-p="material" value="${esc(pl.material || "")}" placeholder="bv. 2 grote doelen, potjes, kegels, ballen, hesjes"></label></div>` : ""}</div>
-    <div class="row noprint pl-tools"><button class="btn ghost small" type="button" id="prt">${IC.print}Afdrukken</button><button class="btn ghost small" type="button" id="tplSave">${IC.copy}Bewaren als training in de bibliotheek</button>
+    <div class="row noprint pl-tools"><button class="btn ghost small" type="button" id="prt">${IC.print}Afdrukken</button>${opts.tpl ? "" : `<button class="btn ghost small" type="button" id="tplSave">${IC.copy}Bewaren in de bibliotheek</button>`}
       <button class="btn ghost small" type="button" id="cpy">${IC.rotate}Overnemen van andere training</button>${pl.items.length ? `<span class="spacer"></span><button class="link" type="button" id="clr">Plan leegmaken</button>` : ""}</div>
-    ${EX_PHASES.map(ph => { const xs = pl.items.filter(x => x.phase === ph), mins = xs.reduce((s, x) => s + exMinutes(x), 0), t0 = acc; acc += mins; let t = t0;
-      return `<section class="pl-phase" style="--pc:${PHASE_COL[ph]}"><header><i aria-hidden="true"></i><h2>${ph}</h2><span class="hint">${xs.length ? `${mins} min` : ""}</span></header>
-        <div class="pl-list" data-drop="${ph}">${xs.map(x => { const r = row(x, t); t += exMinutes(x); return r; }).join("") || `<div class="pl-empty">Nog geen oefeningen in dit onderdeel.</div>`}</div>
-        <div class="pl-add noprint"><button class="btn ghost small" type="button" data-new="${ph}">${IC.plus}Nieuwe oefening</button><button class="btn ghost small" type="button" data-lib="${ph}">${IC.book}Uit de bibliotheek</button>${ph === "Kern" ? `<button class="link" type="button" data-pause="${ph}">+ Drinkpauze</button>` : ""}</div></section>`; }).join("")}`;
+    <div class="pl-list" data-drop="1">${pl.items.map((x, k) => { const r = row(x, acc, k); acc += exMinutes(x); return r; }).join("") ||
+      `<div class="pl-empty"><b>Bouw je training zoals jij wil</b>Voeg oefeningen toe in de volgorde die jij kiest. Je bepaalt zelf hoeveel en welke; een label zoals "Opwarming" kan je per oefening meegeven, maar dat hoeft niet.</div>`}</div>
+    <div class="pl-add noprint"><button class="btn" type="button" id="addNew">${IC.plus}Nieuwe oefening</button><button class="btn ghost" type="button" id="addLib">${IC.book}Uit de bibliotheek</button><button class="btn ghost" type="button" id="addPause">☕ Pauze</button></div>`;
     bind();
   };
   const find = id => pl.items.find(x => x.id === id);
@@ -80,35 +111,34 @@ async function planEditor(tv, e) {
     $$("[data-p]", tv).forEach(x => x.oninput = x.onchange = () => { pl[x.dataset.p] = x.hasAttribute("data-num") ? (x.value === "" ? null : +x.value) : x.value; sv(); });
     $("#pl-det", tv).onclick = () => { details = !details; draw(); };
     $("#prt", tv).onclick = () => printPlan(e);
-    $("#tplSave", tv).onclick = async () => { if (!pl.items.length) { toast("Voeg eerst oefeningen toe."); return; } const name = prompt("Naam van deze training in de bibliotheek:", pl.theme || e.theme || "Training"); if (!name) return;
+    const ts = $("#tplSave", tv); if (ts) ts.onclick = async () => { if (!pl.items.length) { toast("Voeg eerst oefeningen toe."); return; } const name = prompt("Naam van deze training in de bibliotheek:", pl.theme || e.theme || "Training"); if (!name) return;
       await safe(() => items.save({ kind: "training", title: name, data: { ...JSON.parse(JSON.stringify(pl)), ages: S.team?.category ? [S.team.category.toUpperCase().replace(/^P/, "")] : [] } }), "Bewaard bij Volledige trainingen in de bibliotheek."); };
     $("#cpy", tv).onclick = () => copyFrom();
     const clr = $("#clr", tv); if (clr) clr.onclick = () => { if (!confirm("Alle oefeningen uit dit plan halen?")) return; pl.items = []; change(); };
-    $$("[data-new]", tv).forEach(b => b.onclick = () => exEditor({ id: uid(), phase: b.dataset.new, name: "", cats: [], minutes: b.dataset.new === "Afsluiting" ? 5 : b.dataset.new === "Opwarming" ? 15 : 15, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } }, x => { pl.items.push(x); change(); }));
-    $$("[data-lib]", tv).forEach(b => b.onclick = () => libPick(x => { x.phase = b.dataset.lib; pl.items.push(x); change(); }));
-    $$("[data-pause]", tv).forEach(b => b.onclick = () => { pl.items.push({ id: uid(), phase: b.dataset.pause, name: "Drinkpauze", minutes: 3, pause: true, cats: [] }); change(); });
+    $("#addNew", tv).onclick = () => exEditor(newEx(), x => { pl.items.push(x); change(); });
+    $("#addLib", tv).onclick = () => libPick(x => { pl.items.push(x); change(); });
+    $("#addPause", tv).onclick = () => { pl.items.push({ id: uid(), phase: "", name: "Drinkpauze", minutes: 3, pause: true, cats: [] }); change(); };
     $$("[data-act]", tv).forEach(b => b.onclick = ev => { ev.stopPropagation(); const x = find(b.dataset.id); if (!x) return; const arr = pl.items, k = arr.indexOf(x), act = b.dataset.act;
       if (act === "edit" && !x.pause) exEditor(JSON.parse(JSON.stringify(x)), y => { arr[arr.indexOf(x)] = y; change(); });
-      if (act === "minus" || act === "plus") { const m = exMinutes(x), step = m <= 5 && act === "minus" ? 1 : act === "plus" && m < 5 ? 1 : 5; x.minutes = Math.max(1, m + (act === "plus" ? step : -step)); if (x.reps && act) { /* expliciete duur wint */ } change(); }
-      if (act === "up") { const pi = EX_PHASES.indexOf(x.phase); if (k > 0 && arr[k - 1].phase === x.phase) [arr[k - 1], arr[k]] = [arr[k], arr[k - 1]]; else if (pi > 0) x.phase = EX_PHASES[pi - 1]; change(); }
-      if (act === "down") { const pi = EX_PHASES.indexOf(x.phase); if (k < arr.length - 1 && arr[k + 1].phase === x.phase) [arr[k + 1], arr[k]] = [arr[k], arr[k + 1]]; else if (pi < EX_PHASES.length - 1) { x.phase = EX_PHASES[pi + 1]; arr.splice(k, 1); const j = arr.findIndex(z => EX_PHASES.indexOf(z.phase) >= pi + 1); arr.splice(j < 0 ? arr.length : j, 0, x); } change(); }
+      if (act === "minus" || act === "plus") { const m = exMinutes(x), step = act === "minus" ? (m <= 5 ? 1 : 5) : (m < 5 ? 1 : 5); x.minutes = Math.max(1, m + (act === "plus" ? step : -step)); change(); }
+      if (act === "up" && k > 0) { [arr[k - 1], arr[k]] = [arr[k], arr[k - 1]]; change(); }
+      if (act === "down" && k < arr.length - 1) { [arr[k + 1], arr[k]] = [arr[k], arr[k + 1]]; change(); }
       if (act === "dup") { arr.splice(k + 1, 0, { ...JSON.parse(JSON.stringify(x)), id: uid() }); change(); }
       if (act === "del" && confirm(`"${x.name || "Oefening"}" uit deze training halen?`)) { arr.splice(k, 1); change(); }
       if (act === "mine") safe(() => items.save({ kind: "oefening", title: x.name || "Oefening", data: exData(x) }), "Bewaard bij je oefeningen in de bibliotheek."); });
-    /* slepen met de muis: tussen oefeningen en naar een ander onderdeel */
+    /* slepen met de muis */
     $$(".pl-row", tv).forEach(r => { r.ondragstart = ev => { dragId = r.dataset.id; r.classList.add("dragging"); ev.dataTransfer.effectAllowed = "move"; ev.dataTransfer.setData("text/plain", dragId); };
-      r.ondragend = () => { dragId = null; r.classList.remove("dragging"); $$(".drop-before,.drop-after,.drop-in", tv).forEach(z => z.classList.remove("drop-before", "drop-after", "drop-in")); }; });
-    $$("[data-drop]", tv).forEach(list => {
-      list.ondragover = ev => { if (!dragId) return; ev.preventDefault(); $$(".drop-before,.drop-after,.drop-in", tv).forEach(z => z.classList.remove("drop-before", "drop-after", "drop-in"));
-        const r = ev.target.closest(".pl-row"); if (r && r.dataset.id !== dragId) { const b = r.getBoundingClientRect(); r.classList.add(ev.clientY < b.top + b.height / 2 ? "drop-before" : "drop-after"); } else if (!r) list.classList.add("drop-in"); };
-      list.ondrop = ev => { ev.preventDefault(); if (!dragId) return; const x = find(dragId), r = ev.target.closest(".pl-row"), arr = pl.items; arr.splice(arr.indexOf(x), 1); x.phase = list.dataset.drop;
-        if (r && r.dataset.id !== x.id) { const tgt = find(r.dataset.id), b = r.getBoundingClientRect(); let j = arr.indexOf(tgt); if (ev.clientY >= b.top + b.height / 2) j++; arr.splice(j, 0, x); }
-        else { const last = arr.map((z, i) => [z, i]).filter(([z]) => EX_PHASES.indexOf(z.phase) <= EX_PHASES.indexOf(x.phase)).pop(); arr.splice(last ? last[1] + 1 : 0, 0, x); }
-        dragId = null; change(); }; });
+      r.ondragend = () => { dragId = null; r.classList.remove("dragging"); $$(".drop-before,.drop-after", tv).forEach(z => z.classList.remove("drop-before", "drop-after")); }; });
+    const list = $("[data-drop]", tv);
+    list.ondragover = ev => { if (!dragId) return; ev.preventDefault(); $$(".drop-before,.drop-after", tv).forEach(z => z.classList.remove("drop-before", "drop-after"));
+      const r = ev.target.closest(".pl-row"); if (r && r.dataset.id !== dragId) { const b = r.getBoundingClientRect(); r.classList.add(ev.clientY < b.top + b.height / 2 ? "drop-before" : "drop-after"); } };
+    list.ondrop = ev => { ev.preventDefault(); if (!dragId) return; const x = find(dragId), r = ev.target.closest(".pl-row"), arr = pl.items;
+      if (r && r.dataset.id !== x.id) { arr.splice(arr.indexOf(x), 1); const tgt = find(r.dataset.id), b = r.getBoundingClientRect(); let j = arr.indexOf(tgt); if (ev.clientY >= b.top + b.height / 2) j++; arr.splice(j, 0, x); }
+      dragId = null; change(); };
   };
   const copyFrom = () => { const others = S.events.filter(z => z.type === "training" && z.id !== e.id && normPlan(z.plan).items.length).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15);
     if (!others.length) { toast("Er zijn nog geen andere trainingen met een plan."); return; }
-    const d = dialog(`<div class="dlg"><h2>Overnemen van een andere training</h2><p class="muted" style="margin:0">De oefeningen worden onderaan dit plan toegevoegd. Wat je niet nodig hebt, haal je er daarna weer uit.</p>
+    const d = dialog(`<div class="dlg"><h2>Overnemen van een andere training</h2><p class="muted" style="margin:0">De oefeningen komen onderaan dit plan. Wat je niet nodig hebt, haal je er daarna weer uit.</p>
       <div class="list">${others.map(z => { const p2 = normPlan(z.plan); return `<div class="item" data-o="${z.id}"><span class="date"><b>${dDay(z.date)}</b><small>${dMon(z.date)}</small></span><span class="main"><b>${esc(p2.theme || z.theme || "Training")}</b><small>${p2.items.length} oefeningen · ${planMinutes(p2)} min</small></span>${IC.plus}</div>`; }).join("")}</div>
       <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button></div></div>`);
     $$("[data-o]", d).forEach(y => y.onclick = () => { const z = S.events.find(q => q.id === y.dataset.o), p2 = normPlan(z.plan);
@@ -119,21 +149,24 @@ async function planEditor(tv, e) {
 const INTENS = { 1: "Heel licht", 2: "Licht", 3: "Matig", 4: "Redelijk zwaar", 5: "Zwaar", 6: "Zwaar+", 7: "Heel zwaar", 8: "Heel zwaar+", 9: "Bijna maximaal", 10: "Maximaal" };
 const exData = x => { const d = JSON.parse(JSON.stringify(x)); delete d.id; return d; };
 
-/* ============ oefening maken of bewerken: tekening links, de belangrijkste velden rechts ============ */
+/* ============ oefening maken of bewerken: schermvullend, tekening centraal ============ */
 function exEditor(x, onSave, saveLabel) {
   x.cats = x.cats || []; const hasImg = () => x.img || x.img_path; if (!x.diagram && !hasImg()) x.diagram = { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] };
   const catOpts = LEERPLAN.flatMap(([a, b, list]) => list.map(l => `${a} > ${b}${l !== b ? " > " + l : ""}`));
   let dirty = false; const curMin = exMinutes(x);
-  const d = dialog(`<form class="exed" novalidate><div class="exhead"><input name="name" class="exname" required value="${esc(x.name || "")}" placeholder="Naam van de oefening, bv. Rondo 4 tegen 1" aria-label="Naam van de oefening">
-      <button class="xbtn" style="position:static" type="button" id="exx" aria-label="Sluiten">${IC.x}</button></div>
-    <div class="exgrid"><div class="exdiag" id="exdiag"><div id="dgHost"></div>
+  const d = dialog(`<form class="exed exf" novalidate>
+    <header class="exbar"><button class="ib exx" type="button" id="exx" aria-label="Sluiten">${IC.x}</button><input name="name" class="exname" required value="${esc(x.name || "")}" placeholder="Naam van de oefening" aria-label="Naam van de oefening">
+      <div class="exviews" role="tablist"><button type="button" role="tab" data-view="draw" aria-selected="true">Tekening</button><button type="button" role="tab" data-view="info" aria-selected="false">Uitleg en duur</button></div>
+      <span class="hint" id="durH"></span><button class="btn ghost" type="button" id="exc">Annuleren</button><button class="btn" type="submit">${saveLabel || "Bewaren"}</button></header>
+    <div class="exbody" data-v="draw"><div class="exdiag"><div id="dgHost"></div>
         <p class="hint exalt">${hasImg() ? `Je gebruikt een afbeelding. <button class="link" type="button" id="toDraw">Liever zelf tekenen</button>` : `Liever een foto of afbeelding? <label class="link" style="cursor:pointer">Afbeelding kiezen<input type="file" accept="image/*" id="imgIn" hidden></label>`}</p></div>
-      <div class="exform">
-        <div class="f full"><span>Onderdeel</span><div class="seg exseg" role="radiogroup">${EX_PHASES.map(p2 => `<button type="button" role="radio" data-ph="${p2}" aria-checked="${(x.phase || "Kern") === p2}" style="--pc:${PHASE_COL[p2]}">${p2}</button>`).join("")}</div></div>
+      <aside class="exform">
         <div class="f full"><span>Duur</span><div class="exdur">${[5, 10, 15, 20, 25, 30].map(n => `<button type="button" class="chip" data-min="${n}" aria-pressed="${curMin === n}">${n}′</button>`).join("")}<label class="exmin"><input name="minutes" type="number" min="0" inputmode="numeric" value="${x.minutes ?? ""}" placeholder="${curMin || "min"}" aria-label="Duur in minuten"> min</label></div></div>
+        <label class="f full">Label <span class="hint">mag leeg, kies of typ zelf</span><input name="phase" value="${esc(x.phase || "")}" list="phlist" placeholder="bv. Opwarming, Techniek, Partijvorm"><datalist id="phlist">${LABEL_SUG.map(l => `<option value="${l}">`).join("")}</datalist>
+          <span class="chips exlabs">${LABEL_SUG.slice(0, 6).map(l => `<button type="button" class="tag" data-lab="${l}" style="--pc:${labelCol(l)}">${l}</button>`).join("")}</span></label>
         <div class="fields"><label class="f">Aantal spelers<input name="players" value="${esc(x.players || "")}" placeholder="bv. 8-12"></label>
           <label class="f">Afmetingen<input name="size" value="${esc(x.size || "")}" placeholder="bv. 30 × 20 m"></label></div>
-        <label class="f full">Organisatie en verloop<textarea name="org" rows="5" placeholder="Hoe zet je de oefening op en hoe verloopt ze? Welke varianten zijn er?">${esc(x.org || "")}</textarea></label>
+        <label class="f full">Organisatie en verloop<textarea name="org" rows="6" placeholder="Hoe zet je de oefening op en hoe verloopt ze? Welke varianten zijn er?">${esc(x.org || "")}</textarea></label>
         <label class="f full">Aandachtspunten<textarea name="criteria" rows="4" placeholder="Eén aandachtspunt per regel, bv.&#10;Open lichaamshouding&#10;Pass in de juiste voet">${esc(x.criteria || "")}</textarea></label>
         <details class="exmore"${x.goal || x.reps || x.intensity || x.material || x.cats.length || (x.ages || []).length ? " open" : ""}><summary>Meer details <span class="hint">doel, intensiteit, herhalingen, materiaal, categorie, leeftijd</span></summary>
           <div class="fields"><label class="f full">Doel van de oefening<input name="goal" value="${esc(x.goal || "")}" placeholder="Wat leren de spelers hier?"></label>
@@ -146,19 +179,19 @@ function exEditor(x, onSave, saveLabel) {
             <div class="f full"><span>Categorie (leerplan Voetbal Vlaanderen)</span><div class="chips" id="cats"></div>
               <input list="catlist" id="catin" placeholder="Zoek en kies, bv. Passing of Openen: breed"><datalist id="catlist">${catOpts.map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
             ${x.source === "PSD" ? `<p class="hint full" style="margin:0">Overgenomen uit de PSD-oefendatabank${x.author ? " · gemaakt door " + esc(x.author) : ""}.</p>` : ""}</div></details>
-      </div></div>
-    <div class="row exfoot"><span class="hint" id="durH"></span><span class="spacer"></span><button class="btn ghost" type="button" id="exc">Annuleren</button><button class="btn" type="submit">${saveLabel || "Oefening bewaren"}</button></div></form>`, "wide xl exdlg");
-  const f = $("form", d); let phase = x.phase || "Kern", stopDg = null;
+      </aside></div></form>`, "exfull");
+  const f = $("form", d); let stopDg = null;
   const mark = () => { dirty = true; };
-  const startDg = () => { x.diagram = x.diagram || { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] }; stopDg = diagramEditor($("#dgHost", d), x.diagram, mark); };
+  const startDg = () => { x.diagram = x.diagram || { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] }; stopDg = diagramEditor($("#dgHost", d), x.diagram, mark, { full: true }); };
   const showImg = () => { $("#dgHost", d).innerHTML = `<div class="eximg">${exPic(x, "")}</div>`; };
   if (hasImg() && !(x.diagram?.objs?.length)) showImg(); else startDg();
   const td = $("#toDraw", d); if (td) td.onclick = () => { x.img = null; x.img_path = null; mark(); td.parentElement.remove(); startDg(); };
   const ii = $("#imgIn", d); if (ii) ii.onchange = () => { const file = ii.files[0]; if (!file) return; if (file.size > 4e6) { toast("Kies een afbeelding kleiner dan 4 MB."); return; }
     const rd = new FileReader(); rd.onload = () => { x.img = rd.result; x.img_path = null; x.diagram = null; if (stopDg) stopDg(); mark(); showImg(); }; rd.readAsDataURL(file); };
-  $$("[data-ph]", d).forEach(b => b.onclick = () => { phase = b.dataset.ph; mark(); $$("[data-ph]", d).forEach(z => z.setAttribute("aria-checked", z === b)); });
+  $$("[data-view]", d).forEach(b => b.onclick = () => { $(".exbody", d).dataset.v = b.dataset.view; $$("[data-view]", d).forEach(z => z.setAttribute("aria-selected", z === b)); });
+  $$("[data-lab]", d).forEach(b => b.onclick = () => { f.phase.value = f.phase.value === b.dataset.lab ? "" : b.dataset.lab; mark(); });
   const dh = () => { const tmp = { reps: +f.reps.value || null, work: f.work.value, rest: +f.rest.value || 0, minutes: +f.minutes.value || null }, m = exMinutes(tmp);
-    $("#durH", d).textContent = m ? `Duurtijd: ${m} minuten` : "Kies een duur"; $$("[data-min]", d).forEach(b => b.setAttribute("aria-pressed", +b.dataset.min === m && !!f.minutes.value)); };
+    $("#durH", d).textContent = m ? `${m} min` : ""; $$("[data-min]", d).forEach(b => b.setAttribute("aria-pressed", +b.dataset.min === m && !!f.minutes.value)); };
   $$("[data-min]", d).forEach(b => b.onclick = () => { f.minutes.value = b.dataset.min; mark(); dh(); });
   ["reps", "work", "rest", "minutes"].forEach(k => f[k].addEventListener("input", dh)); dh();
   f.addEventListener("input", mark);
@@ -166,12 +199,12 @@ function exEditor(x, onSave, saveLabel) {
   const addCat = el => { const val = el.value.trim(); if (val && !x.cats.includes(val)) { x.cats.push(val); mark(); drawCats(); } el.value = ""; };
   drawCats(); $("#catin", d).onchange = ev => addCat(ev.target); $("#catin", d).onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); addCat(ev.target); } };
   const leave = () => !dirty || confirm("Je wijzigingen aan deze oefening niet bewaren?");
-  $("#exx", d).onclick = $("#exc", d).onclick = () => { if (leave()) d.close(); };
-  d.addEventListener("cancel", ev => { if (!leave()) ev.preventDefault(); }, { once: false });
+  $("#exc", d).onclick = $("#exx", d).onclick = () => { if (leave()) d.close(); };
+  d.addEventListener("cancel", ev => { if (!leave()) ev.preventDefault(); });
   d.addEventListener("close", () => stopDg && stopDg(), { once: true });
   f.onsubmit = ev => { ev.preventDefault(); const fd = Object.fromEntries(new FormData(f));
-    if (!fd.name.trim()) { f.name.focus(); toast("Geef de oefening een naam."); return; }
-    Object.assign(x, { name: fd.name.trim(), phase, intensity: fd.intensity ? +fd.intensity : null, work: fd.work.trim(), rest: fd.rest === "" ? null : +fd.rest, reps: fd.reps === "" ? null : +fd.reps, minutes: fd.minutes === "" ? null : +fd.minutes,
+    if (!fd.name.trim()) { f.name.focus(); toast("Geef de oefening eerst een naam (bovenaan)."); return; }
+    Object.assign(x, { name: fd.name.trim(), phase: fd.phase.trim(), intensity: fd.intensity ? +fd.intensity : null, work: fd.work.trim(), rest: fd.rest === "" ? null : +fd.rest, reps: fd.reps === "" ? null : +fd.reps, minutes: fd.minutes === "" ? null : +fd.minutes,
       org: fd.org.trim(), criteria: fd.criteria.trim(), material: fd.material.trim(), size: fd.size.trim(), players: fd.players.trim(), goal: fd.goal.trim(),
       ages: fd.ages.split(/[,;\s]+/).map(a => a.trim().toUpperCase()).filter(Boolean).map(a => /^\d+$/.test(a) ? "U" + a : a === "SENIORS" ? "Seniors" : a) });
     dirty = false; d.close(); onSave(x); };
@@ -263,10 +296,10 @@ function exFilterBar(host, list, f, onChange, compact) {
 /* ============ afdrukken: trainingsfiche zoals PSD ============ */
 async function printPlan(e) {
   const pl = normPlan(e.plan), el = document.createElement("div"); el.className = "print-only";
-  el.innerHTML = `<div class="pfiche"><header><div><h1>${esc(pl.theme || e.theme || "Training")}</h1><p>${esc(S.team?.name || "")} · ${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : ""}${e.location ? " · " + esc(e.location) : ""}</p></div><img src="icons/icon-192.png" alt=""></header>
+  el.innerHTML = `<div class="pfiche"><header><div><h1>${esc(pl.theme || e.theme || "Training")}</h1><p>${esc(S.team?.name || "")} · ${e.date ? cap(dLong(e.date)) : "Training zonder datum"}${e.start_time ? ", " + tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : ""}${e.location ? " · " + esc(e.location) : ""}</p></div><img src="icons/icon-192.png" alt=""></header>
     <dl class="pmeta"><div><dt>Thema</dt><dd>${esc(pl.theme || e.theme || "–")}</dd></div><div><dt>Aantal spelers</dt><dd>${esc(pl.players || "–")}</dd></div><div><dt>Materiaal</dt><dd>${esc(pl.material || "–")}</dd></div><div><dt>Intensiteit</dt><dd>${pl.intensity ? pl.intensity + " – " + INTENS[pl.intensity] : "–"}</dd></div><div><dt>Totale duur</dt><dd>${planMinutes(pl)} min</dd></div></dl>
     ${pl.goal ? `<p class="pgoal"><b>Doel:</b> ${esc(pl.goal)}</p>` : ""}
-    ${pl.items.map(x => `<section class="pex"><div class="ptxt"><h2>${esc(x.phase)} : ${esc(x.name || "Oefening")}</h2>
+    ${pl.items.map(x => `<section class="pex"><div class="ptxt"><h2>${x.phase ? esc(x.phase) + " : " : ""}${esc(x.name || "Oefening")}</h2>
       ${x.cats?.length ? `<p><b>Categorie:</b><br>${x.cats.map(c => "- " + esc(c)).join("<br>")}</p>` : ""}
       <p>${[["Duurtijd", exMinutes(x) ? exMinutes(x) + " min." : ""], ["Intensiteit", x.intensity ? x.intensity + " - " + INTENS[x.intensity] : ""], ["Duur van de inspanning", x.work], ["Duur van de rust", x.rest ? x.rest + " sec." : ""], ["Aantal herhalingen", x.reps]].filter(([, val]) => val).map(([k, val]) => `<b>${k}:</b> ${esc(val)}`).join("<br>")}</p>
       ${x.org ? `<h3>Opstelling / Organisatie &amp; richtlijnen</h3><p>${esc(x.org).replace(/\n/g, "<br>")}</p>` : ""}${x.criteria ? `<h3>Uitvoeringscriteria / Aandachtspunten</h3><p>${esc(x.criteria).replace(/\n/g, "<br><br>")}</p>` : ""}
@@ -298,9 +331,10 @@ function tplView(x, onChange) {
     <p class="muted" style="margin:0">${esc([agesTxt(x.data.ages), pl.players ? pl.players + " spelers" : "", planMinutes(pl) + " min", x.data.author ? "gemaakt door " + x.data.author : ""].filter(Boolean).join(" · "))}</p>
     ${pl.goal ? `<p style="margin:0">${esc(pl.goal)}</p>` : ""}${pl.material ? `<p class="hint" style="margin:0"><b>Materiaal:</b> ${esc(pl.material)}</p>` : ""}
     <div class="exs" style="max-height:60dvh;overflow:auto">${pl.items.map(it => `<article class="excard"><div class="pic">${exPic(it)}</div><div class="bd"><small class="hint">${esc(it.phase)}</small><b>${esc(it.name || "Oefening")}</b><small class="muted">${esc([exMinutes(it) ? exMinutes(it) + " min" : "", it.size].filter(Boolean).join(" · "))}</small>${it.org ? `<p class="clamp">${esc(it.org)}</p>` : ""}</div></article>`).join("")}</div>
-    <div class="row">${srcLine(x, x.data)}<span class="spacer"></span>${items.mine(x) && mode !== "demo" ? `<button class="link" type="button" id="tv-sh">${x.shared ? "Niet meer delen" : "Delen met club"}</button>` : ""}${items.mine(x) ? `<button class="link" type="button" id="tv-del">Verwijderen</button>` : ""}
+    <div class="row">${srcLine(x, x.data)}<span class="spacer"></span>${items.mine(x) && mode !== "demo" ? `<button class="link" type="button" id="tv-sh">${x.shared ? "Niet meer delen" : "Delen met club"}</button>` : ""}${items.mine(x) ? `<button class="link" type="button" id="tv-del">Verwijderen</button><button class="btn ghost" type="button" id="tv-ed">Bewerken</button>` : ""}
       ${S.team && logged() ? `<button class="btn" type="button" id="tv-plan">${IC.plus}Inplannen op een training</button>` : ""}</div></div>`, "wide xl");
   const tp = $("#tv-plan", d); if (tp) tp.onclick = () => { d.close(); tplSchedule(x); };
+  const te = $("#tv-ed", d); if (te) te.onclick = () => { d.close(); go("#/sjabloon/" + x.id); };
   const sh = $("#tv-sh", d); if (sh) sh.onclick = async () => { await safe(() => items.share(x, !x.shared), x.shared ? "Niet meer gedeeld." : "Gedeeld met alle clubtrainers."); d.close(); onChange && onChange(); };
   const dl = $("#tv-del", d); if (dl) dl.onclick = async () => { if (!confirm(`Training "${x.title}" verwijderen?`)) return; await safe(() => items.del(x), "Verwijderd."); d.close(); onChange && onChange(); };
 }
@@ -420,10 +454,10 @@ function exView(m, onChange) {
     await safe(() => items.del(m), "Oefening verwijderd."); d.close(); onChange && onChange(); };
 }
 /* een oefening op een geplande training zetten */
-function toTraining(item) {
+function toTraining(item, title) {
   const up = S.events.filter(e => e.type === "training" && e.date >= todayIso()).slice(0, 10);
   if (!up.length) { toast("Plan eerst een training in de kalender."); return; }
-  const d2 = dialog(`<div class="dlg"><h2>Aan welke training toevoegen?</h2><div class="list">${up.map(e => `<div class="item" data-e="${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(normPlan(e.plan).theme || e.theme || "Training")}</b><small>${dShort(e.date)} · ${normPlan(e.plan).items.length} oefeningen</small></span>${IC.plus}</div>`).join("")}</div><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button></div></div>`);
+  const d2 = dialog(`<div class="dlg"><h2>${esc(title || "Aan welke training toevoegen?")}</h2><div class="list">${up.map(e => `<div class="item" data-e="${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(normPlan(e.plan).theme || e.theme || "Training")}</b><small>${dShort(e.date)} · ${normPlan(e.plan).items.length} oefeningen</small></span>${IC.plus}</div>`).join("")}</div><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>${title ? "Nee, bedankt" : "Annuleren"}</button></div></div>`);
   $$("[data-e]", d2).forEach(y => y.onclick = async () => { const e = S.events.find(z => z.id === y.dataset.e); e.plan = normPlan(e.plan); e.plan.items.push(item);
     await safe(() => putEvent(e), "Toegevoegd aan de training van " + dShort(e.date) + "."); d2.close(); });
 }

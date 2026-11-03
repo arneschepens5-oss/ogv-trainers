@@ -254,7 +254,7 @@ const NAV = [
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Scouting", items: [["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
-const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "bibliotheek", sjablonen: "bibliotheek", zonekaart: "opslag" };
+const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
 let teardown = null;

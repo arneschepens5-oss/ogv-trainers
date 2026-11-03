@@ -840,3 +840,47 @@ dialog.exdlg{width:min(1320px,100% - 16px)}
 .dge .dgwrap svg{max-height:68dvh}
 .dgfull .dgwrap svg{max-height:calc(100dvh - 250px)}
 @media (max-width:640px){.exfoot #durH{display:none}.exfoot{bottom:-22px}}
+
+/* ============ schermvullende oefening-editor ============ */
+dialog.exfull{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border-radius:0;overflow:hidden}
+dialog.exfull .exf{height:100%;padding:0;gap:0;display:flex;flex-direction:column}
+.exbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+.exbar .exname{flex:1;min-width:0;font-size:20px}
+.exbar #durH{font-weight:700;color:var(--ink);white-space:nowrap}
+.exviews{display:none}
+.exbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 400px}
+.exbody .exdiag{position:static;overflow:auto;padding:12px 16px;display:flex;flex-direction:column}
+.exbody .exform{overflow:auto;padding:16px 18px 40px;border-left:1px solid var(--line);background:var(--bg)}
+.exfull #dgfs{display:none}
+.exfull .dgwrap{display:flex;justify-content:center;background:transparent}
+.exfull .dge .dgwrap svg{height:calc(100dvh - 300px);width:auto;max-width:100%;max-height:none;border-radius:12px}
+.exfull .eximg img{max-height:calc(100dvh - 150px);width:auto;max-width:100%;margin:0 auto}
+.exlabs{margin-top:6px}.exlabs .tag{border-left:3px solid var(--pc)}
+@media (max-width:900px){
+  .exbody{grid-template-columns:1fr}
+  .exbody[data-v=draw] .exform,.exbody[data-v=info] .exdiag{display:none}
+  .exbody .exform{border-left:0}
+  .exviews{display:flex;gap:4px;order:3;width:100%}
+  .exviews button{flex:1;border:1px solid var(--line2);background:transparent;border-radius:10px;padding:8px;font:inherit;font-weight:700;font-size:14px;color:var(--muted)}
+  .exviews button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .exbar{flex-wrap:wrap;padding:8px 10px;gap:8px}.exbar .exname{flex:1 1 0;font-size:17px}.exbar #durH,.exbar #exc{display:none}
+  .exbar .exx{display:grid}
+  .exfull .dge .dgwrap svg{height:auto;width:100%;max-height:calc(100dvh - 330px)}
+  .exbody .exdiag{padding:8px}
+}
+/* ============ trainingen maken: startkeuze en vrije volgorde ============ */
+.startpick{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 8px}
+.startpick button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:20px;border-radius:var(--r);background:var(--card);border:1px solid var(--line)}
+.startpick button:hover{border-color:var(--yellow)}.startpick button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.startpick b{font-size:20px;font-weight:800}.startpick small{color:var(--muted);font-size:14.5px;line-height:1.45}
+.startpick .sp-ic{width:44px;height:44px;border-radius:12px;background:var(--yellow);color:#000;display:grid;place-items:center}
+.startpick .sp-ic svg{width:26px;height:26px}
+@media (max-width:640px){.startpick{grid-template-columns:1fr}}
+.pl-list[data-drop]{margin-top:12px}
+.pl-empty{display:flex;flex-direction:column;gap:4px;padding:24px}.pl-empty b{color:var(--ink);font-size:16px}
+.pl-no{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:6px;background:var(--card2);color:var(--ink);font-size:12px;margin-right:6px;padding:0 4px}
+.pl-lab{margin-left:8px;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:700;color:var(--ink);background:color-mix(in srgb,var(--pc) 22%,transparent);border:1px solid var(--pc)}
+.pl-add{margin-top:14px}
+
+.exbar .exx{display:none}
+@media (max-width:900px){.exbar .exx{display:grid}}
