@@ -191,7 +191,7 @@ dialog h2{font-size:24px;margin:0}
 .quick a{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(10,11,10,.85);color:#F2F2EE;font-weight:600;font-size:15px}
 .quick a:first-child{background:var(--yellow);color:#000!important;border-color:var(--yellow)}
 .quick a:hover{border-color:var(--yellow)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .tile{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:18px;background:var(--card);border:1px solid var(--line);transition:border-color .15s}
 .tile:hover{border-color:var(--yellow)}
 .tile .ic{width:46px;height:46px;border-radius:13px;background:var(--yellow);color:#000;display:grid;place-items:center;flex:none}
@@ -990,3 +990,22 @@ dialog.exfull .exf{height:100%;padding:0;gap:0;display:flex;flex-direction:colum
 .fbinfo{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}.fbinfo dt{color:var(--muted)}.fbinfo dd{margin:0;word-break:break-word}
 
 a.navbtn{text-decoration:none}
+/* ============ wie contacteer ik? ============ */
+.ct112{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:12px 16px;border-radius:14px;background:color-mix(in srgb,var(--s-bad,#E11D48) 14%,transparent);border:1px solid var(--s-bad,#E11D48);margin-bottom:14px;font-size:15px}
+.ct112 a{color:var(--ink);font-weight:900;font-size:17px}
+.ctcat{margin-bottom:22px}.ctcat h2{display:flex;align-items:center;gap:10px;font-size:19px;margin:0 0 10px}.ctcat h2 i{width:12px;height:12px;border-radius:4px;background:var(--cc)}
+.ctgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.ctcard{display:flex;flex-direction:column;gap:4px;padding:16px;border-radius:var(--r);background:var(--card);border:1px solid var(--line);border-top:4px solid var(--cc)}
+.cttopic{color:var(--muted);font-size:13px;font-weight:700}
+.ctname{font-size:19px;font-weight:800;font-stretch:108%;line-height:1.2}
+.ctfn{align-self:flex-start;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--cc) 22%,transparent)}
+.ctnote{margin:6px 0 2px;padding-left:18px;color:var(--muted);font-size:14px;line-height:1.45}
+.ctacts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}.ctacts .btn svg{width:16px;height:16px}
+.ctphone{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill.fn{font-size:11.5px;vertical-align:2px;border:1px solid var(--line2);color:var(--muted);font-weight:700}
+/* tegels op de startpagina */
+.tile>span:last-child{min-width:0}
+.tile b{overflow-wrap:anywhere;hyphens:auto}
+.cthd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctline{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}.ctline .ctfn{align-self:auto}
+.ctacts{margin-top:auto;padding-top:8px}

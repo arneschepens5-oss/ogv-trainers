@@ -19,18 +19,17 @@ route("start", { title: "Start", render: async v => {
   ${todo.length ? `<div class="sec"><h2>Nog in te vullen</h2><div class="list">${todo.map(e => evItem(e)).join("")}</div></div>` : ""}
   ${recent.length ? `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Laatste uitslagen van de club</h2><a class="link" href="#/uitslagen">Alle uitslagen</a></div><div class="list">${recent.map(clubItem).join("")}</div></div>` : ""}
   <div class="sec"><h2>Alles op één plek</h2><div class="tiles">${[
-    ["kalender", "cal", "Kalender en aanwezigheden", "Trainingen en wedstrijden plannen, aanwezigheden afvinken."],
-    ["live", "mic", "Live coachen", "Klok, goals en wissels tijdens de match, met spraak. Speeltijd wordt vanzelf berekend."],
-    ["uitslagen", "trophy", "Uitslagen en verslagen", "Alle wedstrijden van de club met het verslag erbij."],
-    ["evaluaties", "star", "Evaluaties", "Uitgebreide fiche per speler, met winterstop en einde seizoen als vaste momenten."],
-    ["bibliotheek", "book", "Trainingsbibliotheek", "Alle clubtrainingen per leeftijd, met PDF en aanpasbare versie."],
-    ["trainingen", "plan", "Trainingen maken", "Volledige trainingsfiches met veldtekening, belasting en duur per oefening."],
-    ["videoanalyse", "cam", "Videoanalyse", "Teken pijlen, zones en spotlights op je eigen beelden en exporteer als video."],
-    ["principes", "video", "Mijn spelprincipes", "Jouw speelwijze als animatie of video, met kernpunten."],
-    ["opslag", "folder", "Mijn opslag", "Je eigen documenten, video's, links en notities."],
-    ["animatiebord", "board", "Animatiebord", "Teken en animeer tactieken en exporteer als video."],
-    ["matchday", "sheet", "Wedstrijdblad", "Opstelling, kapitein en opdrachten voor de kleedkamer."],
-    ["scouting", "scout", "Scouting", "De gedeelde scoutingsdatabase van de club."]
+    ["kalender", "cal", "Kalender", "Wedstrijden komen vanzelf van RBFA. Aanwezigheden met één tik, ouders bevestigen zelf."],
+    ["trainingen", "plan", "Trainingen maken", "Eén oefening of een hele training, met veldtekening en tijd per oefening."],
+    ["bibliotheek", "book", "Bibliotheek", "Clubtrainingen en honderden oefeningen, per leeftijd, thema en soort."],
+    ["evaluaties", "star", "Evaluaties", "Per speler, met winterstop en einde seizoen als vaste momenten."],
+    ["cijfers", "chart", "Cijfers", "Resultaten, speeltijd per speler, doelpunten en werkpunten."],
+    ["matchday", "sheet", "Wedstrijdblad", "Selectie, opstelling en wissels per periode, klaar voor de kleedkamer."],
+    ["live", "mic", "Live coachen", "Klok, goals en wissels tijdens de match. Speeltijd wordt vanzelf berekend."],
+    ["uitslagen", "trophy", "Uitslagen club", "Alle wedstrijden van de club met het verslag erbij."],
+    ["animatiebord", "board", "Animatiebord", "Teken en animeer tactieken en exporteer ze als video."],
+    ["videoanalyse", "cam", "Videoanalyse", "Pijlen, zones en spotlights op je eigen beelden."],
+    ["contacten", "phone", "Wie contacteer ik?", "Bij wie je terechtkunt voor attesten, blessures, ICT en meer."]
   ].map(([h, i, b, s]) => `<a class="tile" href="#/${h}"><span class="ic">${IC[i]}</span><span><b>${b}</b><small>${s}</small></span></a>`).join("")}</div></div>`;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
   $$("[data-em]", v).forEach(a => a.onclick = () => { evMoment = +a.dataset.em; });

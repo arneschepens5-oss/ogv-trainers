@@ -590,3 +590,61 @@ begin
   insert into public.team_trainers(team_id, user_id, email) values (t, uid, lower(trim(mail))) on conflict do nothing;
   return 'ok';
 end $$;
+
+-- =====================================================================
+-- Versie 12: functies in de club (TVJO, ICT, coördinator…) en toegang tot alle ploegen zonder trainer te zijn,
+-- plus de lijst met contactpersonen ("Wie contacteer ik?") die de beheerder invult.
+-- =====================================================================
+alter table public.club_members add column if not exists all_teams boolean not null default false;
+alter table public.club_members add column if not exists functie   text;
+create or replace function public.is_trainer(t uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.team_trainers where team_id = t and user_id = auth.uid())
+      or exists (select 1 from public.club_members where user_id = auth.uid() and all_teams);
+$$;
+create or replace function public.club_status() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object('member', public.is_member(), 'admin', public.is_admin(),
+    'all_teams', coalesce((select all_teams from public.club_members where user_id = auth.uid()), false),
+    'functie', (select functie from public.club_members where user_id = auth.uid()));
+$$;
+create or replace function public.club_set_access(uid uuid, alle boolean, fn text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  update public.club_members set all_teams = coalesce(alle, false), functie = nullif(trim(coalesce(fn, '')), '') where user_id = uid;
+end $$;
+revoke all on function public.club_set_access(uuid, boolean, text) from anon, public;
+grant execute on function public.club_set_access(uuid, boolean, text), public.club_status() to authenticated;
+create or replace function public.club_admin_info() returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  return json_build_object(
+    'code', (select value from public.club_settings where key = 'invite_code'),
+    'members', coalesce((select json_agg(json_build_object('user_id', m.user_id, 'email', m.email, 'role', m.role, 'created_at', m.created_at,
+        'name', nullif(trim(u.raw_user_meta_data->>'full_name'), ''), 'all_teams', m.all_teams, 'functie', m.functie,
+        'teams', (select string_agg(t.name, ', ' order by t.name) from public.team_trainers tt join public.teams t on t.id = tt.team_id where tt.user_id = m.user_id))
+        order by m.role, coalesce(nullif(trim(u.raw_user_meta_data->>'full_name'), ''), m.email)) from public.club_members m left join auth.users u on u.id = m.user_id), '[]'::json),
+    'waiting', coalesce((select json_agg(json_build_object('user_id', u.id, 'email', u.email, 'created_at', u.created_at, 'name', nullif(trim(u.raw_user_meta_data->>'full_name'), '')) order by u.created_at desc)
+        from auth.users u where not exists (select 1 from public.club_members m where m.user_id = u.id)), '[]'::json));
+end $$;
+
+create table if not exists public.club_contacts (
+  id         uuid primary key default gen_random_uuid(),
+  cat        text not null default 'Algemeen',
+  topic      text not null,
+  name       text,
+  functie    text,
+  phone      text,
+  email      text,
+  note       text,
+  sort       integer not null default 100,
+  updated_at timestamptz not null default now()
+);
+alter table public.club_contacts enable row level security;
+drop policy if exists "contacten lezen" on public.club_contacts;
+drop policy if exists "contacten beheren" on public.club_contacts;
+create policy "contacten lezen"   on public.club_contacts for select to authenticated using (public.is_member());
+create policy "contacten beheren" on public.club_contacts for all to authenticated using (public.is_admin()) with check (public.is_admin());
+grant select, insert, update, delete on public.club_contacts to authenticated;

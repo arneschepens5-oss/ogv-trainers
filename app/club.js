@@ -37,7 +37,7 @@ function viewJoin(v) {
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin;
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.functie = data.functie || "";
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
   catch (e) { S.member = true; S.admin = false; /* databaseversie 5 nog niet uitgevoerd: gedrag zoals vroeger */ }
@@ -69,17 +69,35 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
       <p class="hint">Een nieuwe code maken stopt de oude. Wie al lid is, blijft lid.</p></div>
     <div class="panel"><div class="row"><h2 style="margin:0">Wachten op toegang</h2>${info.waiting?.length ? `<span class="pill w">${info.waiting.length}</span>` : ""}</div>${info.waiting?.length ? `<div class="list" style="margin-top:10px">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
       : `<p class="hint" style="margin:8px 0 0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
-    <div class="sec"><h2>Leden (${info.members.length})</h2><div class="list">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${esc(m.teams || "nog geen ploeg")}</small></span>
-      ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : `<button class="link" type="button" data-role="${m.user_id}" data-r="${m.role === "admin" ? "trainer" : "admin"}">${m.role === "admin" ? "Geen beheerder meer" : "Beheerder maken"}</button><button class="link danger" type="button" data-rm="${m.user_id}" data-mail="${esc(m.name || m.email || "")}">Toegang intrekken</button>`}</div>`).join("")}</div></div>`;
+    <div class="sec"><div class="row"><h2 style="margin:0">Leden (${info.members.length})</h2><span class="spacer"></span><span class="hint">Geef iemand een functie (bv. TVJO, ICT) en eventueel toegang tot alle ploegen, zonder trainer van een ploeg te zijn.</span></div>
+    <div class="list" style="margin-top:10px">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}${m.functie ? ` <span class="pill fn">${esc(m.functie)}</span>` : ""}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${m.all_teams ? "toegang tot alle ploegen" : esc(m.teams || "nog geen ploeg")}</small></span>
+      ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : ""}<button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button></div>`).join("")}</div></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
   $("#share").onclick = () => { const txt = `Je bent uitgenodigd voor OGV Trainers, het trainersplatform van OG Vorselaar.\nMaak je account aan op ${link} met de clubcode ${info.code}`;
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else { navigator.clipboard?.writeText(txt); toast("Uitnodiging gekopieerd."); } };
   $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 6 tekens):", "OGV-" + Math.random().toString(36).slice(2, 8).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
   $$("[data-ok]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.ok, r: "trainer" }, "Toegelaten."));
-  $$("[data-role]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.role, r: b.dataset.r }, "Rol aangepast."));
-  $$("[data-rm]", v).forEach(b => b.onclick = () => { if (confirm(`Toegang intrekken voor ${b.dataset.mail}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) rpc("club_set_member", { uid: b.dataset.rm, r: null }, "Toegang ingetrokken."); });
+  $$("[data-edm]", v).forEach(b => b.onclick = () => memberForm(info.members.find(m => m.user_id === b.dataset.edm), rpc));
 } });
+
+/* lid bewerken: functie, beheerder en toegang tot alle ploegen */
+const FUNCTIES = ["Trainer", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "ICT", "Scouting", "Bestuur", "Clubkinesist", "API"];
+function memberForm(m, rpc) {
+  const me = m.user_id === user?.id;
+  const d = dialog(`<form><h2>${esc(m.name || m.email)}</h2><p class="muted" style="margin:0">${esc(m.email || "")}${m.teams ? " · trainer van " + esc(m.teams) : ""}</p>
+    <label class="f">Functie in de club<input name="fn" list="fnl" value="${esc(m.functie || "")}" placeholder="bv. TVJO, ICT, Coördinator onderbouw"><datalist id="fnl">${FUNCTIES.map(f => `<option value="${f}">`).join("")}</datalist></label>
+    <label class="check"><input type="checkbox" name="all"${m.all_teams ? " checked" : ""}> <span><b>Toegang tot alle ploegen</b><br><small class="muted">Voor de TVJO of coördinatoren: alle spelers, evaluaties, trainingen en verslagen van elke ploeg bekijken en aanpassen, zonder trainer van een ploeg te zijn.</small></span></label>
+    <label class="check"><input type="checkbox" name="adm"${m.role === "admin" ? " checked" : ""}${me ? " disabled" : ""}> <span><b>Beheerder</b><br><small class="muted">Toegang tot Beheer: meldingen, leden, ploegen, trainers koppelen en contactpersonen. Bv. voor het ICT-team.</small></span></label>
+    <div class="row">${me ? "" : `<button class="link danger" type="button" id="rmm">Toegang intrekken</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
+  const rm = $("#rmm", d); if (rm) rm.onclick = () => { if (confirm(`Toegang intrekken voor ${m.name || m.email}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) { d.close(); rpc("club_set_member", { uid: m.user_id, r: null }, "Toegang ingetrokken."); } };
+  $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = ev.target; if (mode === "demo") { d.close(); toast("In de demo wordt dit niet bewaard."); return; }
+    const role = me ? m.role : (f.adm.checked ? "admin" : "trainer");
+    if (role !== m.role) { const r = await sb.rpc("club_set_member", { uid: m.user_id, r: role }); if (r.error) { toast(r.error.message); return; } }
+    const r2 = await sb.rpc("club_set_access", { uid: m.user_id, alle: f.all.checked, fn: f.fn.value.trim() });
+    if (r2.error) { toast(/club_set_access|function/i.test(r2.error.message) ? "Voer eerst ogv-database.sql uit (versie 12)." : r2.error.message); return; }
+    d.close(); toast("Opgeslagen."); render(); };
+}
 
 /* meldingen van trainers */
 let FB_F = "open";
@@ -270,4 +288,53 @@ function historyHtml(p) {
   return `<div class="sec"><h2>Vorige seizoenen</h2><div class="grid2">${h.slice().reverse().map(x => `<div class="panel"><div class="row" style="margin-bottom:8px"><b style="font-size:17px">${esc(x.team)}</b><span class="spacer"></span><span class="pill g">${esc(x.season)}</span></div>
     <div class="hstats">${[["Training", x.stats?.trainingPct != null ? x.stats.trainingPct + "%" : "–"], ["Wedstrijden", x.stats?.matches ?? "–"], ["Minuten", x.stats?.minutes ?? "–"], ["Goals", x.stats?.goals ?? "–"], ["Gem. cijfer", f1(x.stats?.rating)]].map(([k, val]) => `<div><small>${k}</small><b>${val}</b></div>`).join("")}</div>
     ${x.evals?.length ? `<p class="hint" style="margin:10px 0 4px">Evaluaties (gemiddelde op 5)</p><div class="chips">${x.evals.map(e => `<span class="pill g">${EV_MOMENTS[e.moment - 1]?.naam || "E" + e.moment}: ${f1(avgE(e))}</span>`).join("")}</div>` : ""}</div>`).join("")}</div></div>`;
+}
+
+/* ============ wie contacteer ik? — de club vult zelf in wie je bij welk probleem bereikt ============ */
+const CT_CATS = ["Administratie", "Sportief", "Medisch en welzijn", "Praktisch", "Algemeen"];
+const CT_COL = { Administratie: "#38BDF8", Sportief: "#FFD500", "Medisch en welzijn": "#FB7185", Praktisch: "#22C55E", Algemeen: "#A78BFA" };
+const telHref = p => "tel:" + String(p || "").replace(/[^\d+]/g, "");
+const waHref = p => { let n = String(p || "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "32" + n.slice(1); return "https://wa.me/" + n; };
+let CT_Q = "";
+route("contacten", { title: "Wie contacteer ik?", auth: true, render: async v => {
+  v.innerHTML = head("Wie contacteer ik?", "Laden…");
+  let list = [];
+  if (mode === "demo") list = [{ id: "d1", cat: "Administratie", topic: "Administratie en algemene organisatie", name: "Voorbeeld Persoon", functie: "AVJO", phone: "0470 00 00 00", note: "Wedstrijdverplaatsingen\nAttesten" }, { id: "d2", cat: "Medisch en welzijn", topic: "Blessures en kine", name: "Voorbeeld Kine", functie: "Clubkinesist", phone: "0470 11 11 11", note: "Elke dinsdag op de club" }];
+  else { const r = await sb.from("club_contacts").select("*").order("sort").order("topic");
+    if (r.error) { v.innerHTML = head("Wie contacteer ik?", "") + `<div class="empty"><b>Nog niet beschikbaar</b>${S.admin ? "Voer ogv-database.sql (versie 12) uit in Supabase." : "De beheerder zet deze lijst binnenkort klaar."}</div>`; return; } list = r.data; }
+  const draw = () => {
+    const t = CT_Q.trim().toLowerCase(), shown = list.filter(c => !t || [c.topic, c.name, c.functie, c.note, c.cat].filter(Boolean).join(" ").toLowerCase().includes(t));
+    const cats = [...new Set([...CT_CATS, ...list.map(c => c.cat)])].filter(c => shown.some(x => x.cat === c));
+    $("#ctl", v).innerHTML = shown.length ? cats.map(c => `<section class="ctcat" style="--cc:${CT_COL[c] || "var(--muted)"}"><h2><i aria-hidden="true"></i>${esc(c)}</h2><div class="ctgrid">${shown.filter(x => x.cat === c).map(x => `<article class="ctcard">
+        <div class="cthd"><small class="cttopic">${esc(x.topic)}</small>${S.admin ? `<button class="link" type="button" data-ce="${x.id}">Bewerken</button>` : ""}</div><b class="ctname">${esc(x.name || "–")}</b>
+        <span class="ctline">${x.functie ? `<span class="ctfn">${esc(x.functie)}</span>` : ""}${x.phone ? `<span class="ctphone">${esc(x.phone)}</span>` : ""}${x.email ? `<span class="ctphone">${esc(x.email)}</span>` : ""}</span>
+        ${x.note ? `<ul class="ctnote">${x.note.split("\n").filter(Boolean).map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
+        <div class="ctacts">${x.phone ? `<a class="btn small" href="${telHref(x.phone)}">${IC.phone}Bellen</a><a class="btn ghost small" href="${waHref(x.phone)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}">${IC.mail}Mail</a>` : ""}
+          ${!x.phone && !x.email ? `<span class="hint">Nog geen gegevens</span>` : ""}</div></article>`).join("")}</div></section>`).join("")
+      : `<div class="empty"><b>${list.length ? "Niets gevonden" : "Nog geen contactpersonen"}</b>${list.length ? "Probeer een ander woord." : S.admin ? "Voeg de contactpersonen van de club toe met de knop hierboven." : "De beheerder vult deze lijst aan."}</div>`;
+    $$("[data-ce]", v).forEach(b => b.onclick = () => contactForm(list.find(x => x.id === b.dataset.ce), list, () => render())); };
+  v.innerHTML = head("Wie contacteer ik?", "Bij wie kan je terecht voor welke vraag? Zoek op een woord of bel, app of mail meteen.", S.admin ? `<button class="btn" type="button" id="ctadd">${IC.plus}Contactpersoon</button>` : "") +
+    `<div class="ct112"><b>Noodgeval?</b> Bel eerst <a href="tel:112">112</a>. Verwittig daarna de ouders en de club.</div>
+     <div class="filters" style="margin-bottom:16px"><label class="flt grow"><span>Waarvoor zoek je iemand?</span><input type="search" id="ctq" value="${esc(CT_Q)}" placeholder="bv. attest, blessure, wedstrijd verplaatsen, PSD, pesten…"></label></div><div id="ctl"></div>`;
+  $("#ctq", v).oninput = e => { CT_Q = e.target.value; draw(); };
+  const a = $("#ctadd", v); if (a) a.onclick = () => contactForm(null, list, () => render());
+  draw();
+} });
+function contactForm(c, list, done) {
+  const n = !c; c = c || { cat: "Algemeen", topic: "", sort: (Math.max(0, ...list.map(x => x.sort || 0)) + 10) };
+  const d = dialog(`<form><h2>${n ? "Contactpersoon toevoegen" : "Contactpersoon bewerken"}</h2><div class="fields">
+    <label class="f full">Waarvoor? <span class="hint">het onderwerp, bv. Blessures en kine</span><input name="topic" required value="${esc(c.topic || "")}"></label>
+    <label class="f">Groep<input name="cat" list="ctcats" value="${esc(c.cat || "")}"><datalist id="ctcats">${CT_CATS.map(x => `<option value="${x}">`).join("")}</datalist></label>
+    <label class="f">Volgorde<input name="sort" type="number" value="${c.sort ?? 100}"></label>
+    <label class="f">Naam<input name="name" value="${esc(c.name || "")}"></label>
+    <label class="f">Functie<input name="functie" value="${esc(c.functie || "")}" placeholder="bv. AVJO"></label>
+    <label class="f">Telefoon<input name="phone" type="tel" value="${esc(c.phone || "")}" placeholder="0470 12 34 56"></label>
+    <label class="f">E-mail<input name="email" type="email" value="${esc(c.email || "")}"></label>
+    <label class="f full">Waarmee kan je bij deze persoon terecht? <span class="hint">één ding per regel</span><textarea name="note" rows="4">${esc(c.note || "")}</textarea></label></div>
+    <div class="row">${n ? "" : `<button class="link danger" type="button" id="ctdel">Verwijderen</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
+  const del = $("#ctdel", d); if (del) del.onclick = async () => { if (!confirm(`"${c.topic}" verwijderen?`)) return; if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const { error } = await sb.from("club_contacts").delete().eq("id", c.id); if (error) toast(error.message); else { d.close(); toast("Verwijderd."); done(); } };
+  $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); if (mode === "demo") { d.close(); toast("In de demo wordt dit niet bewaard."); return; }
+    const row = { ...(n ? {} : { id: c.id }), topic: f.topic.trim(), cat: f.cat.trim() || "Algemeen", sort: +f.sort || 100, name: f.name.trim() || null, functie: f.functie.trim() || null, phone: f.phone.trim() || null, email: f.email.trim() || null, note: f.note.trim() || null, updated_at: new Date().toISOString() };
+    const { error } = await sb.from("club_contacts").upsert(row); if (error) toast(error.message); else { d.close(); toast("Opgeslagen."); done(); } };
 }
