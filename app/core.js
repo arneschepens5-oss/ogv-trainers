@@ -263,8 +263,8 @@ function shell() {
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const navHtml = (S.admin ? [...NAV, { g: "Beheer", items: [["clubbeheer", "Clubbeheer", "gear"]] }] : NAV).map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
     `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")).join("");
-  const who = mode === "demo" ? "Demomodus" : (user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
-  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : "Trainer OG Vorselaar"}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
+  const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
+  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(user?.email || "") : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
   const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc((t.category || "OGV").slice(0, 4))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   $("#app").innerHTML = `<div class="shell">
@@ -288,6 +288,7 @@ function shell() {
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   bindThemeSwitch();
   $$("[data-logout]").forEach(b => b.onclick = logout);
+  $$("[data-setname], .acct .who b").forEach(b => b.onclick = () => mode !== "demo" && nameForm());
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
 }
@@ -310,6 +311,17 @@ addEventListener("hashchange", render);
 
 function backLink(href, label) { return `<a class="crumb" href="${href}">${IC.back}${esc(label)}</a>`; }
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }
+
+/* ============ naam van de trainer (in het account, zodat andere trainers en de beheerder je herkennen) ============ */
+const myName = () => (user?.user_metadata?.full_name || "").trim();
+function nameForm() {
+  const d = dialog(`<form><h2>Jouw naam</h2><p class="muted" style="margin:0">Andere trainers en de beheerder zien je naam in plaats van alleen je e-mailadres.</p>
+    <label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" value="${esc(myName())}" placeholder="bv. Jelle Lauwers"></label>
+    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Bewaren</button></div></form>`);
+  $("form", d).onsubmit = async ev => { ev.preventDefault(); const n = ev.target.nm.value.trim().replace(/\s+/g, " "); if (!n) return;
+    const r = await safe(async () => { const { data, error } = await sb.auth.updateUser({ data: { full_name: n } }); if (error) throw error; user = data.user; return true; }, "Naam bewaard.");
+    if (r) { d.close(); render(); } };
+}
 
 /* ============ ploeg kiezen ============ */
 /* nog geen ploeg: vragen of een collega de ploeg al aanmaakte, zodat er geen dubbele ploeg ontstaat */

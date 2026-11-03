@@ -517,3 +517,30 @@ begin
 end $$;
 revoke all on function public.admin_teams(), public.admin_set_trainer(uuid, uuid, boolean), public.admin_move_trainer(uuid, uuid, uuid) from anon, public;
 grant execute on function public.admin_teams(), public.admin_set_trainer(uuid, uuid, boolean), public.admin_move_trainer(uuid, uuid, uuid) to authenticated;
+
+-- =====================================================================
+-- Versie 9: namen van trainers tonen in clubbeheer (uit het account).
+-- =====================================================================
+create or replace function public.club_admin_info() returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  return json_build_object(
+    'code', (select value from public.club_settings where key = 'invite_code'),
+    'members', coalesce((select json_agg(json_build_object('user_id', m.user_id, 'email', m.email, 'role', m.role, 'created_at', m.created_at,
+        'name', nullif(trim(u.raw_user_meta_data->>'full_name'), ''),
+        'teams', (select string_agg(t.name, ', ' order by t.name) from public.team_trainers tt join public.teams t on t.id = tt.team_id where tt.user_id = m.user_id))
+        order by m.role, coalesce(nullif(trim(u.raw_user_meta_data->>'full_name'), ''), m.email)) from public.club_members m left join auth.users u on u.id = m.user_id), '[]'::json),
+    'waiting', coalesce((select json_agg(json_build_object('user_id', u.id, 'email', u.email, 'created_at', u.created_at, 'name', nullif(trim(u.raw_user_meta_data->>'full_name'), '')) order by u.created_at desc)
+        from auth.users u where not exists (select 1 from public.club_members m where m.user_id = u.id)), '[]'::json));
+end $$;
+create or replace function public.admin_teams() returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  return coalesce((select json_agg(json_build_object('id', t.id, 'name', t.name, 'category', t.category, 'season', t.season,
+      'trainers', coalesce((select json_agg(json_build_object('user_id', tt.user_id, 'email', coalesce(u.email, tt.email), 'name', nullif(trim(u.raw_user_meta_data->>'full_name'), ''))
+          order by coalesce(nullif(trim(u.raw_user_meta_data->>'full_name'), ''), u.email, tt.email))
+        from public.team_trainers tt left join auth.users u on u.id = tt.user_id where tt.team_id = t.id), '[]'::json))
+    order by t.season desc nulls last, t.name) from public.teams t), '[]'::json);
+end $$;
