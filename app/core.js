@@ -297,8 +297,9 @@ async function render() {
   shell(); const v = $("#view");
   if (def.wide) v.classList.add("wide");
   const logged = !!db && (mode === "demo" || !!user);
-  if (def.auth && !logged) { viewLogin(v, "Meld je aan om dit onderdeel te gebruiken."); return; }
-  if (def.auth && mode === "cloud" && S.member === false) { viewJoin(v); return; }
+  /* alles achter aanmelden en de clubcode, behalve het aanmeldscherm zelf */
+  if (r.page !== "aanmelden" && !logged) { viewLogin(v); return; }
+  if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   try { const td = await def.render(v, r.id, r.sub); if (typeof td === "function") teardown = td; }
   catch (e) { console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
@@ -366,7 +367,7 @@ function viewLogin(v, msg) {
   v.innerHTML = `<div class="authbox"><h1>OGV<span>Trainers</span></h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
   <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
-  <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><button class="link" type="button" id="demo">Bekijk de demo</button></div>
+  <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span>${LOCAL ? `<button class="link" type="button" id="demo">Bekijk de demo</button>` : ""}</div>
   <div class="panel" style="padding:14px 16px"><b>Nog geen account?</b><p class="hint" style="margin:4px 0 10px">Maak er zelf een aan met de clubcode die je van de jeugdcoördinator kreeg.</p><button class="btn ghost small" type="button" id="reg">Account aanmaken</button></div></div>`;
   $("#lf").onsubmit = async e => { e.preventDefault(); if (!sb) { $("#lerr").textContent = "Geen verbinding met de database."; return; }
     const btn = $("button", e.target); btn.disabled = true; btn.textContent = "Bezig met aanmelden…"; $("#lerr").textContent = "";
@@ -377,7 +378,7 @@ function viewLogin(v, msg) {
     finally { if ($("#lerr").textContent) { btn.disabled = false; btn.textContent = "Aanmelden"; } } };
   $("#forgot").onclick = async () => { const m = $("#lf").email.value.trim(); if (!m) { $("#lerr").textContent = "Vul eerst je e-mailadres in."; return; }
     if (sb) await sb.auth.resetPasswordForEmail(m, { redirectTo: location.origin + location.pathname }); $("#lerr").textContent = "Als dit adres een account heeft, staat er nu een mail in je mailbox."; };
-  $("#demo").onclick = startDemo; $("#reg").onclick = () => viewRegister(v);
+  const dm = $("#demo"); if (dm) dm.onclick = startDemo; $("#reg").onclick = () => viewRegister(v);
 }
 async function startCloud() {
   mode = "cloud"; db = SBDB;
@@ -455,9 +456,11 @@ function demoSeed() {
 }
 
 /* ============ opstarten ============ */
+const LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
 function boot() {
   let demo = false; try { demo = sessionStorage.getItem("ogv-mode") === "demo"; } catch (e) {}
   if (new URLSearchParams(location.search).has("demo")) demo = true;
+  if (!LOCAL) { demo = false; try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } /* demo alleen om lokaal te testen */
   if (window.supabase && window.supabase.createClient) {
     sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: "tb_auth" } });
     let started = false;

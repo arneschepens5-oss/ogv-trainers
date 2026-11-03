@@ -935,3 +935,9 @@ dialog.exfull .exf{height:100%;padding:0;gap:0;display:flex;flex-direction:colum
 .nth{display:flex;flex-direction:column;gap:12px}.nth>b{font-size:17px}
 .nthb{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .nth .codebox b{font-size:16px;letter-spacing:0;word-break:break-all}
+
+.admteams{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.admteam{display:flex;flex-direction:column;gap:8px}.admteam h3{margin:0;font-size:18px;margin-right:auto}
+.admteam .item select{width:auto;max-width:160px;min-height:34px;padding:4px 8px;font-size:13px}
+.admteam .admadd{min-height:36px;font-size:14px}
+@media (max-width:640px){.admteams{grid-template-columns:1fr}.admteam .item{flex-wrap:wrap}.admteam .item select{max-width:none;flex:1}}

@@ -480,3 +480,40 @@ create policy "gedeelde afbeeldingen lezen" on storage.objects for select to aut
 -- de overgenomen PSD-oefendatabank meteen delen met de club
 update public.trainer_items set shared = true, data = data || jsonb_build_object('shared_by', 'Arne Schepens')
   where data->>'source' = 'PSD' and not shared;
+
+-- =====================================================================
+-- Versie 8: de beheerder beheert de trainers van alle ploegen
+-- (toevoegen, verplaatsen naar een andere ploeg, verwijderen bij een ploeg).
+-- =====================================================================
+create or replace function public.admin_teams() returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  return coalesce((select json_agg(json_build_object('id', t.id, 'name', t.name, 'category', t.category, 'season', t.season,
+      'trainers', coalesce((select json_agg(json_build_object('user_id', tt.user_id, 'email', coalesce(u.email, tt.email)) order by coalesce(u.email, tt.email))
+        from public.team_trainers tt left join auth.users u on u.id = tt.user_id where tt.team_id = t.id), '[]'::json))
+    order by t.season desc nulls last, t.name) from public.teams t), '[]'::json);
+end $$;
+create or replace function public.admin_set_trainer(t uuid, uid uuid, on_team boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare mail text;
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  if on_team then
+    select email into mail from auth.users where id = uid;
+    if mail is null then raise exception 'Dit account bestaat niet.'; end if;
+    insert into public.team_trainers(team_id, user_id, email) values (t, uid, lower(mail)) on conflict do nothing;
+    insert into public.club_members(user_id, email) values (uid, mail) on conflict do nothing;
+  else
+    delete from public.team_trainers where team_id = t and user_id = uid;
+  end if;
+end $$;
+create or replace function public.admin_move_trainer(uid uuid, from_t uuid, to_t uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  perform public.admin_set_trainer(to_t, uid, true);
+  if from_t is not null and from_t <> to_t then delete from public.team_trainers where team_id = from_t and user_id = uid; end if;
+end $$;
+revoke all on function public.admin_teams(), public.admin_set_trainer(uuid, uuid, boolean), public.admin_move_trainer(uuid, uuid, uuid) from anon, public;
+grant execute on function public.admin_teams(), public.admin_set_trainer(uuid, uuid, boolean), public.admin_move_trainer(uuid, uuid, uuid) to authenticated;

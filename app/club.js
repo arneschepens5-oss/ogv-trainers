@@ -58,6 +58,8 @@ route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
     : `<p class="hint" style="margin:0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
   <div class="sec"><h2>Leden (${info.members.length})</h2><div class="list">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.email || "")}</b><small>${esc(m.teams || "nog geen ploeg")}</small></span>
     ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : `<button class="link" type="button" data-role="${m.user_id}" data-r="${m.role === "admin" ? "trainer" : "admin"}">${m.role === "admin" ? "Geen beheerder meer" : "Beheerder maken"}</button><button class="link danger" type="button" data-rm="${m.user_id}" data-mail="${esc(m.email || "")}">Toegang intrekken</button>`}</div>`).join("")}</div></div>`;
+  v.insertAdjacentHTML("beforeend", `<div class="sec" id="adm-teams"><h2>Ploegen en trainers</h2><p class="hint" style="margin-top:0">Laden…</p></div>`);
+  adminTeams($("#adm-teams"), info);
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
   $("#share").onclick = () => { const txt = `Je bent uitgenodigd voor OGV Trainers, het trainersplatform van OG Vorselaar.\nMaak je account aan op ${link} met de clubcode ${info.code}`;
@@ -67,6 +69,31 @@ route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
   $$("[data-role]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.role, r: b.dataset.r }, "Rol aangepast."));
   $$("[data-rm]", v).forEach(b => b.onclick = () => { if (confirm(`Toegang intrekken voor ${b.dataset.mail}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) rpc("club_set_member", { uid: b.dataset.rm, r: null }, "Toegang ingetrokken."); });
 } });
+
+/* beheerder: trainers toevoegen, verplaatsen naar een andere ploeg of verwijderen bij een ploeg */
+async function adminTeams(host, info) {
+  let teams;
+  if (mode === "demo") teams = [{ id: "a", name: "Demoploeg U9", category: "U9", season: "2026-2027", trainers: [{ user_id: "demo", email: "demo@ogvorselaar.be" }] }, { id: "b", name: "Demoploeg U11", category: "U11", season: "2026-2027", trainers: [{ user_id: "x", email: "trainer.u11@ogvorselaar.be" }] }];
+  else { const { data, error } = await sb.rpc("admin_teams"); if (error) { host.innerHTML = `<h2>Ploegen en trainers</h2><div class="share">${IC.eye}<div>${/admin_teams|function/i.test(error.message) ? "Voer eerst het databasescript <b>ogv-update-v8.sql</b> uit in Supabase om trainers van ploegen te beheren." : esc(error.message)}</div></div>`; return; } teams = data || []; }
+  const members = info.members || [];
+  host.innerHTML = `<h2>Ploegen en trainers</h2><p class="hint" style="margin-top:0">Voeg trainers toe aan een ploeg, verplaats ze naar een andere ploeg of haal ze weg. Een trainer die je weghaalt, blijft lid van de club en houdt zijn eigen oefeningen.</p>
+    <div class="admteams">${teams.map(t => { const ids = new Set(t.trainers.map(x => x.user_id)), free = members.filter(m => !ids.has(m.user_id));
+      return `<div class="panel admteam"><div class="row"><h3>${esc(t.name)}</h3><span class="hint">${esc([t.category, t.season].filter(Boolean).join(" · "))}</span></div>
+        <div class="list">${t.trainers.map(x => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((x.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(x.email || "")}</b>${x.user_id === user?.id ? "<small>jij</small>" : ""}</span>
+          <select data-mv="${x.user_id}" data-from="${t.id}" aria-label="Verplaatsen naar een andere ploeg"><option value="">Verplaatsen naar…</option>${teams.filter(o => o.id !== t.id).map(o => `<option value="${o.id}">${esc(o.name)}${o.season ? " (" + esc(o.season) + ")" : ""}</option>`).join("")}</select>
+          <button class="ib" type="button" data-del="${x.user_id}" data-t="${t.id}" data-mail="${esc(x.email || "")}" data-last="${t.trainers.length === 1}" title="Weghalen bij deze ploeg" aria-label="Weghalen bij deze ploeg">${IC.trash}</button></div>`).join("") || `<p class="hint" style="margin:6px 0">Geen trainers. Alleen beheerders zien deze ploeg nog.</p>`}</div>
+        ${free.length ? `<select class="admadd" data-add="${t.id}" aria-label="Trainer toevoegen"><option value="">+ Trainer toevoegen…</option>${free.map(m => `<option value="${m.user_id}">${esc(m.email)}</option>`).join("")}</select>` : ""}</div>`; }).join("") || `<p class="muted">Nog geen ploegen.</p>`}</div>`;
+  const call = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) { toast(error.message); return; } toast(ok); if (fn !== "admin_teams") { await loadTeams().catch(() => {}); } adminTeams(host, info); };
+  const tName = id => teams.find(t => t.id === id)?.name || "de ploeg";
+  $$("[data-mv]", host).forEach(sel => sel.onchange = () => { const to = sel.value; if (!to) return; const mail = sel.closest(".item").querySelector("b").textContent;
+    if (!confirm(`${mail} verplaatsen van ${tName(sel.dataset.from)} naar ${tName(to)}?`)) { sel.value = ""; return; }
+    call("admin_move_trainer", { uid: sel.dataset.mv, from_t: sel.dataset.from, to_t: to }, `Verplaatst naar ${tName(to)}.`); });
+  $$("[data-del]", host).forEach(b => b.onclick = () => { const last = b.dataset.last === "true";
+    if (!confirm(`${b.dataset.mail} weghalen bij ${tName(b.dataset.t)}?${last ? "\n\nDit is de laatste trainer van deze ploeg: daarna ziet niemand behalve de beheerders de ploeg nog." : ""}`)) return;
+    call("admin_set_trainer", { t: b.dataset.t, uid: b.dataset.del, on_team: false }, "Weggehaald bij de ploeg."); });
+  $$("[data-add]", host).forEach(sel => sel.onchange = () => { if (!sel.value) return; const mail = sel.selectedOptions[0].textContent;
+    call("admin_set_trainer", { t: sel.dataset.add, uid: sel.value, on_team: true }, `${mail} is nu trainer van ${tName(sel.dataset.add)}.`); });
+}
 
 /* ============ ouders bevestigen aanwezigheid ============ */
 const rsvpOf = (eid, pid) => (S.rsvp || []).find(r => r.event_id === eid && r.player_id === pid);
