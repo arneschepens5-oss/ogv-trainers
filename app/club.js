@@ -45,7 +45,7 @@ async function clubStatus() {
 
 /* ============ clubbeheer ============ */
 /* ============ beheer: aparte pagina's voor meldingen, toegang, ploegen en systeem ============ */
-const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang en leden"], ["ploegen", "Ploegen en trainers"], ["systeem", "Systeem"]];
+const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["systeem", "Systeem"]];
 async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
 route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
@@ -64,13 +64,13 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
     $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render()); return adminTeams($("#adm-teams"), info); }
   const link = location.origin + location.pathname + "#/aanmelden";
   host.innerHTML = `<div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan met deze code. Deel ze alleen met trainers van de club.</p>
-      <div class="codebox"><b id="code">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
+      <div class="codebox"><b id="code" translate="no">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
       <div class="row" style="margin-top:12px"><a class="btn small" id="wa" target="_blank" rel="noopener">${IC.wa}Delen via WhatsApp</a><button class="btn ghost small" type="button" id="share">${IC.out}Anders delen</button><button class="link" type="button" id="newcode">Nieuwe code maken</button><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a></div>
       <p class="hint">Een nieuwe code maken stopt de oude. Wie al lid is, blijft lid.</p></div>
     <div class="panel"><div class="row"><h2 style="margin:0">Wachten op toegang</h2>${info.waiting?.length ? `<span class="pill w">${info.waiting.length}</span>` : ""}</div>${info.waiting?.length ? `<div class="list" style="margin-top:10px">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
       : `<p class="hint" style="margin:8px 0 0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
     <div class="sec"><div class="row"><h2 style="margin:0">Leden (${info.members.length})</h2><span class="spacer"></span><span class="hint">Geef iemand een functie (bv. TVJO, ICT) en eventueel toegang tot alle ploegen, zonder trainer van een ploeg te zijn.</span></div>
-    <div class="list" style="margin-top:10px">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}${m.functie ? ` <span class="pill fn">${esc(m.functie)}</span>` : ""}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${m.all_teams ? "toegang tot alle ploegen" : esc(m.teams || "nog geen ploeg")}</small></span>
+    <div class="list memlist" style="margin-top:10px">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}${m.functie ? ` <span class="pill fn">${esc(m.functie)}</span>` : ""}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${m.all_teams ? "toegang tot alle ploegen" : esc(m.teams || "nog geen ploeg")}</small></span>
       ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : ""}<button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button></div>`).join("")}</div></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
@@ -316,7 +316,7 @@ route("contacten", { title: "Wie contacteer ik?", auth: true, render: async v =>
       : `<div class="empty"><b>${list.length ? "Niets gevonden" : "Nog geen contactpersonen"}</b>${list.length ? "Probeer een ander woord." : S.admin ? "Voeg de contactpersonen van de club toe met de knop hierboven." : "De beheerder vult deze lijst aan."}</div>`;
     $$("[data-ce]", v).forEach(b => b.onclick = () => contactForm(list.find(x => x.id === b.dataset.ce), list, () => render())); };
   v.innerHTML = head("Wie contacteer ik?", "Bij wie kan je terecht voor welke vraag? Zoek op een woord of bel, app of mail meteen.", S.admin ? `<button class="btn" type="button" id="ctadd">${IC.plus}Contactpersoon</button>` : "") +
-    `<div class="ct112"><b>Noodgeval?</b> Bel eerst <a href="tel:112">112</a>. Verwittig daarna de ouders en de club.</div>
+    `<div class="ct112"><b>Noodgeval?</b> <span>Bel eerst <a href="tel:112">112</a>.</span> <span>Verwittig daarna de ouders en de club.</span></div>
      <div class="filters" style="margin-bottom:16px"><label class="flt grow"><span>Waarvoor zoek je iemand?</span><input type="search" id="ctq" value="${esc(CT_Q)}" placeholder="bv. attest, blessure, wedstrijd verplaatsen, PSD, pesten…"></label></div><div id="ctl"></div>`;
   $("#ctq", v).oninput = e => { CT_Q = e.target.value; draw(); };
   const a = $("#ctadd", v); if (a) a.onclick = () => contactForm(null, list, () => render());

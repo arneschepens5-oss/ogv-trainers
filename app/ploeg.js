@@ -166,9 +166,9 @@ function evalChart(ev) {
 }
 function evalDetail(ev) { const a0 = ev[0], b0 = ev[ev.length - 1], two = ev.length > 1, nm = m => EV_MOMENTS[m - 1].kort;
   const cell = (a, b) => { const dl = two && a != null && b != null ? b - a : null; return `<td>${a == null ? "–" : f1(a)}</td>${two ? `<td>${b == null ? "–" : f1(b)}</td><td style="color:${dl > 0 ? "var(--ok)" : dl < 0 ? "var(--bad)" : "var(--muted)"}">${dl == null ? "–" : (dl > 0 ? "+" : "") + f1(dl)}</td>` : ""}`; };
-  return `<table class="tbl" style="margin-top:8px"><tr><th style="text-align:left">Onderdeel</th><th>${nm(a0.moment)}</th>${two ? `<th>${nm(b0.moment)}</th><th>Groei</th>` : ""}</tr>
+  return `<div class="tblwrap"><table class="tbl evtbl" style="margin-top:8px"><tr><th style="text-align:left">Onderdeel</th><th>${nm(a0.moment)}</th>${two ? `<th>${nm(b0.moment)}</th><th>Groei</th>` : ""}</tr>
   ${evGroups().map(g => { const n = g.items.map(i => i.name); return `<tr class="grow"><td style="text-align:left"><b>${esc(g.name)}</b></td>${cell(evAvgOf(a0, n), evAvgOf(b0, n))}</tr>` +
-    g.items.map(i => `<tr><td style="text-align:left;padding-left:18px" class="muted">${esc(i.name)}</td>${cell(evScore(a0, i.name), evScore(b0, i.name))}</tr>`).join(""); }).join("")}</table>
+    g.items.map(i => `<tr><td style="text-align:left;padding-left:18px" class="muted">${esc(i.name)}</td>${cell(evScore(a0, i.name), evScore(b0, i.name))}</tr>`).join(""); }).join("")}</table></div>
   <a class="btn ghost small" style="margin-top:10px" href="#/evaluaties/${a0.player_id}/${b0.moment}">Evaluatie openen</a>`; }
 
 /* ============ cijfers ============ */
@@ -177,7 +177,7 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
   const t = S.team, mf = matchFormat(t);
   v.innerHTML = head("Ploeg en trainers", `${esc(t.name)} · ${esc([t.category, t.format, t.season].filter(Boolean).join(" · "))} · ${mf.periods} × ${mf.minutes} minuten`, `<button class="btn ghost" type="button" id="editT">Ploeg bewerken</button>`) +
   `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Wat zien andere trainers?</b><br>De uitslag en het wedstrijdverslag van elke wedstrijd zijn zichtbaar voor alle trainers van de club. Spelersfiches, trainingen, aanwezigheden en evaluaties blijven privé voor de trainers van deze ploeg.
-    <label class="check" style="margin-top:10px"><input type="checkbox" id="shareR"${t.share_ratings ? " checked" : ""}> Ook de spelersbeoordelingen van wedstrijden (cijfer, pijlers, notities) delen met alle trainers</label></div></div>
+    <label class="check" style="margin-top:10px"><input type="checkbox" id="shareR"${t.share_ratings ? " checked" : ""}> Ook de spelersbeoordelingen van wedstrijden (cijfer en notities) delen met alle trainers</label></div></div>
   <div class="grid2"><div class="panel"><h2>Trainers van deze ploeg</h2><div class="list">${S.trainers.map(x => `<div class="item static"><span class="main"><b>${esc(x.email || "Trainer")}</b>${x.user_id === user?.id ? "<small>jij</small>" : ""}</span></div>`).join("")}</div>
     ${S.admin ? `<form id="addTr" class="row" style="margin-top:12px"><input type="email" name="mail" required placeholder="e-mailadres co-trainer" style="flex:1;min-width:180px"><button class="btn">Toevoegen</button></form>
     <p class="hint">Als beheerder kan je ook alle ploegen beheren via <a href="#/clubbeheer/ploegen">Beheer → Ploegen en trainers</a>.</p>` : `<p class="hint" style="margin-bottom:0">Trainers toevoegen of weghalen doet de beheerder van de club. Stuur een melding via <b>Probleem melden</b> als er iemand bij moet of weg moet.</p>`}</div>

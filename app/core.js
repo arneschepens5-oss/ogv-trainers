@@ -304,7 +304,7 @@ function shell() {
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
   const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc((t.category || "OGV").slice(0, 4))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
-  $("#app").innerHTML = `<div class="shell">
+  $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
     <a class="brand" href="#/start"><img src="icons/icon-192.png" alt=""><span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
     ${teamBtn}
@@ -346,7 +346,7 @@ async function render() {
   document.title = (def.title ? def.title + " | " : "") + "OGV Trainers";
   if (!def.keepScroll) scrollTo(0, 0);
 }
-addEventListener("hashchange", render);
+addEventListener("hashchange", () => { const d = $("#dlg"); if (d?.open) d.close(); render(); }); /* terugknop op gsm sluit ook een open venster */
 
 function backLink(href, label) { return `<a class="crumb" href="${href}">${IC.back}${esc(label)}</a>`; }
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }

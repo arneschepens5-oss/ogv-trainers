@@ -164,7 +164,7 @@ const DG_PRESETS = [
 
 /* ============ tekenbord ============ */
 const DG_GROUPS = [
-  ["Spelers", [["p", "Speler"], ["k", "Keeper"], ["tr", "Trainer"], ["ball", "Bal"], ["step", "Stap 1-2-3"]]],
+  ["Spelers", [["p", "Speler"], ["k", "Keeper"], ["tr", "Trainer"], ["ball", "Bal"], ["step", "Stapnr."]]],
   ["Materiaal", [["cone", "Kegel"], ["pot", "Potje"], ["conerow", "Rij potjes"], ["gate", "Poortje"], ["pole", "Paal"], ["ring", "Hoepel"], ["pop", "Pop"], ["ladder", "Ladder"], ["hurdle", "Horde"], ["goal", "Groot doel"], ["mini", "Minidoel"], ["rebound", "Kaatsmuur"], ["net", "Ballen"], ["flag", "Vlag"]]],
   ["Lijnen", [["pass", "Pass"], ["run", "Loopactie"], ["drib", "Dribbel"], ["shot", "Schot"], ["lob", "Hoge bal"], ["line", "Lijn"], ["pen", "Vrij tekenen"], ["meas", "Afstand"]]],
   ["Vlakken", [["zone", "Zone"], ["oval", "Cirkel"], ["txt", "Tekst"]]]
