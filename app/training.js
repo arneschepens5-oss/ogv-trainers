@@ -5,9 +5,9 @@
 /* ============ trainingsfiche ============ */
 const EX_PHASES = ["Opwarming", "Kern", "Wedstrijdvorm", "Afsluiting"];
 /* soort oefening: één woordenlijst voor de trainingsfiche en de bibliotheek */
-const EX_TYPES = ["Opwarming", "Tussenvorm", "Wedstrijdvorm", "Afwerkvorm", "Pasvorm", "Positiespel", "Duelvorm", "Techniekvorm", "Coördinatie", "Cooling down"];
-const TYPE_COL = { Opwarming: "#38BDF8", Tussenvorm: "#FFD500", Wedstrijdvorm: "#22C55E", Afwerkvorm: "#FB7185", Pasvorm: "#F97316", Positiespel: "#14B8A6", Duelvorm: "#E879F9", Techniekvorm: "#A3E635", "Coördinatie": "#60A5FA", "Cooling down": "#A78BFA" };
-const TYPE_ALIAS = { partijvorm: "Wedstrijdvorm", spelvorm: "Wedstrijdvorm", afsluiting: "Cooling down", passingvorm: "Pasvorm", passvorm: "Pasvorm", rondo: "Positiespel", techniek: "Techniekvorm", afwerking: "Afwerkvorm", duel: "Duelvorm", coordinatie: "Coördinatie" };
+const EX_TYPES = ["Opwarming", "Tussenvorm", "Wedstrijdvorm", "Afwerkvorm", "Pasvorm", "Positiespel", "Duelvorm", "Techniekvorm", "Coördinatie", "Activatie met band", "Stretching", "Cooling down"];
+const TYPE_COL = { Opwarming: "#38BDF8", Tussenvorm: "#FFD500", Wedstrijdvorm: "#22C55E", Afwerkvorm: "#FB7185", Pasvorm: "#F97316", Positiespel: "#14B8A6", Duelvorm: "#E879F9", Techniekvorm: "#A3E635", "Coördinatie": "#60A5FA", "Activatie met band": "#F43F5E", "Stretching": "#2DD4BF", "Cooling down": "#A78BFA" };
+const TYPE_ALIAS = { partijvorm: "Wedstrijdvorm", spelvorm: "Wedstrijdvorm", afsluiting: "Cooling down", passingvorm: "Pasvorm", passvorm: "Pasvorm", rondo: "Positiespel", techniek: "Techniekvorm", afwerking: "Afwerkvorm", duel: "Duelvorm", coordinatie: "Coördinatie", activatie: "Activatie met band", "activatie band": "Activatie met band", weerstandsband: "Activatie met band", rekken: "Stretching", stretchen: "Stretching" };
 const FORM2TYPE = { Duelvorm: "Duelvorm", Kleine: "Wedstrijdvorm", Grote: "Wedstrijdvorm", Rondo: "Positiespel", Passingvorm: "Pasvorm", Afwerkvorm: "Afwerkvorm", Opbouwpatroon: "Tussenvorm", Technische: "Techniekvorm", Circuit: "Coördinatie", Spelvorm: "Opwarming", Oefening: "Tussenvorm" };
 function exType(x) {
   const p = (x.phase || "").trim().toLowerCase(), hit = EX_TYPES.find(t => t.toLowerCase() === p) || TYPE_ALIAS[p];
