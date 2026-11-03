@@ -331,7 +331,9 @@ function shell() {
   $$("[data-report]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); reportProblem(); });
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
 }
+let renderSeq = 0;
 async function render() {
+  const seq = ++renderSeq;
   if (teardown) { try { teardown(); } catch (e) {} teardown = null; }
   const r = cur(), def = ROUTES[r.page] || ROUTES.start;
   shell(); const v = $("#view");
@@ -341,7 +343,8 @@ async function render() {
   if (r.page !== "aanmelden" && !logged) { viewLogin(v); return; }
   if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
-  try { const td = await def.render(v, r.id, r.sub); if (typeof td === "function") teardown = td; }
+  try { const td = await def.render(v, r.id, r.sub);
+    if (typeof td === "function") { if (seq === renderSeq) teardown = td; else try { td(); } catch (x) {} } /* een nieuwere weergave kwam tussen */ }
   catch (e) { console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
   document.title = (def.title ? def.title + " | " : "") + "OGV Trainers";
   if (!def.keepScroll) scrollTo(0, 0);

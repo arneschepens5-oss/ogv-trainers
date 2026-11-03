@@ -6,18 +6,21 @@ route("start", { title: "Start", render: async v => {
   const logged = !!db && (mode === "demo" || !!user), t = S.team, now = new Date();
   const greet = (h => h < 12 ? "Goeiemorgen" : h < 18 ? "Goeiemiddag" : "Goeieavond")(now.getHours());
   const next = t ? S.events.find(e => e.date >= todayIso()) : null;
-  let recent = [];
-  if (logged) { try { recent = (await loadClub()).filter(e => e.date <= todayIso() && e.score_for != null).slice(0, 6); } catch (e) {} }
+  /* uitslagen van de club worden achteraf ingeladen, zodat de startpagina meteen verschijnt */
+  const recentOf = c => (c || []).filter(e => e.date <= todayIso() && e.score_for != null).slice(0, 6);
+  const recentHtml = rs => rs.length ? `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Laatste uitslagen van de club</h2><a class="link" href="#/uitslagen">Alle uitslagen</a></div><div class="list">${rs.map(clubItem).join("")}</div></div>` : "";
+  const recent = recentOf(S.club);
+  const first = (myName() || "").trim().split(/\s+/)[0];
   const todo = t ? past().filter(e => !S.att.some(a => a.event_id === e.id)).slice(-3).reverse() : [];
   v.innerHTML = `<section class="hero"><canvas id="pitch3d" aria-hidden="true"></canvas>
     <p class="date-l">${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
-    <h1>${greet},<span>trainer</span></h1>
+    <h1>${greet},<span>${esc(logged && mode !== "demo" && first ? first : "trainer")}</span></h1>
     <div class="quick">${next ? `<a href="#/activiteit/${next.id}">${next.type === "wedstrijd" ? IC.ball : IC.check}${next.date === todayIso() ? (next.type === "wedstrijd" ? "Wedstrijd van vandaag" : "Aanwezigheden van vandaag") : (next.type === "wedstrijd" ? "Volgende wedstrijd" : "Volgende training")}</a>` : ""}
       ${next && next.type === "wedstrijd" ? `<a href="#/live/${next.id}">${IC.mic}Live coachen</a>` : `<a href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a>`}
       <a href="#/uitslagen">${IC.trophy}Uitslagen club</a>${logged ? "" : `<a href="#/aanmelden">Aanmelden</a>`}</div></section>
   ${t ? evReminder() : ""}
   ${todo.length ? `<div class="sec"><h2>Nog in te vullen</h2><div class="list">${todo.map(e => evItem(e)).join("")}</div></div>` : ""}
-  ${recent.length ? `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Laatste uitslagen van de club</h2><a class="link" href="#/uitslagen">Alle uitslagen</a></div><div class="list">${recent.map(clubItem).join("")}</div></div>` : ""}
+  <div id="recentBox">${recentHtml(recent)}</div>
   <div class="sec"><h2>Alles op één plek</h2><div class="tiles">${[
     ["kalender", "cal", "Kalender", "Wedstrijden komen vanzelf van RBFA. Aanwezigheden met één tik, ouders bevestigen zelf."],
     ["trainingen", "plan", "Trainingen maken", "Eén oefening of een hele training, met veldtekening en tijd per oefening."],
@@ -33,6 +36,7 @@ route("start", { title: "Start", render: async v => {
   ].map(([h, i, b, s]) => `<a class="tile" href="#/${h}"><span class="ic">${IC[i]}</span><span><b>${b}</b><small>${s}</small></span></a>`).join("")}</div></div>`;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
   $$("[data-em]", v).forEach(a => a.onclick = () => { evMoment = +a.dataset.em; });
+  if (logged) loadClub().then(c => { const box = $("#recentBox", v); if (!box || !v.isConnected) return; box.innerHTML = recentHtml(recentOf(c)); $$("[data-go]", box).forEach(x => x.onclick = () => go(x.dataset.go)); }).catch(() => {});
   return window.mountPitch ? window.mountPitch($("#pitch3d")) : null;
 } });
 

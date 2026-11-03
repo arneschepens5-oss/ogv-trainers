@@ -1040,3 +1040,4 @@ a.navbtn{text-decoration:none}
   .admtabs{gap:0}.admtabs a{padding:10px 9px;font-size:14px;gap:5px}
   .dgtop select{max-width:none;flex:1 1 140px;min-width:0}
 }
+@media (max-width:640px){.hero h1{font-size:clamp(26px,9.2vw,40px);font-stretch:112%;max-width:none;overflow-wrap:anywhere}}
