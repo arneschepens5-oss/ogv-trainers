@@ -173,24 +173,6 @@ function evalDetail(ev) { const a0 = ev[0], b0 = ev[ev.length - 1], two = ev.len
   <a class="btn ghost small" style="margin-top:10px" href="#/evaluaties/${a0.player_id}/${b0.moment}">Evaluatie openen</a>`; }
 
 /* ============ cijfers ============ */
-let sortK = "name", sortD = 1;
-route("cijfers", { title: "Cijfers", auth: true, team: true, render: v => {
-  const rows = active().map(p => ({ p, ...playerStats(p) }));
-  const cols = [["name","Speler"],["trPct","Aanw. %"],["matches","Wedstr."],["basis","Basis"],["minutes","Minuten"],["goals","Goals"],["assists","Assists"],["rating","Cijfer"],["motm","MVP"],["evalAvg","Evaluatie"]];
-  rows.sort((a, b) => { const x = sortK === "name" ? pname(a.p) : a[sortK] ?? -1, y = sortK === "name" ? pname(b.p) : b[sortK] ?? -1; return (x > y ? 1 : x < y ? -1 : 0) * sortD; });
-  const ms = past("wedstrijd").filter(e => e.score_for != null);
-  v.innerHTML = head("Cijfers", "Automatisch berekend uit aanwezigheden, wedstrijdverslagen en evaluaties. Tik op een kolom om te sorteren.", `<button class="btn ghost" type="button" id="csv">${IC.dl}Exporteren naar Excel</button>`) +
-  `<div class="kpis"><div class="kpi"><small>Trainingen</small><b>${past("training").length}</b></div><div class="kpi"><small>Wedstrijden</small><b>${past("wedstrijd").length}</b></div>
-   <div class="kpi"><small>Gescoord</small><b>${ms.reduce((s, e) => s + e.score_for, 0)}</b><span>${f1(avg(ms.map(e => e.score_for)))} per match</span></div><div class="kpi"><small>Tegengekregen</small><b>${ms.reduce((s, e) => s + e.score_against, 0)}</b><span>${f1(avg(ms.map(e => e.score_against)))} per match</span></div></div>
-  <div class="panel wrapx sec" style="padding:6px 12px"><table class="tbl"><thead><tr>${cols.map(([k, l]) => `<th data-k="${k}">${l}${sortK === k ? (sortD > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>
-  ${rows.map(r => `<tr class="go" data-go="#/speler/${r.p.id}"><td>${esc(pname(r.p))}</td><td>${r.trTot ? r.trPct + "%" : "–"}<span class="bar hide-m"><i style="width:${r.trPct}%"></i></span></td><td>${r.matches}</td><td>${r.basis}</td><td>${r.minutes}</td><td>${r.goals}</td><td>${r.assists}</td><td>${f1(r.rating)}</td><td>${r.motm || "–"}</td><td>${f1(r.evalAvg)}</td></tr>`).join("")}</tbody></table></div>`;
-  $$("th[data-k]", v).forEach(th => th.onclick = () => { if (sortK === th.dataset.k) sortD *= -1; else { sortK = th.dataset.k; sortD = th.dataset.k === "name" ? 1 : -1; } render(); });
-  $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
-  $("#csv").onclick = () => download(`${S.team.name.replace(/[^\w-]+/g, "_")}_cijfers_${todayIso()}.csv`, "﻿" + [
-    ["Speler","Rugnummer","Aanwezig training %","Trainingen aanwezig","Trainingen totaal","Wedstrijden","Basis","Minuten","Goals","Assists","Gem. cijfer","Man van de match","Laatste evaluatie","Meest genoteerd werkpunt"].map(csvCell).join(";"),
-    ...rows.map(r => [pname(r.p), r.p.number, r.trTot ? r.trPct : "", r.trIn, r.trTot, r.matches, r.basis, r.minutes, r.goals, r.assists, r.rating ? f1(r.rating) : "", r.motm, r.evalAvg ? f1(r.evalAvg) : "", r.topTag].map(csvCell).join(";"))].join("\r\n"));
-} });
-
 /* ============ ploeg en trainers ============ */
 route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true, render: v => {
   const t = S.team, mf = matchFormat(t);
