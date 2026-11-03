@@ -4,6 +4,16 @@
 
 /* ============ trainingsfiche ============ */
 const EX_PHASES = ["Opwarming", "Kern", "Wedstrijdvorm", "Afsluiting"];
+/* soort oefening: één woordenlijst voor de trainingsfiche en de bibliotheek */
+const EX_TYPES = ["Opwarming", "Tussenvorm", "Wedstrijdvorm", "Afwerkvorm", "Pasvorm", "Positiespel", "Duelvorm", "Techniekvorm", "Coördinatie", "Cooling down"];
+const TYPE_COL = { Opwarming: "#38BDF8", Tussenvorm: "#FFD500", Wedstrijdvorm: "#22C55E", Afwerkvorm: "#FB7185", Pasvorm: "#F97316", Positiespel: "#14B8A6", Duelvorm: "#E879F9", Techniekvorm: "#A3E635", "Coördinatie": "#60A5FA", "Cooling down": "#A78BFA" };
+const TYPE_ALIAS = { partijvorm: "Wedstrijdvorm", spelvorm: "Wedstrijdvorm", afsluiting: "Cooling down", passingvorm: "Pasvorm", passvorm: "Pasvorm", rondo: "Positiespel", techniek: "Techniekvorm", afwerking: "Afwerkvorm", duel: "Duelvorm", coordinatie: "Coördinatie" };
+const FORM2TYPE = { Duelvorm: "Duelvorm", Kleine: "Wedstrijdvorm", Grote: "Wedstrijdvorm", Rondo: "Positiespel", Passingvorm: "Pasvorm", Afwerkvorm: "Afwerkvorm", Opbouwpatroon: "Tussenvorm", Technische: "Techniekvorm", Circuit: "Coördinatie", Spelvorm: "Opwarming", Oefening: "Tussenvorm" };
+function exType(x) {
+  const p = (x.phase || "").trim().toLowerCase(), hit = EX_TYPES.find(t => t.toLowerCase() === p) || TYPE_ALIAS[p];
+  if (hit) return hit;
+  return FORM2TYPE[exForm(x).split(" ")[0]] || "Tussenvorm";
+}
 const secOf = t => { if (t == null || t === "") return 0; const m = String(t).match(/^(\d+)(?::(\d{1,2}))?$/); return m ? (m[2] != null ? +m[1] * 60 + +m[2] : +m[1] * 60) : 0; };
 const exMinutes = x => x.minutes ? +x.minutes : (x.reps && secOf(x.work) ? Math.round((x.reps * secOf(x.work) + (x.reps - 1) * (+x.rest || 0)) / 60) : 0);
 function normPlan(pl) {
@@ -62,9 +72,9 @@ route("sjabloon", { title: "Training zonder datum", auth: true, team: true, rend
 
 /* ============ trainingsplan: één lijst in de volgorde die de trainer zelf kiest ============ */
 const PHASE_COL = { Opwarming: "#38BDF8", Kern: "#FFD500", Wedstrijdvorm: "#22C55E", Afsluiting: "#A78BFA" };
-const LABEL_SUG = ["Opwarming", "Techniek", "Tussenvorm", "Kern", "Partijvorm", "Wedstrijdvorm", "Afwerking", "Afsluiting", "Cooling down"];
+const LABEL_SUG = EX_TYPES;
 const LPAL = ["#38BDF8", "#FFD500", "#22C55E", "#A78BFA", "#FB7185", "#F97316", "#14B8A6", "#E879F9"];
-const labelCol = l => !l ? "var(--line2)" : PHASE_COL[l] || LPAL[[...l.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % LPAL.length];
+const labelCol = l => !l ? "var(--line2)" : TYPE_COL[l] || PHASE_COL[l] || LPAL[[...l.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % LPAL.length];
 const hm = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const toMin = s => { const [h, m] = tm(s).split(":"); return +h * 60 + +m; };
 async function planEditor(tv, e, opts = {}) {
@@ -74,11 +84,11 @@ async function planEditor(tv, e, opts = {}) {
   const change = () => { sv(); draw(); };
   const newEx = () => ({ id: uid(), phase: "", name: "", cats: [], minutes: 15, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } });
   const row = (x, t0, k) => { const m = exMinutes(x), clock = start != null ? `${hm(start + t0)} – ${hm(start + t0 + m)}` : `${t0}′ – ${t0 + m}′`;
-    const lab = x.phase ? `<span class="pl-lab">${esc(x.phase)}</span>` : "";
+    const lab = `<span class="pl-lab">${esc(exType(x))}</span>`;
     if (x.pause) return `<article class="pl-row pause" draggable="true" data-id="${x.id}" style="--pc:var(--line2)"><span class="grip" aria-hidden="true">⋮⋮</span><span class="pl-pic ph">☕</span>
       <div class="pl-main"><span class="pl-clock">${clock}</span><b>${esc(x.name || "Drinkpauze")}</b></div>${durCtl(x, m)}<div class="pl-acts">${moveBtns(x)}<button class="ib" type="button" data-act="del" data-id="${x.id}" aria-label="Verwijderen">${IC.trash}</button></div></article>`;
     const facts = [x.players ? x.players + " spelers" : "", x.size, x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? " · " + x.rest + " s rust" : ""}` : ""].filter(Boolean).join(" · ");
-    return `<article class="pl-row" draggable="true" data-id="${x.id}" style="--pc:${labelCol(x.phase)}"><span class="grip" title="Sleep om te verplaatsen" aria-hidden="true">⋮⋮</span>
+    return `<article class="pl-row" draggable="true" data-id="${x.id}" style="--pc:${labelCol(exType(x))}"><span class="grip" title="Sleep om te verplaatsen" aria-hidden="true">⋮⋮</span>
       <button class="pl-pic" type="button" data-act="edit" data-id="${x.id}" aria-label="Oefening openen">${exPic(x)}</button>
       <div class="pl-main" data-act="edit" data-id="${x.id}"><span class="pl-clock"><span class="pl-no">${k + 1}</span>${clock}${lab}</span><b>${esc(x.name || "Naamloze oefening")}</b>${facts ? `<small>${esc(facts)}</small>` : ""}${x.org ? `<p class="clamp2">${esc(x.org)}</p>` : `<p class="hint" style="margin:0">Nog geen uitleg. Tik om aan te vullen.</p>`}</div>
       ${durCtl(x, m)}<div class="pl-acts">${moveBtns(x)}<button class="ib" type="button" data-act="dup" data-id="${x.id}" title="Kopie" aria-label="Kopie">${IC.copy}</button>
@@ -86,8 +96,8 @@ async function planEditor(tv, e, opts = {}) {
   const durCtl = (x, m) => `<div class="pl-dur"><button type="button" data-act="minus" data-id="${x.id}" aria-label="Korter">−</button><span><b>${m || "–"}</b><small>min</small></span><button type="button" data-act="plus" data-id="${x.id}" aria-label="Langer">+</button></div>`;
   const moveBtns = x => `<button class="ib" type="button" data-act="up" data-id="${x.id}" title="Omhoog" aria-label="Omhoog">↑</button><button class="ib" type="button" data-act="down" data-id="${x.id}" title="Omlaag" aria-label="Omlaag">↓</button>`;
   const draw = () => {
-    const total = planMinutes(pl), over = dur ? total - dur : 0, n = pl.items.filter(x => !x.pause).length, labs = [...new Set(pl.items.filter(x => !x.pause && x.phase).map(x => x.phase))];
-    const segs = pl.items.map(x => { const m = exMinutes(x); return m ? `<span style="flex:${m};background:${x.pause ? "var(--line2)" : labelCol(x.phase) === "var(--line2)" ? "var(--muted)" : labelCol(x.phase)}" title="${esc((x.name || "Oefening") + " · " + m + " min")}"></span>` : ""; }).join("");
+    const total = planMinutes(pl), over = dur ? total - dur : 0, n = pl.items.filter(x => !x.pause).length, labs = [...new Set(pl.items.filter(x => !x.pause).map(exType))];
+    const segs = pl.items.map(x => { const m = exMinutes(x); return m ? `<span style="flex:${m};background:${x.pause ? "var(--line2)" : labelCol(exType(x))}" title="${esc((x.name || "Oefening") + " · " + m + " min")}"></span>` : ""; }).join("");
     let acc = 0;
     tv.innerHTML = `<div class="pl-top noprint">
       <input class="pl-theme" data-p="theme" value="${esc(pl.theme || e.theme || "")}" list="themes2" placeholder="Thema van de training, bv. Opbouw van achteruit" aria-label="Thema"><datalist id="themes2">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist>
@@ -102,7 +112,7 @@ async function planEditor(tv, e, opts = {}) {
     <div class="row noprint pl-tools"><button class="btn ghost small" type="button" id="prt">${IC.print}Afdrukken</button>${opts.tpl ? "" : `<button class="btn ghost small" type="button" id="tplSave">${IC.copy}Bewaren in de bibliotheek</button>`}
       <button class="btn ghost small" type="button" id="cpy">${IC.rotate}Overnemen van andere training</button>${pl.items.length ? `<span class="spacer"></span><button class="link" type="button" id="clr">Plan leegmaken</button>` : ""}</div>
     <div class="pl-list" data-drop="1">${pl.items.map((x, k) => { const r = row(x, acc, k); acc += exMinutes(x); return r; }).join("") ||
-      `<div class="pl-empty"><b>Bouw je training zoals jij wil</b>Voeg oefeningen toe in de volgorde die jij kiest. Je bepaalt zelf hoeveel en welke; een label zoals "Opwarming" kan je per oefening meegeven, maar dat hoeft niet.</div>`}</div>
+      `<div class="pl-empty"><b>Bouw je training zoals jij wil</b>Voeg oefeningen toe in de volgorde die jij kiest. Je bepaalt zelf hoeveel en welke. Per oefening kies je de soort: opwarming, tussenvorm, wedstrijdvorm, afwerkvorm, pasvorm…</div>`}</div>
     <div class="pl-add noprint"><button class="btn" type="button" id="addNew">${IC.plus}Nieuwe oefening</button><button class="btn ghost" type="button" id="addLib">${IC.book}Uit de bibliotheek</button><button class="btn ghost" type="button" id="addPause">☕ Pauze</button></div>`;
     bind();
   };
@@ -162,8 +172,8 @@ function exEditor(x, onSave, saveLabel) {
         <p class="hint exalt">${hasImg() ? `Je gebruikt een afbeelding. <button class="link" type="button" id="toDraw">Liever zelf tekenen</button>` : `Liever een foto of afbeelding? <label class="link" style="cursor:pointer">Afbeelding kiezen<input type="file" accept="image/*" id="imgIn" hidden></label>`}</p></div>
       <aside class="exform">
         <div class="f full"><span>Duur</span><div class="exdur">${[5, 10, 15, 20, 25, 30].map(n => `<button type="button" class="chip" data-min="${n}" aria-pressed="${curMin === n}">${n}′</button>`).join("")}<label class="exmin"><input name="minutes" type="number" min="0" inputmode="numeric" value="${x.minutes ?? ""}" placeholder="${curMin || "min"}" aria-label="Duur in minuten"> min</label></div></div>
-        <label class="f full">Label <span class="hint">mag leeg, kies of typ zelf</span><input name="phase" value="${esc(x.phase || "")}" list="phlist" placeholder="bv. Opwarming, Techniek, Partijvorm"><datalist id="phlist">${LABEL_SUG.map(l => `<option value="${l}">`).join("")}</datalist>
-          <span class="chips exlabs">${LABEL_SUG.slice(0, 6).map(l => `<button type="button" class="tag" data-lab="${l}" style="--pc:${labelCol(l)}">${l}</button>`).join("")}</span></label>
+        <div class="f full"><span>Soort oefening</span><input type="hidden" name="phase" value="${esc(exType(x))}">
+          <span class="chips exlabs" role="radiogroup">${EX_TYPES.map(l => `<button type="button" class="tag" role="radio" data-lab="${l}" aria-checked="${exType(x) === l}" style="--pc:${labelCol(l)}">${l}</button>`).join("")}</span></div>
         <div class="fields"><label class="f">Aantal spelers<input name="players" value="${esc(x.players || "")}" placeholder="bv. 8-12"></label>
           <label class="f">Afmetingen<input name="size" value="${esc(x.size || "")}" placeholder="bv. 30 × 20 m"></label></div>
         <label class="f full">Organisatie en verloop<textarea name="org" rows="6" placeholder="Hoe zet je de oefening op en hoe verloopt ze? Welke varianten zijn er?">${esc(x.org || "")}</textarea></label>
@@ -189,7 +199,7 @@ function exEditor(x, onSave, saveLabel) {
   const ii = $("#imgIn", d); if (ii) ii.onchange = () => { const file = ii.files[0]; if (!file) return; if (file.size > 4e6) { toast("Kies een afbeelding kleiner dan 4 MB."); return; }
     const rd = new FileReader(); rd.onload = () => { x.img = rd.result; x.img_path = null; x.diagram = null; if (stopDg) stopDg(); mark(); showImg(); }; rd.readAsDataURL(file); };
   $$("[data-view]", d).forEach(b => b.onclick = () => { $(".exbody", d).dataset.v = b.dataset.view; $$("[data-view]", d).forEach(z => z.setAttribute("aria-selected", z === b)); });
-  $$("[data-lab]", d).forEach(b => b.onclick = () => { f.phase.value = f.phase.value === b.dataset.lab ? "" : b.dataset.lab; mark(); });
+  $$("[data-lab]", d).forEach(b => b.onclick = () => { f.phase.value = b.dataset.lab; $$("[data-lab]", d).forEach(z => z.setAttribute("aria-checked", z === b)); mark(); });
   const dh = () => { const tmp = { reps: +f.reps.value || null, work: f.work.value, rest: +f.rest.value || 0, minutes: +f.minutes.value || null }, m = exMinutes(tmp);
     $("#durH", d).textContent = m ? `${m} min` : ""; $$("[data-min]", d).forEach(b => b.setAttribute("aria-pressed", +b.dataset.min === m && !!f.minutes.value)); };
   $$("[data-min]", d).forEach(b => b.onclick = () => { f.minutes.value = b.dataset.min; mark(); dh(); });
@@ -262,7 +272,7 @@ const EX_BANDS = [["onder", "U6 – U9 (2v2 en 5v5)", 6, 9], ["mid", "U10 – U1
 const ageNum = a => /senior/i.test(a) ? 99 : +String(a).replace(/\D/g, "") || 0;
 const exBands = x => EX_BANDS.filter(([, , lo, hi]) => (x.ages || []).some(a => { const n = ageNum(a); return n >= lo && n <= hi; })).map(b => b[0]);
 const agesTxt = ages => { const ns = (ages || []).map(ageNum).filter(Boolean).sort((a, b) => a - b); if (!ns.length) return ""; const f = n => n === 99 ? "Seniors" : "U" + n; return ns.length === 1 ? f(ns[0]) : f(ns[0]) + "–" + f(ns[ns.length - 1]); };
-const exMeta = x => [x.phase, agesTxt(x.ages), exMinutes(x) ? exMinutes(x) + " min" : "", x.players ? x.players + " sp." : ""].filter(Boolean).join(" · ");
+const exMeta = x => [agesTxt(x.ages), exMinutes(x) ? exMinutes(x) + " min" : "", x.players ? x.players + " sp." : ""].filter(Boolean).join(" · ");
 const FILTER_KEY = "ogv-exfilter";
 function exFilterState() { try { return { q: "", ...JSON.parse(localStorage.getItem(FILTER_KEY) || "{}"), q: "" }; } catch (e) { return { q: "" }; } }
 function exFilter(list, f) {
@@ -347,7 +357,7 @@ const SRC_L = { club: "Club", eigen: "Van mij", anderen: "Gedeeld door trainers"
 const teamBand = () => { const c = parseInt(String(S.team?.category || "").replace(/\D/g, "")); return !c ? "" : c <= 9 ? "onder" : c <= 13 ? "mid" : "boven"; };
 let LB = null;
 function lbState() { if (LB) return LB; let st = {}; try { st = JSON.parse(localStorage.getItem("ogv-lib") || "{}"); } catch (e) {}
-  LB = { type: st.type || "oefening", band: st.band ?? teamBand(), theme: "", phase: "", form: "", src: "", author: "", q: "", more: false }; return LB; }
+  LB = { type: st.type || "oefening", band: st.band ?? teamBand(), theme: "", soort: "", src: "", author: "", q: "", more: false }; return LB; }
 const lbSave = () => { try { localStorage.setItem("ogv-lib", JSON.stringify({ type: LB.type, band: LB.band })); } catch (e) {} };
 const logged = () => !!db && (mode === "demo" || !!user);
 async function libData() {
@@ -356,10 +366,9 @@ async function libData() {
   const out = [], ph = `<span class="ph0">${IC.field}</span>`;
   (L?.items || []).forEach(i => { const train = i.map === "thema";
     out.push({ key: "c:" + i.id, type: train ? "training" : "oefening", src: "club", title: i.title, sub: i.bedoeling, pic: `<img src="trainingen/${esc(i.img)}" alt="" loading="lazy">`,
-      bands: i.bouwen.map(b => BOUW2BAND[b]), themes: [i.principe ? PRTHEME[i.principe] : LIBTHEME[i.thema]].filter(Boolean), phase: i.map === "opwarming" ? "Opwarming" : train ? "" : i.thema === "Wedstrijdvormen" ? "Wedstrijdvorm" : "Kern",
-      form: train ? "" : exForm({ name: (i.vorm || "") + " " + i.title }), meta: [i.principe ? "Basisprincipe " + i.principe : "", i.vorm, i.bouwen.map(b => L.bouwen.find(x => x.id === b)?.leeftijd).join(", ")].filter(Boolean).join(" · "), author: "", lib: i }); });
+      bands: i.bouwen.map(b => BOUW2BAND[b]), themes: [i.principe ? PRTHEME[i.principe] : LIBTHEME[i.thema]].filter(Boolean), soort: train ? "" : i.map === "opwarming" ? "Opwarming" : ({ Wedstrijdvormen: "Wedstrijdvorm", "Duel 1v1": "Duelvorm", "Passing en balaanname": "Pasvorm", Techniek: "Techniekvorm", Positiespel: "Positiespel", Handelingssnelheid: "Tussenvorm" })[i.thema] || "Tussenvorm", meta: [i.principe ? "Basisprincipe " + i.principe : "", i.vorm, i.bouwen.map(b => L.bouwen.find(x => x.id === b)?.leeftijd).join(", ")].filter(Boolean).join(" · "), author: "", lib: i }); });
   ex.forEach(m => { const x = m.data;
-    out.push({ key: "x:" + m.id, type: "oefening", src: x.source === "PSD" ? "psd" : items.mine(m) ? "eigen" : "anderen", title: m.title, sub: x.goal || x.org, pic: exPic(x, ph), bands: exBands(x), themes: exThemes(x), phase: x.phase, form: exForm(x), meta: exMeta(x), author: x.author || x.shared_by || "", row: m }); });
+    out.push({ key: "x:" + m.id, type: "oefening", src: x.source === "PSD" ? "psd" : items.mine(m) ? "eigen" : "anderen", title: m.title, sub: x.goal || x.org, pic: exPic(x, ph), bands: exBands(x), themes: exThemes(x), soort: exType(x), meta: exMeta(x), author: x.author || x.shared_by || "", row: m }); });
   tp.forEach(t => { const pics = t.data.items.filter(i => i.img || i.img_path || i.diagram?.objs?.length).slice(0, 3), th = [...new Set(t.data.items.flatMap(exThemes))].filter(z => z !== "Overige");
     out.push({ key: "t:" + t.id, type: "training", src: t.data.source === "PSD" ? "psd" : items.mine(t) ? "eigen" : "anderen", title: t.title, sub: t.data.goal, strip: pics.map(i => `<div>${exPic(i, "")}</div>`).join("") || `<div class="ph0">${IC.field}</div>`,
       bands: exBands(t.data), themes: th.length ? th : ["Overige"], phase: "", form: "", meta: [agesTxt(t.data.ages), t.data.items.length + " oefeningen", planMinutes(t.data) ? planMinutes(t.data) + " min" : ""].filter(Boolean).join(" · "), author: t.data.author || t.data.shared_by || "", row: t }); });
@@ -370,7 +379,7 @@ function libMatch(e, f, skip) {
   if (f.type && e.type !== f.type) return false;
   if (skip !== "band" && f.band && !e.bands.includes(f.band)) return false;
   if (skip !== "theme" && f.theme && !e.themes.includes(f.theme)) return false;
-  if (f.phase && e.phase !== f.phase) return false; if (f.form && e.form !== f.form) return false;
+  if (skip !== "soort" && f.soort && e.soort !== f.soort) return false;
   if (f.src && e.src !== f.src) return false; if (f.author && e.author !== f.author) return false;
   const t = (f.q || "").toLowerCase().trim(); if (!t) return true;
   const x = e.row?.data || e.lib || {};
@@ -380,7 +389,7 @@ const libCard = e => e.type === "training" && e.strip != null
   ? `<button class="tplcard pickable" type="button" data-k="${esc(e.key)}"><div class="tstrip">${e.strip}</div>${libBody(e)}</button>`
   : `<button class="excard pickable" type="button" data-k="${esc(e.key)}"><div class="pic">${e.pic}</div>${libBody(e)}</button>`;
 const libBody = e => `<div class="bd"><b class="lt">${esc(e.title)}</b>
-  <div class="chips">${e.themes.filter(z => z !== "Overige").slice(0, 2).map(c => `<span class="pill g">${esc(c)}</span>`).join("")}${e.form && e.form !== "Oefening" ? `<span class="pill">${esc(e.form)}</span>` : ""}</div>
+  <div class="chips">${e.themes.filter(z => z !== "Overige").slice(0, 2).map(c => `<span class="pill g">${esc(c)}</span>`).join("")}${e.soort ? `<span class="pill soort" style="--pc:${labelCol(e.soort)}">${esc(e.soort)}</span>` : ""}</div>
   ${e.meta ? `<small class="muted">${esc(e.meta)}</small>` : ""}${e.sub ? `<p class="clamp">${esc(e.sub)}</p>` : ""}
   <small class="hint lsrc src-${e.src}">${e.row?.shared ? `<span class="shdot" aria-hidden="true"></span>` : ""}${esc(e.src === "club" ? "Clubtraining OG Vorselaar" : e.src === "psd" ? "PSD-databank" + (e.author ? " · " + e.author : "") : e.src === "anderen" ? "Gedeeld door " + (e.author || "een clubtrainer") : e.row?.shared ? "Van jou, gedeeld met de club" : "Van jou")}</small></div>`;
 
@@ -394,7 +403,7 @@ route("bibliotheek", { title: "Trainingsbibliotheek", render: async (v, id) => {
       `<div class="libtype" role="tablist">${[["oefening", "Oefeningen", "Losse oefeningen om je training mee op te bouwen"], ["training", "Volledige trainingen", "Kant-en-klaar, in één keer in te plannen"]].map(([k, l, s2]) => `<button type="button" role="tab" data-type="${k}" aria-selected="${f.type === k}"><b>${l} <span>${counts(k)}</span></b><small>${s2}</small></button>`).join("")}</div>
       <div class="bouw b4" role="group" aria-label="Leeftijd">${[["", "Alle", "Alle leeftijden"], ["onder", "Onderbouw", "U6 – U9 · 5v5"], ["mid", "Middenbouw", "U10 – U13 · 8v8"], ["boven", "Bovenbouw", "U14+ · 11v11"]].map(([k, n, l]) => `<button type="button" data-band="${k}" aria-pressed="${f.band === k}"><b>${n}</b><small>${l}</small></button>`).join("")}</div>
       <div id="lf"></div><p class="hint" id="cnt" style="margin:12px 0"></p><div id="grid"></div>`;
-    $$("[data-type]", v).forEach(b => b.onclick = () => { f.type = b.dataset.type; f.phase = f.form = ""; f.theme = ""; lbSave(); shown = 36; shell(); });
+    $$("[data-type]", v).forEach(b => b.onclick = () => { f.type = b.dataset.type; f.soort = ""; f.theme = ""; lbSave(); shown = 36; shell(); });
     $$("[data-band]", v).forEach(b => b.onclick = () => { f.band = b.dataset.band; lbSave(); shown = 36; $$("[data-band]", v).forEach(x => x.setAttribute("aria-pressed", x === b)); bar(); grid(); });
     const n = $("#new", v); if (n) n.onclick = () => exEditor({ id: uid(), phase: "Kern", name: "", cats: [], rest: 60, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } }, async x => { const r = await safe(() => items.save({ kind: "oefening", title: x.name, data: exData(x) }), "Oefening opgeslagen bij Van mij."); if (r) reload(); });
     bar(); grid();
@@ -403,18 +412,18 @@ route("bibliotheek", { title: "Trainingsbibliotheek", render: async (v, id) => {
     const th = [...EX_THEMES.map(t => t[0]), "Overige"].map(t => [t, inBand.filter(e => e.themes.includes(t)).length]).filter(([, c]) => c || f.theme === "" + c);
     const authors = [...new Set(base.map(e => e.author).filter(Boolean))].sort((a, b) => a.localeCompare(b, "nl"));
     const sel = (k, label, opts) => `<label class="flt"><span>${label}</span><select data-f="${k}"><option value="">Alle</option>${opts.map(([val, l]) => `<option value="${esc(val)}"${f[k] === val ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
-    const active = ["phase", "form", "src", "author"].filter(k => f[k]).length;
-    $("#lf", v).innerHTML = `<div class="filters"><label class="flt grow"><span>Zoeken</span><input type="search" data-f="q" value="${esc(f.q)}" placeholder="${f.type === "oefening" ? "Zoek: rondo, 1v1, afwerken, opbouw…" : "Zoek: opbouw, omschakeling…"}"></label>
+    const active = ["src", "author"].filter(k => f[k]).length, inS = base.filter(e => libMatch(e, f, "soort"));
+    $("#lf", v).innerHTML = (f.type === "oefening" ? `<div class="soorten" role="group" aria-label="Soort oefening"><button type="button" class="chip" data-so="" aria-pressed="${!f.soort}">Alle soorten</button>${EX_TYPES.map(t => [t, inS.filter(e => e.soort === t).length]).filter(([t, c]) => c || f.soort === t).map(([t, c]) => `<button type="button" class="chip" data-so="${t}" aria-pressed="${f.soort === t}" style="--pc:${labelCol(t)}">${t} <b>${c}</b></button>`).join("")}</div>` : "") + `<div class="filters"><label class="flt grow"><span>Zoeken</span><input type="search" data-f="q" value="${esc(f.q)}" placeholder="${f.type === "oefening" ? "Zoek: rondo, 1v1, afwerken, opbouw…" : "Zoek: opbouw, omschakeling…"}"></label>
       ${sel("theme", "Thema", th.map(([t, c]) => [t, `${t} (${c})`]))}
-      ${f.type === "oefening" ? sel("phase", "Onderdeel", EX_PHASES.map(p2 => [p2, p2])) : ""}
       <button class="link" type="button" id="more" aria-expanded="${f.more}">${f.more ? "Minder filters" : "Meer filters"}${active && !f.more ? ` (${active})` : ""}</button>
-      ${f.more ? `<div class="fmore">${f.type === "oefening" ? sel("form", "Vorm", EX_FORMS.map(t => [t, t])) : ""}${sel("src", "Bron", Object.entries(SRC_L).filter(([k]) => base.some(e => e.src === k)))}${authors.length > 1 ? sel("author", "Gemaakt door", authors.map(a => [a, a])) : ""}</div>` : ""}
-      ${active || f.theme || f.q ? `<button class="link" type="button" id="reset">Filters wissen</button>` : ""}</div>`;
+      ${f.more ? `<div class="fmore">${sel("src", "Bron", Object.entries(SRC_L).filter(([k]) => base.some(e => e.src === k)))}${authors.length > 1 ? sel("author", "Gemaakt door", authors.map(a => [a, a])) : ""}</div>` : ""}
+      ${active || f.theme || f.q || f.soort ? `<button class="link" type="button" id="reset">Filters wissen</button>` : ""}</div>`;
     $$("[data-f]", v).forEach(el => { const k = el.dataset.f;
       if (k === "q") el.oninput = () => { f.q = el.value; shown = 36; grid(); };
       else el.onchange = () => { f[k] = el.value; shown = 36; bar(); grid(); }; });
     $("#more", v).onclick = () => { f.more = !f.more; bar(); };
-    const r = $("#reset", v); if (r) r.onclick = () => { Object.assign(f, { theme: "", phase: "", form: "", src: "", author: "", q: "" }); shown = 36; bar(); grid(); };
+    $$("[data-so]", v).forEach(b => b.onclick = () => { f.soort = b.dataset.so; shown = 36; bar(); grid(); });
+    const r = $("#reset", v); if (r) r.onclick = () => { Object.assign(f, { theme: "", soort: "", src: "", author: "", q: "" }); shown = 36; bar(); grid(); };
   };
   const grid = () => { const list = D.list.filter(e => libMatch(e, f)), tot = D.list.filter(e => e.type === f.type).length;
     $("#cnt", v).textContent = `${list.length} ${f.type === "oefening" ? (list.length === 1 ? "oefening" : "oefeningen") : (list.length === 1 ? "training" : "trainingen")}${list.length < tot ? " van " + tot : ""}${!logged() ? " · meld je aan om ook de oefenstof van de trainers te zien" : ""}`;
@@ -436,9 +445,9 @@ function exView(m, onChange) {
   const x = m.data, own = items.mine(m), fact = (k, val) => val ? `<dt>${k}</dt><dd>${esc(val)}</dd>` : "";
   const d = dialog(`<div class="dlg exview"><div class="row"><h2 style="margin-right:auto">${esc(m.title)}</h2><button class="xbtn" style="position:static" type="button" data-close aria-label="Sluiten">${IC.x}</button></div>
     <div class="exvgrid"><div class="exvpic">${exPic(x)}</div><div class="exvinfo">
-      <div class="chips">${exThemes(x).filter(z => z !== "Overige").map(c => `<span class="pill g">${esc(c)}</span>`).join("")}<span class="pill">${esc(exForm(x))}</span></div>
+      <div class="chips">${exThemes(x).filter(z => z !== "Overige").map(c => `<span class="pill g">${esc(c)}</span>`).join("")}<span class="pill soort" style="--pc:${labelCol(exType(x))}">${esc(exType(x))}</span></div>
       ${x.goal ? `<p style="margin:0">${esc(x.goal)}</p>` : ""}
-      <dl class="facts">${fact("Onderdeel", x.phase)}${fact("Leeftijd", agesTxt(x.ages))}${fact("Duur", exMinutes(x) ? exMinutes(x) + " min" : "")}${fact("Inspanning", x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? ", " + x.rest + " s rust" : ""}` : "")}${fact("Intensiteit", x.intensity ? x.intensity + " – " + INTENS[x.intensity] : "")}${fact("Spelers", x.players)}${fact("Afmetingen", x.size)}${fact("Materiaal", x.material)}</dl>
+      <dl class="facts">${fact("Soort", exType(x))}${fact("Leeftijd", agesTxt(x.ages))}${fact("Duur", exMinutes(x) ? exMinutes(x) + " min" : "")}${fact("Inspanning", x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? ", " + x.rest + " s rust" : ""}` : "")}${fact("Intensiteit", x.intensity ? x.intensity + " – " + INTENS[x.intensity] : "")}${fact("Spelers", x.players)}${fact("Afmetingen", x.size)}${fact("Materiaal", x.material)}</dl>
       ${srcLine(m, x)}</div></div>
     ${x.org ? `<h3>Organisatie en richtlijnen</h3><p class="pre">${esc(x.org)}</p>` : ""}${x.criteria ? `<h3>Aandachtspunten</h3><p class="pre">${esc(x.criteria)}</p>` : ""}
     <div class="row exvact">${S.team && logged() ? `<button class="btn" type="button" id="xv-plan">${IC.plus}Toevoegen aan een training</button>` : ""}
@@ -463,17 +472,17 @@ function toTraining(item, title) {
 }
 /* kiezen uit de bibliotheek vanuit de trainingsfiche */
 async function libPick(onPick) {
-  const D = await libData(), f = { type: "oefening", band: lbState().band, theme: "", phase: "", form: "", src: "", author: "", q: "" };
+  const D = await libData(), f = { type: "oefening", band: lbState().band, theme: "", soort: "", src: "", author: "", q: "" };
   const d = dialog(`<div class="dlg"><h2>Uit de trainingsbibliotheek</h2><div class="filters"><label class="flt grow"><span>Zoeken</span><input type="search" id="pq" placeholder="Zoek: rondo, 1v1, afwerken…"></label>
     <label class="flt"><span>Leeftijd</span><select id="pb"><option value="">Alle</option>${EX_BANDS.map(([k, l]) => `<option value="${k}"${f.band === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="flt"><span>Thema</span><select id="pt"><option value="">Alle</option>${[...EX_THEMES.map(t => t[0])].map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
-    <label class="flt"><span>Onderdeel</span><select id="pp"><option value="">Alle</option>${EX_PHASES.map(p2 => `<option>${p2}</option>`).join("")}</select></label></div>
+    <label class="flt"><span>Soort</span><select id="pp"><option value="">Alle</option>${EX_TYPES.map(p2 => `<option>${p2}</option>`).join("")}</select></label></div>
     <div id="pl" class="exs" style="max-height:56dvh;overflow:auto"></div><div class="row"><span class="hint" id="pc"></span><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`, "wide xl");
   const draw = () => { const list = D.list.filter(e => libMatch(e, f)); $("#pc", d).textContent = `${list.length} oefeningen${list.length > 60 ? " · eerste 60 getoond, verfijn met de filters" : ""}`;
     $("#pl", d).innerHTML = list.slice(0, 60).map(libCard).join("") || `<div class="empty"><b>Niets gevonden</b>Pas de filters aan.</div>`;
     $$("[data-k]", d).forEach(b => b.onclick = () => { const e = D.list.find(z => z.key === b.dataset.k);
-      onPick(e.lib ? exFromLib(e.lib) : { ...JSON.parse(JSON.stringify(e.row.data)), id: uid(), name: e.row.data.name || e.row.title }); d.close(); toast("Oefening toegevoegd."); }); };
+      onPick({ ...(e.lib ? exFromLib(e.lib) : { ...JSON.parse(JSON.stringify(e.row.data)), id: uid(), name: e.row.data.name || e.row.title }), phase: e.soort }); d.close(); toast("Oefening toegevoegd."); }); };
   $("#pq", d).oninput = ev => { f.q = ev.target.value; draw(); };
-  [["#pb", "band"], ["#pt", "theme"], ["#pp", "phase"]].forEach(([sel, k]) => $(sel, d).onchange = ev => { f[k] = ev.target.value; draw(); });
+  [["#pb", "band"], ["#pt", "theme"], ["#pp", "soort"]].forEach(([sel, k]) => $(sel, d).onchange = ev => { f[k] = ev.target.value; draw(); });
   draw();
 }

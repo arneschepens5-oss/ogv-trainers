@@ -884,3 +884,11 @@ dialog.exfull .exf{height:100%;padding:0;gap:0;display:flex;flex-direction:colum
 
 .exbar .exx{display:none}
 @media (max-width:900px){.exbar .exx{display:grid}}
+
+.soorten{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 10px}
+.soorten::-webkit-scrollbar{display:none}
+.soorten .chip{flex:none;display:inline-flex;align-items:center;gap:6px}
+.soorten .chip[data-so]:not([data-so=""])::before{content:"";width:8px;height:8px;border-radius:3px;background:var(--pc)}
+.soorten .chip b{font-weight:600;opacity:.6;font-size:12.5px}
+.pill.soort{border:1px solid var(--pc);color:var(--ink);background:color-mix(in srgb,var(--pc) 16%,transparent)}
+.exlabs .tag[aria-checked=true]{background:var(--pc);border-color:var(--pc);color:#000}

@@ -1,6 +1,6 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v26";
-const SHELL = ["./", "index.html", "app/app.css?v=26", "app/core.js?v=26", "app/ploeg.js?v=26", "app/wedstrijd.js?v=26", "app/leerplan.js?v=26", "app/teken.js?v=26", "app/training.js?v=26", "app/video.js?v=26", "app/map.js?v=26", "app/rbfa.js?v=26", "app/club.js?v=26", "app/evaluatie.js?v=26", "app/kennis.js?v=26", "pitch.js?v=26",
+const CACHE = "ogv-platform-v27";
+const SHELL = ["./", "index.html", "app/app.css?v=27", "app/core.js?v=27", "app/ploeg.js?v=27", "app/wedstrijd.js?v=27", "app/leerplan.js?v=27", "app/teken.js?v=27", "app/training.js?v=27", "app/video.js?v=27", "app/map.js?v=27", "app/rbfa.js?v=27", "app/club.js?v=27", "app/evaluatie.js?v=27", "app/kennis.js?v=27", "pitch.js?v=27",
   "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
   "trainingen/trainingen.json", "matchday/", "tactiekbord/"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
