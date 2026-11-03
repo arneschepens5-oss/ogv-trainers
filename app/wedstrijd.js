@@ -446,7 +446,7 @@ route("uitslagen", { title: "Uitslagen club", auth: true, render: async v => {
 route("verslag", { title: "Wedstrijdverslag", auth: true, render: async (v, id) => {
   const all = await loadClub(); const e = all.find(x => x.id === id) || S.events.find(x => x.id === id);
   if (!e) { v.innerHTML = `<div class="empty"><b>Wedstrijd niet gevonden</b><a class="btn" href="#/uitslagen">Naar de uitslagen</a></div>`; return; }
-  const mine = S.myTeamIds.includes(e.team_id), tn = teamName(e.team_id), R = e.report || {}, r = res(e);
+  const mine = S.allTeams || S.myTeamIds.includes(e.team_id), tn = teamName(e.team_id), R = e.report || {}, r = res(e);
   let att = []; try { att = mine && S.team?.id === e.team_id ? S.att.filter(a => a.event_id === e.id) : await db.list("attendance", { event_id: e.id }); } catch (x) {}
   const pl = att.filter(a => a.status === "aanwezig" && (a.rating || a.note || a.minutes != null)).sort((a, b) => (b.rating || 0) - (a.rating || 0));
   const goals = (R.goals || []).slice().sort((a, b) => (a.min ?? 999) - (b.min ?? 999));
