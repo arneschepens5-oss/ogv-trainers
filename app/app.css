@@ -946,3 +946,12 @@ dialog.exfull .exf{height:100%;padding:0;gap:0;display:flex;flex-direction:colum
 .admteam .item .main{flex:1 1 calc(100% - 52px);min-width:0}
 .admteam .item .main b{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-all}
 .admteam .item select{flex:1;max-width:none;margin-left:44px}
+
+.rbfalist{display:flex;flex-direction:column;gap:6px;max-height:52dvh;overflow:auto;padding-right:4px}
+.rbfarow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+.rbfarow.done{opacity:.55}
+.rbfarow .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rbfarow .rbn{min-height:34px;padding:4px 8px;font-size:14.5px;font-weight:700}
+.rbfarow small{color:var(--muted)}
+.rbfarow select{width:auto;min-height:34px;padding:4px 8px;font-size:13.5px}
+.rbfarow input[type=checkbox]{width:20px;height:20px;flex:none}

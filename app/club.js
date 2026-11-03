@@ -59,7 +59,9 @@ route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
     : `<p class="hint" style="margin:0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
   <div class="sec"><h2>Leden (${info.members.length})</h2><div class="list">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${esc(m.teams || "nog geen ploeg")}</small></span>
     ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : `<button class="link" type="button" data-role="${m.user_id}" data-r="${m.role === "admin" ? "trainer" : "admin"}">${m.role === "admin" ? "Geen beheerder meer" : "Beheerder maken"}</button><button class="link danger" type="button" data-rm="${m.user_id}" data-mail="${esc(m.email || "")}">Toegang intrekken</button>`}</div>`).join("")}</div></div>`;
-  v.insertAdjacentHTML("beforeend", `<div class="sec" id="adm-teams"><h2>Ploegen en trainers</h2><p class="hint" style="margin-top:0">Laden…</p></div>`);
+  v.insertAdjacentHTML("beforeend", `<div class="sec panel" id="adm-rbfa"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van OG Vorselaar op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
+    <div class="sec" id="adm-teams"><h2>Ploegen en trainers</h2><p class="hint" style="margin-top:0">Laden…</p></div>`);
+  $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render());
   adminTeams($("#adm-teams"), info);
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
@@ -70,6 +72,43 @@ route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
   $$("[data-role]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.role, r: b.dataset.r }, "Rol aangepast."));
   $$("[data-rm]", v).forEach(b => b.onclick = () => { if (confirm(`Toegang intrekken voor ${b.dataset.mail}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) rpc("club_set_member", { uid: b.dataset.rm, r: null }, "Toegang ingetrokken."); });
 } });
+
+/* beheerder: alle ploegen van de club aanmaken op basis van RBFA */
+const ageOf = n => { const m = String(n || "").match(/U\s?(\d{1,2})/i); return m ? +m[1] : null; };
+const formatFor = n => { const a = ageOf(n); return a == null ? "11v11" : a <= 7 ? "3v3" : a <= 9 ? "5v5" : a <= 13 ? "8v8" : "11v11"; };
+async function rbfaCreateTeams(done) {
+  const d = dialog(`<div class="dlg"><h2>Ploegen van RBFA</h2><p class="muted" style="margin:0">Laden…</p></div>`, "wide");
+  let list; try { list = await rbfaTeams(); } catch (e) { d.querySelector(".dlg").innerHTML = `<h2>Ploegen van RBFA</h2><p class="err">RBFA is niet bereikbaar: ${esc(e.message)}</p><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div>`; $$("[data-close]", d).forEach(b => b.onclick = () => d.close()); return; }
+  const teams = S.teams || [], season = seasonNow();
+  const rows = list.map(r => { const linked = teams.find(t => String(t.rbfa_team_id || "") === String(r.id)), cat = ageOf(r.name) ? "U" + ageOf(r.name) : "",
+      same = !linked && cat && teams.find(t => (t.category || "").toUpperCase().replace(/^P/, "") === cat.toUpperCase() || ageOf(t.name) === ageOf(r.name));
+    return { r, linked, same, cat, name: "OGV " + rbfaName(r.name), format: formatFor(r.name) }; })
+    .sort((a, b) => (ageOf(a.r.name) ?? 99) - (ageOf(b.r.name) ?? 99) || a.r.name.localeCompare(b.r.name, "nl"));
+  d.querySelector(".dlg").innerHTML = `<h2>Ploegen van RBFA</h2><p class="muted" style="margin:0">${rows.length} ploegen gevonden bij RBFA voor seizoen ${season}. Vink aan welke je wil aanmaken. Ploegen die al bestaan of die bij een bestaande ploeg lijken te horen, staan uitgevinkt.</p>
+    <div class="rbfalist">${rows.map((x, i) => `<label class="rbfarow${x.linked ? " done" : ""}"><input type="checkbox" data-i="${i}"${x.linked || x.same ? "" : " checked"}${x.linked ? " disabled" : ""}>
+      <span class="main"><input class="rbn" data-n="${i}" value="${esc(x.name)}" aria-label="Naam in de app"${x.linked ? " disabled" : ""}><small>RBFA: ${esc(x.r.name)}${x.linked ? ` · bestaat al als <b>${esc(x.linked.name)}</b>` : x.same ? ` · lijkt op <b>${esc(x.same.name)}</b>` : ""}</small></span>
+      <select data-f="${i}" aria-label="Spelvorm"${x.linked ? " disabled" : ""}>${["2v2", "3v3", "5v5", "8v8", "11v11"].map(f => `<option${f === x.format ? " selected" : ""}>${f}</option>`).join("")}</select></label>`).join("")}</div>
+    <label class="check"><input type="checkbox" id="rbSync" checked> Wedstrijden meteen ophalen in de kalender van elke ploeg</label>
+    <label class="check"><input type="checkbox" id="rbMe"> Mezelf als trainer toevoegen aan deze ploegen</label>
+    <p class="hint" style="margin:0">Daarna wijs je bij "Ploegen en trainers" de trainers toe. Zij zien hun ploeg dan meteen na het aanmelden.</p>
+    <div class="row"><span class="hint" id="rbst"></span><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="rbgo">Ploegen aanmaken</button></div>`;
+  $$("[data-close]", d).forEach(b => b.onclick = () => d.close());
+  const cnt = () => { const n = $$("input[data-i]:checked", d).length; $("#rbgo", d).textContent = n ? `${n} ${n === 1 ? "ploeg" : "ploegen"} aanmaken` : "Ploegen aanmaken"; $("#rbgo", d).disabled = !n; };
+  $$("input[data-i]", d).forEach(c => c.onchange = cnt); cnt();
+  $("#rbgo", d).onclick = async () => {
+    if (mode === "demo") { toast("In de demo worden geen ploegen aangemaakt."); return; }
+    const pick = $$("input[data-i]:checked", d).map(c => +c.dataset.i), sync = $("#rbSync", d).checked, keepMe = $("#rbMe", d).checked, st = $("#rbst", d), btn = $("#rbgo", d);
+    btn.disabled = true; let made = 0, games = 0, warn = "";
+    for (const i of pick) { const x = rows[i], name = $(`[data-n="${i}"]`, d).value.trim() || x.name, format = $(`[data-f="${i}"]`, d).value;
+      st.textContent = `Bezig met ${name} (${made + 1} van ${pick.length})…`;
+      const row = { id: uid(), name, category: x.cat || null, format, season, criteria: EV_TEMPLATE.slice(), rbfa_team_id: String(x.r.id) };
+      try { await db.insert("teams", row); made++;
+        if (sync) { try { const r = await rbfaSync(row); games += r.added || 0; } catch (e) { warn = "Niet alle kalenders konden opgehaald worden."; } }
+        if (!keepMe) { const { error } = await sb.rpc("admin_set_trainer", { t: row.id, uid: user.id, on_team: false }); if (error) warn = /admin_set_trainer|function/i.test(error.message) ? "Je staat nog als trainer bij de nieuwe ploegen: voer eerst ogv-update-v9.sql uit om dat te kunnen wijzigen." : error.message; }
+      } catch (e) { warn = /rbfa_team_id|column/i.test(e.message || "") ? "Voer eerst het databasescript ogv-update-v5.sql uit." : (e.message || String(e)); break; } }
+    await loadTeams().catch(() => {}); if (S.team) await loadTeam(S.team.id).catch(() => {});
+    d.close(); toast(`${made} ${made === 1 ? "ploeg" : "ploegen"} aangemaakt${sync ? `, ${games} wedstrijden opgehaald` : ""}.${warn ? " " + warn : ""}`); done && done(); };
+}
 
 /* beheerder: trainers toevoegen, verplaatsen naar een andere ploeg of verwijderen bij een ploeg */
 async function adminTeams(host, info) {
