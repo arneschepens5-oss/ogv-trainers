@@ -59,6 +59,8 @@ route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
     : `<p class="hint" style="margin:0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
   <div class="sec"><h2>Leden (${info.members.length})</h2><div class="list">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${esc(m.teams || "nog geen ploeg")}</small></span>
     ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : `<button class="link" type="button" data-role="${m.user_id}" data-r="${m.role === "admin" ? "trainer" : "admin"}">${m.role === "admin" ? "Geen beheerder meer" : "Beheerder maken"}</button><button class="link danger" type="button" data-rm="${m.user_id}" data-mail="${esc(m.email || "")}">Toegang intrekken</button>`}</div>`).join("")}</div></div>`;
+  v.insertAdjacentHTML("afterbegin", `<div id="adm-fb"></div>`); adminFeedback($("#adm-fb"));
+  v.insertAdjacentHTML("beforeend", `<div class="sec panel" id="adm-db"></div>`); dbCheck($("#adm-db"));
   v.insertAdjacentHTML("beforeend", `<div class="sec panel" id="adm-rbfa"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van OG Vorselaar op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
     <div class="sec" id="adm-teams"><h2>Ploegen en trainers</h2><p class="hint" style="margin-top:0">Laden…</p></div>`);
   $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render());
@@ -72,6 +74,45 @@ route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
   $$("[data-role]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.role, r: b.dataset.r }, "Rol aangepast."));
   $$("[data-rm]", v).forEach(b => b.onclick = () => { if (confirm(`Toegang intrekken voor ${b.dataset.mail}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) rpc("club_set_member", { uid: b.dataset.rm, r: null }, "Toegang ingetrokken."); });
 } });
+
+/* meldingen van trainers */
+async function adminFeedback(host) {
+  if (mode === "demo") return;
+  const { data, error } = await sb.from("feedback").select("*").order("created_at", { ascending: false }).limit(60);
+  if (error) { host.innerHTML = ""; return; }
+  const open = data.filter(x => x.status !== "afgehandeld"), show = host.dataset.all ? data : open;
+  host.innerHTML = `<div class="panel sec fbpanel" style="margin-top:0"><div class="row"><h2 style="margin:0">Meldingen van trainers</h2>${open.length ? `<span class="pill w">${open.length} nieuw</span>` : ""}<span class="spacer"></span>${data.length > open.length ? `<button class="link" type="button" id="fball">${host.dataset.all ? "Alleen open meldingen" : "Ook afgehandelde tonen"}</button>` : ""}</div>
+    ${show.length ? `<div class="list" style="margin-top:10px">${show.map(x => `<div class="item static fbit${x.status === "afgehandeld" ? " done" : ""}"><span class="main"><b>${esc(x.kind || "Melding")} · ${esc(x.name || x.email || "Trainer")}</b>
+      <span class="fbmsg">${esc(x.message)}</span><small>${new Date(x.created_at).toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" })} · ${esc(x.page || "")}${x.info?.versie ? " · versie " + esc(x.info.versie) : ""}${x.info?.toestel ? ` · <button class="link" type="button" data-inf="${x.id}">technische info</button>` : ""}</small></span>
+      <button class="btn ghost small" type="button" data-st="${x.id}">${x.status === "afgehandeld" ? "Heropenen" : "Afgehandeld"}</button></div>`).join("")}</div>` : `<p class="hint" style="margin:8px 0 0">Geen open meldingen. Trainers melden iets via "Probleem melden" onderaan het menu.</p>`}</div>`;
+  const all = $("#fball", host); if (all) all.onclick = () => { if (host.dataset.all) delete host.dataset.all; else host.dataset.all = "1"; adminFeedback(host); };
+  $$("[data-st]", host).forEach(b => b.onclick = async () => { const x = data.find(z => z.id === b.dataset.st), st = x.status === "afgehandeld" ? "nieuw" : "afgehandeld";
+    const { error: e2 } = await sb.from("feedback").update({ status: st }).eq("id", x.id); if (e2) toast(e2.message); else adminFeedback(host); });
+  $$("[data-inf]", host).forEach(b => b.onclick = () => { const x = data.find(z => z.id === b.dataset.inf);
+    dialog(`<div class="dlg"><h2>Technische info</h2><pre class="fbpre">${esc(JSON.stringify(x.info, null, 2))}</pre><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`); });
+}
+/* databasecontrole: welke onderdelen staan klaar in Supabase? */
+async function dbCheck(host) {
+  if (mode === "demo") { host.remove(); return; }
+  const C = [
+    ["Ploegen, spelers en kalender", () => sb.from("teams").select("id").limit(1)],
+    ["Trainingsplan, verslagen en scouting", () => sb.from("events").select("plan,report,lineup").limit(1)],
+    ["Mijn opslag en oefeningen", () => sb.from("trainer_items").select("id").limit(1)],
+    ["Bestanden en afbeeldingen", () => sb.storage.from("trainer-files").list(user.id, { limit: 1 })],
+    ["RBFA-koppeling", () => sb.from("teams").select("rbfa_team_id,sheet_url").limit(1)],
+    ["Clubcode, ouderlinks en aanwezigheid van ouders", () => sb.from("players").select("parent_token").limit(1)],
+    ["Uitgebreide evaluaties", () => sb.from("evaluations").select("details").limit(1)],
+    ["Oefenstof delen met de club", () => sb.from("trainer_items").select("shared").limit(1)],
+    ["Trainers beheren per ploeg", () => sb.rpc("admin_teams")],
+    ["Namen van trainers", async () => { const r = await sb.rpc("club_admin_info"); if (r.error) return r; return (r.data?.members || []).every(m => "name" in m) ? r : { error: { message: "oude versie" } }; }],
+    ["Probleem melden", () => sb.from("feedback").select("id").limit(1)]];
+  host.innerHTML = `<h2>Databasecontrole</h2><p class="hint" style="margin-top:0">Bezig met controleren…</p>`;
+  const res = []; for (const [l, fn] of C) { let ok = false; try { const r = await fn(); ok = !r.error; } catch (e) { ok = false; } res.push([l, ok]); }
+  const bad = res.filter(r => !r[1]).length;
+  host.innerHTML = `<div class="row"><h2 style="margin:0">Databasecontrole</h2><span class="pill ${bad ? "loss" : "w"}">${bad ? bad + " ontbreekt" : "alles in orde"}</span></div>
+    <div class="dbchk">${res.map(([l, ok]) => `<span class="${ok ? "ok" : "bad"}">${ok ? "✓" : "✕"} ${esc(l)}</span>`).join("")}</div>
+    ${bad ? `<div class="share">${IC.eye}<div><b style="color:var(--ink)">Er ontbreekt iets in de database.</b> Voer het volledige script <a href="ploeg/supabase-setup.sql" download="ogv-database.sql">ogv-database.sql</a> uit in Supabase (SQL Editor → plakken → Run). Het is veilig om dit opnieuw te doen: wat al bestaat, blijft bestaan. Ververs daarna deze pagina.</div></div>` : `<p class="hint" style="margin:8px 0 0">De database is volledig bijgewerkt.</p>`}`;
+}
 
 /* beheerder: alle ploegen van de club aanmaken op basis van RBFA */
 const ageOf = n => { const m = String(n || "").match(/U\s?(\d{1,2})/i); return m ? +m[1] : null; };

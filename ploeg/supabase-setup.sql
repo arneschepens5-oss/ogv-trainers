@@ -305,7 +305,9 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- bestaande accounts werden door de beheerder aangemaakt: die zijn allemaal lid
-insert into public.club_members(user_id, email) select id, email from auth.users on conflict do nothing;
+-- (alleen bij de allereerste installatie, zodat dit script veilig opnieuw uitgevoerd kan worden)
+insert into public.club_members(user_id, email) select id, email from auth.users
+  where not exists (select 1 from public.club_members) on conflict do nothing;
 update public.club_members set role = 'admin' where lower(email) = lower('arneschepens5@gmail.com');
 insert into public.club_settings(key, value) values ('invite_code', 'OGV-' || upper(substr(md5(random()::text), 1, 6))) on conflict do nothing;
 
@@ -544,3 +546,25 @@ begin
         from public.team_trainers tt left join auth.users u on u.id = tt.user_id where tt.team_id = t.id), '[]'::json))
     order by t.season desc nulls last, t.name) from public.teams t), '[]'::json);
 end $$;
+
+-- =====================================================================
+-- Versie 10: meldingen van trainers ("Probleem melden") voor de beheerder.
+-- =====================================================================
+create table if not exists public.feedback (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid default auth.uid() references auth.users(id) on delete set null,
+  email      text,
+  name       text,
+  kind       text,
+  page       text,
+  message    text not null,
+  info       jsonb not null default '{}',
+  status     text not null default 'nieuw',
+  created_at timestamptz not null default now()
+);
+alter table public.feedback enable row level security;
+drop policy if exists "feedback geven" on public.feedback;
+drop policy if exists "feedback beheren" on public.feedback;
+create policy "feedback geven"   on public.feedback for insert to authenticated with check (user_id = auth.uid());
+create policy "feedback beheren" on public.feedback for all to authenticated using (public.is_admin()) with check (public.is_admin());
+grant select, insert, update, delete on public.feedback to authenticated;

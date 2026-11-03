@@ -8,11 +8,42 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx
 
 /* ============ gegevenslaag ============ */
 let sb = null, mode = null, user = null, db = null;
+/* zonder verbinding (langs het veld) gaan wijzigingen naar een wachtrij op het toestel en worden ze later verstuurd */
+const OUTBOX_KEY = "ogv-outbox";
+const isNetErr = e => !navigator.onLine || /failed to fetch|networkerror|network request|load failed|fetch|timeout|ERR_INTERNET|ERR_NETWORK/i.test(String(e?.message || e || ""));
+const outbox = {
+  get() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || "[]"); } catch (e) { return []; } },
+  set(a) { try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(a)); } catch (e) {} outboxBanner(); },
+  add(op) { const a = this.get(), k = op.t + ":" + JSON.stringify(op.key);
+    const i = op.kind === "save" ? a.findIndex(x => x.kind === "save" && x.t + ":" + JSON.stringify(x.key) === k) : -1;
+    if (i >= 0) a[i] = op; else a.push(op); this.set(a);
+    if (!outbox.warned) { outbox.warned = true; toast("Geen verbinding: je wijziging staat veilig op je toestel en wordt verstuurd zodra je weer online bent."); } },
+  busy: false, warned: false,
+  async flush() { if (this.busy || !sb || !user || !navigator.onLine) return; const a = this.get(); if (!a.length) return; this.busy = true; let done = 0;
+    try { for (const op of a) {
+        let r; if (op.kind === "save") r = await sb.from(op.t).upsert(op.row, { onConflict: KEYS[op.t].join(",") });
+        else { let q = sb.from(op.t).delete(); for (const k in op.key) q = q.eq(k, op.key[k]); r = await q; }
+        if (r.error && isNetErr(r.error)) break; /* nog steeds offline */
+        if (r.error) console.warn("Niet verstuurd", op, r.error);
+        done++; }
+      const rest = this.get().slice(done); this.set(rest); if (done) { outbox.warned = false; toast(rest.length ? `${done} wijzigingen verstuurd, ${rest.length} wachten nog.` : "Je wijzigingen zijn verstuurd."); }
+    } finally { this.busy = false; } }
+};
+function outboxBanner() { const n = outbox.get().length; let b = document.getElementById("obx");
+  if (!n) { if (b) b.remove(); return; }
+  if (!b) { b = document.createElement("div"); b.id = "obx"; b.className = "obx"; b.setAttribute("role", "status"); document.body.appendChild(b); }
+  b.innerHTML = `<span>${navigator.onLine ? "Bezig met versturen…" : "Geen verbinding"} · ${n} ${n === 1 ? "wijziging wacht" : "wijzigingen wachten"} op je toestel</span><button type="button">Nu proberen</button>`;
+  b.querySelector("button").onclick = () => outbox.flush(); }
+addEventListener("online", () => { outboxBanner(); outbox.flush(); }); addEventListener("offline", outboxBanner);
+setInterval(() => outbox.flush(), 30000);
 const SBDB = {
   async list(t, m = {}) { let q = sb.from(t).select("*"); for (const k in m) q = q.eq(k, m[k]); const { data, error } = await q; if (error) throw error; return data || []; },
-  async save(t, row) { const { error } = await sb.from(t).upsert(row, { onConflict: KEYS[t].join(",") }); if (error) throw error; },
-  async insert(t, row) { const { error } = await sb.from(t).insert(row); if (error) throw error; },
-  async del(t, m) { let q = sb.from(t).delete(); for (const k in m) q = q.eq(k, m[k]); const { error } = await q; if (error) throw error; },
+  async save(t, row) { const op = { kind: "save", t, row: JSON.parse(JSON.stringify(row)), key: Object.fromEntries(KEYS[t].map(k => [k, row[k]])) };
+    if (!navigator.onLine) { outbox.add(op); return; }
+    const { error } = await sb.from(t).upsert(row, { onConflict: KEYS[t].join(",") }); if (error) { if (isNetErr(error)) { outbox.add(op); return; } throw error; } },
+  async insert(t, row) { const { error } = await sb.from(t).insert(row); if (error) { if (isNetErr(error) && KEYS[t]) { outbox.add({ kind: "save", t, row: JSON.parse(JSON.stringify(row)), key: Object.fromEntries(KEYS[t].map(k => [k, row[k]])) }); return; } throw error; } },
+  async del(t, m) { if (!navigator.onLine) { outbox.add({ kind: "del", t, key: m }); return; }
+    let q = sb.from(t).delete(); for (const k in m) q = q.eq(k, m[k]); const { error } = await q; if (error) { if (isNetErr(error)) { outbox.add({ kind: "del", t, key: m }); return; } throw error; } },
   async addTrainer(team, mail) { const { data, error } = await sb.rpc("add_trainer", { t: team, mail }); if (error) throw error; return data; }
 };
 const DEMO_KEY = "ogv-platform-demo-v2";
@@ -65,11 +96,13 @@ async function hydrateImgs(root = document) {
 }
 let hyT; new MutationObserver(() => { clearTimeout(hyT); hyT = setTimeout(() => hydrateImgs().catch(() => {}), 40); }).observe(document.documentElement, { childList: true, subtree: true });
 const items = {
+  _c: {}, bust(kind) { if (kind) delete this._c[kind]; else this._c = {}; },
   async list(kind) { const rows = await db.list("trainer_items", mode === "demo" ? { kind } : { kind, user_id: user.id }); return rows.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || "")); },
-  async save(row) { row.updated_at = new Date().toISOString(); if (!row.id) row.id = uid(); if (mode === "demo") row.user_id = "demo"; else row.user_id = user.id; await db.save("trainer_items", row); return row; },
-  async del(row) { if (row.file_path) await files.remove(row.file_path).catch(() => {}); await db.del("trainer_items", { id: row.id }); },
+  async save(row) { this.bust(row.kind); row.updated_at = new Date().toISOString(); if (!row.id) row.id = uid(); if (mode === "demo") row.user_id = "demo"; else row.user_id = user.id; await db.save("trainer_items", row); return row; },
+  async del(row) { this.bust(row.kind); if (row.file_path) await files.remove(row.file_path).catch(() => {}); await db.del("trainer_items", { id: row.id }); },
   /* eigen items plus wat andere trainers van de club gedeeld hebben */
-  async listAll(kind) { const own = await this.list(kind); if (mode === "demo") { own.forEach(r => { if (r.data && !r.data.name && kind === "oefening") r.data.name = r.title; }); return own; }
+  async listAll(kind) { const c = this._c[kind]; if (c && Date.now() - c.t < 5 * 60e3) return c.rows.slice(); const rows = await this._listAll(kind); this._c[kind] = { t: Date.now(), rows }; return rows.slice(); },
+  async _listAll(kind) { const own = await this.list(kind); if (mode === "demo") { own.forEach(r => { if (r.data && !r.data.name && kind === "oefening") r.data.name = r.title; }); return own; }
     let sh = []; try { sh = await db.list("trainer_items", { kind, shared: true }); } catch (e) { /* ogv-update-v7 nog niet uitgevoerd */ }
     own.concat(sh).forEach(r => { if (r.data && !r.data.name && kind === "oefening") r.data.name = r.title; });
     const ids = new Set(own.map(r => r.id)); return own.concat(sh.filter(r => !ids.has(r.id)).sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))); },
@@ -116,7 +149,7 @@ const f1 = n => n == null || isNaN(n) ? "–" : (Math.round(n * 10) / 10).toLoca
 const seasonNow = () => { const d = new Date(), y = d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1; return y + "-" + (y + 1); };
 const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 let toastT; function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2800); }
-async function safe(fn, ok) { try { const r = await fn(); if (ok) toast(ok); return r; } catch (e) { console.error(e); toast("Opslaan mislukt: " + (e.message || "controleer je verbinding")); } }
+async function safe(fn, ok) { try { const r = await fn(); if (ok) toast(ok); return r; } catch (e) { console.error(e); toast(isNetErr(e) ? "Geen verbinding: dit kon niet opgeslagen worden. Probeer opnieuw zodra je weer bereik hebt." : "Opslaan mislukt: " + (e.message || "onbekende fout")); } }
 function debounce(fn, ms = 600) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function dialog(html, cls = "") { const d = $("#dlg"); d.className = cls; d.innerHTML = html; d.showModal(); $$("[data-close]", d).forEach(b => b.onclick = () => d.close()); return d; }
 function download(name, text, type = "text/csv;charset=utf-8") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
@@ -272,7 +305,7 @@ function shell() {
     <a class="brand" href="#/start"><img src="icons/icon-192.png" alt=""><span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="foot">${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
+    <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
     <header class="topbar"><img src="icons/icon-192.png" alt="">${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -283,13 +316,14 @@ function shell() {
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div><nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="sheetfoot"><div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
+    <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   bindThemeSwitch();
   $$("[data-logout]").forEach(b => b.onclick = logout);
   $$("[data-setname], .acct .who b").forEach(b => b.onclick = () => mode !== "demo" && nameForm());
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
+  $$("[data-report]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); reportProblem(); });
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
 }
 async function render() {
@@ -311,6 +345,28 @@ addEventListener("hashchange", render);
 
 function backLink(href, label) { return `<a class="crumb" href="${href}">${IC.back}${esc(label)}</a>`; }
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }
+
+/* ============ probleem melden ============ */
+const ERRLOG = [];
+addEventListener("error", e => { ERRLOG.push(String(e.message || e.error || "fout").slice(0, 200)); if (ERRLOG.length > 6) ERRLOG.shift(); });
+addEventListener("unhandledrejection", e => { ERRLOG.push(String(e.reason?.message || e.reason || "fout").slice(0, 200)); if (ERRLOG.length > 6) ERRLOG.shift(); });
+const appVersion = () => (document.querySelector('script[src*="core.js"]')?.src.match(/v=(\d+)/) || [])[1] || "?";
+function reportProblem() {
+  const info = { pagina: location.hash || "#/start", versie: appVersion(), toestel: navigator.userAgent, scherm: `${innerWidth}×${innerHeight}`, thema: document.documentElement.dataset.theme, online: navigator.onLine, ploeg: S.team?.name || null, fouten: ERRLOG.slice() };
+  const d = dialog(`<form><h2>Probleem melden</h2><p class="muted" style="margin:0">Iets werkt niet, is onduidelijk of kan beter? Laat het weten. De beheerder krijgt je melding te zien.</p>
+    <div class="chips" id="fbk">${["Er werkt iets niet", "Idee of wens", "Vraag"].map((k, i) => `<button type="button" class="chip" data-k="${k}" aria-pressed="${i === 0}">${k}</button>`).join("")}</div>
+    <label class="f">Wat gebeurde er?<textarea name="msg" rows="5" required placeholder="bv. Als ik op Bewaren tik bij een oefening, gebeurt er niets."></textarea></label>
+    <label class="check"><input type="checkbox" name="tech" checked> Technische info meesturen (pagina, toestel, laatste foutmeldingen)</label>
+    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Versturen</button></div></form>`);
+  let kind = "Er werkt iets niet"; $$("#fbk [data-k]", d).forEach(b => b.onclick = () => { kind = b.dataset.k; $$("#fbk [data-k]", d).forEach(z => z.setAttribute("aria-pressed", z === b)); });
+  $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = ev.target, msg = f.msg.value.trim(); if (!msg) return;
+    if (mode === "demo") { d.close(); toast("In de demo wordt niets verstuurd."); return; }
+    const row = { message: msg, kind, page: info.pagina, email: user?.email || null, name: myName() || null, info: f.tech.checked ? info : {} };
+    const { error } = await sb.from("feedback").insert(row);
+    if (error) { const txt = `[${kind}] ${msg}\n\n${f.tech.checked ? JSON.stringify(info) : ""}`; navigator.clipboard?.writeText(txt).catch(() => {});
+      toast(isNetErr(error) ? "Geen verbinding. Je melding is gekopieerd: plak ze later of stuur ze via WhatsApp." : "Versturen lukte niet. Je melding is gekopieerd: stuur ze naar de beheerder."); return; }
+    d.close(); toast("Bedankt! Je melding is verstuurd."); };
+}
 
 /* ============ naam van de trainer (in het account, zodat andere trainers en de beheerder je herkennen) ============ */
 const myName = () => (user?.user_metadata?.full_name || "").trim();
