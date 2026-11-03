@@ -44,27 +44,33 @@ async function clubStatus() {
 }
 
 /* ============ clubbeheer ============ */
-route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
+/* ============ beheer: aparte pagina's voor meldingen, toegang, ploegen en systeem ============ */
+const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang en leden"], ["ploegen", "Ploegen en trainers"], ["systeem", "Systeem"]];
+async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
+route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
-  v.innerHTML = head("Clubbeheer", "Laden…");
-  let info; if (mode === "demo") info = { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
-  else { const { data, error } = await sb.rpc("club_admin_info"); if (error) { v.innerHTML = head("Clubbeheer", "") + `<div class="empty"><b>Laden mislukt</b>${esc(error.message)}</div>`; return; } info = data; }
+  const tab = ADM_TABS.some(t => t[0] === id) ? id : "meldingen";
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · OG Vorselaar</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", systeem: "Systeem" }[tab]}</h1></div></div>
+    <nav class="admtabs" aria-label="Beheer">${ADM_TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
+  const host = $("#admv");
+  const getInfo = async () => { if (mode === "demo") return { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
+    const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
+  if (tab === "meldingen") return adminFeedback(host);
+  if (tab === "systeem") { host.innerHTML = `<div class="panel" id="adm-db"></div>`; return dbCheck($("#adm-db")); }
+  let info; try { info = await getInfo(); } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message)}</div>`; return; }
+  if (tab === "ploegen") {
+    host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van OG Vorselaar op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
+      <div class="sec" id="adm-teams"><p class="hint">Laden…</p></div>`;
+    $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render()); return adminTeams($("#adm-teams"), info); }
   const link = location.origin + location.pathname + "#/aanmelden";
-  v.innerHTML = head("Clubbeheer", "Wie toegang heeft tot de clubgegevens: uitslagen, verslagen en de scoutingsdatabase.") +
-  `<div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan op ${esc(location.host)} met deze code. Deel ze alleen met trainers van de club.</p>
-    <div class="codebox"><b id="code">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
-    <div class="row" style="margin-top:12px"><button class="btn ghost small" type="button" id="share">${IC.out}Uitnodiging delen</button><button class="link" type="button" id="newcode">Nieuwe code maken</button><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding voor trainers (afdrukken)</a></div>
-    <p class="hint">Een nieuwe code maken stopt de oude. Wie al lid is, blijft lid.</p></div>
-  <div class="panel"><h2>Wachten op toegang</h2>${info.waiting?.length ? `<div class="list">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
-    : `<p class="hint" style="margin:0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
-  <div class="sec"><h2>Leden (${info.members.length})</h2><div class="list">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${esc(m.teams || "nog geen ploeg")}</small></span>
-    ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : `<button class="link" type="button" data-role="${m.user_id}" data-r="${m.role === "admin" ? "trainer" : "admin"}">${m.role === "admin" ? "Geen beheerder meer" : "Beheerder maken"}</button><button class="link danger" type="button" data-rm="${m.user_id}" data-mail="${esc(m.email || "")}">Toegang intrekken</button>`}</div>`).join("")}</div></div>`;
-  v.insertAdjacentHTML("afterbegin", `<div id="adm-fb"></div>`); adminFeedback($("#adm-fb"));
-  v.insertAdjacentHTML("beforeend", `<div class="sec panel" id="adm-db"></div>`); dbCheck($("#adm-db"));
-  v.insertAdjacentHTML("beforeend", `<div class="sec panel" id="adm-rbfa"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van OG Vorselaar op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
-    <div class="sec" id="adm-teams"><h2>Ploegen en trainers</h2><p class="hint" style="margin-top:0">Laden…</p></div>`);
-  $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render());
-  adminTeams($("#adm-teams"), info);
+  host.innerHTML = `<div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan met deze code. Deel ze alleen met trainers van de club.</p>
+      <div class="codebox"><b id="code">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
+      <div class="row" style="margin-top:12px"><button class="btn ghost small" type="button" id="share">${IC.out}Uitnodiging delen</button><button class="link" type="button" id="newcode">Nieuwe code maken</button><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a></div>
+      <p class="hint">Een nieuwe code maken stopt de oude. Wie al lid is, blijft lid.</p></div>
+    <div class="panel"><div class="row"><h2 style="margin:0">Wachten op toegang</h2>${info.waiting?.length ? `<span class="pill w">${info.waiting.length}</span>` : ""}</div>${info.waiting?.length ? `<div class="list" style="margin-top:10px">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
+      : `<p class="hint" style="margin:8px 0 0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
+    <div class="sec"><h2>Leden (${info.members.length})</h2><div class="list">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${esc(m.teams || "nog geen ploeg")}</small></span>
+      ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : `<button class="link" type="button" data-role="${m.user_id}" data-r="${m.role === "admin" ? "trainer" : "admin"}">${m.role === "admin" ? "Geen beheerder meer" : "Beheerder maken"}</button><button class="link danger" type="button" data-rm="${m.user_id}" data-mail="${esc(m.name || m.email || "")}">Toegang intrekken</button>`}</div>`).join("")}</div></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
   $("#share").onclick = () => { const txt = `Je bent uitgenodigd voor OGV Trainers, het trainersplatform van OG Vorselaar.\nMaak je account aan op ${link} met de clubcode ${info.code}`;
@@ -76,24 +82,36 @@ route("clubbeheer", { title: "Clubbeheer", auth: true, render: async v => {
 } });
 
 /* meldingen van trainers */
+let FB_F = "open";
 async function adminFeedback(host) {
-  if (mode === "demo") return;
-  const { data, error } = await sb.from("feedback").select("*").order("created_at", { ascending: false }).limit(60);
-  if (error) { host.innerHTML = ""; return; }
-  const open = data.filter(x => x.status !== "afgehandeld"), show = host.dataset.all ? data : open;
-  host.innerHTML = `<div class="panel sec fbpanel" style="margin-top:0"><div class="row"><h2 style="margin:0">Meldingen van trainers</h2>${open.length ? `<span class="pill w">${open.length} nieuw</span>` : ""}<span class="spacer"></span>${data.length > open.length ? `<button class="link" type="button" id="fball">${host.dataset.all ? "Alleen open meldingen" : "Ook afgehandelde tonen"}</button>` : ""}</div>
-    ${show.length ? `<div class="list" style="margin-top:10px">${show.map(x => `<div class="item static fbit${x.status === "afgehandeld" ? " done" : ""}"><span class="main"><b>${esc(x.kind || "Melding")} · ${esc(x.name || x.email || "Trainer")}</b>
-      <span class="fbmsg">${esc(x.message)}</span><small>${new Date(x.created_at).toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" })} · ${esc(x.page || "")}${x.info?.versie ? " · versie " + esc(x.info.versie) : ""}${x.info?.toestel ? ` · <button class="link" type="button" data-inf="${x.id}">technische info</button>` : ""}</small></span>
-      <button class="btn ghost small" type="button" data-st="${x.id}">${x.status === "afgehandeld" ? "Heropenen" : "Afgehandeld"}</button></div>`).join("")}</div>` : `<p class="hint" style="margin:8px 0 0">Geen open meldingen. Trainers melden iets via "Probleem melden" onderaan het menu.</p>`}</div>`;
-  const all = $("#fball", host); if (all) all.onclick = () => { if (host.dataset.all) delete host.dataset.all; else host.dataset.all = "1"; adminFeedback(host); };
+  let data = [];
+  if (mode === "demo") data = [{ id: "1", kind: "Er werkt iets niet", name: "Jelle Lauwers", email: "jelle@voorbeeld.be", page: "#/trainingen", message: "Als ik op Bewaren tik bij een oefening, gebeurt er niets.", info: { versie: "38", toestel: "iPhone Safari", scherm: "390×844" }, status: "nieuw", created_at: new Date(Date.now() - 36e5).toISOString() },
+    { id: "2", kind: "Idee of wens", name: "Steven Deneef", email: "steven@voorbeeld.be", page: "#/bibliotheek", message: "Kunnen we oefeningen ook per seizoen markeren?", info: {}, status: "afgehandeld", created_at: new Date(Date.now() - 864e5 * 3).toISOString() }];
+  else { const r = await sb.from("feedback").select("*").order("created_at", { ascending: false }).limit(200);
+    if (r.error) { host.innerHTML = `<div class="share">${IC.eye}<div>${/feedback|relation|schema/i.test(r.error.message) ? "Meldingen staan nog niet klaar in de database. Voer <b>ogv-database.sql</b> uit in Supabase (zie Systeem)." : esc(r.error.message)}</div></div>`; return; } data = r.data; }
+  const open = data.filter(x => x.status !== "afgehandeld"), done = data.length - open.length; S.fbOpen = open.length;
+  const list = FB_F === "open" ? open : FB_F === "klaar" ? data.filter(x => x.status === "afgehandeld") : data;
+  const KC = { "Er werkt iets niet": "var(--s-bad,#E11D48)", "Idee of wens": "var(--yellow)", "Vraag": "#38BDF8" };
+  const ago = d => { const m = Math.round((Date.now() - new Date(d)) / 6e4); return m < 60 ? `${Math.max(1, m)} min geleden` : m < 1440 ? `${Math.round(m / 60)} u geleden` : new Date(d).toLocaleDateString("nl-BE", { day: "numeric", month: "short" }); };
+  host.innerHTML = `<div class="fbtop"><div class="seg fbseg" role="group" aria-label="Filter">${[["open", `Open (${open.length})`], ["klaar", `Afgehandeld (${done})`], ["alle", `Alle (${data.length})`]].map(([k, l]) => `<button type="button" data-fbf="${k}" aria-pressed="${FB_F === k}">${l}</button>`).join("")}</div>
+      <span class="hint">Trainers melden iets via <b>Probleem melden</b> onderaan hun menu.</span></div>
+    ${list.length ? `<div class="fbcards">${list.map(x => `<article class="fbcard${x.status === "afgehandeld" ? " done" : ""}" style="--kc:${KC[x.kind] || "var(--muted)"}">
+        <header><span class="fbkind">${esc(x.kind || "Melding")}</span><span class="hint">${ago(x.created_at)}</span></header>
+        <p class="fbmsg">${esc(x.message)}</p>
+        <div class="fbmeta"><span class="av sm" aria-hidden="true">${esc((x.name || x.email || "?")[0].toUpperCase())}</span><span><b>${esc(x.name || x.email || "Trainer")}</b>${x.name && x.email ? `<small>${esc(x.email)}</small>` : ""}</span></div>
+        <div class="fbacts">${x.page ? `<a class="btn ghost small" href="${esc(x.page)}">Open pagina</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Je melding in OGV Trainers")}&body=${encodeURIComponent("Dag " + (x.name || "") + ",\n\nBedankt voor je melding:\n\"" + x.message + "\"\n\n")}">Antwoorden</a>` : ""}
+          ${Object.keys(x.info || {}).length ? `<button class="link" type="button" data-inf="${x.id}">Technische info</button>` : ""}<span class="spacer"></span><button class="btn small${x.status === "afgehandeld" ? " ghost" : ""}" type="button" data-st="${x.id}">${x.status === "afgehandeld" ? "Heropenen" : "Afgehandeld"}</button></div></article>`).join("")}</div>`
+      : `<div class="empty"><b>${FB_F === "open" ? "Geen open meldingen" : "Niets gevonden"}</b>${FB_F === "open" ? "Alles is afgehandeld. Nieuwe meldingen verschijnen hier en als getal in het menu." : ""}</div>`}`;
+  $$("[data-fbf]", host).forEach(b => b.onclick = () => { FB_F = b.dataset.fbf; adminFeedback(host); });
   $$("[data-st]", host).forEach(b => b.onclick = async () => { const x = data.find(z => z.id === b.dataset.st), st = x.status === "afgehandeld" ? "nieuw" : "afgehandeld";
-    const { error: e2 } = await sb.from("feedback").update({ status: st }).eq("id", x.id); if (e2) toast(e2.message); else adminFeedback(host); });
+    if (mode === "demo") { x.status = st; toast("In de demo wordt dit niet bewaard."); return; }
+    const { error } = await sb.from("feedback").update({ status: st }).eq("id", x.id); if (error) toast(error.message); else { await adminFeedback(host); shell(); render(); } });
   $$("[data-inf]", host).forEach(b => b.onclick = () => { const x = data.find(z => z.id === b.dataset.inf);
-    dialog(`<div class="dlg"><h2>Technische info</h2><pre class="fbpre">${esc(JSON.stringify(x.info, null, 2))}</pre><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`); });
+    dialog(`<div class="dlg"><h2>Technische info</h2><dl class="fbinfo">${Object.entries(x.info || {}).map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(val) ? (val.join(" · ") || "–") : String(val))}</dd>`).join("")}</dl><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`); });
 }
 /* databasecontrole: welke onderdelen staan klaar in Supabase? */
 async function dbCheck(host) {
-  if (mode === "demo") { host.remove(); return; }
+  if (mode === "demo") { host.innerHTML = `<h2>Databasecontrole</h2><p class="hint">In de demo is er geen database om te controleren.</p>`; return; }
   const C = [
     ["Ploegen, spelers en kalender", () => sb.from("teams").select("id").limit(1)],
     ["Trainingsplan, verslagen en scouting", () => sb.from("events").select("plan,report,lineup").limit(1)],
@@ -157,7 +175,7 @@ async function adminTeams(host, info) {
   if (mode === "demo") teams = [{ id: "a", name: "Demoploeg U9", category: "U9", season: "2026-2027", trainers: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer" }] }, { id: "b", name: "Demoploeg U11", category: "U11", season: "2026-2027", trainers: [{ user_id: "x", email: "trainer.u11@ogvorselaar.be" }] }];
   else { const { data, error } = await sb.rpc("admin_teams"); if (error) { host.innerHTML = `<h2>Ploegen en trainers</h2><div class="share">${IC.eye}<div>${/admin_teams|function/i.test(error.message) ? "Voer eerst het databasescript <b>ogv-update-v8.sql</b> uit in Supabase om trainers van ploegen te beheren." : esc(error.message)}</div></div>`; return; } teams = data || []; }
   const members = info.members || [];
-  host.innerHTML = `<h2>Ploegen en trainers</h2><p class="hint" style="margin-top:0">Voeg trainers toe aan een ploeg, verplaats ze naar een andere ploeg of haal ze weg. Een trainer die je weghaalt, blijft lid van de club en houdt zijn eigen oefeningen.</p>
+  host.innerHTML = `<p class="hint" style="margin-top:0">Voeg trainers toe aan een ploeg, verplaats ze naar een andere ploeg of haal ze weg. Een trainer die je weghaalt, blijft lid van de club en houdt zijn eigen oefeningen.</p>
     <div class="admteams">${teams.map(t => { const ids = new Set(t.trainers.map(x => x.user_id)), free = members.filter(m => !ids.has(m.user_id));
       return `<div class="panel admteam"><div class="row"><h3>${esc(t.name)}</h3><span class="hint">${esc([t.category, t.season].filter(Boolean).join(" · "))}</span></div>
         <div class="list">${t.trainers.map(x => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((x.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(x.name || x.email || "")}</b><small>${x.name ? esc(x.email || "") : ""}${x.user_id === user?.id ? (x.name ? " · " : "") + "jij" : ""}</small></span>
