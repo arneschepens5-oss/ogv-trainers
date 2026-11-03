@@ -311,20 +311,36 @@ function backLink(href, label) { return `<a class="crumb" href="${href}">${IC.ba
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }
 
 /* ============ ploeg kiezen ============ */
+/* nog geen ploeg: vragen of een collega de ploeg al aanmaakte, zodat er geen dubbele ploeg ontstaat */
+function noTeamHelp(host, done) {
+  const mail = user?.email || "", msg = `Hoi! Kan je mij toevoegen als trainer van onze ploeg in OGV Trainers? Ga naar "Ploeg en trainers" en vul bij "Trainers van deze ploeg" mijn e-mailadres in: ${mail}`;
+  const ask = () => { host.innerHTML = `<div class="nth"><b>Heeft een trainer van jouw ploeg de ploeg al aangemaakt in de app?</b>
+      <div class="nthb"><button class="btn" type="button" id="nty">Ja, een collega heeft ze al</button><button class="btn ghost" type="button" id="ntn">Nee, ik maak ze zelf aan</button><button class="link" type="button" id="ntq">Ik weet het niet</button></div></div>`;
+    $("#nty", host).onclick = yes; $("#ntq", host).onclick = yes; $("#ntn", host).onclick = () => { done && done(); teamForm(); }; };
+  const yes = () => { host.innerHTML = `<div class="nth"><b>Vraag je collega om je toe te voegen</b><p class="muted" style="margin:0">Een ploeg maak je best maar één keer aan, anders zitten spelers en wedstrijden verspreid. Je collega voegt je toe via <b>Ploeg en trainers</b> met dit e-mailadres:</p>
+      <div class="codebox"><b>${esc(mail)}</b><button class="btn ghost small" type="button" id="ntc">${IC.copy}Kopiëren</button></div>
+      <div class="nthb"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Vragen via WhatsApp</a><button class="btn ghost" type="button" id="ntr">${IC.rotate}Ik ben toegevoegd, kijk opnieuw</button></div>
+      <button class="link" type="button" id="ntb" style="align-self:flex-start">← Terug</button></div>`;
+    $("#ntc", host).onclick = () => navigator.clipboard?.writeText(mail).then(() => toast("E-mailadres gekopieerd."), () => toast(mail));
+    $("#ntb", host).onclick = ask;
+    $("#ntr", host).onclick = async () => { await loadTeams(); if (myTeams().length) { const t = myTeams()[0]; done && done(); await loadTeam(t.id); toast(`Welkom bij ${t.name}!`); render(); } else toast("Je bent nog niet toegevoegd. Vraag het nog eens aan je collega."); }; };
+  ask();
+}
 function viewNoTeam(v) {
   const ts = myTeams();
-  v.innerHTML = head("Kies je ploeg", ts.length ? "Met welke ploeg wil je werken?" : "Je bent nog aan geen ploeg gekoppeld. Maak je ploeg aan, of vraag een collega-trainer om je toe te voegen.") +
+  v.innerHTML = head("Kies je ploeg", ts.length ? "Met welke ploeg wil je werken?" : "Je bent nog aan geen ploeg gekoppeld.") +
     (ts.length ? `<div class="list">${ts.map(t => `<div class="item" data-team="${t.id}"><span class="num">${esc((t.category || "").slice(0, 4))}</span><span class="main"><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · "))}</small></span>${IC.chev}</div>`).join("")}</div>` : "") +
-    `<p style="margin-top:18px"><button class="btn" type="button" id="nt">${IC.plus}Nieuwe ploeg</button></p>`;
+    (ts.length || mode === "demo" ? `<p style="margin-top:18px"><button class="btn" type="button" id="nt">${IC.plus}Nieuwe ploeg</button></p>` : `<div class="panel" id="nth" style="margin-top:6px"></div>`);
   $$("[data-team]", v).forEach(x => x.onclick = async () => { await loadTeam(x.dataset.team); render(); });
-  $("#nt").onclick = () => teamForm();
+  const nt = $("#nt"); if (nt) nt.onclick = () => teamForm(); else noTeamHelp($("#nth"));
 }
 function pickTeam() {
   if (!db || (mode !== "demo" && !user)) { go("#/aanmelden"); return; }
-  const d = dialog(`<div class="dlg"><h2>Ploeg kiezen</h2><div class="list">${myTeams().map(t => `<div class="item" data-team="${t.id}"><span class="num">${esc((t.category || "").slice(0, 4))}</span><span class="main"><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · "))}</small></span>${t.id === S.team?.id ? IC.check : ""}</div>`).join("") || '<p class="muted">Nog geen ploegen.</p>'}</div>
-  <div class="row"><button class="btn ghost" type="button" id="nt">${IC.plus}Nieuwe ploeg</button><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`);
+  const d = dialog(`<div class="dlg"><h2>Ploeg kiezen</h2><div class="list">${myTeams().map(t => `<div class="item" data-team="${t.id}"><span class="num">${esc((t.category || "").slice(0, 4))}</span><span class="main"><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · "))}</small></span>${t.id === S.team?.id ? IC.check : ""}</div>`).join("") || '<div id="nth"></div>'}</div>
+  <div class="row">${myTeams().length || mode === "demo" ? `<button class="btn ghost" type="button" id="nt">${IC.plus}Nieuwe ploeg</button>` : ""}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`);
+  if (!myTeams().length && mode !== "demo") noTeamHelp($("#nth", d), () => d.close());
   $$("[data-team]", d).forEach(x => x.onclick = async () => { d.close(); await loadTeam(x.dataset.team); render(); });
-  $("#nt", d).onclick = () => { d.close(); teamForm(); };
+  const ntb = $("#nt", d); if (ntb) ntb.onclick = () => { d.close(); teamForm(); };
 }
 function teamForm(t) {
   const n = !t; t = t || { name: "", category: "", format: "5v5", season: seasonNow() };

@@ -931,3 +931,7 @@ dialog.exfull .exf{height:100%;padding:0;gap:0;display:flex;flex-direction:colum
 .cfpc span{font-weight:700;font-size:13px}.cfpc small{color:var(--muted)}
 [data-theme=light] .cftbl td{background:color-mix(in srgb,#E0B800 var(--h,0%),transparent)}
 [data-theme=light] .cftbl td:first-child{background:var(--card)}
+
+.nth{display:flex;flex-direction:column;gap:12px}.nth>b{font-size:17px}
+.nthb{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.nth .codebox b{font-size:16px;letter-spacing:0;word-break:break-all}
