@@ -568,3 +568,25 @@ drop policy if exists "feedback beheren" on public.feedback;
 create policy "feedback geven"   on public.feedback for insert to authenticated with check (user_id = auth.uid());
 create policy "feedback beheren" on public.feedback for all to authenticated using (public.is_admin()) with check (public.is_admin());
 grant select, insert, update, delete on public.feedback to authenticated;
+
+-- =====================================================================
+-- Versie 11: alleen de beheerder maakt ploegen aan, verwijdert ze en koppelt trainers.
+-- Trainers passen de instellingen, spelers en activiteiten van hun eigen ploeg nog wel zelf aan.
+-- =====================================================================
+drop policy if exists "ploeg maken" on public.teams;
+create policy "ploeg maken" on public.teams for insert to authenticated with check (public.is_admin());
+drop policy if exists "ploeg verwijderen" on public.teams;
+create policy "ploeg verwijderen" on public.teams for delete to authenticated using (public.is_admin());
+drop policy if exists "trainer verwijderen" on public.team_trainers;
+create policy "trainer verwijderen" on public.team_trainers for delete to authenticated using (public.is_admin());
+create or replace function public.add_trainer(t uuid, mail text) returns text
+language plpgsql security definer set search_path = public as $$
+declare uid uuid;
+begin
+  if not public.is_admin() then raise exception 'Alleen de beheerder kan trainers aan een ploeg koppelen.'; end if;
+  select id into uid from auth.users where lower(email) = lower(trim(mail));
+  if uid is null then return 'geen_account'; end if;
+  insert into public.club_members(user_id, email) values (uid, lower(trim(mail))) on conflict do nothing;
+  insert into public.team_trainers(team_id, user_id, email) values (t, uid, lower(trim(mail))) on conflict do nothing;
+  return 'ok';
+end $$;

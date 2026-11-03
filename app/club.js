@@ -91,7 +91,7 @@ async function adminFeedback(host) {
     if (r.error) { host.innerHTML = `<div class="share">${IC.eye}<div>${/feedback|relation|schema/i.test(r.error.message) ? "Meldingen staan nog niet klaar in de database. Voer <b>ogv-database.sql</b> uit in Supabase (zie Systeem)." : esc(r.error.message)}</div></div>`; return; } data = r.data; }
   const open = data.filter(x => x.status !== "afgehandeld"), done = data.length - open.length; S.fbOpen = open.length;
   const list = FB_F === "open" ? open : FB_F === "klaar" ? data.filter(x => x.status === "afgehandeld") : data;
-  const KC = { "Er werkt iets niet": "var(--s-bad,#E11D48)", "Idee of wens": "var(--yellow)", "Vraag": "#38BDF8" };
+  const KC = { "Er werkt iets niet": "var(--s-bad,#E11D48)", "Idee of wens": "var(--yellow)", "Vraag": "#38BDF8", "Toegang tot ploeg": "#22C55E" };
   const ago = d => { const m = Math.round((Date.now() - new Date(d)) / 6e4); return m < 60 ? `${Math.max(1, m)} min geleden` : m < 1440 ? `${Math.round(m / 60)} u geleden` : new Date(d).toLocaleDateString("nl-BE", { day: "numeric", month: "short" }); };
   host.innerHTML = `<div class="fbtop"><div class="seg fbseg" role="group" aria-label="Filter">${[["open", `Open (${open.length})`], ["klaar", `Afgehandeld (${done})`], ["alle", `Alle (${data.length})`]].map(([k, l]) => `<button type="button" data-fbf="${k}" aria-pressed="${FB_F === k}">${l}</button>`).join("")}</div>
       <span class="hint">Trainers melden iets via <b>Probleem melden</b> onderaan hun menu.</span></div>
@@ -99,13 +99,17 @@ async function adminFeedback(host) {
         <header><span class="fbkind">${esc(x.kind || "Melding")}</span><span class="hint">${ago(x.created_at)}</span></header>
         <p class="fbmsg">${esc(x.message)}</p>
         <div class="fbmeta"><span class="av sm" aria-hidden="true">${esc((x.name || x.email || "?")[0].toUpperCase())}</span><span><b>${esc(x.name || x.email || "Trainer")}</b>${x.name && x.email ? `<small>${esc(x.email)}</small>` : ""}</span></div>
-        <div class="fbacts">${x.page ? `<a class="btn ghost small" href="${esc(x.page)}">Open pagina</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Je melding in OGV Trainers")}&body=${encodeURIComponent("Dag " + (x.name || "") + ",\n\nBedankt voor je melding:\n\"" + x.message + "\"\n\n")}">Antwoorden</a>` : ""}
+        <div class="fbacts">${x.kind === "Toegang tot ploeg" && x.info?.ploeg && x.user_id && x.status !== "afgehandeld" ? `<button class="btn small" type="button" data-link="${x.id}">Koppelen aan ${esc(x.info.ploegnaam || "ploeg")}</button>` : ""}${x.page ? `<a class="btn ghost small" href="${esc(x.page)}">${x.kind === "Toegang tot ploeg" ? "Ploegen en trainers" : "Open pagina"}</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Je melding in OGV Trainers")}&body=${encodeURIComponent("Dag " + (x.name || "") + ",\n\nBedankt voor je melding:\n\"" + x.message + "\"\n\n")}">Antwoorden</a>` : ""}
           ${Object.keys(x.info || {}).length ? `<button class="link" type="button" data-inf="${x.id}">Technische info</button>` : ""}<span class="spacer"></span><button class="btn small${x.status === "afgehandeld" ? " ghost" : ""}" type="button" data-st="${x.id}">${x.status === "afgehandeld" ? "Heropenen" : "Afgehandeld"}</button></div></article>`).join("")}</div>`
       : `<div class="empty"><b>${FB_F === "open" ? "Geen open meldingen" : "Niets gevonden"}</b>${FB_F === "open" ? "Alles is afgehandeld. Nieuwe meldingen verschijnen hier en als getal in het menu." : ""}</div>`}`;
   $$("[data-fbf]", host).forEach(b => b.onclick = () => { FB_F = b.dataset.fbf; adminFeedback(host); });
   $$("[data-st]", host).forEach(b => b.onclick = async () => { const x = data.find(z => z.id === b.dataset.st), st = x.status === "afgehandeld" ? "nieuw" : "afgehandeld";
     if (mode === "demo") { x.status = st; toast("In de demo wordt dit niet bewaard."); return; }
     const { error } = await sb.from("feedback").update({ status: st }).eq("id", x.id); if (error) toast(error.message); else { await adminFeedback(host); shell(); render(); } });
+  $$("[data-link]", host).forEach(b => b.onclick = async () => { const x = data.find(z => z.id === b.dataset.link);
+    if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const r = await sb.rpc("admin_set_trainer", { t: x.info.ploeg, uid: x.user_id, on_team: true }); if (r.error) { toast(r.error.message); return; }
+    await sb.from("feedback").update({ status: "afgehandeld" }).eq("id", x.id); toast(`${x.name || x.email} is nu trainer van ${x.info.ploegnaam}.`); await adminFeedback(host); shell(); render(); });
   $$("[data-inf]", host).forEach(b => b.onclick = () => { const x = data.find(z => z.id === b.dataset.inf);
     dialog(`<div class="dlg"><h2>Technische info</h2><dl class="fbinfo">${Object.entries(x.info || {}).map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(val) ? (val.join(" · ") || "–") : String(val))}</dd>`).join("")}</dl><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`); });
 }
