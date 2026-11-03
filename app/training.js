@@ -12,6 +12,9 @@ const FORM2TYPE = { Duelvorm: "Duelvorm", Kleine: "Wedstrijdvorm", Grote: "Wedst
 function exType(x) {
   const p = (x.phase || "").trim().toLowerCase(), hit = EX_TYPES.find(t => t.toLowerCase() === p) || TYPE_ALIAS[p];
   if (hit) return hit;
+  const n = [x.name, x.goal].filter(Boolean).join(" ").toLowerCase();
+  if (/stretch|rekken|rekoefen/.test(n)) return "Stretching";
+  if (/weerstandsband|elastiek|miniband|\bband\b|activatie met band/.test(n)) return "Activatie met band";
   return FORM2TYPE[exForm(x).split(" ")[0]] || "Tussenvorm";
 }
 const secOf = t => { if (t == null || t === "") return 0; const m = String(t).match(/^(\d+)(?::(\d{1,2}))?$/); return m ? (m[2] != null ? +m[1] * 60 + +m[2] : +m[1] * 60) : 0; };
