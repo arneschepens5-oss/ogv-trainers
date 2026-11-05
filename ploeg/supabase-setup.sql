@@ -820,3 +820,55 @@ create policy "beheer spelers wijzigen"  on public.players for update to authent
 -- zodat het gratis Supabase-project niet gepauzeerd wordt na een week zonder gebruik. Geeft geen gegevens terug.
 create or replace function public.ping() returns text language sql stable as $$ select 'ok'::text $$;
 grant execute on function public.ping() to anon, authenticated;
+
+-- =====================================================================
+-- Versie 15: de ouderapp (OGV Ouders). Ouders vullen zelf hun contactgegevens, medische aandachtspunten
+-- en toestemming voor beeldmateriaal in via hun persoonlijke link. Geen accounts of wachtwoorden nodig.
+-- =====================================================================
+alter table public.players add column if not exists consent        jsonb;        -- {analysis:bool, public:bool, date, name}
+alter table public.players add column if not exists parent_updated timestamptz;
+
+create or replace function public.parent_view(tok uuid) returns json
+language plpgsql stable security definer set search_path = public as $$
+declare p public.players%rowtype;
+begin
+  select * into p from public.players where parent_token = tok and active is not false;
+  if not found then return null; end if;
+  return json_build_object('player', p.first_name, 'team', (select name from public.teams where id = p.team_id),
+    'contacts', coalesce(p.contacts, '[]'::jsonb), 'medical', p.medical, 'consent', p.consent, 'updated', p.parent_updated,
+    'events', coalesce((select json_agg(json_build_object('id', e.id, 'type', e.type, 'date', e.date,
+        'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'), 'location', e.location,
+        'opponent', e.opponent, 'home', e.home, 'state', case when e.cancelled then 'afgelast' else e.rbfa_state end,
+        'convo', case when e.convo ? 'sent' then json_build_object('selected', (e.convo->'players') ? p.id::text,
+            'meet', e.convo->>'meet', 'place', e.convo->>'place', 'bring', e.convo->>'bring', 'note', e.convo->>'note') end,
+        'rsvp', r.status, 'note', r.note) order by e.date, e.start_time)
+      from public.events e left join public.rsvp r on r.event_id = e.id and r.player_id = p.id
+      where e.team_id = p.team_id and e.date between current_date and current_date + 42), '[]'::json),
+    'messages', coalesce((select json_agg(json_build_object('title', m.title, 'body', m.body, 'author', m.author, 'date', m.created_at::date, 'club', m.team_id is null) order by m.created_at desc)
+      from (select * from public.messages m where (m.team_id is null or m.team_id = p.team_id)
+              and coalesce(m.until, (m.created_at + interval '30 days')::date) >= current_date order by m.created_at desc limit 8) m), '[]'::json));
+end $$;
+grant execute on function public.parent_view(uuid) to anon, authenticated;
+
+create or replace function public.parent_update(tok uuid, c jsonb, med text, cons jsonb) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare p public.players%rowtype; clean jsonb;
+begin
+  select * into p from public.players where parent_token = tok and active is not false;
+  if not found then return false; end if;
+  if c is not null and jsonb_typeof(c) <> 'array' then return false; end if;
+  select coalesce(jsonb_agg(jsonb_build_object('name', left(coalesce(x->>'name', ''), 80), 'rel', left(coalesce(x->>'rel', ''), 30),
+           'phone', left(coalesce(x->>'phone', ''), 30), 'email', left(coalesce(x->>'email', ''), 120))), '[]'::jsonb)
+    into clean from (select x from jsonb_array_elements(coalesce(c, '[]'::jsonb)) x limit 3) q
+    where coalesce(x->>'name', '') <> '' or coalesce(x->>'phone', '') <> '' or coalesce(x->>'email', '') <> '';
+  update public.players set contacts = clean,
+    medical = nullif(left(trim(coalesce(med, '')), 1000), ''),
+    consent = case when cons is null then consent else jsonb_build_object('analysis', coalesce((cons->>'analysis')::boolean, false),
+      'public', coalesce((cons->>'public')::boolean, false), 'name', left(coalesce(cons->>'name', ''), 80), 'date', now()) end,
+    parent_contact = nullif((select string_agg(trim(concat_ws(' ', y->>'name', y->>'phone')), ' · ') from jsonb_array_elements(clean) y), ''),
+    parent_updated = now()
+  where id = p.id;
+  return true;
+end $$;
+revoke all on function public.parent_update(uuid, jsonb, text, jsonb) from public;
+grant execute on function public.parent_update(uuid, jsonb, text, jsonb) to anon, authenticated;

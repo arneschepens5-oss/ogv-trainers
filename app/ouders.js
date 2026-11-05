@@ -108,6 +108,8 @@ async function startMessages(box) { try { const l = (await loadMessages(10)).sli
   box.innerHTML = `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Berichten</h2><a class="link" href="#/berichten">Alle berichten</a></div><div class="msgs">${l.map(msgCard).join("")}</div></div>`; } catch (e) {} }
 
 /* ============ oudercontacten en medische info ============ */
+const consentLine = p => { const c = p.consent; if (!c) return `<p class="hint" style="margin:10px 0 0">Toestemming voor foto's en video's: nog niet ingevuld door de ouders.</p>`;
+  return `<div class="row" style="gap:6px;margin-top:10px"><span class="pill ${c.analysis ? "w" : "loss"}">${c.analysis ? "Video-analyse mag" : "Geen video-analyse"}</span><span class="pill ${c.public ? "w" : "loss"}">${c.public ? "Foto's online mogen" : "Geen foto's online"}</span></div>`; };
 const REL = ["Mama", "Papa", "Voogd", "Grootouder", "Andere"];
 function pContacts(p) {
   if (Array.isArray(p.contacts) && p.contacts.some(c => c && (c.name || c.phone || c.email))) return p.contacts.filter(c => c && (c.name || c.phone || c.email));
@@ -120,7 +122,8 @@ function contactsPanel(p) {
   return `<div class="sec panel"><div class="row"><h2 style="margin:0;margin-right:auto">Ouders en noodcontact</h2></div>
     ${p.medical ? `<div class="medw">${IC.eye}<div><b>Medisch</b><p>${esc(p.medical).replace(/\n/g, "<br>")}</p></div></div>` : ""}
     ${cs.length ? `<div class="list" style="margin-top:8px">${cs.map(c => `<div class="item static" style="flex-wrap:wrap;row-gap:8px"><span class="main"><b>${esc(c.name || "Contact")}${c.rel ? ` <span class="muted" style="font-weight:500">· ${esc(c.rel)}</span>` : ""}</b><small>${esc([c.phone, c.email].filter(Boolean).join(" · "))}</small></span><span class="row" style="gap:6px">${contactBtns(c)}</span></div>`).join("")}</div>`
-      : `<p class="hint">Nog geen contactgegevens. Vul ze in via <b>Fiche bewerken</b>.</p>`}${p.notes ? `<p style="margin:12px 0 0"><span class="muted">Notities:</span> ${esc(p.notes)}</p>` : ""}</div>`;
+      : `<p class="hint">Nog geen contactgegevens. Ouders vullen ze zelf in via hun link (OGV Ouders), of jij via <b>Fiche bewerken</b>.</p>`}
+    ${consentLine(p)}${p.parent_updated ? `<p class="hint" style="margin:8px 0 0">Door de ouders bijgewerkt op ${new Date(p.parent_updated).toLocaleDateString("nl-BE", { day: "numeric", month: "long" })}.</p>` : ""}${p.notes ? `<p style="margin:12px 0 0"><span class="muted">Notities:</span> ${esc(p.notes)}</p>` : ""}</div>`;
 }
 function contactFields(p) {
   const cs = pContacts(p); while (cs.length < 2) cs.push({});
@@ -136,7 +139,7 @@ function readContacts(f) {
 function teamContacts() {
   const ps = active();
   dialog(`<div class="dlg"><h2>Contacten ouders</h2><p class="hint" style="margin-top:0">Handig tijdens een wedstrijd of bij een blessure.</p>
-    <div class="list tclist">${ps.map(p => { const cs = pContacts(p); return `<div class="item static" style="flex-wrap:wrap;row-gap:6px"><span class="num">${p.number ?? ""}</span><span class="main"><b>${esc(pname(p))}${p.medical ? ` <span class="pill loss" title="${esc(p.medical)}">medisch</span>` : ""}</b><small>${cs.length ? esc(cs.map(c => [c.rel || c.name, c.phone].filter(Boolean).join(" ")).join(" · ")) : "geen contact ingevuld"}</small></span>
+    <div class="list tclist">${ps.map(p => { const cs = pContacts(p); return `<div class="item static" style="flex-wrap:wrap;row-gap:6px"><span class="num">${p.number ?? ""}</span><span class="main"><b>${esc(pname(p))}${p.medical ? ` <span class="pill loss" title="${esc(p.medical)}">medisch</span>` : ""}${p.consent && !p.consent.analysis ? ` <span class="pill" title="Geen toestemming voor beelden">geen beelden</span>` : ""}</b><small>${cs.length ? esc(cs.map(c => [c.rel || c.name, c.phone].filter(Boolean).join(" ")).join(" · ")) : "geen contact ingevuld"}</small></span>
       <span class="row" style="gap:6px">${cs.filter(c => c.phone).slice(0, 2).map(c => `<a class="btn small" href="${telHref(c.phone)}" title="${esc(c.name || "")}">${IC.phone}${esc(c.rel || "Bel")}</a>`).join("")}</span></div>`; }).join("") || '<p class="muted">Nog geen spelers.</p>'}</div>
     <div class="row" style="margin-top:12px"><span class="spacer"></span><button class="btn" type="button" data-close>Sluiten</button></div></div>`);
 }
