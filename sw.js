@@ -1,7 +1,7 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v64";
-const SHELL = ["./", "index.html", "app/app.css?v=64", "app/core.js?v=64", "app/ploeg.js?v=64", "app/cijfers.js?v=64", "app/wedstrijd.js?v=64", "app/leerplan.js?v=64", "app/teken.js?v=64", "app/training.js?v=64", "app/video.js?v=64", "app/map.js?v=64", "app/rbfa.js?v=64", "app/club.js?v=64", "app/evaluatie.js?v=64", "app/kennis.js?v=64", "app/ouders.js?v=64", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=64",
-  "manifest.webmanifest", "icons/icon-192.png", "icons/logo.png", "icons/logo-dark.png", "fonts/fonts.css", "fonts/montserrat.woff2", "fonts/open-sans.woff2", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
+const CACHE = "ogv-platform-v65";
+const SHELL = ["./", "index.html", "app/app.css?v=65", "app/core.js?v=65", "app/ploeg.js?v=65", "app/cijfers.js?v=65", "app/wedstrijd.js?v=65", "app/leerplan.js?v=65", "app/teken.js?v=65", "app/training.js?v=65", "app/video.js?v=65", "app/map.js?v=65", "app/rbfa.js?v=65", "app/club.js?v=65", "app/evaluatie.js?v=65", "app/kennis.js?v=65", "app/ouders.js?v=65", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=65",
+  "manifest.webmanifest", "icons/icon-192.png", "icons/logo.png", "icons/logo-dark.png", "fonts/fonts.css", "fonts/archivo.woff2", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
   "trainingen/trainingen.json", "matchday/", "tactiekbord/"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("ogv-platform-") && k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });

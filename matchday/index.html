@@ -8,15 +8,16 @@
 <meta name="theme-color" content="#111110">
 <link rel="icon" type="image/png" href="../icons/favicon.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 <style>
 /* Links het invulpaneel (alleen op scherm), rechts een echt A4-blad. Clubkleuren geel-zwart. */
 :root{
   --geel:#FFD400; --zwart:#111111; --papier:#ffffff;
   --ui-bg:#F2F1EA; --ui-panel:#ffffff; --ui-fg:#1b1b18; --ui-muted:#6b6a60; --ui-line:#dddbd0; --ui-accent:#111; --ui-warn:#c0392b;
-  --display:"Montserrat","Arial",sans-serif;
-  --body:"Open Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
-  --cond:"Montserrat",Arial,sans-serif;
+  --display:"Bebas Neue","Arial Narrow",Impact,sans-serif;
+  --body:"Barlow","Helvetica Neue",Arial,sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ui-bg:#17170f;--ui-panel:#222219;--ui-fg:#f1f0e6;--ui-muted:#a5a493;--ui-line:#3a3a2f;--ui-accent:#FFD400;color-scheme:dark}}
 :root[data-theme="dark"]{--ui-bg:#17170f;--ui-panel:#222219;--ui-fg:#f1f0e6;--ui-muted:#a5a493;--ui-line:#3a3a2f;--ui-accent:#FFD400;color-scheme:dark}
@@ -27,13 +28,13 @@ body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font-family:var(--body)
 .topbar{position:sticky;top:0;z-index:20;background:#111110;color:#fff;display:flex;align-items:center;gap:12px;padding:calc(8px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
 .topbar a{color:var(--geel);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;min-height:36px}
 .topbar img{width:30px;height:30px;border-radius:7px;background:#fff}
-.topbar b{font-family:var(--display);font-size:18px;letter-spacing:.01em;font-weight:800;margin-left:auto}
+.topbar b{font-family:var(--display);font-size:22px;letter-spacing:.03em;font-weight:400;margin-left:auto}
 .app{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:24px;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));align-items:start}
 @media (max-width:980px){.app{grid-template-columns:1fr}}
 
 /* ---------- Invulpaneel ---------- */
 .panel{display:flex;flex-direction:column;gap:14px;min-width:0}
-.panel h1{font-family:var(--display);font-size:26px;letter-spacing:-.01em;margin:0;line-height:1.05;font-weight:800}
+.panel h1{font-family:var(--display);font-size:34px;letter-spacing:.02em;margin:0;line-height:1;font-weight:400}
 .panel h1 span{background:var(--geel);color:#111;padding:0 6px}
 .lead{color:var(--ui-muted);margin:4px 0 0;line-height:1.45}
 .card{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
@@ -64,7 +65,7 @@ button.small{padding:3px 8px;font-size:12px}
 .hint{color:var(--ui-muted);font-size:12.5px;margin:0;line-height:1.4}
 .ms{display:flex;flex-direction:column;gap:12px}
 .mi{display:grid;grid-template-columns:26px 1fr;gap:6px 8px;align-items:start}
-.mi .n{font-family:var(--display);font-weight:800;font-size:20px;line-height:1;background:var(--geel);color:#111;text-align:center;border-radius:4px}
+.mi .n{font-family:var(--display);font-size:26px;line-height:1;background:var(--geel);color:#111;text-align:center;border-radius:4px}
 .mi .fields{display:flex;flex-direction:column;gap:6px;min-width:0}
 .icons{display:flex;gap:4px;flex-wrap:wrap}
 .icons button{padding:2px;width:34px;height:34px;display:grid;place-items:center;background:#fff}
@@ -74,7 +75,7 @@ button.small{padding:3px 8px;font-size:12px}
 dialog{border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-panel);color:var(--ui-fg);padding:18px;width:min(420px,calc(100vw - 32px))}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 dialog form{display:flex;flex-direction:column;gap:10px}
-dialog h3{margin:0;font-family:var(--display);font-size:20px;font-weight:800}
+dialog h3{margin:0;font-family:var(--display);font-size:26px;font-weight:400}
 
 /* ---------- Preview ---------- */
 .stage{min-width:0;display:flex;justify-content:center}
@@ -86,7 +87,7 @@ dialog h3{margin:0;font-family:var(--display);font-size:20px;font-weight:800}
 .hdr{display:grid;grid-template-columns:24mm 1fr 30mm;gap:5mm;align-items:center}
 .hdr img{width:24mm;height:24mm;object-fit:contain;display:block}
 .kicker{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9.5pt;text-transform:uppercase;margin:0 0 1mm}
-.vs{font-family:var(--display);font-weight:800;font-size:25pt;line-height:1;margin:0;letter-spacing:-.01em}
+.vs{font-family:var(--display);font-weight:400;font-size:34pt;line-height:.92;margin:0;letter-spacing:.01em}
 .vs .them{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vs i{font-style:normal;font-size:20pt;background:var(--geel);padding:0 1.6mm;margin:0 1mm;vertical-align:.25em}
 .chev{width:30mm;height:30mm}
@@ -98,7 +99,7 @@ dialog h3{margin:0;font-family:var(--display);font-size:20px;font-weight:800}
 .start{display:grid;grid-template-columns:100mm 1fr;gap:7mm;align-items:start}
 .start svg{width:100mm;height:125mm;display:block}
 .side{display:flex;flex-direction:column;gap:5mm;padding-top:2mm;min-width:0}
-.big{font-family:var(--display);font-weight:800;font-size:25pt;line-height:1;margin:0}
+.big{font-family:var(--display);font-size:36pt;line-height:.85;margin:0}
 .big small{display:block;font-size:16pt;color:#555;margin-top:1.5mm;letter-spacing:.04em}
 .sublbl{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9pt;text-transform:uppercase;margin:0 0 2mm;color:#555}
 .bench{display:flex;flex-direction:column;gap:1.8mm}
@@ -108,24 +109,24 @@ dialog h3{margin:0;font-family:var(--display);font-size:20px;font-weight:800}
 .empty{color:#888;font-size:10pt}
 .capt{display:grid;grid-template-columns:11mm 1fr;gap:3mm;align-items:center;background:#111;color:#fff;border-radius:2.5mm;padding:2.5mm 3mm}
 .capt .sublbl{color:var(--geel);margin:0 0 .5mm}
-.capt strong{font-family:var(--display);font-size:16pt;line-height:1.05;font-weight:800;display:block}
+.capt strong{font-family:var(--display);font-size:22pt;line-height:.95;font-weight:400;display:block}
 .capt .ctask{margin:1mm 0 0;font-family:var(--cond);font-weight:600;font-size:10.5pt;color:#fff}
 .capt .ctask b{color:var(--geel);font-weight:700}
-.capt .band{width:11mm;height:11mm;border-radius:50%;background:var(--geel);color:#111;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:14pt;line-height:1;padding-top:.6mm}
+.capt .band{width:11mm;height:11mm;border-radius:50%;background:var(--geel);color:#111;display:grid;place-items:center;font-family:var(--display);font-size:20pt;line-height:1;padding-top:.6mm}
 .tasks{display:flex;flex-direction:column;gap:3mm;flex:1 1 auto;min-height:0}
 .tasks h4{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9pt;text-transform:uppercase;margin:0}
 #sTasks{display:flex;flex-direction:column;gap:3mm}
 .task{display:grid;grid-template-columns:9mm 17mm 1fr 13mm;gap:3.5mm;align-items:center;border:.5mm solid #111;border-radius:2.5mm;padding:2.6mm 3.5mm}
 .solo .task{padding:6mm 5mm;grid-template-columns:12mm 26mm 1fr 16mm}.solo .task .n{font-size:40pt}.solo .task .ico{width:26mm;height:26mm}.solo .task .ico svg{width:17mm;height:17mm}.solo .task h3{font-size:32pt}.solo .task p{font-size:13pt}.solo .task .ok i{width:11mm;height:11mm}
-.task .n{font-family:var(--display);font-weight:800;font-size:21pt;line-height:1;text-align:center}
+.task .n{font-family:var(--display);font-size:28pt;line-height:1;text-align:center}
 .task .ico{width:17mm;height:17mm;border-radius:50%;background:var(--geel);display:grid;place-items:center}
 .task .ico svg{width:11.5mm;height:11.5mm}
-.task h3{font-family:var(--display);font-weight:800;font-size:15pt;line-height:1.1;margin:0}
+.task h3{font-family:var(--display);font-weight:400;font-size:20pt;line-height:.95;margin:0}
 .task p{margin:.8mm 0 0;font-size:10pt;line-height:1.25}
 .task .ok{display:flex;flex-direction:column;align-items:center;gap:1mm;font-family:var(--cond);font-weight:600;font-size:8pt}
 .task .ok i{width:8mm;height:8mm;border:.5mm solid #111;border-radius:1.5mm;display:block}
 .foot{display:flex;justify-content:space-between;align-items:center;font-family:var(--cond);font-weight:600;font-size:8.5pt;color:#555;border-top:.3mm solid #ddd;padding-top:1.6mm;margin-top:auto}
-.foot .slogan{font-family:var(--display);font-weight:800;font-size:13pt;color:#111;background:var(--geel);padding:.4mm 2.5mm 0;line-height:1;letter-spacing:.02em}
+.foot .slogan{font-family:var(--display);font-size:18pt;color:#111;background:var(--geel);padding:.4mm 2.5mm 0;line-height:1;letter-spacing:.02em}
 
 @page{size:A4;margin:0}
 @media print{
@@ -310,7 +311,7 @@ const EIGEN='Eigen opstelling';
 const ICONS={
  dribbel:'<svg viewBox="0 0 48 48"><path d="M6 40c8-2 8-12 16-14s10 6 18-6" fill="none" stroke="#111" stroke-width="3" stroke-dasharray="4 4" stroke-linecap="round"/><circle cx="38" cy="14" r="7" fill="#fff" stroke="#111" stroke-width="3"/><path d="M38 9.5l3.5 2.7-1.3 4.1h-4.4l-1.3-4.1z" fill="#111"/></svg>',
  jagen:'<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="7" fill="#fff" stroke="#111" stroke-width="3"/><path d="M24 19.5l3.5 2.7-1.3 4.1h-4.4l-1.3-4.1z" fill="#111"/><path d="M3 10l11 8M3 38l11-8M45 10l-11 8M45 38l-11-8" stroke="#111" stroke-width="3.5" stroke-linecap="round"/></svg>',
- praten:'<svg viewBox="0 0 48 48"><path d="M5 9h38v22H20l-9 9v-9H5z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/><text x="24" y="24.5" text-anchor="middle" font-family="Montserrat,Impact,sans-serif" font-weight="800" font-size="10" fill="#111">HIER!</text></svg>',
+ praten:'<svg viewBox="0 0 48 48"><path d="M5 9h38v22H20l-9 9v-9H5z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/><text x="24" y="25" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="14" fill="#111">HIER!</text></svg>',
  kijken:'<svg viewBox="0 0 48 48"><path d="M3 24s8-13 21-13 21 13 21 13-8 13-21 13S3 24 3 24z" fill="#fff" stroke="#111" stroke-width="3"/><circle cx="24" cy="24" r="7" fill="#111"/><circle cx="26.5" cy="21.5" r="2.2" fill="#fff"/></svg>',
  duel:'<svg viewBox="0 0 48 48"><path d="M24 4l17 6v12c0 11-7 18-17 22C14 40 7 33 7 22V10z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/><path d="M15 24l6 6 12-13" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
  schieten:'<svg viewBox="0 0 48 48"><path d="M20 8h24v30" fill="none" stroke="#111" stroke-width="3"/><path d="M20 8v10M44 38H34" stroke="#111" stroke-width="3"/><path d="M6 40l18-14" stroke="#111" stroke-width="3" stroke-dasharray="3 4" stroke-linecap="round"/><circle cx="30" cy="22" r="7" fill="#fff" stroke="#111" stroke-width="3"/><path d="M30 17.5l3.5 2.7-1.3 4.1h-4.4l-1.3-4.1z" fill="#111"/></svg>',
@@ -470,8 +471,8 @@ function renderEditor(){
   const pos=T().pos,n=pos.length,r=n>8?4.2:5;
   $('editor').innerHTML=pitchLines('rgba(255,255,255,.7)')+pos.map((p,i)=>{const id=M().lineup[i];const lab=id?shortName(nm(id)):'';
     return `<g><circle class="dot" data-i="${i}" cx="${p.x}" cy="${p.y}" r="${r}" fill="#FFD400" stroke="#111" stroke-width=".7"/>
-    <text x="${p.x}" y="${p.y+1.3}" text-anchor="middle" font-family="Montserrat,Arial,sans-serif" font-weight="700" font-size="${n>8?3.2:3.6}" fill="#111" pointer-events="none">${esc(p.l)}</text>
-    ${lab?`<text x="${p.x}" y="${p.y+r+4}" text-anchor="middle" font-family="Open Sans,Arial,sans-serif" font-weight="600" font-size="3.6" fill="#fff" pointer-events="none">${esc(lab)}</text>`:''}</g>`}).join('');
+    <text x="${p.x}" y="${p.y+1.3}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${n>8?3.2:3.6}" fill="#111" pointer-events="none">${esc(p.l)}</text>
+    ${lab?`<text x="${p.x}" y="${p.y+r+4}" text-anchor="middle" font-family="Barlow,Arial,sans-serif" font-weight="600" font-size="3.6" fill="#fff" pointer-events="none">${esc(lab)}</text>`:''}</g>`}).join('');
 }
 (function drag(){
   const svg=$('editor');let i=-1;
@@ -517,9 +518,9 @@ function renderSheet(){
     const name=pl?shortName(pl.name,n):'';
     const cy=p.y,ty=cy+r+4.4,tx=p.x;
     return `<g><circle cx="${p.x}" cy="${cy}" r="${r}" fill="${pl?'#FFD400':'#fff'}" stroke="#111" stroke-width=".8"/>
-    <text x="${p.x}" y="${cy+1.6}" text-anchor="middle" font-family="Montserrat,Arial,sans-serif" font-weight="700" font-size="${String(inside).length>2?3.4:4.4}" fill="#111">${esc(inside)}</text>
-    ${cap?`<circle cx="${p.x+r*.8}" cy="${cy-r*.8}" r="2.6" fill="#111"/><text x="${p.x+r*.8}" y="${cy-r*.8+1.1}" text-anchor="middle" font-family="Montserrat,Impact,sans-serif" font-weight="800" font-size="3" fill="#FFD400">C</text>`:''}
-    ${name?`<g class="nmtag"><rect rx="1.6" fill="#111"/><text x="${tx}" y="${ty}" text-anchor="middle" font-family="Montserrat,Arial,sans-serif" font-weight="700" font-size="${fsN}" letter-spacing=".15" fill="#fff">${esc(name.toUpperCase())}</text></g>`:''}</g>`}).join('')}</svg>`;
+    <text x="${p.x}" y="${cy+1.6}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${String(inside).length>2?3.4:4.4}" fill="#111">${esc(inside)}</text>
+    ${cap?`<circle cx="${p.x+r*.8}" cy="${cy-r*.8}" r="2.6" fill="#111"/><text x="${p.x+r*.8}" y="${cy-r*.8+1.1}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="3.4" fill="#FFD400">C</text>`:''}
+    ${name?`<g class="nmtag"><rect rx="1.6" fill="#111"/><text x="${tx}" y="${ty}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${fsN}" letter-spacing=".15" fill="#fff">${esc(name.toUpperCase())}</text></g>`:''}</g>`}).join('')}</svg>`;
   /* naamlabels: donkere tag precies rond de naam, binnen het veld gehouden */
   $('sPitch').querySelectorAll('.nmtag').forEach(g=>{const t=g.querySelector('text'),rc=g.querySelector('rect');let b;try{b=t.getBBox()}catch(e){}if(!b||!b.width){const fs=+t.getAttribute('font-size'),wd=t.textContent.length*fs*.5;b={x:+t.getAttribute('x')-(t.getAttribute('text-anchor')==='start'?0:wd/2),y:+t.getAttribute('y')-fs*.8,width:wd,height:fs*.95}}
     const px=1.6,py=.7,w=b.width+px*2,h=b.height+py*2;let x=b.x-px;const dx=x<1?1-x:x+w>99?99-(x+w):0;x+=dx;

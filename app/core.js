@@ -319,7 +319,7 @@ function shell() {
     <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
-    <header class="topbar">${LOGO("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-family:var(--font-h)">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
+    <header class="topbar">${LOGO("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
     <div class="page" id="view"></div>
   </main>
   <nav class="tabbar" aria-label="Snelmenu">

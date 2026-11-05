@@ -30,7 +30,7 @@ function vaDrawShape(ctx, sh, W, H, preview) {
     ctx.globalAlpha = .25; ctx.beginPath(); ctx.ellipse(a[0], a[1], rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
   else if (sh.k === "rect") { if (pts.length < 2) { ctx.restore(); return; } const [a, b] = pts; ctx.globalAlpha = .22; ctx.fillRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
     ctx.globalAlpha = 1; ctx.setLineDash([lw * 2, lw * 1.4]); ctx.strokeRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); ctx.setLineDash([]); }
-  else if (sh.k === "text" && pts.length) { const fs = Math.max(14, W * .026), p = pts[0]; ctx.shadowBlur = 0; ctx.font = `800 ${fs}px Montserrat, Arial, sans-serif`; const tw = ctx.measureText(sh.text || "").width;
+  else if (sh.k === "text" && pts.length) { const fs = Math.max(14, W * .026), p = pts[0]; ctx.shadowBlur = 0; ctx.font = `800 ${fs}px Archivo, Arial, sans-serif`; const tw = ctx.measureText(sh.text || "").width;
     ctx.fillStyle = "rgba(0,0,0,.72)"; const pad = fs * .35; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(p[0] - pad, p[1] - fs - pad * .6, tw + pad * 2, fs + pad * 1.6, fs * .3) : ctx.rect(p[0] - pad, p[1] - fs - pad * .6, tw + pad * 2, fs + pad * 1.6); ctx.fill();
     ctx.fillStyle = c === "#111111" ? "#FFD100" : c; ctx.fillText(sh.text || "", p[0], p[1]); }
   if (preview) { ctx.globalAlpha = 1; }

@@ -13,14 +13,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
 /* Layout: one-screen board app. Pitch is the hero; dock = step bar, contextual options, tool pane, tab bar (right column on desktop). */
 :root{
   --bg:#F1F3EF; --panel:#FFFFFF; --ink:#141A15; --muted:#5B665D; --line:#D7DDD4;
   --stage:#DDE5D9; --accent:#F2C200; --accent-ink:#1C1800; --chip:#E7ECE4; --danger:#B8322A;
-  --display:"Montserrat","Arial",sans-serif;
-  --body:"Open Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0E1310; --panel:#161D18; --ink:#E8EEE7; --muted:#95A296; --line:#263028;
@@ -693,7 +695,7 @@ function drawOverlay(c,Vw,d,g){
   c.stroke(); c.restore();
   if(ov==='zones'||ov==='thirds'){
     const labels=ov==='zones'?['Opbouw','Middenveld','Aanval']:['Verdedigend','Middenveld','Aanvallend'];
-    c.save(); c.fillStyle=g.line; c.globalAlpha=.6; c.font=`700 ${Math.round(clamp(1.1*Vw.S*f.k,10,15))}px "Montserrat",sans-serif`; c.textBaseline='top';
+    c.save(); c.fillStyle=g.line; c.globalAlpha=.6; c.font=`700 ${Math.round(clamp(1.1*Vw.S*f.k,10,15))}px "Barlow Condensed",sans-serif`; c.textBaseline='top';
     labels.forEach((t,i)=>{const T=t.toUpperCase();const p=Vw.toS(0.6,f.L*(i+1)/3-0.6);if(Vw.orient==='v'){c.textAlign='left';c.fillText(T,p[0]+2,p[1]+2)}else{c.textAlign='right';c.fillText(T,p[0]-4,p[1]+2)}});
     c.restore();
   }
@@ -770,7 +772,7 @@ function drawItem(c,Vw,it,pos,d,alpha=1,prog=1){
       c.fillStyle=gr; c.beginPath(); c.arc(s[0],s[1],r,0,Math.PI*2); c.fill()}
   } else if(it.t==='text'){
     const s=Vw.toS(it.x,it.y), fs=Math.max(11,(it.size||2)*Vw.S*0.6); c.shadowBlur=0;
-    c.font=`600 ${fs}px "Open Sans",Arial,sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+    c.font=`600 ${fs}px "Barlow",Arial,sans-serif`; c.textAlign='center'; c.textBaseline='middle';
     const lines=String(it.text||'').split('\n'); const w=Math.max(...lines.map(l=>c.measureText(l).width))+fs*.8, h=lines.length*fs*1.2+fs*.4;
     if(it.bg!==false){c.save();c.globalAlpha*=.72;c.fillStyle=g.light?'#FFFFFF':'#0A100C';roundRect(c,s[0]-w/2,s[1]-h/2,w,h,fs*.3);c.fill();c.restore()}
     c.fillStyle=color; lines.forEach((l,i)=>c.fillText(l,s[0],s[1]-h/2+fs*.2+fs*1.2*(i+.5)));
@@ -827,8 +829,8 @@ function drawPlayer(c,Vw,o,p,d,opts){
   if(d.style.shape==='shirt'){c.fillStyle='rgba(0,0,0,.28)';shirtPath(c,s[0]+r*.12,s[1]+r*.2,r);c.fill();c.fillStyle=fill;shirtPath(c,s[0],s[1],r);c.fill();c.lineWidth=Math.max(1.4,r*.1);c.strokeStyle=edge;c.stroke()}
   else{c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(s[0]+r*.12,s[1]+r*.22,r,r*.92,0,0,Math.PI*2);c.fill();
     c.fillStyle=fill;c.beginPath();c.arc(s[0],s[1],r,0,Math.PI*2);c.fill();c.lineWidth=Math.max(1.5,r*.13);c.strokeStyle=edge;c.stroke()}
-  if(o.label){c.fillStyle=textOn(fill);c.font=`700 ${Math.round(r*(o.label.length>2?0.85:1.08))}px "Montserrat",Arial,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(o.label,s[0],s[1]+r*(d.style.shape==='shirt'?.14:.06))}
-  if(o.name&&d.style.names&&!opts.noName){const fs=Math.max(10,Math.round(r*.75));c.font=`600 ${fs}px "Open Sans",Arial,sans-serif`;c.textAlign='center';c.textBaseline='top';
+  if(o.label){c.fillStyle=textOn(fill);c.font=`700 ${Math.round(r*(o.label.length>2?0.85:1.08))}px "Barlow Condensed","Arial Narrow",sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(o.label,s[0],s[1]+r*(d.style.shape==='shirt'?.14:.06))}
+  if(o.name&&d.style.names&&!opts.noName){const fs=Math.max(10,Math.round(r*.75));c.font=`600 ${fs}px "Barlow",Arial,sans-serif`;c.textAlign='center';c.textBaseline='top';
     const w=c.measureText(o.name).width+8;c.fillStyle='rgba(10,16,12,.74)';roundRect(c,s[0]-w/2,s[1]+r+3,w,fs+4,4);c.fill();c.fillStyle='#fff';c.fillText(o.name,s[0],s[1]+r+5)}
   c.restore();
 }
@@ -878,7 +880,7 @@ function render(){
 }
 function drawScaleBar(c,Vw,x,y){const len=Vw.f.scale*Vw.S, g=GRASS[doc.pitch.grass]||GRASS.stripes; if(len>cw*.5)return;
   c.save();c.strokeStyle=g.line;c.fillStyle=g.line;c.globalAlpha=.85;c.lineWidth=1.5;c.beginPath();c.moveTo(x,y-4);c.lineTo(x,y);c.lineTo(x+len,y);c.lineTo(x+len,y-4);c.stroke();
-  c.font='600 11px "Open Sans",Arial,sans-serif';c.textBaseline='bottom';c.fillText(Vw.f.scale+' m',x+len+5,y+3);c.restore()}
+  c.font='600 11px "Barlow",Arial,sans-serif';c.textBaseline='bottom';c.fillText(Vw.f.scale+' m',x+len+5,y+3);c.restore()}
 function selItem(){return sel.item?frame().items.find(i=>i.id===sel.item)||null:null}
 function handlesFor(it){
   const pos=frame().pos, h=[]; if(!it)return h;
@@ -963,13 +965,13 @@ function drawCard(c,w,h,sc,o){
   c.save(); c.translate(0,hh); drawScene(c,Vw,d,sc); c.restore();
   c.fillStyle='#F2C200'; c.fillRect(pad,hh*.25,6*u,hh*.38);
   const n=d.frames.length, stepTxt=`STAP ${sc.step+1}/${n}`;
-  c.font=`700 ${Math.round(26*u)}px "Montserrat",Arial,sans-serif`; const sw=c.measureText(stepTxt).width;
+  c.font=`700 ${Math.round(26*u)}px "Barlow Condensed","Arial Narrow",sans-serif`; const sw=c.measureText(stepTxt).width;
   c.fillStyle='#F2C200'; c.textAlign='right'; c.textBaseline='middle'; c.fillText(stepTxt,w-pad,hh*.44);
-  c.font=`700 ${Math.round(40*u)}px "Montserrat",Arial,sans-serif`; c.textAlign='left'; c.fillStyle='#fff';
+  c.font=`700 ${Math.round(40*u)}px "Barlow Condensed","Arial Narrow",sans-serif`; c.textAlign='left'; c.fillStyle='#fff';
   c.fillText(wrapLines(c,d.name,w-pad*2-sw-40*u,1)[0]||'',pad+18*u,hh*.44);
-  c.fillStyle='rgba(255,255,255,.55)'; c.font=`600 ${Math.round(19*u)}px "Open Sans",Arial,sans-serif`;
+  c.fillStyle='rgba(255,255,255,.55)'; c.font=`600 ${Math.round(19*u)}px "Barlow",Arial,sans-serif`;
   c.fillText(`${f.lab} · ${catLabel(d.category)}`,pad+18*u,hh*.8);
-  const fs=Math.round((vert?34:26)*u); c.fillStyle='#fff'; c.font=`500 ${fs}px "Open Sans",Arial,sans-serif`; c.textBaseline='top';
+  const fs=Math.round((vert?34:26)*u); c.fillStyle='#fff'; c.font=`500 ${fs}px "Barlow",Arial,sans-serif`; c.textBaseline='top';
   wrapLines(c,sc.note||'',w-pad*2,vert?4:3).forEach((l,i)=>c.fillText(l,pad,h-chh+16*u+i*fs*1.3));
   const segW=(w-pad*2)/n; for(let i=0;i<n;i++){c.fillStyle=i<=sc.step?'#F2C200':'rgba(255,255,255,.18)';c.fillRect(pad+i*segW,h-22*u,segW-6*u,5*u)}
 }
