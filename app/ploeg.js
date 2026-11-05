@@ -20,6 +20,7 @@ route("start", { title: "Start", render: async v => {
       <a href="#/uitslagen">${IC.trophy}Uitslagen club</a>${logged ? "" : `<a href="#/aanmelden">Aanmelden</a>`}</div></section>
   ${t ? evReminder() : ""}
   ${todo.length ? `<div class="sec"><h2>Nog in te vullen</h2><div class="list">${todo.map(e => evItem(e)).join("")}</div></div>` : ""}
+  <div id="msgBox"></div>
   <div id="recentBox">${recentHtml(recent)}</div>
   <div class="sec"><h2>Alles op één plek</h2><div class="tiles">${[
     ["kalender", "cal", "Kalender", "Wedstrijden komen vanzelf van RBFA. Aanwezigheden met één tik, ouders bevestigen zelf."],
@@ -32,10 +33,13 @@ route("start", { title: "Start", render: async v => {
     ["uitslagen", "trophy", "Uitslagen club", "Alle wedstrijden van de club met het verslag erbij."],
     ["animatiebord", "board", "Animatiebord", "Teken en animeer tactieken en exporteer ze als video."],
     ["videoanalyse", "cam", "Videoanalyse", "Pijlen, zones en spotlights op je eigen beelden."],
+    ["berichten", "mail", "Berichten", "Nieuws van de club en je ploeg, ook zichtbaar voor de ouders."],
+    ["terreinen", "cal", "Terreinen", "Wie wanneer op welk veld staat, met overlappingen in het rood."],
     ["contacten", "phone", "Wie contacteer ik?", "Bij wie je terechtkunt voor attesten, blessures, ICT en meer."]
   ].map(([h, i, b, s]) => `<a class="tile" href="#/${h}"><span class="ic">${IC[i]}</span><span><b>${b}</b><small>${s}</small></span></a>`).join("")}</div></div>`;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
   $$("[data-em]", v).forEach(a => a.onclick = () => { evMoment = +a.dataset.em; });
+  if (logged && typeof startMessages === "function") startMessages($("#msgBox", v));
   if (logged) loadClub().then(c => { const box = $("#recentBox", v); if (!box || !v.isConnected) return; box.innerHTML = recentHtml(recentOf(c)); $$("[data-go]", box).forEach(x => x.onclick = () => go(x.dataset.go)); }).catch(() => {});
   return window.mountPitch ? window.mountPitch($("#pitch3d")) : null;
 } });
@@ -45,7 +49,7 @@ function evItem(e) {
   const right = e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast</span>` : e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
     : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : ((rs => rs && e.date >= todayIso() ? `<b style="color:var(--ok)">${rs.ja} komen</b>${rs.nee ? rs.nee + " niet · " : ""}${rs.open} open` : "")(rsvpSummary(e)) || (e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : ""));
   return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
-    <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, "OGV") : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span>${e.series ? ` <span class="pill" title="Ingepland door de club">Vast</span>` : ""}</b>
+    <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, "OGV") : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span>${e.series ? ` <span class="pill" title="Ingepland door de club">Vast</span>` : ""}${e.cancelled ? ` <span class="pill loss">Afgelast</span>` : ""}</b>
     <small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.theme ? " · " + esc(e.theme) : e.location ? " · " + esc(e.location) : ""}</small></span><span class="val">${right}</span></div>`;
 }
 function clubItem(e) {
@@ -88,10 +92,10 @@ route("spelers", { title: "Spelers", auth: true, team: true, render: v => {
   const ps = active(), old = S.players.filter(p => p.active === false);
   const it = p => { const s = playerStats(p); return `<div class="item" data-go="#/speler/${p.id}"><span class="num">${p.number ?? ""}</span><span class="main"><b>${esc(pname(p))}</b><small>${esc([p.position, p.foot ? p.foot + "voetig" : ""].filter(Boolean).join(" · ") || "Geen positie")}</small></span>
     <span class="val hide-m"><b>${s.trTot ? s.trPct + "%" : "–"}</b>aanwezig</span><span class="val hide-m"><b>${s.minutes}</b>minuten</span><span class="val"><b>${f1(s.rating)}</b>gem. cijfer</span></div>`; };
-  v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="plinks">${IC.link}Ouderlinks</button><button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
+  v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="pcont">${IC.phone}Contacten</button><button class="btn ghost" type="button" id="plinks">${IC.link}Ouderlinks</button><button class="btn ghost" type="button" id="imp">${IC.out}Importeren</button><button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
     (ps.length ? `<div class="list">${ps.map(it).join("")}</div>` : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
     (old.length ? `<div class="sec"><h2>Niet meer actief</h2><div class="list">${old.map(it).join("")}</div></div>` : "");
-  $("#addP").onclick = () => playerForm(); $("#bulk").onclick = bulkForm; $("#plinks").onclick = parentLinks;
+  $("#addP").onclick = () => playerForm(); $("#bulk").onclick = bulkForm; $("#plinks").onclick = parentLinks; $("#pcont").onclick = teamContacts; $("#imp").onclick = () => importPlayers(false);
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
 function playerForm(p) {
@@ -101,7 +105,7 @@ function playerForm(p) {
   <label class="f">Rugnummer<input name="number" type="number" min="0" inputmode="numeric" value="${p.number ?? ""}"></label><label class="f">Geboortedatum<input name="birthdate" type="date" value="${esc(p.birthdate || "")}"></label>
   <label class="f">Positie<select name="position">${["","Keeper","Verdediger","Middenvelder","Aanvaller"].map(x => `<option${x === (p.position || "") ? " selected" : ""}>${x}</option>`).join("")}</select></label>
   <label class="f">Voorkeursvoet<select name="foot">${["","Rechts","Links","Beide"].map(x => `<option${x === (p.foot || "") ? " selected" : ""}>${x}</option>`).join("")}</select></label>
-  <label class="f full">Contact ouders<input name="parent_contact" value="${esc(p.parent_contact || "")}" placeholder="Naam en gsm-nummer"></label>
+  ${V14() ? contactFields(p) : `<label class="f full">Contact ouders<input name="parent_contact" value="${esc(p.parent_contact || "")}" placeholder="Naam en gsm-nummer"></label>`}
   <label class="f full">Notities<textarea name="notes">${esc(p.notes || "")}</textarea></label>
   ${n ? "" : `<label class="f full check"><input type="checkbox" name="active"${p.active !== false ? " checked" : ""}> Speelt nog in deze ploeg</label>`}</div>
   <div class="row">${n ? "" : `<button class="btn danger" type="button" id="del">Verwijderen</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
@@ -109,7 +113,7 @@ function playerForm(p) {
     await safe(async () => { await db.del("players", { id: p.id }); S.players = S.players.filter(x => x.id !== p.id); S.att = S.att.filter(a => a.player_id !== p.id); S.evals = S.evals.filter(a => a.player_id !== p.id); S.goals = S.goals.filter(a => a.player_id !== p.id); d.close(); go("#/spelers"); }, "Speler verwijderd."); };
   $("form", d).onsubmit = async e => { e.preventDefault(); const fd = new FormData(e.target), f = Object.fromEntries(fd);
     const row = { ...(n ? { id: uid(), team_id: S.team.id } : p), first_name: f.first_name.trim(), last_name: (f.last_name || "").trim(), number: f.number === "" ? null : +f.number, birthdate: f.birthdate || null,
-      position: f.position || null, foot: f.foot || null, parent_contact: f.parent_contact || null, notes: f.notes || null, active: n ? true : fd.has("active") };
+      position: f.position || null, foot: f.foot || null, parent_contact: f.parent_contact || null, notes: f.notes || null, active: n ? true : fd.has("active"), ...(V14() ? readContacts(f) : {}) };
     await safe(async () => { await db.save("players", row); const i = S.players.findIndex(x => x.id === row.id); if (i >= 0) S.players[i] = row; else S.players.push(row); sortPlayers(); d.close(); render(); }, "Speler opgeslagen."); };
 }
 function bulkForm() {
@@ -144,7 +148,7 @@ route("speler", { title: "Speler", auth: true, team: true, render: (v, id) => {
      : `<p class="hint">Zet een of twee concrete doelen per periode, bijvoorbeeld "met links leren passen over 10 meter".</p>`}</div></div>
   ${ms.length ? `<div class="sec"><h2>Wedstrijden</h2><div class="list">${ms.map(({ e, a }) => `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
     <span class="main"><b>${e.report?.squad ? `<span class="pill g">${esc(e.report.squad)}</span> ` : ""}${esc(e.opponent || "Wedstrijd")}${e.report?.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b><small>${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · "))}</small>${a.note ? `<span class="notefull">${esc(a.note)}</span>` : ""}</span><span class="val"><b>${a.rating ?? "–"}</b>cijfer</span></div>`).join("")}</div></div>` : ""}
-  ${p.notes || p.parent_contact ? `<div class="sec panel"><h2>Fiche</h2>${p.parent_contact ? `<p style="margin:0 0 6px"><span class="muted">Contact ouders:</span> ${esc(p.parent_contact)}</p>` : ""}${p.notes ? `<p style="margin:0;white-space:pre-wrap">${esc(p.notes)}</p>` : ""}</div>` : ""}${historyHtml(p)}`;
+  ${contactsPanel(p)}${historyHtml(p)}`;
   $("#editP").onclick = () => playerForm(p); $("#addG").onclick = () => goalForm(p);
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
   $$("[data-gs]", v).forEach(sel => sel.onchange = async () => { const g = S.goals.find(x => x.id === sel.dataset.gs); g.status = sel.value; await safe(() => db.save("goals", g), "Doel bijgewerkt."); });

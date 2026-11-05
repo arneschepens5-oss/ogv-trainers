@@ -49,7 +49,7 @@ route("matchday", { title: "Wedstrijdblad", wide: true, render: (v, id) => {
     const sel = next ? active().filter(p => { const a = attOf(next.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; }).map(p => p.id) : [];
     try { localStorage.setItem("ogv-matchday-import", JSON.stringify({ id: S.team.id, name: S.team.name, format: S.team.format || "5v5",
       squad: active().map(p => ({ id: p.id, name: pname(p), nr: p.number ?? "" })), sel, opp: next?.opponent || "", date: next?.date || "", kick: tm(next?.start_time), home: next ? (next.home === false ? "uit" : "thuis") : "" })); } catch (e) {} }
-  embed(v, "matchday/?v=56", "Wedstrijdblad");
+  embed(v, "matchday/?v=57", "Wedstrijdblad");
 } });
 
 /* ============ scouting ============ */

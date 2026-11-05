@@ -3,7 +3,7 @@
 "use strict";
 const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -237,7 +237,7 @@ const matchFormat = t => ({ periods: t?.periods || FORMAT_DEF[t?.format]?.[0] ||
 /* ============ toestand ============ */
 const S = { teams: [], myTeamIds: [], team: null, players: [], events: [], att: [], evals: [], goals: [], trainers: [], club: null };
 const TEAM_KEY = "ogv-platform-team";
-const myTeams = () => S.allTeams ? S.teams.slice() : S.teams.filter(t => S.myTeamIds.includes(t.id));
+const myTeams = () => S.allTeams ? S.teams.slice() : S.teams.filter(t => S.myTeamIds.includes(t.id) || (S.teamAccess || []).includes(t.id));
 async function loadTeams() {
   S.teams = (await db.list("teams")).sort((a, b) => (a.category || a.name).localeCompare(b.category || b.name, "nl", { numeric: true }));
   const tt = mode === "demo" ? (await db.list("team_trainers", { user_id: "demo" })) : (await db.list("team_trainers", { user_id: user.id }));
@@ -256,7 +256,7 @@ const sortPlayers = () => S.players.sort((a, b) => (a.number ?? 99) - (b.number 
 const sortEvents = () => S.events.sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || "")));
 const active = () => S.players.filter(p => p.active !== false);
 const attOf = (e, p) => S.att.find(a => a.event_id === e && a.player_id === p);
-const past = type => S.events.filter(e => e.date <= todayIso() && (!type || e.type === type));
+const past = type => S.events.filter(e => e.date <= todayIso() && !e.cancelled && (!type || e.type === type));
 const teamName = id => S.teams.find(t => t.id === id)?.name || "Ploeg";
 async function putAtt(a) { const p = S.players.find(x => x.id === a.player_id); if (p) a.player_name = pname(p);
   await db.save("attendance", a); const i = S.att.findIndex(x => x.event_id === a.event_id && x.player_id === a.player_id); if (i >= 0) S.att[i] = a; else S.att.push(a); }
@@ -289,7 +289,7 @@ const NAV = [
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
-  { g: "Club", items: [["contacten", "Wie contacteer ik?", "phone"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
+  { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
 const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
@@ -298,7 +298,8 @@ let teardown = null;
 
 function shell() {
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
-  const navHtml = (S.admin ? [...NAV, { g: "Beheer", items: [["clubbeheer", "Beheer", "gear"]] }] : NAV).map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
+  const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g);
+  const navHtml = (S.admin ? [...nav, { g: "Beheer", items: [["clubbeheer", "Beheer", "gear"]] }] : nav).map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
     `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("")).join("");
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · OG Vorselaar" : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
@@ -463,13 +464,13 @@ function viewLogin(v, msg) {
 }
 async function startCloud() {
   mode = "cloud"; db = SBDB;
-  await clubStatus(); if (!S.member) { render(); return; } setTimeout(fbCount, 1500); setInterval(fbCount, 120000);
+  await clubStatus(); if (!S.member) { render(); return; } if (typeof v14Check === "function") await v14Check(); setTimeout(fbCount, 1500); setInterval(fbCount, 120000);
   try { await loadTeams(); const last = (() => { try { return localStorage.getItem(TEAM_KEY); } catch (e) {} })();
     const pick = myTeams().find(t => t.id === last) || (myTeams().length === 1 ? myTeams()[0] : null); if (pick) await loadTeam(pick.id); }
   catch (e) { console.error(e); db = null; mode = null; shell(); viewLogin($("#view"), /relation|does not exist|schema cache|column/i.test(e.message || "") ? "De database is nog niet klaargezet. De beheerder moet eerst supabase-setup.sql uitvoeren." : "Laden mislukt: " + (e.message || e)); return; }
   if (cur().page === "aanmelden") location.hash = "#/start"; else render();
 }
-async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", email: "demo" }; S.member = true; S.admin = true; try { sessionStorage.setItem("ogv-mode", "demo"); } catch (e) {}
+async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", email: "demo" }; S.member = true; S.admin = true; S.v14 = true; try { sessionStorage.setItem("ogv-mode", "demo"); } catch (e) {}
   await loadTeams(); await loadTeam(myTeams()[0].id); if (cur().page === "aanmelden") location.hash = "#/start"; else render(); }
 async function logout() { if (mode === "demo") { try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } else if (sb) await sb.auth.signOut();
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }

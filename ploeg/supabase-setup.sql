@@ -657,3 +657,166 @@ create index if not exists events_series on public.events(series) where series i
 drop policy if exists "beheer trainingen inplannen" on public.events;
 create policy "beheer trainingen inplannen" on public.events for all to authenticated
   using (public.is_admin() and type = 'training') with check (public.is_admin() and type = 'training');
+
+-- =====================================================================
+-- Versie 14: ouders (convocaties en berichten), oudercontacten en medische info, toegang per ploegenselectie
+-- (bv. coördinator onderbouw), clubdashboard, terreinoverzicht en back-up voor de beheerder.
+-- =====================================================================
+alter table public.events  add column if not exists convo     jsonb;     -- {players:[id], meet, place, bring, note, sent}
+alter table public.events  add column if not exists cancelled boolean not null default false;
+alter table public.players add column if not exists contacts  jsonb not null default '[]'; -- [{name, rel, phone, email}]
+alter table public.players add column if not exists medical   text;     -- allergieën, medicatie, aandachtspunten (enkel voor de trainers van de ploeg)
+alter table public.club_members add column if not exists team_access uuid[] not null default '{}';
+
+create or replace function public.is_trainer(t uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.team_trainers where team_id = t and user_id = auth.uid())
+      or exists (select 1 from public.club_members where user_id = auth.uid() and (all_teams or t = any(team_access)));
+$$;
+create or replace function public.club_status() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object('member', public.is_member(), 'admin', public.is_admin(),
+    'all_teams', coalesce((select all_teams from public.club_members where user_id = auth.uid()), false),
+    'team_access', coalesce((select to_json(team_access) from public.club_members where user_id = auth.uid()), '[]'::json),
+    'functie', (select functie from public.club_members where user_id = auth.uid()));
+$$;
+create or replace function public.club_set_team_access(uid uuid, teams uuid[]) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  update public.club_members set team_access = coalesce(teams, '{}') where user_id = uid;
+end $$;
+revoke all on function public.club_set_team_access(uuid, uuid[]) from anon, public;
+grant execute on function public.club_set_team_access(uuid, uuid[]) to authenticated;
+create or replace function public.club_admin_info() returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  return json_build_object(
+    'code', (select value from public.club_settings where key = 'invite_code'),
+    'members', coalesce((select json_agg(json_build_object('user_id', m.user_id, 'email', m.email, 'role', m.role, 'created_at', m.created_at,
+        'name', nullif(trim(u.raw_user_meta_data->>'full_name'), ''), 'all_teams', m.all_teams, 'functie', m.functie, 'team_access', m.team_access,
+        'teams', (select string_agg(t.name, ', ' order by t.name) from public.team_trainers tt join public.teams t on t.id = tt.team_id where tt.user_id = m.user_id))
+        order by m.role, coalesce(nullif(trim(u.raw_user_meta_data->>'full_name'), ''), m.email)) from public.club_members m left join auth.users u on u.id = m.user_id), '[]'::json),
+    'waiting', coalesce((select json_agg(json_build_object('user_id', u.id, 'email', u.email, 'created_at', u.created_at, 'name', nullif(trim(u.raw_user_meta_data->>'full_name'), '')) order by u.created_at desc)
+        from auth.users u where not exists (select 1 from public.club_members m where m.user_id = u.id)), '[]'::json));
+end $$;
+
+-- berichten: van de club (team_id leeg, enkel beheerders) of van een ploeg (trainers van die ploeg)
+create table if not exists public.messages (
+  id         uuid primary key default gen_random_uuid(),
+  team_id    uuid references public.teams(id) on delete cascade,
+  title      text not null,
+  body       text,
+  author     text,
+  created_by uuid default auth.uid(),
+  created_at timestamptz not null default now(),
+  until      date
+);
+alter table public.messages enable row level security;
+drop policy if exists "berichten lezen" on public.messages;
+drop policy if exists "berichten schrijven" on public.messages;
+create policy "berichten lezen" on public.messages for select to authenticated
+  using (public.is_member() and (team_id is null or public.is_trainer(team_id) or public.is_admin()));
+create policy "berichten schrijven" on public.messages for all to authenticated
+  using ((team_id is null and public.is_admin()) or (team_id is not null and (public.is_trainer(team_id) or public.is_admin())))
+  with check ((team_id is null and public.is_admin()) or (team_id is not null and (public.is_trainer(team_id) or public.is_admin())));
+grant select, insert, update, delete on public.messages to authenticated;
+create index if not exists messages_team on public.messages(team_id, created_at desc);
+
+-- wat ouders zien: nu ook de convocatie (verzamelen, meebrengen, of hun kind geselecteerd is), afgelastingen en berichten
+create or replace function public.parent_view(tok uuid) returns json
+language plpgsql stable security definer set search_path = public as $$
+declare p public.players%rowtype;
+begin
+  select * into p from public.players where parent_token = tok and active is not false;
+  if not found then return null; end if;
+  return json_build_object('player', p.first_name, 'team', (select name from public.teams where id = p.team_id),
+    'events', coalesce((select json_agg(json_build_object('id', e.id, 'type', e.type, 'date', e.date,
+        'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'), 'location', e.location,
+        'opponent', e.opponent, 'home', e.home, 'state', case when e.cancelled then 'afgelast' else e.rbfa_state end,
+        'convo', case when e.convo ? 'sent' then json_build_object('selected', (e.convo->'players') ? p.id::text,
+            'meet', e.convo->>'meet', 'place', e.convo->>'place', 'bring', e.convo->>'bring', 'note', e.convo->>'note') end,
+        'rsvp', r.status, 'note', r.note) order by e.date, e.start_time)
+      from public.events e left join public.rsvp r on r.event_id = e.id and r.player_id = p.id
+      where e.team_id = p.team_id and e.date between current_date and current_date + 42), '[]'::json),
+    'messages', coalesce((select json_agg(json_build_object('title', m.title, 'body', m.body, 'author', m.author, 'date', m.created_at::date, 'club', m.team_id is null) order by m.created_at desc)
+      from (select * from public.messages m where (m.team_id is null or m.team_id = p.team_id)
+              and coalesce(m.until, (m.created_at + interval '30 days')::date) >= current_date order by m.created_at desc limit 8) m), '[]'::json));
+end $$;
+grant execute on function public.parent_view(uuid) to anon, authenticated;
+
+-- clubdashboard: cijfers per ploeg zonder namen van kinderen; voor beheerders en wie toegang heeft tot meerdere ploegen
+create or replace function public.club_dashboard(since date) returns json
+language plpgsql stable security definer set search_path = public as $$
+declare me public.club_members%rowtype;
+begin
+  select * into me from public.club_members where user_id = auth.uid();
+  if not found or not (me.role = 'admin' or me.all_teams or cardinality(me.team_access) > 0) then raise exception 'Alleen voor beheerders en coördinatoren.'; end if;
+  return coalesce((select json_agg(x order by x->>'name') from (
+    select json_build_object('id', t.id, 'name', t.name, 'category', t.category, 'format', t.format,
+      'trainers', (select count(*) from public.team_trainers tt where tt.team_id = t.id),
+      'players', (select count(*) from public.players pl where pl.team_id = t.id and pl.active),
+      'trainings', (select count(*) from public.events e where e.team_id = t.id and e.type = 'training' and not e.cancelled and e.date between since and current_date),
+      'trainings_att', (select count(*) from public.events e where e.team_id = t.id and e.type = 'training' and e.date between since and current_date and exists (select 1 from public.attendance a where a.event_id = e.id)),
+      'trainings_plan', (select count(*) from public.events e where e.team_id = t.id and e.type = 'training' and e.date between since and current_date and e.plan is not null and e.plan::text not in ('null', '{}', '[]')),
+      'att_pct', (select round(100.0 * count(*) filter (where a.status in ('aanwezig', 'te laat')) / nullif(count(*), 0)) from public.attendance a join public.events e on e.id = a.event_id where e.team_id = t.id and e.type = 'training' and e.date between since and current_date),
+      'matches', (select count(*) from public.events e where e.team_id = t.id and e.type = 'wedstrijd' and e.date between since and current_date),
+      'matches_report', (select count(*) from public.events e where e.team_id = t.id and e.type = 'wedstrijd' and e.date between since and current_date and e.score_for is not null),
+      'evals', (select json_object_agg(m, n) from (select ev.moment m, count(*) n from public.evaluations ev join public.players pl on pl.id = ev.player_id where pl.team_id = t.id group by ev.moment) q),
+      'next', (select min(e.date) from public.events e where e.team_id = t.id and e.date >= current_date)) x
+    from public.teams t
+    where me.role = 'admin' or me.all_teams or t.id = any(me.team_access)) s), '[]'::json);
+end $$;
+revoke all on function public.club_dashboard(date) from anon, public;
+grant execute on function public.club_dashboard(date) to authenticated;
+
+-- terreinoverzicht: trainingen en thuiswedstrijden van alle ploegen (geen namen van kinderen), voor alle clubleden
+create or replace function public.club_fields(d1 date, d2 date) returns json
+language sql stable security definer set search_path = public as $$
+  select case when not public.is_member() then '[]'::json else coalesce((select json_agg(json_build_object('id', e.id, 'team_id', e.team_id, 'team', t.name, 'type', e.type,
+      'date', e.date, 'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'), 'location', e.location, 'opponent', e.opponent,
+      'cancelled', e.cancelled or coalesce(e.rbfa_state, '') = 'afgelast') order by e.date, e.start_time)
+    from public.events e join public.teams t on t.id = e.team_id
+    where e.date between d1 and least(d2, d1 + 400) and (e.type = 'training' or e.home is not false)), '[]'::json) end;
+$$;
+revoke all on function public.club_fields(date, date) from anon, public;
+grant execute on function public.club_fields(date, date) to authenticated;
+
+-- back-up: de beheerder downloadt alle gegevens van de club als één bestand
+create or replace function public.club_backup() returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Alleen voor beheerders van de club.'; end if;
+  return json_build_object('made', now(), 'version', 14,
+    'teams', (select coalesce(json_agg(t), '[]') from public.teams t),
+    'team_trainers', (select coalesce(json_agg(t), '[]') from public.team_trainers t),
+    'players', (select coalesce(json_agg(t), '[]') from public.players t),
+    'events', (select coalesce(json_agg(t), '[]') from public.events t),
+    'attendance', (select coalesce(json_agg(t), '[]') from public.attendance t),
+    'evaluations', (select coalesce(json_agg(t), '[]') from public.evaluations t),
+    'goals', (select coalesce(json_agg(t), '[]') from public.goals t),
+    'rsvp', (select coalesce(json_agg(t), '[]') from public.rsvp t),
+    'scouting', (select coalesce(json_agg(t), '[]') from public.scouting t),
+    'trainer_items', (select coalesce(json_agg(t), '[]') from public.trainer_items t),
+    'club_docs', (select coalesce(json_agg(t), '[]') from public.club_docs t),
+    'club_members', (select coalesce(json_agg(t), '[]') from public.club_members t),
+    'club_contacts', (select coalesce(json_agg(t), '[]') from public.club_contacts t),
+    'messages', (select coalesce(json_agg(t), '[]') from public.messages t),
+    'feedback', (select coalesce(json_agg(t), '[]') from public.feedback t));
+end $$;
+revoke all on function public.club_backup() from anon, public;
+grant execute on function public.club_backup() to authenticated;
+
+-- beheerders mogen spelers importeren in elke ploeg (bv. de ledenlijst uit PSD)
+drop policy if exists "beheer spelers lezen" on public.players;
+drop policy if exists "beheer spelers toevoegen" on public.players;
+drop policy if exists "beheer spelers wijzigen" on public.players;
+create policy "beheer spelers lezen"     on public.players for select to authenticated using (public.is_admin());
+create policy "beheer spelers toevoegen" on public.players for insert to authenticated with check (public.is_admin());
+create policy "beheer spelers wijzigen"  on public.players for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- wakker houden: een kleine, openbare oproep die een geplande taak (GitHub Actions) elke dag doet,
+-- zodat het gratis Supabase-project niet gepauzeerd wordt na een week zonder gebruik. Geeft geen gegevens terug.
+create or replace function public.ping() returns text language sql stable as $$ select 'ok'::text $$;
+grant execute on function public.ping() to anon, authenticated;

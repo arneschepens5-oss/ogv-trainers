@@ -37,7 +37,7 @@ function viewJoin(v) {
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.functie = data.functie || "";
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || "";
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
   catch (e) { S.member = true; S.admin = false; /* databaseversie 5 nog niet uitgevoerd: gedrag zoals vroeger */ }
@@ -57,12 +57,24 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
     const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
   if (tab === "meldingen") return adminFeedback(host);
   if (tab === "planning") return adminPlanning(host);
-  if (tab === "systeem") { host.innerHTML = `<div class="panel" id="adm-db"></div>`; return dbCheck($("#adm-db")); }
+  if (tab === "systeem") { host.innerHTML = `<div class="panel" id="adm-db"></div>
+    <div class="grid2 sec"><div class="panel"><h2>Back-up</h2><p class="hint" style="margin-top:0">Download alle gegevens van de club (ploegen, spelers, kalender, verslagen, evaluaties…) als één bestand. Doe dit minstens één keer per maand en bewaar het op een veilige plaats: het bevat gegevens van kinderen.</p>
+      <button class="btn" type="button" id="bk">${IC.out}Back-up downloaden</button><p class="hint" id="bkl" style="margin-bottom:0"></p></div>
+    <div class="panel"><h2>Gratis Supabase: aandachtspunten</h2><ul class="tight">
+      <li><b>Pauzeren na 7 dagen zonder gebruik:</b> een geplande taak op GitHub houdt het project dagelijks wakker (zie de overdrachtsnota).</li>
+      <li><b>Mails:</b> zonder eigen mailserver stuurt Supabase maar enkele mails per uur. Stel een eigen SMTP in (bv. Brevo of Resend) vóór je veel trainers tegelijk uitnodigt.</li>
+      <li><b>Back-ups:</b> het gratis plan heeft geen terugzetpunt. Download daarom zelf regelmatig een back-up.</li></ul></div></div>`;
+    try { const l = localStorage.getItem("ogv-last-backup"); if (l) $("#bkl").textContent = "Laatste back-up op dit toestel: " + new Date(l).toLocaleString("nl-BE"); } catch (x) {}
+    $("#bk").onclick = async () => { if (mode === "demo") { download("ogv-backup-demo.json", JSON.stringify(DEMODB._load(), null, 1), "application/json"); return; }
+      const r = await sb.rpc("club_backup"); if (r.error) { toast(/club_backup|function/i.test(r.error.message) ? "Voer eerst ogv-database.sql uit (versie 14)." : r.error.message); return; }
+      download("ogv-backup-" + todayIso() + ".json", JSON.stringify(r.data), "application/json"); try { localStorage.setItem("ogv-last-backup", new Date().toISOString()); } catch (x) {} toast("Back-up gedownload."); };
+    return dbCheck($("#adm-db")); }
   let info; try { info = await getInfo(); } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message)}</div>`; return; }
   if (tab === "ploegen") {
     host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van OG Vorselaar op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
+      ${V14() ? `<div class="panel sec"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Spelers importeren uit PSD</h2><p class="hint" style="margin:4px 0 0">Exporteer de spelerslijst van de hele club uit PSD als Excel, met een kolom voor de ploeg. Alle spelers komen in één keer in de juiste ploeg, met de gsm-nummers van de ouders.</p></div><button class="btn ghost" type="button" id="impAll">${IC.out}Excel kiezen</button></div></div>` : ""}
       <div class="sec" id="adm-teams"><p class="hint">Laden…</p></div>`;
-    $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render()); return adminTeams($("#adm-teams"), info); }
+    $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render()); const ia = $("#impAll"); if (ia) ia.onclick = () => importPlayers(true); return adminTeams($("#adm-teams"), info); }
   const link = location.origin + location.pathname + "#/aanmelden";
   host.innerHTML = `<div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan met deze code. Deel ze alleen met trainers van de club.</p>
       <div class="codebox"><b id="code" translate="no">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
@@ -71,7 +83,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
     <div class="panel"><div class="row"><h2 style="margin:0">Wachten op toegang</h2>${info.waiting?.length ? `<span class="pill w">${info.waiting.length}</span>` : ""}</div>${info.waiting?.length ? `<div class="list" style="margin-top:10px">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
       : `<p class="hint" style="margin:8px 0 0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
     <div class="sec"><div class="row"><h2 style="margin:0">Leden (${info.members.length})</h2><span class="spacer"></span><span class="hint">Geef iemand een functie (bv. TVJO, ICT) en eventueel toegang tot alle ploegen, zonder trainer van een ploeg te zijn.</span></div>
-    <div class="list memlist" style="margin-top:10px">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}${m.functie ? ` <span class="pill fn">${esc(m.functie)}</span>` : ""}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${m.all_teams ? "toegang tot alle ploegen" : esc(m.teams || "nog geen ploeg")}</small></span>
+    <div class="list memlist" style="margin-top:10px">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}${m.functie ? ` <span class="pill fn">${esc(m.functie)}</span>` : ""}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${m.all_teams ? "toegang tot alle ploegen" : (m.team_access || []).length ? "toegang tot " + (m.team_access.length) + " ploegen" + (m.teams ? " · trainer van " + esc(m.teams) : "") : esc(m.teams || "nog geen ploeg")}</small></span>
       ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : ""}<button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button></div>`).join("")}</div></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
@@ -91,14 +103,22 @@ function memberForm(m, rpc) {
   const d = dialog(`<form><h2>${esc(m.name || m.email)}</h2><p class="muted" style="margin:0">${esc(m.email || "")}${m.teams ? " · trainer van " + esc(m.teams) : ""}</p>
     <label class="f">Functie in de club<input name="fn" list="fnl" value="${esc(m.functie || "")}" placeholder="bv. TVJO, ICT, Coördinator onderbouw"><datalist id="fnl">${FUNCTIES.map(f => `<option value="${f}">`).join("")}</datalist></label>
     <label class="check"><input type="checkbox" name="all"${m.all_teams ? " checked" : ""}> <span><b>Toegang tot alle ploegen</b><br><small class="muted">Voor de TVJO of coördinatoren: alle spelers, evaluaties, trainingen en verslagen van elke ploeg bekijken en aanpassen, zonder trainer van een ploeg te zijn.</small></span></label>
+    ${V14() ? `<div class="f full" id="taw"${m.all_teams ? " hidden" : ""}><span>Of toegang tot bepaalde ploegen <small class="muted" style="font-weight:400">— bv. de coördinator onderbouw</small></span>
+      <div class="chips" style="margin:6px 0">${BOUW.slice(1).map(([k, l]) => `<button class="chip" type="button" data-bw="${k}">${l}</button>`).join("")}<button class="chip" type="button" data-bw="none">Geen</button></div>
+      <div class="plteams">${S.teams.map(t => `<button type="button" class="chip" data-ta="${t.id}" aria-pressed="${(m.team_access || []).includes(t.id)}">${esc(t.name)}</button>`).join("")}</div></div>` : ""}
     <label class="check"><input type="checkbox" name="adm"${m.role === "admin" ? " checked" : ""}${me ? " disabled" : ""}> <span><b>Beheerder</b><br><small class="muted">Toegang tot Beheer: meldingen, leden, ploegen, trainers koppelen en contactpersonen. Bv. voor het ICT-team.</small></span></label>
     <div class="row">${me ? "" : `<button class="link danger" type="button" id="rmm">Toegang intrekken</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
   const rm = $("#rmm", d); if (rm) rm.onclick = () => { if (confirm(`Toegang intrekken voor ${m.name || m.email}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) { d.close(); rpc("club_set_member", { uid: m.user_id, r: null }, "Toegang ingetrokken."); } };
+  const ta = new Set(m.team_access || []), tap = () => $$("[data-ta]", d).forEach(b => b.setAttribute("aria-pressed", ta.has(b.dataset.ta)));
+  $$("[data-ta]", d).forEach(b => b.onclick = () => { ta.has(b.dataset.ta) ? ta.delete(b.dataset.ta) : ta.add(b.dataset.ta); tap(); });
+  $$("[data-bw]", d).forEach(b => b.onclick = () => { if (b.dataset.bw === "none") ta.clear(); else S.teams.filter(t => bouwOf(t) === b.dataset.bw).forEach(t => ta.add(t.id)); tap(); });
+  const allBox = $("[name=all]", d), taw = $("#taw", d); if (allBox && taw) allBox.onchange = () => taw.hidden = allBox.checked;
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = ev.target; if (mode === "demo") { d.close(); toast("In de demo wordt dit niet bewaard."); return; }
     const role = me ? m.role : (f.adm.checked ? "admin" : "trainer");
     if (role !== m.role) { const r = await sb.rpc("club_set_member", { uid: m.user_id, r: role }); if (r.error) { toast(r.error.message); return; } }
     const r2 = await sb.rpc("club_set_access", { uid: m.user_id, alle: f.all.checked, fn: f.fn.value.trim() });
     if (r2.error) { toast(/club_set_access|function/i.test(r2.error.message) ? "Voer eerst ogv-database.sql uit (versie 12)." : r2.error.message); return; }
+    if (V14()) { const r3 = await sb.rpc("club_set_team_access", { uid: m.user_id, teams: f.all.checked ? [] : [...ta] }); if (r3.error) { toast(r3.error.message); return; } }
     d.close(); toast("Opgeslagen."); render(); };
 }
 
@@ -150,7 +170,8 @@ async function dbCheck(host) {
     ["Namen van trainers", async () => { const r = await sb.rpc("club_admin_info"); if (r.error) return r; return (r.data?.members || []).every(m => "name" in m) ? r : { error: { message: "oude versie" } }; }],
     ["Probleem melden", () => sb.from("feedback").select("id").limit(1)],
     ["Functies en contactlijst", () => sb.from("club_contacts").select("id").limit(1)],
-    ["Vaste trainingen inplannen", () => sb.from("events").select("series").limit(1)]];
+    ["Vaste trainingen inplannen", () => sb.from("events").select("series").limit(1)],
+    ["Convocaties, berichten, oudercontacten en clubdashboard", () => sb.from("messages").select("id").limit(1)]];
   host.innerHTML = `<h2>Databasecontrole</h2><p class="hint" style="margin-top:0">Bezig met controleren…</p>`;
   const res = []; for (const [l, fn] of C) { let ok = false; try { const r = await fn(); ok = !r.error; } catch (e) { ok = false; } res.push([l, ok]); }
   const bad = res.filter(r => !r[1]).length;
@@ -405,7 +426,7 @@ function planForm(done) {
     const out = []; let x = new Date(a + "T12:00"); const end = new Date(b + "T12:00");
     while (x <= end && out.length < 800) { const k = iso(x); if (st.days.has(x.getDay()) && !st.skip.some(([s1, s2]) => k >= s1 && k <= (s2 || s1))) out.push(k); x = addDays(x, 1); }
     return out; };
-  const sum = () => { const n = dates().length, t = st.teams.size;
+  const sum = () => { const n = dates().length, t = st.teams.size; delete f.dataset.ok; $("#plok", d).textContent = "Inplannen";
     $("#plsum", d).innerHTML = !t ? "Kies minstens één ploeg." : !st.days.size ? "Kies minstens één dag." : !n ? "Er valt geen enkele training in deze periode."
       : `Dit zet <b>${n} trainingen</b>${t > 1 ? ` in de kalender van elk van de <b>${t} ploegen</b> (${n * t} in totaal)` : " in de kalender"}. Bestaat er op die dag al een training op hetzelfde uur, dan wordt ze overgeslagen.`;
     $("#plok", d).disabled = !(n && t); };
@@ -414,7 +435,7 @@ function planForm(done) {
     $("#pldr", d).innerHTML = WD_ORDER.filter(dn => st.days.has(dn)).map(dn => { const x = st.days.get(dn); return `<div class="pldr" data-dr="${dn}"><b>${WD[dn]}</b>
       <label class="f">Van<input type="time" data-k="st" value="${esc(x.st)}" required></label><label class="f">Tot<input type="time" data-k="et" value="${esc(x.et)}"></label>
       <label class="f plloc">Terrein<input data-k="loc" list="pllocs" value="${esc(x.loc)}" placeholder="bv. E-plein"></label></div>`; }).join("");
-    $$("[data-dr] input", d).forEach(i => i.oninput = () => { st.days.get(+i.closest("[data-dr]").dataset.dr)[i.dataset.k] = i.value; });
+    $$("[data-dr] input", d).forEach(i => i.oninput = () => { st.days.get(+i.closest("[data-dr]").dataset.dr)[i.dataset.k] = i.value; delete f.dataset.ok; $("#plok", d).textContent = "Inplannen"; });
     $("#skl", d).innerHTML = st.skip.map(([a, b], i) => `<span class="chip on">${dShort(a)}${b && b !== a ? " – " + dShort(b) : ""}<button type="button" data-sk="${i}" aria-label="Weg">✕</button></span>`).join("");
     $$("[data-sk]", d).forEach(b => b.onclick = () => { st.skip.splice(+b.dataset.sk, 1); paint(); }); sum(); };
   $$("[data-tm]", d).forEach(b => b.onclick = () => { const k = b.dataset.tm; st.teams.has(k) ? st.teams.delete(k) : st.teams.add(k); paint(); });
@@ -433,6 +454,13 @@ function planForm(done) {
       const key = (t, dt, s) => t + "|" + dt + "|" + String(s || "").slice(0, 5), seen = new Set(have.map(e => key(e.team_id, e.date, e.start_time)));
       const rows = []; for (const t of tIds) for (const dt of ds) { const x = slot(dt); if (!seen.has(key(t, dt, x.st))) rows.push({ id: uid(), team_id: t, type: "training", date: dt, start_time: x.st, end_time: x.et || null, location: (x.loc || "").trim() || null, series, report: {} }); }
       if (!rows.length) { toast("Alles stond al in de kalender."); d.close(); return; }
+      if (!f.dataset.ok && V14()) { /* overlap met andere ploegen op hetzelfde terrein? */
+        let ex = []; try { ex = await fieldsData(ds[0], ds[ds.length - 1]); } catch (x) {}
+        const nw = rows.filter(r => r.location).map(r => ({ id: r.id, team: S.teams.find(t => t.id === r.team_id)?.name, date: r.date, start: r.start_time, end: r.end_time, location: r.location, mine: true }));
+        const bad = overlaps([...ex.filter(x => !tIds.includes(x.team_id)), ...nw]), hits = nw.filter(x => bad.has(x.id));
+        if (hits.length) { const other = ex.filter(x => bad.has(x.id)), teamsHit = [...new Set(other.map(x => x.team))];
+          $("#plsum", d).innerHTML = `<b style="color:var(--warn)">Let op: ${hits.length} trainingen overlappen</b> met ${esc(teamsHit.join(", "))} op hetzelfde terrein, bv. ${dShort(hits[0].date)} op ${esc(hits[0].location)}. Pas het uur of het terrein aan, of plan toch in als dat zo afgesproken is.`;
+          f.dataset.ok = "1"; btn.disabled = false; btn.textContent = "Toch inplannen"; return; } }
       if (mode === "demo") { for (const r of rows) await db.insert("events", r); }
       else for (let i = 0; i < rows.length; i += 200) { const r = await sb.from("events").insert(rows.slice(i, i + 200)); if (r.error) throw r.error; }
       d.close(); toast(`${rows.length} trainingen ingepland.`); await planRefresh(tIds); done && done();

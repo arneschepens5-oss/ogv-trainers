@@ -1075,3 +1075,28 @@ a.navbtn{text-decoration:none}
 .pldr{display:grid;grid-template-columns:96px 1fr 1fr 1.4fr;gap:8px;align-items:end;padding:10px 12px;border-radius:12px;background:var(--card2)}
 .pldr>b{align-self:center}.pldr .f{margin:0;font-size:12.5px}.pldr input{min-width:0}
 @media (max-width:640px){.pldr{grid-template-columns:1fr 1fr}.pldr>b,.pldr .plloc{grid-column:1/-1}}
+/* ---- v14: berichten, contacten, import, dashboard, terreinen ---- */
+.msgs{display:flex;flex-direction:column;gap:10px}
+.msgw{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.msgc b{display:block;font-size:16.5px;margin-top:6px}.msgc p{margin:6px 0 0;color:var(--ink2,var(--ink));line-height:1.45}
+.msgs>.msgc{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--yellow);border-radius:14px;padding:12px 14px}
+.msgs>.msgc:not(.club){border-left-color:var(--info,#38BDF8)}
+.medw{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--s-bad,#E11D48) 12%,transparent);border:1px solid var(--s-bad,#E11D48);margin-top:10px}
+.medw p{margin:2px 0 0}.medw .i{flex:none;margin-top:2px}
+.ctrow{display:grid;grid-template-columns:1.3fr .9fr 1fr 1.3fr;gap:6px;margin-top:6px}.ctrow input,.ctrow select{min-width:0}
+@media (max-width:640px){.ctrow{grid-template-columns:1fr 1fr}}
+.impdlg{max-width:760px}.impmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:14px}.impmap .f{margin:0;font-size:12.5px}
+.dbt td,.dbt th{text-align:center}.dbt td:first-child,.dbt th:first-child{text-align:left}
+.dbt td.okc{color:var(--s-ok,#16A34A);font-weight:700}.dbt td.badc{color:var(--s-bad,#E11D48);font-weight:700}
+.fldw{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.fldd{display:flex;flex-direction:column;gap:5px;min-width:0}.fldd>small{font-weight:700;color:var(--muted);text-transform:capitalize}.fldd.today>small{color:var(--ytext,var(--ink))}
+.fldb{border-radius:10px;padding:6px 8px;background:var(--card2);border:1px solid var(--line);font-size:12.5px;line-height:1.25;display:flex;flex-direction:column;min-width:0}
+.fldb b{font-size:12.5px}.fldb span,.fldb em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fldb em{font-style:normal;color:var(--muted)}
+.fldb.wedstrijd{border-color:var(--yellow)}.fldb.clash{border-color:var(--s-bad,#E11D48);background:color-mix(in srgb,var(--s-bad,#E11D48) 14%,transparent)}
+.fldb.off{opacity:.45;text-decoration:line-through}.fld0{color:var(--muted);font-size:12px}
+@media (max-width:760px){.fldw{grid-template-columns:1fr}.fldd{flex-direction:row;flex-wrap:wrap;align-items:center}.fldd>small{width:56px}.fldd .fld0{display:none}.fldd:has(.fld0){display:none}}
+.wev.off{opacity:.5}.wev.off b{text-decoration:line-through}
+.field button em.rs{font-style:normal;font-size:11px;font-weight:700;margin-left:4px;padding:1px 6px;border-radius:999px}
+.field button em.rs.ja{background:color-mix(in srgb,var(--s-ok,#16A34A) 25%,transparent)}.field button em.rs.nee{background:color-mix(in srgb,var(--s-bad,#E11D48) 25%,transparent)}
+ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14.5px;line-height:1.45}
+.tclist .item .main{flex:1 1 150px}

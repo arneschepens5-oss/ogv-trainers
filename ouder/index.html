@@ -43,6 +43,10 @@ h1 span{color:var(--yellow)}
 .why button[aria-pressed="true"]{border-color:var(--bad);color:var(--bad)}
 .why input{flex:1;min-width:160px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px}
 .state{grid-column:1/-1;font-size:13px;color:var(--muted);min-height:1em;margin-top:2px}
+.note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--yellow);border-radius:14px;padding:12px 14px}
+.note small{display:block;color:var(--muted);font-size:12.5px}.note b{display:block;font-size:17px;margin-top:2px}.note p{margin:6px 0 0}
+.convo{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--okbg);font-size:14.5px}
+.convo.off{background:var(--chip);color:var(--muted)}.convo span b{display:inline}
 .msg{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;text-align:center}
 .msg b{display:block;font-size:19px;margin-bottom:4px}
 .foot{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
@@ -70,7 +74,9 @@ async function view() {
     const today = new Date().toISOString().slice(0, 10), lim = new Date(Date.now() + 42 * 864e5).toISOString().slice(0, 10);
     return { player: p.first_name, team: d.teams.find(t => t.id === p.team_id)?.name, events: d.events.filter(e => e.team_id === p.team_id && e.date >= today && e.date <= lim)
       .sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || ""))).map(e => { const r = (d.rsvp || []).find(x => x.event_id === e.id && x.player_id === p.id);
-        return { id: e.id, type: e.type, date: e.date, start: (e.start_time || "").slice(0, 5), end: (e.end_time || "").slice(0, 5), location: e.location, opponent: e.opponent, home: e.home, state: e.rbfa_state, rsvp: r?.status || null, note: r?.note || null }; }) }; }
+        return { id: e.id, type: e.type, date: e.date, start: (e.start_time || "").slice(0, 5), end: (e.end_time || "").slice(0, 5), location: e.location, opponent: e.opponent, home: e.home, state: e.cancelled ? "afgelast" : e.rbfa_state,
+          convo: e.convo && e.convo.sent ? { selected: (e.convo.players || []).includes(p.id), meet: e.convo.meet, place: e.convo.place, bring: e.convo.bring, note: e.convo.note } : null, rsvp: r?.status || null, note: r?.note || null }; }),
+      messages: (d.messages || []).filter(m => !m.team_id || m.team_id === p.team_id).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 8).map(m => ({ title: m.title, body: m.body, author: m.author, date: String(m.created_at).slice(0, 10), club: !m.team_id })) }; }
   const { data, error } = await sb.rpc("parent_view", { tok }); if (error) throw error; return data;
 }
 async function answer(ev, st, msg) {
@@ -84,13 +90,16 @@ function draw() {
   $("#h").innerHTML = `Komt ${esc(n)}<span>?</span>`;
   $("#sub").textContent = `${data.team || ""} · tik per activiteit aan of ${n} erbij is.`;
   if (!data.events.length) { $("#list").innerHTML = `<div class="msg"><b>Niets gepland</b>De komende zes weken staan er nog geen trainingen of wedstrijden in de kalender. Kom later nog eens kijken.</div>`; return; }
-  $("#list").innerHTML = data.events.map(e => { const d = dayFmt(e.date), cancel = e.state === "afgelast";
+  const msgs = (data.messages || []).map(m => `<div class="note"><small>${m.club ? "Bericht van de club" : "Bericht van de trainer"} · ${dayFmt(m.date).toLocaleDateString("nl-BE", { day: "numeric", month: "short" })}</small><b>${esc(m.title)}</b>${m.body ? `<p>${esc(m.body).replace(/\n/g, "<br>")}</p>` : ""}</div>`).join("");
+  $("#list").innerHTML = msgs + data.events.map(e => { const d = dayFmt(e.date), cancel = e.state === "afgelast", cv = e.convo, out = cv && !cv.selected;
     const title = e.type === "wedstrijd" ? `${e.opponent ? (e.home === false ? "Uit bij " : "Thuis tegen ") + esc(e.opponent) : "Wedstrijd"}` : "Training";
     const maps = e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location.split(" · ").pop())}" target="_blank" rel="noopener">${esc(e.location)}</a>` : "";
     return `<article class="ev${cancel ? " cancel" : ""}" data-e="${e.id}"><div class="date"><small>${d.toLocaleDateString("nl-BE", { weekday: "short" })}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString("nl-BE", { month: "short" })}</small></div>
       <div class="t">${e.type === "wedstrijd" ? '<span class="tag match">Wedstrijd</span>' : ""}${cancel ? "Afgelast · " : ""}${title}</div>
       <div class="m">${e.start ? e.start + (e.end ? "–" + e.end : "") : "Uur volgt"}${maps ? " · " + maps : ""}</div>
-      ${cancel ? "" : `<div class="act"><button type="button" class="ja" aria-pressed="${e.rsvp === "ja"}">Komt</button><button type="button" class="nee" aria-pressed="${e.rsvp === "nee"}">Komt niet</button></div>
+      ${cv && !cancel ? (cv.selected ? `<div class="convo"><b>✅ ${esc(n)} is geselecteerd</b>${cv.meet ? `<span>Verzamelen om <b>${esc(cv.meet)}</b>${cv.place ? " · " + esc(cv.place) : ""}</span>` : ""}${cv.bring ? `<span>Meebrengen: ${esc(cv.bring)}</span>` : ""}${cv.note ? `<span>${esc(cv.note)}</span>` : ""}</div>`
+        : `<div class="convo off"><b>${esc(n)} is deze keer niet geselecteerd.</b><span>Volgende keer weer! Vragen? Spreek de trainer gerust aan.</span></div>`) : ""}
+      ${cancel || out ? "" : `<div class="act"><button type="button" class="ja" aria-pressed="${e.rsvp === "ja"}">Komt</button><button type="button" class="nee" aria-pressed="${e.rsvp === "nee"}">Komt niet</button></div>
       <div class="why"${e.rsvp === "nee" ? "" : " hidden"}>${WHY.map(w => `<button type="button" data-w="${w}" aria-pressed="${e.note === w}">${w}</button>`).join("")}<input placeholder="Of schrijf een korte reden" maxlength="200" value="${esc(WHY.includes(e.note) ? "" : e.note || "")}"></div>
       <div class="state" aria-live="polite">${e.rsvp ? "Doorgegeven aan de trainer." : ""}</div>`}</article>`; }).join("") +
     `<p class="foot">Deze pagina is persoonlijk voor ${esc(n)}. Stuur de link niet door.</p>`;

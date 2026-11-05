@@ -11,7 +11,7 @@ function weekView(evs) { /* "Mijn planning": maandag tot zondag, zoals in PSD */
   return `<div class="row" style="margin-bottom:10px"><button class="btn ghost small" type="button" data-wk="-1" aria-label="Vorige week">‹</button><b style="font-size:17px">Week ${wk} · ${dShort(days[0])} – ${dShort(days[6])}</b><button class="btn ghost small" type="button" data-wk="1" aria-label="Volgende week">›</button>${calWeek ? `<button class="link" type="button" data-wk="0">Deze week</button>` : ""}</div>
   <div class="week">${days.map(d => { const es = evs.filter(e => e.date === d).sort((a, b) => tm(a.start_time).localeCompare(tm(b.start_time)));
     return `<div class="wd${d === t ? " today" : ""}"><div class="wh"><span>${parse(d).toLocaleDateString("nl-BE", { weekday: "short" })}</span><b>${dDay(d)}</b></div>${es.map(e => { const r = res(e);
-      return `<button type="button" class="wev ${e.type}" data-go="#/activiteit/${e.id}"><small>${tm(e.start_time)}${e.end_time ? "–" + tm(e.end_time) : ""}${e.series ? ` · <span title="Ingepland door de club">vast</span>` : ""}</small><b>${e.type === "wedstrijd" ? esc((e.home === false ? "@ " : "vs ") + (e.opponent || "Wedstrijd")) : esc(e.theme || "Training")}</b>${r ? `<span class="pill ${r}">${e.score_for}-${e.score_against}</span>` : e.location ? `<small>${esc(e.location)}</small>` : ""}</button>`; }).join("")}</div>`; }).join("")}</div>`;
+      return `<button type="button" class="wev ${e.type}${e.cancelled || e.rbfa_state === "afgelast" ? " off" : ""}" data-go="#/activiteit/${e.id}"><small>${tm(e.start_time)}${e.end_time ? "–" + tm(e.end_time) : ""}${e.series ? ` · <span title="Ingepland door de club">vast</span>` : ""}</small><b>${e.type === "wedstrijd" ? esc((e.home === false ? "@ " : "vs ") + (e.opponent || "Wedstrijd")) : esc(e.theme || "Training")}</b>${r ? `<span class="pill ${r}">${e.score_for}-${e.score_against}</span>` : e.location ? `<small>${esc(e.location)}</small>` : ""}</button>`; }).join("")}</div>`; }).join("")}</div>`;
 }
 route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   const t = todayIso();
@@ -37,7 +37,8 @@ function eventForm(e, forceNew) {
   <label class="f wo">Tegenstander<input name="opponent" value="${esc(e.opponent || "")}"></label>
   <label class="f wo">Thuis of uit<select name="home"><option value="1"${e.home !== false ? " selected" : ""}>Thuis</option><option value="0"${e.home === false ? " selected" : ""}>Uit</option></select></label>
   <label class="f full to">Thema<input name="theme" list="themes" value="${esc(e.theme || "")}" placeholder="bv. 1A Opbouw van achteruit"><datalist id="themes">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
-  ${n ? `<label class="f full to">Wekelijks herhalen tot <span class="hint">(leeg laten voor één keer)</span><input type="date" name="until"></label>` : ""}</div>
+  ${n ? `<label class="f full to">Wekelijks herhalen tot <span class="hint">(leeg laten voor één keer)</span><input type="date" name="until"></label>` : ""}
+  ${!n && V14() ? `<label class="f full check"><input type="checkbox" name="cancelled"${e.cancelled ? " checked" : ""}> <span><b>Afgelast</b> <span class="muted" style="font-weight:400">— blijft in de kalender en ouders zien dat het niet doorgaat</span></span></label>` : ""}</div>
   <div class="row">${n ? "" : `<button class="btn danger" type="button" id="del">Verwijderen</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
   let type = e.type; const sync = () => { $$(".wo", d).forEach(x => x.hidden = type !== "wedstrijd"); $$(".to", d).forEach(x => x.hidden = type !== "training"); $$("#typ button", d).forEach(b => b.setAttribute("aria-pressed", b.dataset.t === type)); };
   $$("#typ button", d).forEach(b => b.onclick = () => { type = b.dataset.t; sync(); }); sync();
@@ -45,11 +46,14 @@ function eventForm(e, forceNew) {
     await safe(async () => { await db.del("events", { id: e.id }); S.events = S.events.filter(x => x.id !== e.id); S.att = S.att.filter(a => a.event_id !== e.id); S.club = null; d.close(); go("#/kalender"); }, "Activiteit verwijderd."); };
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
     const base = { team_id: S.team.id, type, start_time: f.start_time || null, end_time: f.end_time || null, location: f.location || null,
-      opponent: type === "wedstrijd" ? f.opponent || null : null, home: type === "wedstrijd" ? f.home === "1" : null, theme: type === "training" ? f.theme || null : null };
+      opponent: type === "wedstrijd" ? f.opponent || null : null, home: type === "wedstrijd" ? f.home === "1" : null, theme: type === "training" ? f.theme || null : null,
+      ...(!n && V14() ? { cancelled: !!f.cancelled } : {}) };
+    const before = n ? null : { ...e };
     const dates = [f.date]; if (n && type === "training" && f.until) { let x = parse(f.date); for (;;) { x = addDays(x, 7); if (iso(x) > f.until || dates.length > 60) break; dates.push(iso(x)); } }
     let firstId;
     await safe(async () => { for (const dt of dates) { const row = { ...(n ? { id: uid(), report: {} } : e), ...base, date: dt }; firstId = firstId || row.id; await putEvent(row); }
-      d.close(); if (n && dates.length === 1) go("#/activiteit/" + firstId + (type === "training" ? "/plan" : "")); else render(); }, dates.length > 1 ? dates.length + " trainingen toegevoegd." : "Opgeslagen."); };
+      d.close(); if (n && dates.length === 1) go("#/activiteit/" + firstId + (type === "training" ? "/plan" : "")); else render();
+      if (before) notifyChange(before, S.events.find(x => x.id === e.id) || { ...e, ...base }); }, dates.length > 1 ? dates.length + " trainingen toegevoegd." : "Opgeslagen."); };
 }
 
 /* ============ activiteit ============ */
@@ -57,7 +61,7 @@ route("activiteit", { title: "Activiteit", auth: true, team: true, keepScroll: t
   const e = S.events.find(x => x.id === id);
   if (!e) { v.innerHTML = `<div class="empty"><b>Activiteit niet gevonden</b>Ze hoort misschien bij een andere ploeg.<br><a class="btn" href="#/kalender">Naar de kalender</a></div>`; return; }
   e.report = e.report || {};
-  return e.type === "wedstrijd" ? viewMatch(v, e, sub || "verslag") : viewTraining(v, e, sub || "aanwezig");
+  return e.type === "wedstrijd" ? viewMatch(v, e, sub || (e.date >= todayIso() && !e.cancelled ? "convocatie" : "verslag")) : viewTraining(v, e, sub || "aanwezig");
 } });
 function tabsHtml(base, tabs, curT) { return `<div class="ptabs noprint" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === curT}" data-tab="${base}/${k}">${l}</button>`).join("")}</div>`; }
 function bindTabs(v) { $$("[data-tab]", v).forEach(b => b.onclick = () => { history.replaceState(null, "", "#/activiteit/" + b.dataset.tab); render(); }); }
@@ -68,6 +72,7 @@ function viewTraining(v, e, tab) {
   v.innerHTML = backLink("#/kalender", "Kalender") + head("Training" + (e.theme ? ": " + esc(e.theme) : ""),
     `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : ""}${e.location ? " · " + esc(e.location) : ""}`,
     `<span class="hint" id="saved"></span><button class="btn ghost small noprint" type="button" id="editEv">Bewerken</button><button class="btn ghost small noprint" type="button" onclick="print()">${IC.print}Afdrukken</button>`) +
+    (e.cancelled ? `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Afgelast.</b> Ouders zien deze training als afgelast. Via Bewerken zet je ze terug aan.</div></div>` : "") +
     tabsHtml(e.id, [["aanwezig", "Aanwezigheden"], ["plan", "Trainingsplan"], ["verslag", "Verslag"]], tab) + `<div id="tabv"></div>`;
   $("#editEv").onclick = () => eventForm(e); bindTabs(v);
   const tv = $("#tabv");
@@ -102,10 +107,10 @@ function viewMatch(v, e, tab) {
   v.innerHTML = backLink("#/kalender", "Kalender") + head(matchTitle(e, S.team.name),
     `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) : ""}${e.location ? " · " + esc(e.location) : ""}${r ? ` · <span class="pill ${r}">${RES_L[r]}</span>` : ""}`,
     `<span class="hint" id="saved"></span><a class="btn noprint" href="#/live/${e.id}">${IC.mic}Live coachen</a><button class="btn ghost small noprint" type="button" id="editEv">Bewerken</button><button class="btn ghost small noprint" type="button" onclick="print()">${IC.print}Afdrukken</button>`) +
-    matchLinks(e) + tabsHtml(e.id, [["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"]], tab) + `<div id="tabv"></div>`;
+    matchLinks(e) + (e.cancelled ? `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Afgelast.</b> Ouders zien deze wedstrijd als afgelast. Via Bewerken zet je ze terug aan.</div></div>` : "") + tabsHtml(e.id, [...(e.date >= todayIso() ? [["convocatie", "Convocatie"]] : []), ["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"], ...(e.date < todayIso() ? [["convocatie", "Convocatie"]] : [])], tab || (e.date >= todayIso() ? "convocatie" : "verslag")) + `<div id="tabv"></div>`;
   $("#editEv").onclick = () => eventForm(e); bindTabs(v);
   const tv = $("#tabv");
-  ({ verslag: reportTab, spelers: playersTab, momenten: momentsTab, opstelling: lineupTab, aanwezig: attendanceView }[tab] || reportTab)(tv, e);
+  ({ convocatie: convoTab, verslag: reportTab, spelers: playersTab, momenten: momentsTab, opstelling: lineupTab, aanwezig: attendanceView }[tab || (e.date >= todayIso() ? "convocatie" : "verslag")] || reportTab)(tv, e);
 }
 function reportTab(tv, e) {
   const R = e.report, sv = saver(e), ps = S.players;
