@@ -466,7 +466,7 @@ function pitchLines(stroke){
 }
 function renderEditor(){
   const pos=T().pos,n=pos.length,r=n>8?4.2:5;
-  $('editor').innerHTML=pitchLines('rgba(255,255,255,.7)')+pos.map((p,i)=>{const id=M().lineup[i];const lab=id?nm(id).split(' ')[0]:'';
+  $('editor').innerHTML=pitchLines('rgba(255,255,255,.7)')+pos.map((p,i)=>{const id=M().lineup[i];const lab=id?shortName(nm(id)):'';
     return `<g><circle class="dot" data-i="${i}" cx="${p.x}" cy="${p.y}" r="${r}" fill="#FFD400" stroke="#111" stroke-width=".7"/>
     <text x="${p.x}" y="${p.y+1.3}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${n>8?3.2:3.6}" fill="#111" pointer-events="none">${esc(p.l)}</text>
     ${lab?`<text x="${p.x}" y="${p.y+r+4}" text-anchor="middle" font-family="Barlow,Arial,sans-serif" font-weight="600" font-size="3.6" fill="#fff" pointer-events="none">${esc(lab)}</text>`:''}</g>`}).join('');
@@ -523,12 +523,12 @@ function renderSheet(){
     const px=1.6,py=.7,w=b.width+px*2,h=b.height+py*2;let x=b.x-px;const dx=x<1?1-x:x+w>99?99-(x+w):0;x+=dx;
     if(dx)t.setAttribute('x',+t.getAttribute('x')+dx);rc.setAttribute('x',x);rc.setAttribute('y',b.y-py);rc.setAttribute('width',w);rc.setAttribute('height',h)});
   const cp=P(m.cap);$('sCapWrap').hidden=!cp;
-  $('sCap').textContent=cp?cp.name:'';
+  $('sCap').textContent=cp?shortName(cp.name):'';
   $('sCapTask').innerHTML=(m.capTask||'').trim()?'<b>Belangrijkste taak:</b> '+esc(m.capTask):'';
   const inLu=new Set(m.lineup.filter(Boolean));
   const bench=m.sel.filter(id=>P(id)&&!inLu.has(id));
   $('sBench').className='bench'+(bench.length>6?' dense':'');
-  $('sBench').innerHTML=bench.length?bench.map(id=>{const p=P(id);return `<span><i>${esc(p.nr||'')}</i>${esc(p.name)}${id===m.cap?' (C)':''}</span>`}).join(''):'<span class="empty">Geen wissels</span>';
+  $('sBench').innerHTML=bench.length?bench.map(id=>{const p=P(id);return `<span><i>${esc(p.nr||'')}</i>${esc(shortName(p.name))}${id===m.cap?' (C)':''}</span>`}).join(''):'<span class="empty">Geen wissels</span>';
   const tasks=m.tasks.slice(0,m.ntasks).filter(x=>x.t||x.h);
   $('sTasksWrap').hidden=!tasks.length;
   $('sTasks').className=tasks.length===1?'solo':'';
