@@ -882,3 +882,72 @@ drop policy if exists "beheer kalender" on public.events;
 create policy "beheer kalender" on public.events for all to authenticated using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "beheer ploeg wijzigen" on public.teams;
 create policy "beheer ploeg wijzigen" on public.teams for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- =====================================================================
+-- Versie 17: OGV Ouders, uitgebreid. Ouders zien ook de laatste uitslagen en het seizoen van hun kind
+-- (aanwezigheid, wedstrijden, doelpunten) en kunnen een vraag of bericht naar de trainer sturen.
+-- =====================================================================
+create table if not exists public.parent_messages (
+  id         uuid primary key default gen_random_uuid(),
+  player_id  uuid not null references public.players(id) on delete cascade,
+  team_id    uuid not null references public.teams(id) on delete cascade,
+  body       text not null,
+  sender     text,
+  created_at timestamptz not null default now(),
+  read_at    timestamptz
+);
+alter table public.parent_messages enable row level security;
+drop policy if exists "ouderberichten" on public.parent_messages;
+create policy "ouderberichten" on public.parent_messages for all to authenticated using (public.is_trainer(team_id)) with check (public.is_trainer(team_id));
+grant select, insert, update, delete on public.parent_messages to authenticated;
+create index if not exists parent_messages_team on public.parent_messages(team_id, created_at desc);
+
+create or replace function public.parent_ask(tok uuid, body text, who text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare p public.players%rowtype;
+begin
+  select * into p from public.players where parent_token = tok and active is not false;
+  if not found or coalesce(trim(body), '') = '' then return false; end if;
+  if (select count(*) from public.parent_messages where player_id = p.id and created_at > now() - interval '1 day') >= 10 then return false; end if;
+  insert into public.parent_messages(player_id, team_id, body, sender) values (p.id, p.team_id, left(trim(body), 1000), nullif(left(trim(coalesce(who, '')), 80), ''));
+  return true;
+end $$;
+revoke all on function public.parent_ask(uuid, text, text) from public;
+grant execute on function public.parent_ask(uuid, text, text) to anon, authenticated;
+
+create or replace function public.parent_view(tok uuid) returns json
+language plpgsql stable security definer set search_path = public as $$
+declare p public.players%rowtype; ss date;
+begin
+  select * into p from public.players where parent_token = tok and active is not false;
+  if not found then return null; end if;
+  ss := make_date(case when extract(month from current_date) >= 7 then extract(year from current_date)::int else extract(year from current_date)::int - 1 end, 7, 1);
+  return json_build_object('v', 17, 'player', p.first_name, 'number', p.number, 'team', (select name from public.teams where id = p.team_id),
+    'trainers', coalesce((select json_agg(nullif(trim(u.raw_user_meta_data->>'full_name'), '')) from public.team_trainers tt join auth.users u on u.id = tt.user_id
+        where tt.team_id = p.team_id and nullif(trim(u.raw_user_meta_data->>'full_name'), '') is not null), '[]'::json),
+    'contacts', coalesce(p.contacts, '[]'::jsonb), 'medical', p.medical, 'consent', p.consent, 'updated', p.parent_updated,
+    'events', coalesce((select json_agg(json_build_object('id', e.id, 'type', e.type, 'date', e.date,
+        'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'), 'location', e.location,
+        'opponent', e.opponent, 'home', e.home, 'state', case when e.cancelled then 'afgelast' else e.rbfa_state end,
+        'convo', case when e.convo ? 'sent' then json_build_object('selected', (e.convo->'players') ? p.id::text,
+            'meet', e.convo->>'meet', 'place', e.convo->>'place', 'bring', e.convo->>'bring', 'note', e.convo->>'note') end,
+        'rsvp', r.status, 'note', r.note) order by e.date, e.start_time)
+      from public.events e left join public.rsvp r on r.event_id = e.id and r.player_id = p.id
+      where e.team_id = p.team_id and e.date between current_date and current_date + 42), '[]'::json),
+    'results', coalesce((select json_agg(json_build_object('date', e.date, 'opponent', e.opponent, 'home', e.home, 'for', e.score_for, 'against', e.score_against,
+        'played', a.status in ('aanwezig', 'te laat'), 'goals', a.goals, 'assists', a.assists) order by e.date desc)
+      from (select * from public.events e where e.team_id = p.team_id and e.type = 'wedstrijd' and e.date < current_date and e.date >= current_date - 35 and e.score_for is not null order by e.date desc limit 6) e
+      left join public.attendance a on a.event_id = e.id and a.player_id = p.id), '[]'::json),
+    'season', json_build_object(
+      'trainings', (select count(*) from public.events e where e.team_id = p.team_id and e.type = 'training' and not e.cancelled and e.date between ss and current_date and exists (select 1 from public.attendance x where x.event_id = e.id)),
+      'present', (select count(*) from public.attendance a join public.events e on e.id = a.event_id where a.player_id = p.id and e.type = 'training' and e.date between ss and current_date and a.status in ('aanwezig', 'te laat')),
+      'matches', (select count(*) from public.attendance a join public.events e on e.id = a.event_id where a.player_id = p.id and e.type = 'wedstrijd' and e.date between ss and current_date and a.status in ('aanwezig', 'te laat')),
+      'goals', (select coalesce(sum(a.goals), 0) from public.attendance a join public.events e on e.id = a.event_id where a.player_id = p.id and e.date >= ss),
+      'assists', (select coalesce(sum(a.assists), 0) from public.attendance a join public.events e on e.id = a.event_id where a.player_id = p.id and e.date >= ss)),
+    'messages', coalesce((select json_agg(json_build_object('title', m.title, 'body', m.body, 'author', m.author, 'date', m.created_at::date, 'club', m.team_id is null) order by m.created_at desc)
+      from (select * from public.messages m where (m.team_id is null or m.team_id = p.team_id)
+              and coalesce(m.until, (m.created_at + interval '30 days')::date) >= current_date order by m.created_at desc limit 8) m), '[]'::json),
+    'asked', coalesce((select json_agg(json_build_object('body', q.body, 'date', q.created_at, 'read', q.read_at is not null) order by q.created_at desc)
+      from (select * from public.parent_messages q where q.player_id = p.id order by q.created_at desc limit 5) q), '[]'::json));
+end $$;
+grant execute on function public.parent_view(uuid) to anon, authenticated;

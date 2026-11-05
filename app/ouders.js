@@ -83,12 +83,13 @@ const msgCard = m => `<div class="msgc${m.team_id ? "" : " club"}"><div class="r
   <b>${esc(m.title)}</b>${m.body ? `<p>${esc(m.body).replace(/\n/g, "<br>")}</p>` : ""}</div>`;
 route("berichten", { title: "Berichten", auth: true, render: async v => {
   if (!V14()) { v.innerHTML = head("Berichten", "") + needV14("Berichten"); return; }
-  const list = await loadMessages(80), canClub = S.admin, canTeam = !!S.team;
+  const list = await loadMessages(80), canClub = S.admin, canTeam = !!S.team, pm = await loadParentMsgs();
   v.innerHTML = head("Berichten", "Berichten van de club en van je ploeg. Ouders zien ze bovenaan hun persoonlijke link, 30 dagen lang of tot de datum die je kiest.",
     canClub || canTeam ? `<button class="btn" type="button" id="newmsg">${IC.plus}Nieuw bericht</button>` : "") +
+    (pm.length ? `<div class="sec"><h2>Van ouders${S.team ? " · " + esc(S.team.name) : ""}</h2><p class="hint" style="margin-top:0">Wat ouders via OGV Ouders naar de trainers van de ploeg stuurden. Antwoorden gaat via bellen of WhatsApp.</p><div class="msgs" id="pmsgs">${parentMsgsHtml(pm)}</div></div><h2 class="sec">Van de club en de ploeg</h2>` : "") +
     (list.length ? `<div class="msgs">${list.map(m => `<div class="msgw">${msgCard(m)}<div class="row" style="gap:6px;margin-top:8px"><a class="btn ghost small" target="_blank" rel="noopener" href="${shareWA(m.title + (m.body ? "\n\n" + m.body : ""))}">${IC.wa}Delen</a>${(m.team_id ? true : S.admin) && (m.created_by === user?.id || S.admin || mode === "demo") ? `<button class="btn ghost small" type="button" data-delm="${m.id}">Verwijderen</button>` : ""}</div></div>`).join("")}</div>`
       : `<div class="empty"><b>Geen berichten</b>Zet hier bv. een afgelasting door het weer, een clubfeest of een oproep voor vrijwilligers.</div>`);
-  const nb = $("#newmsg"); if (nb) nb.onclick = () => msgForm();
+  const nb = $("#newmsg"); if (nb) nb.onclick = () => msgForm(); bindParentMsgs(v, pm);
   $$("[data-delm]", v).forEach(b => b.onclick = async () => { if (!confirm("Dit bericht verwijderen?")) return; await safe(async () => { await db.del("messages", { id: b.dataset.delm }); render(); }, "Bericht verwijderd."); });
 } });
 function msgForm() {
@@ -104,8 +105,18 @@ function msgForm() {
     const ok = await safe(async () => { await db.insert("messages", row); return true; }, "Bericht geplaatst.");
     if (ok) { d.close(); render(); shareDialog("Ook via WhatsApp sturen?", row.title + (row.body ? "\n\n" + row.body : ""), "Het bericht staat nu in de app en op de ouderlinks. Stuur het eventueel ook naar de WhatsApp-groep."); } };
 }
-async function startMessages(box) { try { const l = (await loadMessages(10)).slice(0, 3); if (!box.isConnected || !l.length) return;
-  box.innerHTML = `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Berichten</h2><a class="link" href="#/berichten">Alle berichten</a></div><div class="msgs">${l.map(msgCard).join("")}</div></div>`; } catch (e) {} }
+/* berichten die ouders via OGV Ouders naar de trainer stuurden */
+async function loadParentMsgs() { if (!S.team || !V14()) return [];
+  try { if (mode === "demo") return (await db.list("parent_messages", { team_id: S.team.id })).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const r = await sb.from("parent_messages").select("*").eq("team_id", S.team.id).order("created_at", { ascending: false }).limit(40); return r.error ? [] : r.data; } catch (e) { return []; } }
+function parentMsgsHtml(list) { return list.map(q => { const p = S.players.find(x => x.id === q.player_id), c = p ? pContacts(p).find(x => x.phone) : null;
+  return `<div class="msgw pmsg${q.read_at ? "" : " unread"}"><div class="row" style="gap:8px"><span class="pill ${q.read_at ? "" : "w"}">${q.read_at ? "gelezen" : "nieuw"}</span><b style="margin-right:auto">${esc(p ? pname(p) : "Speler")}</b><small class="muted">${new Date(q.created_at).toLocaleString("nl-BE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</small></div>
+    <p style="margin:8px 0 0;white-space:pre-wrap">${esc(q.body)}</p>${q.sender ? `<small class="muted">— ${esc(q.sender)}</small>` : ""}
+    <div class="row" style="gap:6px;margin-top:8px">${c ? `<a class="btn small" href="${telHref(c.phone)}">${IC.phone}Bellen</a><a class="btn ghost small" href="${waHref(c.phone)}" target="_blank" rel="noopener">${IC.wa}Antwoorden</a>` : ""}${q.read_at ? "" : `<button class="btn ghost small" type="button" data-pread="${q.id}">${IC.check}Gelezen</button>`}</div></div>`; }).join(""); }
+function bindParentMsgs(host, list) { $$("[data-pread]", host).forEach(b => b.onclick = async () => { const q = list.find(x => x.id === b.dataset.pread); q.read_at = new Date().toISOString();
+  await safe(async () => { if (mode === "demo") await db.save("parent_messages", q); else { const r = await sb.from("parent_messages").update({ read_at: q.read_at }).eq("id", q.id); if (r.error) throw r.error; } }); render(); }); }
+async function startMessages(box) { try { const l = (await loadMessages(10)).slice(0, 3), pm = (await loadParentMsgs()).filter(q => !q.read_at); if (!box.isConnected || (!l.length && !pm.length)) return;
+  box.innerHTML = (pm.length ? `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Van ouders <span class="pill w">${pm.length} nieuw</span></h2><a class="link" href="#/berichten">Alles bekijken</a></div><div class="msgs">${parentMsgsHtml(pm.slice(0, 3))}</div></div>` : "") + (!l.length ? "" : `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Berichten</h2><a class="link" href="#/berichten">Alle berichten</a></div><div class="msgs">${l.map(msgCard).join("")}</div></div>`); bindParentMsgs(box, pm); } catch (e) {} }
 
 /* ============ oudercontacten en medische info ============ */
 const consentLine = p => { const c = p.consent; if (!c) return `<p class="hint" style="margin:10px 0 0">Toestemming voor foto's en video's: nog niet ingevuld door de ouders.</p>`;

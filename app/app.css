@@ -1152,3 +1152,4 @@ ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
 .fma.clash{box-shadow:inset 3px 0 0 #E11D48}
 .clubmap .pfl.k{font-size:26px}
 @media (max-width:980px){.fpanel{position:static}}
+.pmsg.unread{border-left:4px solid var(--yellow)}

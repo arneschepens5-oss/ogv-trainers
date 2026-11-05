@@ -1,5 +1,5 @@
 // OGV Ouders: de app opent ook zonder internet (met de laatst bekende gegevens). Altijd eerst online.
-const CACHE = "ogv-ouders-v1";
+const CACHE = "ogv-ouders-v2";
 const SHELL = ["./", "manifest.webmanifest", "../icons/icon-192.png", "../icons/apple-touch-icon.png", "../icons/favicon.png", "../tactiekbord/vendor/supabase-2.118.0.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("ogv-ouders-") && k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
