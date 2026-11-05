@@ -495,7 +495,7 @@ dialog.xl{width:min(1200px,100% - 20px)}
 @media print{
   html.printing #app,html.printing #dlg,html.printing #toast{display:none!important}
   html.printing .print-only{display:block!important}
-  html.printing,html.printing body{background:#fff!important;color:#000!important}
+  html.printing,html.printing body{background:#fff!important;color:#000!important;color-scheme:light}
   @page{size:A4;margin:14mm}
   .pfiche{font:10.5pt/1.45 Arial,sans-serif;color:#111}
   .pfiche header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #FFD100;padding-bottom:8px;margin-bottom:10px}
@@ -1196,3 +1196,40 @@ ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
 .ogvlogo{display:inline-block;line-height:0}.ogvlogo img{height:100%;width:auto;display:block}.ogvlogo .lg-l{display:none}
 :root[data-theme="light"] .ogvlogo .lg-d{display:none}:root[data-theme="light"] .ogvlogo .lg-l{display:block}
 .brand .ogvlogo.side{height:52px;width:auto;border:0;padding:0;margin:0;display:inline-block}.ogvlogo.big{height:150px;margin:0 0 18px}
+/* kleedkamers en scheidsrechter bij thuiswedstrijden (v66) */
+.fmx{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px;flex-basis:100%}
+.fmx label{display:flex;flex-direction:column;gap:3px;min-width:0}.fmx small{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmx select,.fmx input{width:100%;min-width:0}
+@media (max-width:640px){.fmx{grid-template-columns:1fr 1fr}.fmx .fref{grid-column:1/-1}}
+.fpart select[data-k=kk]{flex:0 1 130px}
+/* dagoverzicht terreinen: afdruk om op te hangen (liggend A4) */
+@page fldp{size:A4 landscape;margin:9mm}
+@media print{
+  .fldprint{page:fldp;break-after:page;font:10.5pt/1.3 Archivo,Arial,sans-serif;color:#111;--ink:#111;--muted:#555;--card2:#EFEFEA;--yellow:#FFD100}
+  .fldprint:last-child{break-after:auto}
+  .fldprint header{display:flex;align-items:center;gap:14px;border-bottom:4px solid #FFD100;padding-bottom:7px;margin-bottom:9px}
+  .fldprint header img{height:62px;width:auto}
+  .fldprint header p{margin:0;font-size:9pt;text-transform:uppercase;letter-spacing:.08em;color:#555;font-weight:700}
+  .fldprint header h1{margin:0;font-size:24pt;line-height:1.05;font-weight:900;font-stretch:115%}
+  .fldprint header>div{flex:1}
+  .pcount{text-align:right;font-size:9.5pt;color:#555;line-height:1.25}.pcount b{font-size:17pt;color:#111;margin-right:4px;font-stretch:112%}
+  .pbody{display:grid;grid-template-columns:1fr 70mm;gap:7mm;align-items:start}
+  .fldprint table{width:100%;border-collapse:collapse}
+  .fldprint th{text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:#111;padding:5px 7px}
+  .fldprint td{padding:5px 7px;border-bottom:1px solid #D9D9D2;vertical-align:middle}
+  .fldprint tbody tr:nth-child(even) td{background:#F6F6F1}
+  .fldprint td small{display:block;color:#555;font-size:8.5pt}
+  .fldprint .fx-t{font-size:15pt;font-weight:900;font-stretch:110%;white-space:nowrap;width:1%}
+  .fldprint .fx-n b{font-size:12pt}
+  .fldprint .fx-f{white-space:nowrap}.fldprint .fx-f small{display:inline;margin-left:5px}
+  .pfb{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 5px;border-radius:6px;background:#2E8B3E;color:#FFD100;font-weight:900;font-size:13pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pfb.kgv{background:#1F8A5B;font-size:10pt}
+  .fldprint .fx-k{font-size:14pt;font-weight:900;text-align:center}
+  .fldprint .fx-r{font-size:10.5pt}
+  .fldprint th,.fldprint tbody tr td,.pmap{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pmap{border:1px solid #D9D9D2;border-radius:8px;padding:3mm;background:#fff}
+  .pmap .clubmap .pfb circle{stroke-width:2}
+  .pkk{list-style:none;margin:3mm 0 0;padding:0;font-size:9pt;color:#333}.pkk li{margin:0 0 2px}.pkk b{display:inline-block;min-width:13mm;color:#0284C7}
+  .pwarn{margin:4mm 0 0;padding:3mm;border:2px solid #E11D48;border-radius:6px;font-weight:700;color:#B91C1C}
+  .fldprint footer{margin-top:4mm;font-size:8.5pt;color:#777}
+}

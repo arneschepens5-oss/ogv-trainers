@@ -14,7 +14,8 @@
 <link rel="icon" href="../icons/favicon.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 
-<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght,wdth@400..900,100..125&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#F3F3EE;--card:#fff;--card2:#F7F7F2;--ink:#121311;--muted:#5D5F56;--line:#E2E2DA;--yellow:#FFD100;--ok:#15803D;--okbg:#DCF5E3;--bad:#C2261D;--badbg:#FDE2E0;--chip:#F1F1EA;--blue:#1D5FD1;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#111111;--card:#191A17;--card2:#20211D;--ink:#F2F2EE;--muted:#9EA098;--line:#2A2C26;--ok:#4ADE80;--okbg:#132619;--bad:#F87171;--badbg:#2E1414;--chip:#252621;--blue:#60A5FA;color-scheme:dark}
@@ -178,7 +179,7 @@ function demoKid(tok) {
   const trs = tev.filter(e => e.type === "training" && !e.cancelled && e.date <= today && (d.attendance || []).some(a => a.event_id === e.id));
   return { v: 18, role: kid ? "speler" : "ouder", player: p.first_name, number: p.number, team: d.teams.find(t => t.id === p.team_id)?.name, trainers: ["Demo Trainer"], contacts: kid ? [] : p.contacts || [], medical: kid ? null : p.medical || null, consent: kid ? null : p.consent || null, updated: kid ? null : p.parent_updated || null,
     events: tev.filter(e => e.date >= today && e.date <= lim).sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || ""))).map(e => { const r = (d.rsvp || []).find(x => x.event_id === e.id && x.player_id === p.id);
-      return { id: e.id, type: e.type, date: e.date, start: (e.start_time || "").slice(0, 5), end: (e.end_time || "").slice(0, 5), location: e.location, part: e.field_part || null, opponent: e.opponent, home: e.home, state: e.cancelled ? "afgelast" : e.rbfa_state,
+      return { id: e.id, type: e.type, date: e.date, start: (e.start_time || "").slice(0, 5), end: (e.end_time || "").slice(0, 5), location: e.location, part: e.field_part || null, kk: e.kk_home || null, opponent: e.opponent, home: e.home, state: e.cancelled ? "afgelast" : e.rbfa_state,
         convo: e.convo && e.convo.sent ? { selected: (e.convo.players || []).includes(p.id), meet: e.convo.meet, place: e.convo.place, bring: e.convo.bring, note: e.convo.note } : null, rsvp: r?.status || null, note: r?.note || null }; }),
     results: tev.filter(e => e.type === "wedstrijd" && e.date < today && e.date >= from && e.score_for != null).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6).map(e => { const a = att.find(x => x.event_id === e.id);
       return { date: e.date, opponent: e.opponent, home: e.home, for: e.score_for, against: e.score_against, played: !!a && (a.status === "aanwezig" || a.status === "te laat"), goals: a?.goals || 0, assists: a?.assists || 0 }; }),
@@ -230,7 +231,7 @@ function placeHtml(e, cls) {
   const maps = ext ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location.split(" · ").pop())}" target="_blank" rel="noopener">${esc(e.location.split(" · ").pop())}</a>`
     : `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(CLUB)}" target="_blank" rel="noopener">OG Vorselaar</a>`;
   const pt = f && e.part ? { h1: "ABCD".includes(f) ? "bovenste helft" : "linkerhelft", h2: "ABCD".includes(f) ? "onderste helft" : "rechterhelft", q1: "vak linksboven", q2: "vak rechtsboven", q3: "vak linksonder", q4: "vak rechtsonder" }[e.part] : "";
-  return `<div class="${cls || "fld"}">${f ? `<i>${esc(FLD[f][0])}${pt ? " · " + pt : ""}</i><span>kleedkamers ${esc(FLD[f][1])}</span> · ` : ""}${maps}</div>`; }
+  return `<div class="${cls || "fld"}">${f ? `<i>${esc(FLD[f][0])}${pt ? " · " + pt : ""}</i><span>${e.kk ? "kleedkamer <b>" + esc(e.kk) + "</b>" : "kleedkamers " + esc(FLD[f][1])}</span> · ` : ""}${maps}</div>`; }
 function weekKey(s) { const d = dayFmt(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); }
 function weekLabel(k) { const t = weekKey(todayIso()), diff = Math.round((dayFmt(k) - dayFmt(t)) / (7 * 864e5)); return diff === 0 ? "Deze week" : diff === 1 ? "Volgende week" : "Week van " + dayFmt(k).toLocaleDateString("nl-BE", { day: "numeric", month: "long" }); }
 function allEvents() { const rows = []; for (const k of sel()) for (const e of (data[k.tok]?.events || [])) rows.push({ e, k }); return rows.sort((a, b) => (a.e.date + (a.e.start || "")).localeCompare(b.e.date + (b.e.start || ""))); }

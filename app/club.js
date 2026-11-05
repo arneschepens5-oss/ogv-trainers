@@ -172,7 +172,8 @@ async function dbCheck(host) {
     ["Functies en contactlijst", () => sb.from("club_contacts").select("id").limit(1)],
     ["Vaste trainingen inplannen", () => sb.from("events").select("series").limit(1)],
     ["Convocaties, berichten, oudercontacten en clubdashboard", () => sb.from("messages").select("id").limit(1)],
-    ["Velden verdelen (helft of kwart) en einduren", () => sb.from("events").select("field_part").limit(1)]];
+    ["Velden verdelen (helft of kwart) en einduren", () => sb.from("events").select("field_part").limit(1)],
+    ["Kleedkamers en scheidsrechters", () => sb.from("events").select("kk_home,kk_away,referee").limit(1)]];
   host.innerHTML = `<h2>Databasecontrole</h2><p class="hint" style="margin-top:0">Bezig met controleren…</p>`;
   const res = []; for (const [l, fn] of C) { let ok = false; try { const r = await fn(); ok = !r.error; } catch (e) { ok = false; } res.push([l, ok]); }
   const bad = res.filter(r => !r[1]).length;
