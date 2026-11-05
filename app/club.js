@@ -45,17 +45,18 @@ async function clubStatus() {
 
 /* ============ clubbeheer ============ */
 /* ============ beheer: aparte pagina's voor meldingen, toegang, ploegen en systeem ============ */
-const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["systeem", "Systeem"]];
+const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["planning", "Trainingen"], ["systeem", "Systeem"]];
 async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
 route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
   const tab = ADM_TABS.some(t => t[0] === id) ? id : "meldingen";
-  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · OG Vorselaar</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", systeem: "Systeem" }[tab]}</h1></div></div>
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · OG Vorselaar</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem" }[tab]}</h1></div></div>
     <nav class="admtabs" aria-label="Beheer">${ADM_TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
-  const host = $("#admv");
+  const host = $("#admv"); try { $(".admtabs a[aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" }); } catch (x) {}
   const getInfo = async () => { if (mode === "demo") return { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
     const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
   if (tab === "meldingen") return adminFeedback(host);
+  if (tab === "planning") return adminPlanning(host);
   if (tab === "systeem") { host.innerHTML = `<div class="panel" id="adm-db"></div>`; return dbCheck($("#adm-db")); }
   let info; try { info = await getInfo(); } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message)}</div>`; return; }
   if (tab === "ploegen") {
@@ -147,7 +148,9 @@ async function dbCheck(host) {
     ["Oefenstof delen met de club", () => sb.from("trainer_items").select("shared").limit(1)],
     ["Trainers beheren per ploeg", () => sb.rpc("admin_teams")],
     ["Namen van trainers", async () => { const r = await sb.rpc("club_admin_info"); if (r.error) return r; return (r.data?.members || []).every(m => "name" in m) ? r : { error: { message: "oude versie" } }; }],
-    ["Probleem melden", () => sb.from("feedback").select("id").limit(1)]];
+    ["Probleem melden", () => sb.from("feedback").select("id").limit(1)],
+    ["Functies en contactlijst", () => sb.from("club_contacts").select("id").limit(1)],
+    ["Vaste trainingen inplannen", () => sb.from("events").select("series").limit(1)]];
   host.innerHTML = `<h2>Databasecontrole</h2><p class="hint" style="margin-top:0">Bezig met controleren…</p>`;
   const res = []; for (const [l, fn] of C) { let ok = false; try { const r = await fn(); ok = !r.error; } catch (e) { ok = false; } res.push([l, ok]); }
   const bad = res.filter(r => !r[1]).length;
@@ -339,4 +342,90 @@ function contactForm(c, list, done) {
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); if (mode === "demo") { d.close(); toast("In de demo wordt dit niet bewaard."); return; }
     const row = { ...(n ? {} : { id: c.id }), topic: f.topic.trim(), cat: f.cat.trim() || "Algemeen", sort: +f.sort || 100, name: f.name.trim() || null, functie: f.functie.trim() || null, phone: f.phone.trim() || null, email: f.email.trim() || null, note: f.note.trim() || null, updated_at: new Date().toISOString() };
     const { error } = await sb.from("club_contacts").upsert(row); if (error) toast(error.message); else { d.close(); toast("Opgeslagen."); done(); } };
+}
+
+/* ============ beheer: vaste trainingen inplannen voor ploegen ============
+   De beheerder zet bv. elke maandag en woensdag 18:00–19:15 een training in de kalender van een ploeg.
+   Alle trainingen van één keer inplannen delen een reeks-id (events.series). Trainers kunnen ze nadien
+   gewoon aanpassen of verwijderen en zelf extra trainingen toevoegen. */
+const WD = ["Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"], WD_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const seasonEndIso = () => { const y = +seasonNow().slice(5); return y + "-06-30"; };
+async function planEvents() {
+  if (mode === "demo") return (await db.list("events", { type: "training" })).filter(e => e.series);
+  const r = await sb.from("events").select("id,team_id,date,start_time,end_time,location,series").eq("type", "training").not("series", "is", null).order("date");
+  if (r.error) throw r.error; return r.data;
+}
+async function adminPlanning(host) {
+  let evs; try { evs = await planEvents(); } catch (e) {
+    host.innerHTML = `<div class="empty"><b>Nog niet beschikbaar</b>Voer eerst ogv-database.sql (versie 13) uit in Supabase. Daarna kan je hier trainingen inplannen.<br><small class="muted">${esc(e.message || "")}</small></div>`; return; }
+  const tName = id => S.teams.find(t => t.id === id)?.name || "Onbekende ploeg", today = todayIso();
+  const groups = {}; for (const e of evs) (groups[e.series] = groups[e.series] || []).push(e);
+  const series = Object.entries(groups).map(([id, xs]) => { const days = [...new Set(xs.map(e => new Date(e.date + "T12:00").getDay()))].sort((a, b) => WD_ORDER.indexOf(a) - WD_ORDER.indexOf(b));
+    const teams = [...new Set(xs.map(e => e.team_id))]; return { id, xs, days, teams, from: xs[0].date, to: xs[xs.length - 1].date, f: xs[0], left: xs.filter(e => e.date >= today).length }; })
+    .sort((a, b) => tName(a.teams[0]).localeCompare(tName(b.teams[0]), "nl", { numeric: true }));
+  host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Vaste trainingen</h2><p class="hint" style="margin:4px 0 0">Zet de trainingen van een ploeg in één keer in haar kalender, bv. elke maandag en woensdag van 18:00 tot 19:15. Trainers zien ze meteen, kunnen er één aanpassen of schrappen en voegen zelf extra trainingen toe.</p></div>
+      <button class="btn" type="button" id="plnew">${IC.plus}Trainingen inplannen</button></div></div>
+    ${series.length ? `<div class="list sec">${series.map(x => `<div class="item static plser"><span class="ic plic">${IC.cal}</span><span class="main"><b>${esc(x.teams.map(tName).join(", "))}</b>
+        <small>Elke ${x.days.map(d => WD[d].toLowerCase()).join(" en ")} · ${tm(x.f.start_time) || "?"}${x.f.end_time ? "–" + tm(x.f.end_time) : ""}${x.f.location ? " · " + esc(x.f.location) : ""}</small>
+        <small>${dShort(x.from)} tot ${dShort(x.to)} · ${x.xs.length} trainingen, nog ${x.left} gepland</small></span>
+        <button class="btn ghost small" type="button" data-pldel="${x.id}">Verwijderen</button></div>`).join("")}</div>`
+      : `<div class="empty sec"><b>Nog niets ingepland</b>Tik op <b>Trainingen inplannen</b> om de vaste trainingen van een ploeg in haar kalender te zetten.</div>`}`;
+  $("#plnew").onclick = () => planForm(() => adminPlanning(host));
+  $$("[data-pldel]", host).forEach(b => b.onclick = () => { const x = series.find(y => y.id === b.dataset.pldel), fut = x.xs.filter(e => e.date >= today);
+    const d = dialog(`<div class="dlg"><h2>Ingeplande trainingen verwijderen?</h2><p class="muted" style="margin-top:0">De <b style="color:var(--ink)">${fut.length} trainingen vanaf vandaag</b> van ${esc(x.teams.map(tName).join(", "))} verdwijnen uit de kalender, ook als een trainer er al een trainingsplan aan gekoppeld heeft. Voorbije trainingen met hun aanwezigheden blijven staan.</p>
+      <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="pldok">Verwijderen</button></div></div>`);
+    $("#pldok", d).onclick = async () => { $("#pldok", d).disabled = true;
+      try { if (mode === "demo") { for (const e of fut) await db.del("events", { id: e.id }); }
+        else { const ids = fut.map(e => e.id); for (let i = 0; i < ids.length; i += 200) { const r = await sb.from("events").delete().in("id", ids.slice(i, i + 200)); if (r.error) throw r.error; } }
+        d.close(); toast(fut.length + " trainingen verwijderd."); await planRefresh(x.teams); adminPlanning(host); }
+      catch (e) { toast("Verwijderen lukte niet: " + (e.message || e)); $("#pldok", d).disabled = false; } }; });
+}
+async function planRefresh(teamIds) { if (S.team && teamIds.includes(S.team.id)) { try { await loadTeam(S.team.id); } catch (e) {} } }
+function planForm(done) {
+  const teams = S.teams.slice(), locs = [...new Set(S.events.map(e => e.location).filter(Boolean))];
+  const st = { teams: new Set(S.team ? [S.team.id] : []), days: new Set([1]), skip: [] };
+  const d = dialog(`<form class="dlg plform"><h2>Trainingen inplannen</h2>
+    <label class="f full">Ploegen<span class="hint" style="font-weight:400">Kies er meerdere als ze op hetzelfde moment trainen.</span></label>
+    <div class="plteams">${teams.map(t => `<button type="button" class="chip" data-tm="${t.id}">${esc(t.name)}</button>`).join("") || '<p class="hint">Maak eerst ploegen aan bij Ploegen en trainers.</p>'}</div>
+    <label class="f full" style="margin-top:12px">Dagen</label>
+    <div class="pldays">${WD_ORDER.map(dn => `<button type="button" class="chip" data-wd="${dn}">${WD[dn].slice(0, 2)}</button>`).join("")}</div>
+    <div class="fields" style="margin-top:12px"><label class="f">Van<input type="time" name="st" value="18:00" required></label><label class="f">Tot<input type="time" name="et" value="19:15"></label>
+      <label class="f full">Terrein of plaats<input name="loc" list="pllocs" placeholder="bv. Terrein 3"><datalist id="pllocs">${locs.map(l => `<option value="${esc(l)}">`).join("")}</datalist></label>
+      <label class="f">Vanaf<input type="date" name="from" value="${todayIso()}" required></label><label class="f">Tot en met<input type="date" name="to" value="${seasonEndIso()}" required></label></div>
+    <label class="f full" style="margin-top:12px">Niet trainen (vakanties, feestdagen)</label>
+    <div class="plskip"><input type="date" id="sk1" aria-label="Van"><span>tot</span><input type="date" id="sk2" aria-label="Tot (mag leeg)"><button class="btn ghost small" type="button" id="skadd">${IC.plus}Toevoegen</button></div>
+    <div class="plskips" id="skl"></div>
+    <div class="plsum" id="plsum"></div>
+    <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" id="plok">Inplannen</button></div></form>`);
+  const f = $("form", d);
+  const dates = () => { const a = f.from.value, b = f.to.value; if (!a || !b || b < a) return [];
+    const out = []; let x = new Date(a + "T12:00"); const end = new Date(b + "T12:00");
+    while (x <= end && out.length < 800) { const k = iso(x); if (st.days.has(x.getDay()) && !st.skip.some(([s1, s2]) => k >= s1 && k <= (s2 || s1))) out.push(k); x = addDays(x, 1); }
+    return out; };
+  const sum = () => { const n = dates().length, t = st.teams.size;
+    $("#plsum", d).innerHTML = !t ? "Kies minstens één ploeg." : !st.days.size ? "Kies minstens één dag." : !n ? "Er valt geen enkele training in deze periode."
+      : `Dit zet <b>${n} trainingen</b>${t > 1 ? ` in de kalender van elk van de <b>${t} ploegen</b> (${n * t} in totaal)` : " in de kalender"}. Bestaat er op die dag al een training op hetzelfde uur, dan wordt ze overgeslagen.`;
+    $("#plok", d).disabled = !(n && t); };
+  const paint = () => { $$("[data-tm]", d).forEach(b => b.setAttribute("aria-pressed", st.teams.has(b.dataset.tm)));
+    $$("[data-wd]", d).forEach(b => b.setAttribute("aria-pressed", st.days.has(+b.dataset.wd)));
+    $("#skl", d).innerHTML = st.skip.map(([a, b], i) => `<span class="chip on">${dShort(a)}${b && b !== a ? " – " + dShort(b) : ""}<button type="button" data-sk="${i}" aria-label="Weg">✕</button></span>`).join("");
+    $$("[data-sk]", d).forEach(b => b.onclick = () => { st.skip.splice(+b.dataset.sk, 1); paint(); }); sum(); };
+  $$("[data-tm]", d).forEach(b => b.onclick = () => { const k = b.dataset.tm; st.teams.has(k) ? st.teams.delete(k) : st.teams.add(k); paint(); });
+  $$("[data-wd]", d).forEach(b => b.onclick = () => { const k = +b.dataset.wd; st.days.has(k) ? st.days.delete(k) : st.days.add(k); paint(); });
+  $("#skadd", d).onclick = () => { const a = $("#sk1", d).value, b = $("#sk2", d).value; if (!a) { toast("Kies eerst een datum."); return; } st.skip.push(b && b > a ? [a, b] : [a, null]); $("#sk1", d).value = $("#sk2", d).value = ""; paint(); };
+  f.from.onchange = f.to.onchange = sum; paint();
+  f.onsubmit = async ev => { ev.preventDefault(); const ds = dates(), tIds = [...st.teams]; if (!ds.length || !tIds.length) return;
+    const btn = $("#plok", d); btn.disabled = true; btn.textContent = "Bezig…";
+    const series = uid(), stt = f.st.value, ett = f.et.value || null, loc = f.loc.value.trim() || null;
+    try {
+      let have = [];
+      if (mode === "demo") have = (await db.list("events", { type: "training" })).filter(e => tIds.includes(e.team_id));
+      else { const r = await sb.from("events").select("team_id,date,start_time").eq("type", "training").in("team_id", tIds).gte("date", ds[0]).lte("date", ds[ds.length - 1]); if (r.error) throw r.error; have = r.data; }
+      const key = (t, dt, s) => t + "|" + dt + "|" + String(s || "").slice(0, 5), seen = new Set(have.map(e => key(e.team_id, e.date, e.start_time)));
+      const rows = []; for (const t of tIds) for (const dt of ds) if (!seen.has(key(t, dt, stt))) rows.push({ id: uid(), team_id: t, type: "training", date: dt, start_time: stt, end_time: ett, location: loc, series, report: {} });
+      if (!rows.length) { toast("Alles stond al in de kalender."); d.close(); return; }
+      if (mode === "demo") { for (const r of rows) await db.insert("events", r); }
+      else for (let i = 0; i < rows.length; i += 200) { const r = await sb.from("events").insert(rows.slice(i, i + 200)); if (r.error) throw r.error; }
+      d.close(); toast(`${rows.length} trainingen ingepland.`); await planRefresh(tIds); done && done();
+    } catch (e) { btn.disabled = false; btn.textContent = "Inplannen"; toast(/series|column|policy|row-level/i.test(e.message || "") ? "Voer eerst ogv-database.sql (versie 13) uit." : "Inplannen lukte niet: " + (e.message || e)); } };
 }

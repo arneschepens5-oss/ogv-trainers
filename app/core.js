@@ -182,6 +182,7 @@ const IC = {
   field:`<svg class="i" viewBox="0 0 24 24" ${P}><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/><path d="M3 9h3v6H3M21 9h-3v6h3"/></svg>`,
   split:`<svg class="i" viewBox="0 0 24 24" ${P}><rect x="2" y="5" width="9" height="14" rx="1.5"/><rect x="13" y="5" width="9" height="14" rx="1.5"/></svg>`,
   scout:`<svg class="i" viewBox="0 0 24 24" ${P}><circle cx="10" cy="10" r="6"/><path d="m20 20-5.5-5.5"/></svg>`,
+  clock:`<svg class="i" viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
   gear:`<svg class="i" viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>`,
   menu:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
   back:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`,

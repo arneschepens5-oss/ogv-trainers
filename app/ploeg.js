@@ -45,7 +45,7 @@ function evItem(e) {
   const right = e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast</span>` : e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
     : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : ((rs => rs && e.date >= todayIso() ? `<b style="color:var(--ok)">${rs.ja} komen</b>${rs.nee ? rs.nee + " niet · " : ""}${rs.open} open` : "")(rsvpSummary(e)) || (e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : ""));
   return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
-    <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, "OGV") : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span></b>
+    <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, "OGV") : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span>${e.series ? ` <span class="pill" title="Ingepland door de club">Vast</span>` : ""}</b>
     <small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.theme ? " · " + esc(e.theme) : e.location ? " · " + esc(e.location) : ""}</small></span><span class="val">${right}</span></div>`;
 }
 function clubItem(e) {

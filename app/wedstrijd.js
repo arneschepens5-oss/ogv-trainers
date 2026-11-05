@@ -11,7 +11,7 @@ function weekView(evs) { /* "Mijn planning": maandag tot zondag, zoals in PSD */
   return `<div class="row" style="margin-bottom:10px"><button class="btn ghost small" type="button" data-wk="-1" aria-label="Vorige week">‹</button><b style="font-size:17px">Week ${wk} · ${dShort(days[0])} – ${dShort(days[6])}</b><button class="btn ghost small" type="button" data-wk="1" aria-label="Volgende week">›</button>${calWeek ? `<button class="link" type="button" data-wk="0">Deze week</button>` : ""}</div>
   <div class="week">${days.map(d => { const es = evs.filter(e => e.date === d).sort((a, b) => tm(a.start_time).localeCompare(tm(b.start_time)));
     return `<div class="wd${d === t ? " today" : ""}"><div class="wh"><span>${parse(d).toLocaleDateString("nl-BE", { weekday: "short" })}</span><b>${dDay(d)}</b></div>${es.map(e => { const r = res(e);
-      return `<button type="button" class="wev ${e.type}" data-go="#/activiteit/${e.id}"><small>${tm(e.start_time)}${e.end_time ? "–" + tm(e.end_time) : ""}</small><b>${e.type === "wedstrijd" ? esc((e.home === false ? "@ " : "vs ") + (e.opponent || "Wedstrijd")) : esc(e.theme || "Training")}</b>${r ? `<span class="pill ${r}">${e.score_for}-${e.score_against}</span>` : e.location ? `<small>${esc(e.location)}</small>` : ""}</button>`; }).join("")}</div>`; }).join("")}</div>`;
+      return `<button type="button" class="wev ${e.type}" data-go="#/activiteit/${e.id}"><small>${tm(e.start_time)}${e.end_time ? "–" + tm(e.end_time) : ""}${e.series ? ` · <span title="Ingepland door de club">vast</span>` : ""}</small><b>${e.type === "wedstrijd" ? esc((e.home === false ? "@ " : "vs ") + (e.opponent || "Wedstrijd")) : esc(e.theme || "Training")}</b>${r ? `<span class="pill ${r}">${e.score_for}-${e.score_against}</span>` : e.location ? `<small>${esc(e.location)}</small>` : ""}</button>`; }).join("")}</div>`; }).join("")}</div>`;
 }
 route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   const t = todayIso();
@@ -285,6 +285,7 @@ function replay(L, now = Date.now()) {
     if (ev.type === "start") { period = ev.period; cur = 0; running = true; segStart = ev.ts; inPeriod = true; }
     else if (ev.type === "pause" && running) { cur += (ev.ts - segStart) / 1000; running = false; }
     else if (ev.type === "resume" && inPeriod && !running) { running = true; segStart = ev.ts; }
+    else if (ev.type === "adjust" && inPeriod) { const run = running ? (ev.ts - segStart) / 1000 : 0; cur = Math.max(-run, cur + (ev.d || 0)); continue; } /* klok bijgesteld */
     else if (ev.type === "end") { if (running) cur += (ev.ts - segStart) / 1000; running = false; before += cur; cur = 0; inPeriod = false; if (period >= L.periods) ended = true; }
     else if (ev.type === "sub") { if (ev.out && on.has(ev.out)) { on.delete(ev.out); const st = stints[ev.out]; if (st && st.length) st[st.length - 1][1] = s; }
       if (ev.in && !on.has(ev.in)) { on.add(ev.in); (stints[ev.in] = stints[ev.in] || []).push([s, null]); } }
@@ -316,6 +317,16 @@ function liveView(v, e) {
   }
   const L = e.live, byId = id => S.players.find(p => p.id === id), nm = id => byId(id)?.first_name || "?";
   const push = ev => { L.log.push({ id: uid(), ts: Date.now(), ...ev }); liveSave(e); liveSaveRemote(e); paint(); };
+  /* klok bijstellen zonder iets te wissen: bv. te vroeg of te laat op start gedrukt */
+  const clockAdjust = () => { const R0 = replay(L); let t = Math.floor(R0.perS);
+    const d = dialog(`<div class="dlg"><h2>Klok aanpassen</h2><p class="muted" style="margin-top:0">Zet de klok van ${L.periods === 4 ? "dit kwart" : "deze periode"} juist. Goals, wissels en notities blijven staan; de speeltijd rekent mee.</p>
+      <div class="clkset"><button type="button" class="btn ghost" data-d="-60">−1 min</button><button type="button" class="btn ghost" data-d="-10">−10 s</button><b id="clkv">${mmss(t)}</b><button type="button" class="btn ghost" data-d="10">+10 s</button><button type="button" class="btn ghost" data-d="60">+1 min</button></div>
+      <div class="row" style="justify-content:center;margin-top:8px"><button class="link" type="button" id="clk0">Terug op 0:00</button></div>
+      <div class="row" style="margin-top:12px"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="clkok">Opslaan</button></div></div>`);
+    const show = () => $("#clkv", d).textContent = mmss(t);
+    $$("[data-d]", d).forEach(b => b.onclick = () => { t = Math.max(0, t + +b.dataset.d); show(); });
+    $("#clk0", d).onclick = () => { t = 0; show(); };
+    $("#clkok", d).onclick = () => { const now = replay(L).perS, delta = Math.round(t - now); d.close(); if (Math.abs(delta) < 1) return; push({ type: "adjust", d: delta }); toast("Klok aangepast."); }; };
   /* per ongeluk gestart of opnieuw beginnen: terug naar het kiezen van de basisspelers, het logboek wordt gewist */
   const liveReset = fromUndo => { const n = L.log.filter(x => x.type !== "start" || x.period > 1).length;
     const d = dialog(`<div class="dlg"><h2>${fromUndo ? "Start ongedaan maken?" : "Opnieuw beginnen?"}</h2>
@@ -330,7 +341,7 @@ function liveView(v, e) {
     v.innerHTML = `<div class="live">${backLink("#/activiteit/" + e.id, "Wedstrijdverslag")}
     <div class="clock"><span class="per">${R.ended ? "Wedstrijd afgelopen" : R.inPeriod ? perLabel + (R.running ? "" : " · gepauzeerd") : "Rust · " + (R.period ? "na " + perLabel.toLowerCase() : "")}</span>
       <span class="time${R.running ? " run" : ""}" id="clk">${mmss(R.perS)}</span><span class="per">${over ? '<span style="color:var(--warn)">Tijd is om</span>' : `van ${L.minutes}:00 · minuut ${minute}`}</span>
-      <span class="sc">${esc(team.name.split(" ")[0])} ${R.gf.length} – ${R.ga.length} ${esc(e.opponent || "")}</span></div>
+      <span class="sc">${esc(team.name.split(" ")[0])} ${R.gf.length} – ${R.ga.length} ${esc(e.opponent || "")}</span>${R.inPeriod ? `<button class="clkadj" type="button" data-a="adjust">${IC.clock || IC.cal}Klok aanpassen</button>` : ""}</div>
     ${pickMode ? pickPanel(R, bench) : `<div class="lbtns">
       <button type="button" class="y" data-a="goal">${IC.ball}Goal OGV</button><button type="button" class="r" data-a="against">${IC.ball}Tegengoal</button>
       <button type="button" data-a="sub">${IC.swap}Wissel</button><button type="button" data-a="note">${IC.note}Notitie</button>
@@ -341,7 +352,7 @@ function liveView(v, e) {
     ${R.ended ? `<button class="btn" type="button" id="finish" style="width:100%;padding:16px;margin-top:14px">${IC.check}Verwerken in het wedstrijdverslag</button>` : ""}
     <div class="sec"><h2>Op het veld</h2><div class="field">${R.on.map(id => `<button type="button" class="on" disabled><span class="n">${byId(id)?.number ?? ""}</span>${esc(nm(id))}<em>${Math.round((R.play[id] || 0) / 60)}'</em></button>`).join("")}</div>
       <h2 style="margin-top:16px">Bank</h2><div class="field">${bench.map(id => `<button type="button" disabled><span class="n">${byId(id)?.number ?? ""}</span>${esc(nm(id))}<em>${Math.round((R.play[id] || 0) / 60)}'</em></button>`).join("") || '<span class="muted">Niemand</span>'}</div></div>
-    <div class="sec"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Verloop</h2><button class="link" type="button" data-a="reset">${IC.undo}Opnieuw beginnen</button></div><div class="list log">${R.rows.slice().reverse().filter(r => !["pause","resume"].includes(r.type)).map(r => `<div class="item static"><span class="num">${Math.floor(r.s / 60) + 1}'</span><span class="main"><b>${liveLabel(r, nm)}</b></span></div>`).join("") || '<p class="muted">Nog niets.</p>'}</div></div></div>`;
+    <div class="sec"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Verloop</h2><button class="link" type="button" data-a="reset">${IC.undo}Opnieuw beginnen</button></div><div class="list log">${R.rows.slice().reverse().filter(r => !["pause","resume","adjust"].includes(r.type)).map(r => `<div class="item static"><span class="num">${Math.floor(r.s / 60) + 1}'</span><span class="main"><b>${liveLabel(r, nm)}</b></span></div>`).join("") || '<p class="muted">Nog niets.</p>'}</div></div></div>`;
     bind(R, bench);
   };
   const pickPanel = (R, bench) => {
@@ -361,7 +372,8 @@ function liveView(v, e) {
       else if (a === "pause" || a === "resume") push({ type: a }); else if (a === "end") push({ type: "end", period: R.period });
       else if (a === "next") push({ type: "start", period: R.period + 1 });
       else if (a === "undo") { const last = L.log[L.log.length - 1]; if (!last || (last.type === "start" && last.period === 1)) { liveReset(true); return; } L.log.pop(); liveSave(e); liveSaveRemote(e); toast("Laatste actie ongedaan gemaakt."); paint(); }
-      else if (a === "reset") liveReset(false); });
+      else if (a === "reset") liveReset(false);
+      else if (a === "adjust") clockAdjust(); });
     $$("[data-pk]", v).forEach(b => b.onclick = () => { const k = b.dataset.pk; pickData[k] = pickData[k] === b.dataset.id ? null : b.dataset.id; paint(); const nt = $("#nt"); if (nt && pickData._t) nt.value = pickData._t; });
     const nt = $("#nt"); if (nt) nt.oninput = () => pickData._t = nt.value;
     const c = $("[data-cancel]", v); if (c) c.onclick = () => { pickMode = null; paint(); };

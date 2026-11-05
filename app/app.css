@@ -1051,3 +1051,23 @@ a.navbtn{text-decoration:none}
 .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--s-ok,#22C55E),var(--yellow));transition:width .08s linear}
 .mpick{cursor:pointer}.mpick input{flex:none;width:20px;height:20px;accent-color:var(--yellow)}
 .micdlg .check .muted{font-weight:400;font-size:13.5px}
+/* klok aanpassen */
+.clkadj{margin-top:8px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:600;cursor:pointer}
+.clkadj .i{width:15px;height:15px}
+.clkset{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+.clkset b{font-size:40px;font-weight:900;font-variant-numeric:tabular-nums;min-width:120px;text-align:center}
+.clkset .btn{padding:8px 10px;font-size:14px}
+/* beheer: trainingen inplannen */
+.plteams,.pldays,.plskips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pldays .chip{min-width:44px;text-align:center}
+.plskip{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}.plskip input{width:auto;flex:1 1 130px;min-width:0}
+.plskips .chip{display:inline-flex;align-items:center;gap:6px;cursor:default;color:var(--ink)}.plskips .chip button{border:0;background:none;color:var(--muted);cursor:pointer;padding:0 2px}
+.plsum{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--card2);font-size:14.5px;line-height:1.45}
+.plser .plic{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--yellow);color:#000;flex:none}
+.plser .main small{display:block}
+@media (max-width:640px){.plser{flex-wrap:wrap}.plser>.btn{margin-left:52px}}
+.clkset b{order:-1;flex-basis:100%}
+.clkset .btn{flex:1 1 0;min-width:0}
+.plser .main small{white-space:normal}
+@media (max-width:640px){.plser .main{flex:1 1 calc(100% - 52px)}.admtabs a{padding:10px 8px;font-size:13.5px}}
+@media (max-width:640px){.plser .plic{display:none}.plser .main{flex-basis:100%}.plser>.btn{margin-left:0}}

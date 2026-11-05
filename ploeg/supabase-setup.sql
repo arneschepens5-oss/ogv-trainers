@@ -648,3 +648,12 @@ drop policy if exists "contacten beheren" on public.club_contacts;
 create policy "contacten lezen"   on public.club_contacts for select to authenticated using (public.is_member());
 create policy "contacten beheren" on public.club_contacts for all to authenticated using (public.is_admin()) with check (public.is_admin());
 grant select, insert, update, delete on public.club_contacts to authenticated;
+
+-- Versie 13: beheerders plannen vaste trainingen in voor ploegen (bv. elke maandag 18:00).
+-- Alle trainingen die in één keer worden ingepland, delen een reeks-id. Trainers kunnen ze nadien
+-- gewoon aanpassen of verwijderen en zelf extra trainingen toevoegen.
+alter table public.events add column if not exists series text;
+create index if not exists events_series on public.events(series) where series is not null;
+drop policy if exists "beheer trainingen inplannen" on public.events;
+create policy "beheer trainingen inplannen" on public.events for all to authenticated
+  using (public.is_admin() and type = 'training') with check (public.is_admin() and type = 'training');
