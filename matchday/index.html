@@ -496,7 +496,7 @@ $('missions').addEventListener('click',e=>{const b=e.target.closest('button[data
 
 /* ---------- A4-blad ---------- */
 /* Lange namen inkorten op het veld: bij 8v8 en 11v11 "Voornaam A." */
-const shortName=(nmv,n)=>{const w=String(nmv).trim().split(/\s+/);if(n<=5||w.length<2)return nmv;return w[0]+' '+w[w.length-1][0]+'.'};
+const shortName=(nmv)=>{const w=String(nmv).trim().split(/\s+/);if(w.length<2)return w[0]||'';return w[0]+' '+w[w.length-1][0]+'.'};
 const fmtDate=d=>{if(!d)return'–';const x=new Date(d+'T12:00');return x.toLocaleDateString('nl-BE',{weekday:'short',day:'numeric',month:'short'})};
 function fitText(el,maxPt,minPt){let s=maxPt;el.style.fontSize=s+'pt';while(el.scrollWidth>el.clientWidth+1&&s>minPt){s-=1;el.style.fontSize=s+'pt'}}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{try{renderSheet()}catch(e){}});
@@ -509,14 +509,15 @@ function renderSheet(){
   $('sWhereLbl').textContent=home?'Thuis':'Uit';$('sWhere').textContent=m.venue||(home?'Vorselaar':'–');
   $('sForm').textContent=t.form===EIGEN?F.label:`${t.form} · ${F.label}`;
   const r=n>8?5.2:n>5?6:7,fsN=n>8?3.5:n>5?3.9:4.2;
-  $('sPitch').innerHTML=`<svg viewBox="0 0 100 125" aria-label="Opstelling op het veld"><rect width="100" height="125" fill="#e9f3e6"/>${pitchLines('#7aa874')}
+  const VH=pos.some(p=>p.y>108)?133:125; /* extra strook onder de doellijn voor de naam van de keeper */
+  $('sPitch').innerHTML=`<svg viewBox="0 0 100 ${VH}" aria-label="Opstelling op het veld"><rect width="100" height="${VH}" fill="#e9f3e6"/>${pitchLines('#7aa874')}
   ${pos.map((p,i)=>{const id=m.lineup[i],pl=P(id),cap=id&&id===m.cap;const inside=pl&&pl.nr?pl.nr:p.l;
     const name=pl?shortName(pl.name,n):'';
-    const side=p.y>108,ty=side?p.y+fsN*.35:p.y+r+4.4,tx=side?p.x+r+2.6:p.x;
-    return `<g><circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${pl?'#FFD400':'#fff'}" stroke="#111" stroke-width=".8"/>
-    <text x="${p.x}" y="${p.y+1.6}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${String(inside).length>2?3.4:4.4}" fill="#111">${esc(inside)}</text>
-    ${cap?`<circle cx="${p.x+r*.8}" cy="${p.y-r*.8}" r="2.6" fill="#111"/><text x="${p.x+r*.8}" y="${p.y-r*.8+1.1}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="3.4" fill="#FFD400">C</text>`:''}
-    ${name?`<g class="nmtag"><rect rx="1.6" fill="#111"/><text x="${tx}" y="${ty}" text-anchor="${side?'start':'middle'}" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${fsN}" letter-spacing=".15" fill="#fff">${esc(name.toUpperCase())}</text></g>`:''}</g>`}).join('')}</svg>`;
+    const cy=p.y,ty=cy+r+4.4,tx=p.x;
+    return `<g><circle cx="${p.x}" cy="${cy}" r="${r}" fill="${pl?'#FFD400':'#fff'}" stroke="#111" stroke-width=".8"/>
+    <text x="${p.x}" y="${cy+1.6}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${String(inside).length>2?3.4:4.4}" fill="#111">${esc(inside)}</text>
+    ${cap?`<circle cx="${p.x+r*.8}" cy="${cy-r*.8}" r="2.6" fill="#111"/><text x="${p.x+r*.8}" y="${cy-r*.8+1.1}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="3.4" fill="#FFD400">C</text>`:''}
+    ${name?`<g class="nmtag"><rect rx="1.6" fill="#111"/><text x="${tx}" y="${ty}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${fsN}" letter-spacing=".15" fill="#fff">${esc(name.toUpperCase())}</text></g>`:''}</g>`}).join('')}</svg>`;
   /* naamlabels: donkere tag precies rond de naam, binnen het veld gehouden */
   $('sPitch').querySelectorAll('.nmtag').forEach(g=>{const t=g.querySelector('text'),rc=g.querySelector('rect');let b;try{b=t.getBBox()}catch(e){}if(!b||!b.width){const fs=+t.getAttribute('font-size'),wd=t.textContent.length*fs*.5;b={x:+t.getAttribute('x')-(t.getAttribute('text-anchor')==='start'?0:wd/2),y:+t.getAttribute('y')-fs*.8,width:wd,height:fs*.95}}
     const px=1.6,py=.7,w=b.width+px*2,h=b.height+py*2;let x=b.x-px;const dx=x<1?1-x:x+w>99?99-(x+w):0;x+=dx;
