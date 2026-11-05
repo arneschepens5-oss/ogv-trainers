@@ -349,7 +349,10 @@ function contactForm(c, list, done) {
    Alle trainingen van één keer inplannen delen een reeks-id (events.series). Trainers kunnen ze nadien
    gewoon aanpassen of verwijderen en zelf extra trainingen toevoegen. */
 const WD = ["Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"], WD_ORDER = [1, 2, 3, 4, 5, 6, 0];
-const seasonEndIso = () => { const y = +seasonNow().slice(5); return y + "-06-30"; };
+/* standaardperiode: van de laatste week van juli tot en met de laatste week van april */
+const lastMonday = (y, m) => { const x = new Date(y, m + 1, 0, 12); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+const seasonStartIso = () => { const y = +seasonNow().slice(0, 4), a = iso(lastMonday(y, 6)), t = todayIso(); return a > t ? a : t; }; /* nooit trainingen in het verleden */
+const seasonEndIso = () => { const y = +seasonNow().slice(5); return iso(addDays(lastMonday(y, 3), 6)); };
 async function planEvents() {
   if (mode === "demo") return (await db.list("events", { type: "training" })).filter(e => e.series);
   const r = await sb.from("events").select("id,team_id,date,start_time,end_time,location,series").eq("type", "training").not("series", "is", null).order("date");
@@ -391,7 +394,7 @@ function planForm(done) {
     <div class="pldays">${WD_ORDER.map(dn => `<button type="button" class="chip" data-wd="${dn}">${WD[dn].slice(0, 2)}</button>`).join("")}</div>
     <div class="fields" style="margin-top:12px"><label class="f">Van<input type="time" name="st" value="18:00" required></label><label class="f">Tot<input type="time" name="et" value="19:15"></label>
       <label class="f full">Terrein of plaats<input name="loc" list="pllocs" placeholder="bv. Terrein 3"><datalist id="pllocs">${locs.map(l => `<option value="${esc(l)}">`).join("")}</datalist></label>
-      <label class="f">Vanaf<input type="date" name="from" value="${todayIso()}" required></label><label class="f">Tot en met<input type="date" name="to" value="${seasonEndIso()}" required></label></div>
+      <label class="f">Vanaf<input type="date" name="from" value="${seasonStartIso()}" required></label><label class="f">Tot en met<input type="date" name="to" value="${seasonEndIso()}" required></label></div>
     <label class="f full" style="margin-top:12px">Niet trainen (vakanties, feestdagen)</label>
     <div class="plskip"><input type="date" id="sk1" aria-label="Van"><span>tot</span><input type="date" id="sk2" aria-label="Tot (mag leeg)"><button class="btn ghost small" type="button" id="skadd">${IC.plus}Toevoegen</button></div>
     <div class="plskips" id="skl"></div>
