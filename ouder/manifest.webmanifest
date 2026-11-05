@@ -1,7 +1,7 @@
 {
-  "name": "OGV Ouders",
-  "short_name": "OGV Ouders",
-  "description": "Trainingen, wedstrijden en berichten van OG Vorselaar voor ouders.",
+  "name": "OGV Ouders & spelers",
+  "short_name": "OGV",
+  "description": "Trainingen, wedstrijden, convocaties en nieuws van OG Vorselaar voor ouders en spelers.",
   "lang": "nl",
   "id": "./",
   "start_url": "./",

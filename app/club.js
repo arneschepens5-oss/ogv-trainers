@@ -246,19 +246,30 @@ async function adminTeams(host, info) {
 const rsvpOf = (eid, pid) => (S.rsvp || []).find(r => r.event_id === eid && r.player_id === pid);
 const parentUrl = p => location.origin + location.pathname.replace(/index\.html$/, "") + "ouder/" + (mode === "demo" ? "?demo" : "") + "#" + p.parent_token;
 async function ensureToken(p) { if (p.parent_token) return p; p.parent_token = uid(); await db.save("players", p); return p; }
+let PL_MODE = "ouder";
+const playerUrl = p => location.origin + location.pathname.replace(/index\.html$/, "") + "ouder/" + (mode === "demo" ? "?demo" : "") + "#" + p.player_token;
 async function parentLinks() {
   const ps = active(); if (!ps.length) { toast("Voeg eerst spelers toe."); return; }
-  if (mode === "demo") for (const p of ps) await ensureToken(p);
-  if (ps.some(p => !p.parent_token)) { toast("Voer eerst het databasescript ogv-update-v5.sql uit in Supabase."); return; }
-  const msg = p => `Dag ouders van ${p.first_name}! 👋\nVia de app OGV Ouders zien jullie de trainingen, wedstrijden en convocaties van ${S.team.name}, laten jullie weten of ${p.first_name} komt en vullen jullie je contactgegevens in.\n\nOpen deze link één keer en zet de app op je beginscherm: ${parentUrl(p)}\n\nHeb je nog een kind bij de club? Open ook die link: het komt er gewoon bij. Deze link is persoonlijk, stuur hem niet door.`;
-  const d = dialog(`<div class="dlg"><h2>Ouderlinks</h2><p class="hint" style="margin:0">Elke speler heeft een eigen link naar de app <b>OGV Ouders</b>. Ouders zien daarin de activiteiten van de komende 6 weken, convocaties en berichten, tikken aan of hun kind komt en vullen zelf hun contactgegevens, medische info en toestemming voor beeldmateriaal in. Je ziet de antwoorden bij Aanwezigheden en de gegevens op de spelersfiche.<br><b style="color:var(--ink)">Stuur elke link apart</b>, niet in de groepschat: wie de link heeft, kan antwoorden voor die speler.</p>
-    <div class="list">${ps.map(p => `<div class="item static plink" data-p="${p.id}"><span class="main"><b>${esc(pname(p))}</b><small>${esc(parentUrl(p))}</small></span>
-      <a class="btn small" href="https://wa.me/?text=${encodeURIComponent(msg(p))}" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost small" href="${esc(parentUrl(p))}" target="_blank" rel="noopener" title="Zie wat de ouders zien">Bekijk</a><button class="btn ghost small" type="button" data-cp="${p.id}">${IC.copy}Kopiëren</button><button class="link" type="button" data-new="${p.id}" title="Maak een nieuwe link; de oude werkt dan niet meer">Nieuwe link</button></div>`).join("")}</div>
+  if (mode === "demo") for (const p of ps) { await ensureToken(p); if (!p.player_token) { p.player_token = uid(); await db.save("players", p); } }
+  if (ps.some(p => !p.parent_token)) { toast("Voer eerst het databasescript ogv-database.sql uit in Supabase."); return; }
+  const kidOK = ps.every(p => p.player_token);
+  const msgO = p => `Dag ouders van ${p.first_name}! 👋\nVia de app OGV Ouders zien jullie de trainingen, wedstrijden en convocaties van ${S.team.name}, laten jullie weten of ${p.first_name} komt en vullen jullie je contactgegevens in.\n\nOpen deze link één keer en zet de app op je beginscherm: ${parentUrl(p)}\n\nHeb je nog een kind bij de club? Open ook die link: het komt er gewoon bij. Deze link is persoonlijk, stuur hem niet door.`;
+  const msgS = p => `Hey ${p.first_name}! ⚽\nMet deze link zie je al je trainingen en wedstrijden van ${S.team.name}, of je geselecteerd bent en hoe je seizoen loopt. Je kan ook zelf zeggen of je komt.\n\nOpen hem op je gsm en zet hem op je beginscherm: ${playerUrl(p)}\n\nDeze link is alleen voor jou: stuur hem niet door.`;
+  const d = dialog(`<div class="dlg"><h2>Links voor OGV Ouders</h2>
+    <div class="chips" style="margin:8px 0 10px"><button class="chip" type="button" data-plm="ouder">Voor ouders</button><button class="chip" type="button" data-plm="speler"${kidOK ? "" : " disabled title=\"Voer eerst ogv-database.sql (versie 18) uit\""}>Voor spelers met een eigen gsm</button></div>
+    <p class="hint" style="margin:0" id="plh"></p><div class="list" id="pll" style="margin-top:10px"></div>
     <div class="row"><span class="spacer"></span><button class="btn" type="button" data-close>Klaar</button></div></div>`, "wide");
-  $$("[data-cp]", d).forEach(b => b.onclick = () => { const p = S.players.find(x => x.id === b.dataset.cp); navigator.clipboard?.writeText(msg(p)).then(() => toast("Bericht met link gekopieerd."), () => toast(parentUrl(p))); });
-  $$("[data-new]", d).forEach(b => b.onclick = async () => { const p = S.players.find(x => x.id === b.dataset.new);
-    if (!confirm(`Nieuwe link maken voor ${p.first_name}? De oude link werkt dan niet meer.`)) return;
-    p.parent_token = uid(); if (await safe(async () => { await db.save("players", p); return true; }, "Nieuwe link gemaakt.")) { d.close(); parentLinks(); } });
+  const draw = () => { const kid = PL_MODE === "speler" && kidOK, url = kid ? playerUrl : parentUrl, msg = kid ? msgS : msgO;
+    $$("[data-plm]", d).forEach(b => b.setAttribute("aria-pressed", b.dataset.plm === (kid ? "speler" : "ouder")));
+    $("#plh", d).innerHTML = kid ? `Spelers met een eigen gsm (meestal vanaf U12) krijgen hun eigen link: agenda, convocaties, hun seizoen en het nieuws, en ze geven zelf door of ze komen. Ze zien <b style="color:var(--ink)">geen</b> contactgegevens, medische info of toestemmingen en kunnen de trainer geen berichten sturen; dat blijft bij de ouders. <b style="color:var(--ink)">Stuur elke link apart</b>, liefst via de ouders.`
+      : `Elke speler heeft een eigen link naar de app <b>OGV Ouders</b>. Ouders zien daarin de activiteiten van de komende 6 weken, convocaties, het seizoen en berichten, tikken aan of hun kind komt, sturen de trainer een bericht en vullen zelf hun contactgegevens, medische info en toestemming voor beeldmateriaal in.<br><b style="color:var(--ink)">Stuur elke link apart</b>, niet in de groepschat: wie de link heeft, kan antwoorden voor die speler.`;
+    $("#pll", d).innerHTML = ps.map(p => `<div class="item static plink" data-p="${p.id}"><span class="main"><b>${esc(pname(p))}</b><small>${esc(url(p))}</small></span>
+      <a class="btn small" href="https://wa.me/?text=${encodeURIComponent(msg(p))}" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost small" href="${esc(url(p))}" target="_blank" rel="noopener" title="Zie wat ${kid ? "de speler" : "de ouders"} ziet">Bekijk</a><button class="btn ghost small" type="button" data-cp="${p.id}">${IC.copy}Kopiëren</button><button class="link" type="button" data-new="${p.id}" title="Maak een nieuwe link; de oude werkt dan niet meer">Nieuwe link</button></div>`).join("");
+    $$("[data-cp]", d).forEach(b => b.onclick = () => { const p = S.players.find(x => x.id === b.dataset.cp); navigator.clipboard?.writeText(msg(p)).then(() => toast("Bericht met link gekopieerd."), () => toast(url(p))); });
+    $$("[data-new]", d).forEach(b => b.onclick = async () => { const p = S.players.find(x => x.id === b.dataset.new);
+      if (!confirm(`Nieuwe ${kid ? "spelerslink" : "ouderlink"} maken voor ${p.first_name}? De oude link werkt dan niet meer.`)) return;
+      p[kid ? "player_token" : "parent_token"] = uid(); if (await safe(async () => { await db.save("players", p); return true; }, "Nieuwe link gemaakt.")) draw(); }); };
+  $$("[data-plm]", d).forEach(b => b.onclick = () => { PL_MODE = b.dataset.plm; draw(); }); draw();
 }
 /* samenvatting van de antwoorden voor een activiteit */
 function rsvpSummary(e) {
