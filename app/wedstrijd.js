@@ -331,7 +331,7 @@ function liveView(v, e) {
       ${R.ended ? "" : R.inPeriod ? `<button type="button" data-a="${R.running ? "pause" : "resume"}">${R.running ? IC.pause + "Pauze" : IC.play + "Hervat"}</button><button type="button" data-a="end">${IC.flag}${R.period >= L.periods ? "Einde wedstrijd" : "Einde " + (L.periods === 4 ? "kwart" : "periode")}</button>`
         : `<button type="button" class="y" data-a="next">${IC.play}Start ${L.periods === 4 ? "kwart" : "periode"} ${R.period + 1}</button>`}
       <button type="button" data-a="chance">${IC.star}Kans</button><button type="button" data-a="undo">${IC.undo}Ongedaan</button></div>
-    ${"webkitSpeechRecognition" in window || "SpeechRecognition" in window ? `<button class="mic" type="button" id="mic">${IC.mic}<span>Houd ingedrukt en spreek</span></button><p class="hint" style="text-align:center;margin:6px 0 0">Bijvoorbeeld: "goal Lio assist Mats", "tegendoelpunt", "wissel Odin eruit Remi erin", "pauze timer", "einde kwart".</p>` : ""}`}
+    ${"webkitSpeechRecognition" in window || "SpeechRecognition" in window ? `<div class="microw"><button class="mic" type="button" id="mic">${IC.mic}<span>Houd ingedrukt en spreek</span></button><button class="micset" type="button" id="micset" title="Microfoon en handsfree" aria-label="Microfoon en handsfree instellen">${IC.gear}</button></div><p class="hint" id="micinfo" style="text-align:center;margin:6px 0 0"></p><p class="hint" style="text-align:center;margin:4px 0 0">Bijvoorbeeld: "goal Lio assist Mats", "tegendoelpunt", "wissel Odin eruit Remi erin", "pauze timer", "einde kwart".</p>` : ""}`}
     ${R.ended ? `<button class="btn" type="button" id="finish" style="width:100%;padding:16px;margin-top:14px">${IC.check}Verwerken in het wedstrijdverslag</button>` : ""}
     <div class="sec"><h2>Op het veld</h2><div class="field">${R.on.map(id => `<button type="button" class="on" disabled><span class="n">${byId(id)?.number ?? ""}</span>${esc(nm(id))}<em>${Math.round((R.play[id] || 0) / 60)}'</em></button>`).join("")}</div>
       <h2 style="margin-top:16px">Bank</h2><div class="field">${bench.map(id => `<button type="button" disabled><span class="n">${byId(id)?.number ?? ""}</span>${esc(nm(id))}<em>${Math.round((R.play[id] || 0) / 60)}'</em></button>`).join("") || '<span class="muted">Niemand</span>'}</div></div>
@@ -368,7 +368,7 @@ function liveView(v, e) {
   paint();
   const tick = setInterval(() => { const el = $("#clk"); if (!el) return; const R = replay(L); el.textContent = mmss(R.perS); }, 500);
   let wake = null; try { navigator.wakeLock?.request("screen").then(w => wake = w).catch(() => {}); } catch (x) {}
-  return () => { clearInterval(tick); try { wake?.release(); } catch (x) {} };
+  return () => { clearInterval(tick); micStop(); try { wake?.release(); } catch (x) {} };
 }
 function liveLabel(r, nm) {
   return ({ start: `Start ${r.period === 1 ? "wedstrijd" : "periode " + r.period}`, end: `Einde periode ${r.period}`,
@@ -395,18 +395,82 @@ async function finishLive(e, squad) {
   }, "Uitslag, doelpunten en speeltijd staan in het verslag.");
   go("#/activiteit/" + e.id + "/spelers");
 }
-/* spraak: Nederlandse commando's, zoals in Coach Mic */
+/* spraak: Nederlandse commando's, zoals in Coach Mic.
+   Microfoon: standaard die van de gsm; een verbonden bluetooth-microfoon of oortjes kan je kiezen bij het tandwiel.
+   Handsfree: de app luistert doorlopend en noteert elk herkend commando meteen (handig met een bluetooth-microfoon, gsm in je zak). */
+const MIC = { rec: null, on: false, cont: false, stream: null, btn: null, squad: [], onCmd: null, txt: "" };
+const micPref = () => { try { return JSON.parse(localStorage.getItem("ogv-mic") || "{}") || {}; } catch (x) { return {}; } };
+const micSave = o => { try { localStorage.setItem("ogv-mic", JSON.stringify({ ...micPref(), ...o })); } catch (x) {} };
+const isBT = l => /bluetooth|airpods|headset|hands-?free|buds|\bbt\b|draadloos|wireless|jabra|rode|dji|boya|hollyland/i.test(l || "");
+const micTrackOK = () => !!(navigator.mediaDevices?.getUserMedia && navigator.userAgentData); /* Chrome/Edge: een gekozen microfoon doorgeven aan de spraakherkenning */
+function micInfo() { const el = $("#micinfo"); if (!el) return; const p = micPref();
+  el.innerHTML = `${IC.mic} ${esc(p.label || "Microfoon van je gsm")}${isBT(p.label) ? " · bluetooth" : ""}${p.handsfree ? " · <b>handsfree</b>" : ""}`; }
+function micPaint(interim) { const b = MIC.btn; if (!b || !b.isConnected) return; const hf = !!micPref().handsfree;
+  b.classList.toggle("on", MIC.on); b.classList.toggle("hf", hf);
+  $("span", b).textContent = interim || (MIC.on ? (hf ? "Ik luister mee… tik om te stoppen" : "Ik luister…") : hf ? "Tik om handsfree te luisteren" : "Houd ingedrukt en spreek"); }
+function micHandle(t) { t = (t || "").trim(); if (!t || !MIC.onCmd) return; const cmds = parseSpeech(t, MIC.squad);
+  if (cmds.length) { MIC.onCmd(cmds); toast("Genoteerd: " + t); } else if (!MIC.cont) toast("Niet begrepen: " + t); }
+function micStopStream() { try { MIC.stream?.getTracks().forEach(t => t.stop()); } catch (x) {} MIC.stream = null; }
+async function micStart(cont) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR || MIC.rec) return;
+  MIC.on = true; MIC.cont = cont; MIC.txt = ""; micPaint();
+  const dev = micPref().device; let track = null;
+  if (dev && micTrackOK()) { try { if (!MIC.stream) MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: dev }, echoCancellation: true, noiseSuppression: true } }); track = MIC.stream.getAudioTracks()[0] || null; }
+    catch (x) { toast("De gekozen microfoon is niet gevonden. Is hij nog verbonden? Ik gebruik de microfoon van je gsm."); } }
+  if (!MIC.on) { micStopStream(); micPaint(); return; } /* intussen al losgelaten */
+  const rec = new SR(); rec.lang = "nl-BE"; rec.interimResults = true; rec.continuous = true; MIC.rec = rec;
+  rec.onresult = r => { let interim = "";
+    for (let i = r.resultIndex; i < r.results.length; i++) { const x = r.results[i];
+      if (x.isFinal) { if (MIC.cont) micHandle(x[0].transcript); else MIC.txt += " " + x[0].transcript; } else interim += x[0].transcript; }
+    micPaint(((MIC.cont ? "" : MIC.txt) + " " + interim).trim() || null); };
+  rec.onerror = x => { if (x.error === "no-speech" || x.error === "aborted") return;
+    if (x.error === "not-allowed" || x.error === "service-not-allowed") { MIC.on = false; toast("Geef de app toegang tot je microfoon (instellingen van je browser)."); }
+    else if (x.error === "audio-capture") { MIC.on = false; toast("Geen microfoon gevonden. Verbind je bluetooth-microfoon opnieuw of kies een andere bij het tandwiel."); }
+    else if (x.error === "network") toast("Spraakherkenning heeft internet nodig."); else if (!MIC.cont) toast("Spraak niet herkend. Probeer opnieuw."); };
+  rec.onend = () => { MIC.rec = null;
+    if (MIC.cont && MIC.on) { setTimeout(() => { if (MIC.on && !MIC.rec) micStart(true); }, 250); return; } /* handsfree: meteen verder luisteren */
+    MIC.on = false; micStopStream(); const t = MIC.txt; MIC.txt = ""; micPaint(); if (!MIC.cont) micHandle(t); };
+  try { if (track) rec.start(track); else rec.start(); } catch (x) { try { rec.start(); } catch (y) { MIC.rec = null; MIC.on = false; micStopStream(); micPaint(); } }
+}
+function micStop() { MIC.on = false; if (MIC.rec) { try { MIC.rec.stop(); } catch (x) {} } else micStopStream(); micPaint(); }
 function setupMic(btn, squad, onCmd) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return;
-  let rec = null, txt = "";
-  const start = ev => { ev.preventDefault(); if (rec) return; txt = ""; rec = new SR(); rec.lang = "nl-BE"; rec.interimResults = true; rec.continuous = true;
-    rec.onresult = r => { txt = [...r.results].map(x => x[0].transcript).join(" "); $("span", btn).textContent = txt || "Ik luister…"; };
-    rec.onerror = x => { toast(x.error === "not-allowed" ? "Geef de app toegang tot je microfoon." : "Spraak niet herkend. Probeer opnieuw."); };
-    rec.onend = () => { btn.classList.remove("on"); const t = txt.trim(); rec = null; $("span", btn).textContent = "Houd ingedrukt en spreek";
-      if (!t) return; const cmds = parseSpeech(t, squad); if (cmds.length) { onCmd(cmds); toast("Genoteerd: " + t); } };
-    try { rec.start(); btn.classList.add("on"); $("span", btn).textContent = "Ik luister…"; } catch (x) { rec = null; } };
-  const stop = () => { if (rec) try { rec.stop(); } catch (x) {} };
-  btn.addEventListener("pointerdown", start); btn.addEventListener("pointerup", stop); btn.addEventListener("pointerleave", stop); btn.addEventListener("pointercancel", stop);
+  MIC.btn = btn; MIC.squad = squad; MIC.onCmd = onCmd; micPaint(); micInfo();
+  if (micPref().handsfree) btn.onclick = () => MIC.on ? micStop() : micStart(true);
+  else { const down = ev => { ev.preventDefault(); if (!MIC.on) micStart(false); }, up = () => { if (MIC.on && !MIC.cont) micStop(); };
+    btn.addEventListener("pointerdown", down); btn.addEventListener("pointerup", up); btn.addEventListener("pointerleave", up); btn.addEventListener("pointercancel", up); }
+  const set = $("#micset"); if (set) set.onclick = () => micSettings(() => { const nb = btn.cloneNode(true); btn.replaceWith(nb); setupMic(nb, squad, onCmd); });
+}
+/* venster: microfoon kiezen, testen met een geluidsmeter, handsfree aan of uit */
+function micSettings(done) {
+  if (MIC.on) micStop();
+  const p = micPref(), canPick = micTrackOK();
+  const d = dialog(`<div class="dlg micdlg"><h2>Microfoon</h2>
+    <p class="hint" style="margin-top:0">Verbind eerst je bluetooth-microfoon of oortjes met je gsm, via de bluetooth-instellingen van je gsm. Kies hem daarna hieronder en praat even: de balk moet bewegen.</p>
+    ${canPick ? `<div class="list" id="mlist"><p class="hint">Microfoons zoeken…</p></div>` : `<div class="panel" style="padding:12px 14px"><b>Op iPhone en in Safari</b><p class="hint" style="margin:4px 0 0">De app gebruikt altijd de microfoon die je gsm kiest. Is je bluetooth-microfoon verbonden, dan neemt je gsm die meestal vanzelf. Kijk met de balk hieronder of hij geluid opvangt.</p></div>`}
+    <div class="meter" aria-label="Geluidsniveau"><i id="mlvl"></i></div><p class="hint" id="mname" style="margin:4px 0 0"></p>
+    <label class="check" style="margin-top:14px"><input type="checkbox" id="mhf"${p.handsfree ? " checked" : ""}><span><b>Handsfree</b><br><span class="muted">De app luistert doorlopend en noteert elk commando meteen. Tik één keer op de microfoonknop om te starten en te stoppen. Ideaal met een bluetooth-microfoon en je gsm in je zak.</span></span></label>
+    <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn" type="button" data-close>Klaar</button></div></div>`);
+  let stream = null, ctx = null, raf = 0;
+  const stopMeter = () => { cancelAnimationFrame(raf); try { stream?.getTracks().forEach(t => t.stop()); } catch (x) {} try { ctx?.close(); } catch (x) {} stream = null; ctx = null; };
+  const meter = async devId => { stopMeter();
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: devId ? { deviceId: { exact: devId } } : true }); }
+    catch (x) { $("#mname", d).textContent = x.name === "NotAllowedError" ? "Geef de app toegang tot je microfoon." : "Deze microfoon is niet bereikbaar. Is hij nog verbonden?"; return; }
+    const tr = stream.getAudioTracks()[0]; $("#mname", d).textContent = "Luistert via: " + (tr?.label || "microfoon van je gsm");
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC(); const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an);
+    const buf = new Uint8Array(an.fftSize), bar = $("#mlvl", d);
+    const loop = () => { an.getByteTimeDomainData(buf); let m = 0; for (const v of buf) m = Math.max(m, Math.abs(v - 128)); bar.style.width = Math.min(100, m / 128 * 260) + "%"; raf = requestAnimationFrame(loop); }; loop(); };
+  const list = async () => { const host = $("#mlist", d); if (!host) return;
+    let devs = []; try { devs = (await navigator.mediaDevices.enumerateDevices()).filter(x => x.kind === "audioinput" && x.deviceId !== "default" && x.deviceId !== "communications"); } catch (x) {}
+    const cur = micPref().device || "";
+    host.innerHTML = [{ deviceId: "", label: "Microfoon van je gsm (standaard)" }, ...devs].map(x => `<label class="item mpick"><input type="radio" name="mdev" value="${esc(x.deviceId)}"${x.deviceId === cur ? " checked" : ""}><span class="main"><b>${esc(x.label || "Microfoon")}</b>${isBT(x.label) ? `<small>Bluetooth</small>` : ""}</span></label>`).join("")
+      + (devs.some(x => isBT(x.label)) ? "" : `<p class="hint" style="margin:8px 2px 0">Zie je je bluetooth-microfoon niet? Verbind hem met je gsm en tik op <button class="link" type="button" id="mre">opnieuw zoeken</button>.</p>`);
+    $$("[name=mdev]", host).forEach(r => r.onchange = () => { const lab = r.closest("label").querySelector("b").textContent; micSave({ device: r.value || null, label: r.value ? lab : null }); meter(r.value); });
+    const re = $("#mre", host); if (re) re.onclick = async () => { await meter(micPref().device); list(); }; };
+  (async () => { await meter(canPick ? micPref().device : null); if (canPick) list(); })();
+  try { navigator.mediaDevices?.addEventListener?.("devicechange", list); } catch (x) {}
+  $("#mhf", d).onchange = e => micSave({ handsfree: e.target.checked });
+  d.addEventListener("close", () => { stopMeter(); try { navigator.mediaDevices?.removeEventListener?.("devicechange", list); } catch (x) {} done && done(); }, { once: true });
 }
 const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 function findP(t, squad) { t = ` ${norm(t)} `; const m = squad.filter(p => [p.first_name, pname(p), p.number != null ? "nummer " + p.number : null].some(n => n && t.includes(` ${norm(n)} `))); return m.length === 1 ? m[0].id : null; }

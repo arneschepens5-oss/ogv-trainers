@@ -1041,3 +1041,13 @@ a.navbtn{text-decoration:none}
   .dgtop select{max-width:none;flex:1 1 140px;min-width:0}
 }
 @media (max-width:640px){.hero h1{font-size:clamp(26px,9.2vw,40px);font-stretch:112%;max-width:none;overflow-wrap:anywhere}}
+/* live coachen: microfoon */
+.microw{display:flex;gap:8px;align-items:stretch;margin-top:14px}.microw .mic{margin-top:0;flex:1}
+.micset{flex:none;width:58px;border-radius:20px;border:1px solid var(--line2);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.micset .i{width:22px;height:22px}
+.mic.hf:not(.on){border-style:dashed}
+#micinfo .i{width:14px;height:14px;vertical-align:-2px}
+.meter{height:12px;border-radius:6px;background:var(--card2);border:1px solid var(--line);overflow:hidden;margin-top:14px}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--s-ok,#22C55E),var(--yellow));transition:width .08s linear}
+.mpick{cursor:pointer}.mpick input{flex:none;width:20px;height:20px;accent-color:var(--yellow)}
+.micdlg .check .muted{font-weight:400;font-size:13.5px}
