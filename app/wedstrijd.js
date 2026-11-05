@@ -34,6 +34,7 @@ function eventForm(e, forceNew) {
   <div class="fields"><label class="f">Datum<input type="date" name="date" required value="${esc(e.date)}"></label>
   <label class="f">Begin<input type="time" name="start_time" value="${esc(tm(e.start_time))}"></label><label class="f">Einde<input type="time" name="end_time" value="${esc(tm(e.end_time))}"></label>
   <label class="f">Plaats<input name="location" list="fldnames" value="${esc(e.location || "")}" placeholder="bv. Terrein A of KGV"><datalist id="fldnames">${(typeof FIELD_NAMES !== "undefined" ? FIELD_NAMES : []).map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
+  ${V19() ? `<label class="f">Deel van het veld<select name="field_part">${partOpts(e.field_part, fieldOf(e.location) || "A")}</select></label>` : ""}
   <label class="f wo">Tegenstander<input name="opponent" value="${esc(e.opponent || "")}"></label>
   <label class="f wo">Thuis of uit<select name="home"><option value="1"${e.home !== false ? " selected" : ""}>Thuis</option><option value="0"${e.home === false ? " selected" : ""}>Uit</option></select></label>
   <label class="f full to">Thema<input name="theme" list="themes" value="${esc(e.theme || "")}" placeholder="bv. 1A Opbouw van achteruit"><datalist id="themes">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
@@ -45,7 +46,7 @@ function eventForm(e, forceNew) {
   if (!n) $("#del", d).onclick = async () => { if (!confirm("Deze activiteit met aanwezigheden en verslag verwijderen?")) return;
     await safe(async () => { await db.del("events", { id: e.id }); S.events = S.events.filter(x => x.id !== e.id); S.att = S.att.filter(a => a.event_id !== e.id); S.club = null; d.close(); go("#/kalender"); }, "Activiteit verwijderd."); };
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
-    const base = { team_id: S.team.id, type, start_time: f.start_time || null, end_time: f.end_time || null, location: f.location || null,
+    const base = { team_id: S.team.id, type, start_time: f.start_time || null, end_time: f.end_time || null, location: f.location || null, ...(V19() ? { field_part: fieldOf(f.location) ? f.field_part || null : null } : {}),
       opponent: type === "wedstrijd" ? f.opponent || null : null, home: type === "wedstrijd" ? f.home === "1" : null, theme: type === "training" ? f.theme || null : null,
       ...(!n && V14() ? { cancelled: !!f.cancelled } : {}) };
     const before = n ? null : { ...e };
@@ -70,7 +71,7 @@ const saver = (e, msg) => debounce(async () => { await safe(() => putEvent(e)); 
 /* ---------- training ---------- */
 function viewTraining(v, e, tab) {
   v.innerHTML = backLink("#/kalender", "Kalender") + head("Training" + (e.theme ? ": " + esc(e.theme) : ""),
-    `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : ""}${e.location ? " · " + esc(e.location) : ""}`,
+    `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : ""}${e.location ? " · " + esc(e.location) + (e.field_part && fieldOf(e.location) ? " (" + esc(partLong(e.field_part, fieldOf(e.location))) + ")" : "") : ""}`,
     `<span class="hint" id="saved"></span><button class="btn ghost small noprint" type="button" id="editEv">Bewerken</button><button class="btn ghost small noprint" type="button" onclick="print()">${IC.print}Afdrukken</button>`) +
     (e.cancelled ? `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Afgelast.</b> Ouders zien deze training als afgelast. Via Bewerken zet je ze terug aan.</div></div>` : "") +
     tabsHtml(e.id, [["aanwezig", "Aanwezigheden"], ["plan", "Trainingsplan"], ["verslag", "Verslag"]], tab) + `<div id="tabv"></div>`;
@@ -105,7 +106,7 @@ function attendanceView(tv, e) {
 function viewMatch(v, e, tab) {
   const r = res(e);
   v.innerHTML = backLink("#/kalender", "Kalender") + head(matchTitle(e, S.team.name),
-    `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) : ""}${e.location ? " · " + esc(e.location) : ""}${r ? ` · <span class="pill ${r}">${RES_L[r]}</span>` : ""}`,
+    `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) : ""}${e.location ? " · " + esc(e.location) + (e.field_part && fieldOf(e.location) ? " (" + esc(partLong(e.field_part, fieldOf(e.location))) + ")" : "") : ""}${r ? ` · <span class="pill ${r}">${RES_L[r]}</span>` : ""}`,
     `<span class="hint" id="saved"></span><a class="btn noprint" href="#/live/${e.id}">${IC.mic}Live coachen</a><button class="btn ghost small noprint" type="button" id="editEv">Bewerken</button><button class="btn ghost small noprint" type="button" onclick="print()">${IC.print}Afdrukken</button>`) +
     matchLinks(e) + (e.cancelled ? `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Afgelast.</b> Ouders zien deze wedstrijd als afgelast. Via Bewerken zet je ze terug aan.</div></div>` : "") + tabsHtml(e.id, [...(e.date >= todayIso() ? [["convocatie", "Convocatie"]] : []), ["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"], ...(e.date < todayIso() ? [["convocatie", "Convocatie"]] : [])], tab || (e.date >= todayIso() ? "convocatie" : "verslag")) + `<div id="tabv"></div>`;
   $("#editEv").onclick = () => eventForm(e); bindTabs(v);
@@ -173,7 +174,7 @@ function matchPlayersPanel(e) {
   const rated = rows.filter(x => x.a.rating), av = rated.length ? rated.reduce((s, x) => s + x.a.rating, 0) / rated.length : null;
   rows.sort((x, y) => (y.a.rating || 0) - (x.a.rating || 0) || pname(x.p).localeCompare(pname(y.p)));
   return `<div class="sec panel mplayers"><div class="row" style="margin-bottom:6px"><h2 style="margin:0;margin-right:auto">Spelers</h2><span class="hint">${rows.length} gespeeld${av != null ? " · gemiddeld cijfer " + f1(av) : ""}</span><a class="btn ghost small noprint" href="#/activiteit/${e.id}/spelers">${IC.pen}Beoordelen</a></div>
-    ${rows.map(({ p, a }) => `<div class="mp"><span class="rate${a.rating ? " on" : ""}" style="${a.rating ? `--rc:${a.rating >= 8 ? "#34D17A" : a.rating >= 6 ? "#A3D63B" : a.rating >= 5 ? "#FFD500" : "#F2615A"}` : ""}">${a.rating ?? "–"}</span>
+    ${rows.map(({ p, a }) => `<div class="mp"><span class="rate${a.rating ? " on" : ""}" style="${a.rating ? `--rc:${a.rating >= 8 ? "#34D17A" : a.rating >= 6 ? "#A3D63B" : a.rating >= 5 ? "#FFD100" : "#F2615A"}` : ""}">${a.rating ?? "–"}</span>
       <div class="mpb"><div class="mph"><b>${esc(pname(p))}</b>${isCaptain(e, p, a) ? '<span class="pill w">Kapitein</span>' : ""}${e.report?.motm === p.id ? '<span class="pill w">Man van de match</span>' : ""}<small class="muted">${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : ""].filter(Boolean).join(" · "))}</small></div>
       ${a.note ? `<p>${esc(a.note).replace(/\n/g, "<br>")}</p>` : `<p class="hint">Nog geen commentaar.</p>`}</div></div>`).join("")}</div>`;
 }

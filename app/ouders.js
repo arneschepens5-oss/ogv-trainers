@@ -4,7 +4,9 @@
 
 /* ============ hulpfuncties ============ */
 const V14 = () => mode === "demo" || !!S.v14;
-async function v14Check() { if (mode !== "cloud") { S.v14 = true; return; } try { const r = await sb.from("players").select("contacts").limit(1); S.v14 = !r.error; } catch (e) { S.v14 = false; } }
+async function v14Check() { if (mode !== "cloud") { S.v14 = S.v19 = true; return; } try { const r = await sb.from("players").select("contacts").limit(1); S.v14 = !r.error; } catch (e) { S.v14 = false; }
+  try { const r = await sb.from("events").select("field_part").limit(1); S.v19 = !r.error; } catch (e) { S.v19 = false; } }
+const V19 = () => mode === "demo" || !!S.v19;
 const needV14 = what => `<div class="empty"><b>Nog niet beschikbaar</b>${esc(what)} werkt zodra de beheerder ogv-database.sql (versie 14) uitvoert in Supabase.</div>`;
 const shareWA = txt => "https://wa.me/?text=" + encodeURIComponent(txt);
 const teamShort = () => S.team?.name || "onze ploeg";
@@ -60,9 +62,9 @@ function convoTab(tv, e) {
     $("#cvall", tv).onclick = () => { keep(); ps.forEach(p => sel.add(p.id)); paint(); };
     const text = () => { keep(); const names = ps.filter(p => sel.has(p.id)).map(p => p.first_name).join(", "), off = ps.filter(p => !sel.has(p.id));
       return `⚽ Convocatie ${teamShort()}\n${cap(dLong(e.date))} – ${e.opponent ? (home ? "thuis tegen " : "uit bij ") + e.opponent : "wedstrijd"}\n`
-        + `${v.meet ? "🕗 Verzamelen: " + v.meet + (v.place ? " – " + v.place : "") + "\n" : ""}${kick ? "🏁 Aftrap: " + kick + "\n" : ""}${!home && e.location ? "📍 " + e.location + "\n" : ""}`
+        + `${v.meet ? "🕗 Verzamelen: " + v.meet + (v.place ? " – " + v.place : "") + "\n" : ""}${kick ? "🏁 Aftrap: " + kick + "\n" : ""}${e.location ? "📍 " + (home ? e.location.split(" · ")[0] + (e.field_part && fieldOf(e.location) ? " (" + partLong(e.field_part, fieldOf(e.location)) + ")" : "") : e.location) + "\n" : ""}`
         + `\n✅ Geselecteerd: ${names || "–"}${off.length ? "\n(Niet geselecteerd deze keer: " + off.map(p => p.first_name).join(", ") + ")" : ""}\n`
-        + `${v.bring ? "\n🎒 Meebrengen: " + v.bring : ""}${v.note ? "\n\n" + v.note : ""}\n\nBevestig via je persoonlijke link of je kind erbij is. Bedankt!`; };
+        + `${v.bring ? "\n🎒 Meebrengen: " + v.bring : ""}${v.note ? "\n\n" + v.note : ""}\n\nBevestig via je persoonlijke link of je kind erbij is. Bedankt en komoan OG! 💛🖤`; };
     $("#cvsave", tv).onclick = async () => { keep(); const conv = { players: [...sel], meet: v.meet || null, place: v.place || null, bring: v.bring || null, note: v.note || null, sent: new Date().toISOString() };
       const ok = await safe(async () => { e.convo = conv; await putEvent(e); return true; }, "Convocatie verstuurd. Ouders zien ze via hun link.");
       if (ok) { Object.assign(C, conv); paint(); shareDialog("Ook in de WhatsApp-groep zetten?", text(), "Ouders zien de convocatie al via hun persoonlijke link. Met dit bericht verwittig je ook de WhatsApp-groep."); } };
@@ -264,7 +266,7 @@ const minOf = t => { if (!t) return null; const [h, m] = String(t).split(":").ma
 async function fieldsData(d1, d2) {
   if (mode !== "demo") { const r = await sb.rpc("club_fields", { d1, d2 }); if (r.error) throw r.error; return r.data || []; }
   const T = await db.list("teams"); return (await db.list("events")).filter(e => e.date >= d1 && e.date <= d2 && (e.type === "training" || e.home !== false))
-    .map(e => ({ id: e.id, team_id: e.team_id, team: T.find(t => t.id === e.team_id)?.name || "?", type: e.type, date: e.date, start: tm(e.start_time), end: tm(e.end_time), location: e.location, opponent: e.opponent, cancelled: !!e.cancelled || e.rbfa_state === "afgelast" }));
+    .map(e => ({ id: e.id, team_id: e.team_id, team: T.find(t => t.id === e.team_id)?.name || "?", format: T.find(t => t.id === e.team_id)?.format, type: e.type, date: e.date, start: tm(e.start_time), end: tm(e.end_time), location: e.location, part: e.field_part || null, opponent: e.opponent, cancelled: !!e.cancelled || e.rbfa_state === "afgelast" }));
 }
 /* De terreinen van OG Vorselaar (Riemenstraat 89), zoals op de plattegrond van de club. */
 const CLUB_FIELDS = [
@@ -281,12 +283,51 @@ function fieldOf(loc) { const s = String(loc || "").toLowerCase(); if (!s) retur
   const m = s.match(/(?:terrein|veld|plein)\s*([a-e]|[12])\b/) || s.match(/(?:^|\s)([a-e]|[12])[\s-]*(?:plein|veld|terrein)\b/) || s.match(/^\s*([a-e])\s*$/);
   return m ? m[1].toUpperCase() : null; }
 const fieldName = k => CLUB_FIELDS.find(f => f.k === k)?.name || k;
+/* Terreinverdeling: een ploeg krijgt een heel veld, een helft of een kwart (vak). De ligging volgt de plattegrond:
+   de vakken zijn linksboven (q1), rechtsboven (q2), linksonder (q3) en rechtsonder (q4); een helft ligt aan één kant van de middellijn. */
+const isVert = k => !!k && "ABCD".includes(k);
+const QM = { q1: 1, q2: 2, q3: 4, q4: 8 };
+function partMask(p, k) { if (!p) return 15; if (QM[p]) return QM[p]; const v = isVert(k); return p === "h1" ? (v ? 3 : 5) : p === "h2" ? (v ? 12 : 10) : 15; }
+function partLong(p, k) { if (!p) return "Heel veld"; const v = k ? isVert(k) : true;
+  return { h1: v ? "½ · bovenste helft" : "½ · linkerhelft", h2: v ? "½ · onderste helft" : "½ · rechterhelft", q1: "¼ · vak linksboven", q2: "¼ · vak rechtsboven", q3: "¼ · vak linksonder", q4: "¼ · vak rechtsonder" }[p] || "Heel veld"; }
+const partShort = p => !p ? "" : (p[0] === "h" ? "½" : "¼") + " " + ({ h1: "1", h2: "2", q1: "↖", q2: "↗", q3: "↙", q4: "↘" }[p] || "");
+const partOpts = (sel, k) => ["", "h1", "h2", "q1", "q2", "q3", "q4"].map(x => `<option value="${x}"${x === (sel || "") ? " selected" : ""}>${partLong(x, k)}</option>`).join("");
+/* zonder einduur: training 90 min, wedstrijd volgens het formaat van de ploeg (incl. rust en wissels) */
+const durOf = x => x.type === "wedstrijd" ? (/5/.test(x.format || "") && !/11/.test(x.format || "") ? 75 : /8/.test(x.format || "") ? 90 : 105) : 90;
+const endMin = x => minOf(x.end) ?? (minOf(x.start) ?? 0) + durOf(x);
+const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+const partTxt = x => { const k = fieldOf(x.location); return x.part && k ? partLong(x.part, k) : ""; };
 function overlaps(list) { const bad = new Set(), key = x => fieldOf(x.location) || x.location.trim().toLowerCase();
   const live = list.filter(x => !x.cancelled && x.location && minOf(x.start) != null);
   for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) { const a = live[i], b = live[j];
     if (a.date !== b.date || key(a) !== key(b)) continue;
-    const a1 = minOf(a.start), a2 = minOf(a.end) ?? a1 + (a.type === "wedstrijd" ? 105 : 90), b1 = minOf(b.start), b2 = minOf(b.end) ?? b1 + (b.type === "wedstrijd" ? 105 : 90); if (a1 < b2 && b1 < a2) { bad.add(a.id); bad.add(b.id); } }
+    const k = fieldOf(a.location); if (k && !(partMask(a.part, k) & partMask(b.part, k))) continue; /* andere helft of ander vak: geen overlap */
+    if (minOf(a.start) < endMin(b) && minOf(b.start) < endMin(a)) { bad.add(a.id); bad.add(b.id); } }
   return bad; }
+
+/* één veld in 3D: wie staat waar op het gekozen uur */
+function fieldStage(f, xs, bad, T) {
+  const vert = isVert(f.k), Q = [1, 2, 4, 8], on = xs.filter(x => !x.cancelled && minOf(x.start) != null && minOf(x.start) <= T && T < endMin(x));
+  const zone = i => { const x = on.find(y => partMask(y.part, f.k) & Q[i]); return `<i class="z${x ? " " + x.type : ""}${x && bad.has(x.id) ? " clash" : ""}"></i>`; };
+  const boards = on.map(x => { const m = partMask(x.part, f.k), qs = [0, 1, 2, 3].filter(i => m & Q[i]);
+    const cx = qs.reduce((a, i) => a + (i % 2 ? 75 : 25), 0) / qs.length, cy = qs.reduce((a, i) => a + (i > 1 ? 75 : 25), 0) / qs.length;
+    return `<div class="board ${x.type}${bad.has(x.id) ? " clash" : ""}" style="left:${cx}%;top:${cy}%"><span><b>${esc(x.team)}</b><small>${esc(x.start)}–${hhmm(endMin(x))}${x.part ? " · " + partShort(x.part) : ""}</small></span></div>`; }).join("");
+  const L = vert ? `<rect x="3" y="3" width="62" height="99"/><line x1="3" y1="52.5" x2="65" y2="52.5"/><circle cx="34" cy="52.5" r="9"/><rect x="15" y="3" width="38" height="16"/><rect x="15" y="86" width="38" height="16"/>`
+    : `<rect x="3" y="3" width="99" height="62"/><line x1="52.5" y1="3" x2="52.5" y2="65"/><circle cx="52.5" cy="34" r="9"/><rect x="3" y="15" width="16" height="38"/><rect x="86" y="15" width="16" height="38"/>`;
+  return `<div class="stage3d${vert ? " v" : ""}" aria-hidden="true"><div class="p3d${f.kgv ? " kgv" : ""}"><svg viewBox="0 0 ${vert ? "68 105" : "105 68"}" preserveAspectRatio="none">${L}</svg>
+    <div class="zones">${[0, 1, 2, 3].map(zone).join("")}</div>${boards}<div class="slab"></div></div>${on.length ? "" : `<p class="free">Vrij om ${hhmm(T)}</p>`}</div>`;
+}
+/* tijdlijn van een veld: vier banen (de vakken), een helft beslaat er twee, een heel veld vier */
+function fieldTimeline(f, xs, bad, T) {
+  const live = xs.filter(x => minOf(x.start) != null); if (!live.length) return "";
+  const lo = Math.floor(Math.min(...live.map(x => minOf(x.start))) / 60) * 60, hi = Math.max(lo + 60, Math.ceil(Math.max(...live.map(endMin)) / 60) * 60), span = hi - lo;
+  const order = isVert(f.k) ? [1, 2, 4, 8] : [1, 4, 2, 8], arrows = isVert(f.k) ? ["↖", "↗", "↙", "↘"] : ["↖", "↙", "↗", "↘"];
+  const pct = m => ((m - lo) / span * 100).toFixed(2);
+  const blocks = live.map(x => { const m = partMask(x.part, f.k), lanes = order.map((q, i) => q & m ? i : -1).filter(i => i >= 0), s = minOf(x.start), e = endMin(x);
+    return `<button type="button" class="tlb ${x.type}${bad.has(x.id) ? " clash" : ""}${x.cancelled ? " off" : ""}" data-tt="${s}" style="left:${pct(s)}%;width:${(Math.max(e - s, 10) / span * 100).toFixed(2)}%;top:${lanes[0] * 25}%;height:${lanes.length * 25}%" title="${esc(x.team)} ${esc(x.start)}–${hhmm(e)} · ${esc(partLong(x.part, f.k))}"><span>${esc(x.team)}</span></button>`; }).join("");
+  const ticks = []; for (let m = lo; m <= hi; m += 60) ticks.push(`<span style="left:${pct(m)}%">${m / 60}u</span>`);
+  return `<div class="ftl"><div class="ftl-l">${arrows.map(a => `<span>${a}</span>`).join("")}</div><div class="ftl-c"><div class="ftl-g">${ticks.map(t => t.replace("<span", "<i").replace(/>[^<]*<\/span>/, "></i>")).join("")}${blocks}${T >= lo && T <= hi ? `<b class="ftl-now" style="left:${pct(T)}%"></b>` : ""}</div><div class="ftl-t">${ticks.join("")}</div></div></div>`;
+}
 
 /* plattegrond als tekening: elk veld is aantikbaar */
 function pitchSVG(x, y, w, h, f, st) {
@@ -321,7 +362,7 @@ function clubMapSVG(stOf) {
     ${CLUB_FIELDS.map(f => pitchSVG(...P[f.k], f, stOf(f.k))).join("")}</svg>`;
 }
 
-let FLD_SEL = null, FLD_DAY = null;
+let FLD_SEL = null, FLD_DAY = null, FLD_T = null;
 route("terreinen", { title: "Terreinen", auth: true, render: async v => {
   const mon = addDays(monday(new Date()), FLD_W * 7), d1 = iso(mon), d2 = iso(addDays(mon, 6)), days = [0, 1, 2, 3, 4, 5, 6].map(i => iso(addDays(mon, i))), today = todayIso();
   if (!FLD_DAY || !days.includes(FLD_DAY)) FLD_DAY = days.includes(today) ? today : days[0];
@@ -329,18 +370,32 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
   v.innerHTML = head("Terreinen", sub) + `<p class="hint">Laden…</p>`;
   let list; try { list = await fieldsData(d1, d2); } catch (e) { v.innerHTML = head("Terreinen", "") + (/club_fields|function/i.test(e.message || "") ? needV14("Het terreinoverzicht") : `<div class="empty"><b>Laden mislukt</b>${esc(e.message || e)}</div>`); return; }
   const bad = overlaps(list), now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
-  const isNow = x => x.date === today && !x.cancelled && minOf(x.start) != null && minOf(x.start) <= nowM && nowM < (minOf(x.end) ?? minOf(x.start) + 90);
+  const isNow = x => x.date === today && !x.cancelled && minOf(x.start) != null && minOf(x.start) <= nowM && nowM < endMin(x);
   const ofF = k => list.filter(x => fieldOf(x.location) === k), ofDay = (k, dd) => ofF(k).filter(x => x.date === dd).sort((a, b) => (a.start || "").localeCompare(b.start || ""));
   const loose = list.filter(x => !fieldOf(x.location));
   const stOf = k => { const xs = ofDay(k, FLD_DAY); return { n: xs.filter(x => !x.cancelled).length, sel: FLD_SEL === k, now: ofF(k).some(isNow), clash: xs.some(x => bad.has(x.id)) }; };
   const dayLbl = dd => new Date(dd + "T12:00").toLocaleDateString("nl-BE", { weekday: "short", day: "numeric" });
-  const block = x => `<div class="fldb ${x.type}${bad.has(x.id) ? " clash" : ""}${x.cancelled ? " off" : ""}${isNow(x) ? " live" : ""}"><b>${x.start || "?"}${x.end ? "–" + x.end : ""}</b><span>${esc(x.team)}</span><em>${x.type === "wedstrijd" ? "vs " + esc(x.opponent || "") : "training"}${isNow(x) ? " · nu bezig" : ""}${bad.has(x.id) ? " · overlap" : ""}</em></div>`;
+  const block = x => { const pt = partTxt(x), adm = S.admin && V19() && fieldOf(x.location);
+    return `<div class="fldb ${x.type}${bad.has(x.id) ? " clash" : ""}${x.cancelled ? " off" : ""}${isNow(x) ? " live" : ""}"><b>${x.start || "?"}–${x.end || `<span class="muted" title="Geen einduur ingevuld: geschat">${minOf(x.start) != null ? hhmm(endMin(x)) : "?"}</span>`}</b><span>${esc(x.team)}</span><em>${x.type === "wedstrijd" ? "vs " + esc(x.opponent || "") : "training"}${pt && !adm ? " · " + esc(pt) : ""}${isNow(x) ? " · nu bezig" : ""}${bad.has(x.id) ? " · overlap" : ""}</em>
+      ${adm && !x.cancelled ? `<div class="fpart" data-pe="${x.id}"><select data-k="p" aria-label="Deel van het veld">${partOpts(x.part, fieldOf(x.location))}</select><label>tot<input type="time" data-k="e" value="${esc(x.end || "")}" aria-label="Einduur"></label></div>` : ""}</div>`; };
   const panel = () => { if (!FLD_SEL) return `<div class="fpanel empty0"><b>Kies een terrein</b><p class="hint" style="margin:4px 0 0">Tik op een veld op de plattegrond. Het cijfer op een veld = aantal activiteiten op ${dayLbl(FLD_DAY)}.</p></div>`;
-    const f = CLUB_FIELDS.find(x => x.k === FLD_SEL), xs = ofDay(FLD_SEL, FLD_DAY);
-    return `<div class="fpanel"><div class="row" style="gap:8px"><span class="fbadge${f.kgv ? " kgv" : ""}">${esc(f.short)}</span><div style="margin-right:auto"><h2 style="margin:0">${esc(f.name)}</h2><small class="muted">Kleedkamers ${esc(f.kk)}</small></div><button class="ib" type="button" id="fclose" aria-label="Sluiten">✕</button></div>
+    const f = CLUB_FIELDS.find(x => x.k === FLD_SEL), xs = ofDay(FLD_SEL, FLD_DAY), act = xs.filter(x => !x.cancelled && minOf(x.start) != null);
+    const times = [...new Set(act.map(x => minOf(x.start)))].sort((a, b) => a - b);
+    if (FLD_T == null) FLD_T = FLD_DAY === today && act.some(isNow) ? nowM : times[0] ?? 18 * 60;
+    return `<div class="fpanel"><div class="row" style="gap:8px"><span class="fbadge${f.kgv ? " kgv" : ""}">${esc(f.short)}</span><div style="flex:1;min-width:0"><h2 style="margin:0">${esc(f.name)}</h2><small class="muted">Kleedkamers ${esc(f.kk)}</small></div><button class="ib" type="button" id="fclose" aria-label="Sluiten">✕</button></div>
       <h3 style="margin:14px 0 8px">${cap(new Date(FLD_DAY + "T12:00").toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}</h3>
+      ${act.length ? `${fieldStage(f, xs, bad, FLD_T)}<div class="chips ftimes" role="group" aria-label="Toon het veld om">${FLD_DAY === today ? `<button class="chip" type="button" data-tt="${nowM}" aria-pressed="${FLD_T === nowM}">Nu</button>` : ""}${times.map(m => `<button class="chip" type="button" data-tt="${m}" aria-pressed="${FLD_T === m}">${hhmm(m)}</button>`).join("")}</div>${fieldTimeline(f, xs, bad, FLD_T)}` : ""}
       ${xs.length ? `<div class="fldlist">${xs.map(block).join("")}</div>` : `<p class="muted" style="margin:0">Vrij op deze dag.</p>`}
+      ${S.admin && !V19() && act.length ? `<p class="hint" style="margin:8px 0 0">Wil je een ploeg een helft of een kwart van het veld geven? Voer ogv-database.sql (versie 19) uit in Supabase.</p>` : ""}
+      ${S.admin && V19() && act.length ? `<p class="hint" style="margin:8px 0 0">Geef een ploeg een helft of een kwart van het veld en tot hoe laat ze het mag gebruiken. Twee ploegen op een andere helft tellen niet als overlap.</p>` : ""}
       <h3 style="margin:16px 0 8px">Deze week</h3><div class="fweek">${days.map(dd => { const n = ofDay(FLD_SEL, dd).filter(x => !x.cancelled); return `<button type="button" data-fd="${dd}" aria-pressed="${dd === FLD_DAY}"><small>${dayLbl(dd)}</small><b>${n.length || "–"}</b>${n.length ? `<span>${esc(n[0].start || "")}${n.length > 1 ? "…" : ""}</span>` : ""}</button>`; }).join("")}</div></div>`; };
+  const bindPanel = () => { const fc = $("#fclose"); if (fc) fc.onclick = () => { FLD_SEL = null; FLD_T = null; render(); };
+    $$("[data-fd]", v).forEach(b => b.onclick = () => { FLD_DAY = b.dataset.fd; FLD_T = null; render(); });
+    $$(".fpanel [data-tt]", v).forEach(b => b.onclick = () => { FLD_T = +b.dataset.tt; const w = $(".fpanel", v); w.outerHTML = panel(); bindPanel(); });
+    $$("[data-pe]", v).forEach(row => $$("[data-k]", row).forEach(inp => inp.onchange = async () => {
+      const id = row.dataset.pe, patch = { field_part: $("[data-k=p]", row).value || null, end_time: $("[data-k=e]", row).value || null };
+      const ok = await safe(async () => { if (mode === "demo") await db.save("events", { id, ...patch }); else { const r = await sb.from("events").update(patch).eq("id", id); if (r.error) throw r.error; } return true; }, "Opgeslagen.");
+      if (ok) { const e = S.events.find(x => x.id === id); if (e) Object.assign(e, patch); render(); } })); };
   v.innerHTML = head("Terreinen", sub) +
     `<div class="row" style="gap:8px;margin-bottom:10px"><button class="ib" type="button" id="fwp" aria-label="Vorige week">${IC.chevl || "‹"}</button><b>${dShort(d1)} – ${dShort(d2)}</b><button class="ib" type="button" id="fwn" aria-label="Volgende week">${IC.chev}</button>${FLD_W ? `<button class="link" type="button" id="fw0">Deze week</button>` : ""}<span class="spacer"></span>${bad.size ? `<span class="pill loss">${bad.size} overlappend</span>` : list.length ? `<span class="pill w">geen overlap</span>` : ""}</div>
     <div class="chips fdays">${days.map(dd => `<button class="chip" type="button" data-dd="${dd}" aria-pressed="${dd === FLD_DAY}">${dayLbl(dd)}${dd === today ? " · vandaag" : ""}</button>`).join("")}</div>
@@ -348,21 +403,23 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
     ${loose.length ? `<div class="sec panel"><h2>Niet op de plattegrond</h2><p class="hint" style="margin-top:0">Bij deze activiteiten staat geen terrein van de club (bv. "Terrein A" of "KGV").${S.admin ? " Wijs ze hieronder of in de kalender een terrein toe." : ""}</p><div class="fldlist">${loose.filter(x => x.date === FLD_DAY || !FLD_SEL).slice(0, 30).map(x => `<div class="fldb ${x.type}${x.cancelled ? " off" : ""}"><b>${dayLbl(x.date)} · ${x.start || "?"}</b><span>${esc(x.team)}</span><em>${esc(x.location || "geen plaats")}${x.type === "wedstrijd" ? " · vs " + esc(x.opponent || "") : ""}</em></div>`).join("")}</div></div>` : ""}
     ${S.admin ? `<div class="sec panel" id="fadmin"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Thuiswedstrijden indelen</h2><p class="hint" style="margin:4px 0 0">Kies per thuiswedstrijd van deze week het terrein. Het uur komt van RBFA (zoals in PSD); pas het aan als het anders afgesproken is. Ouders en trainers zien het terrein meteen.</p></div><button class="btn ghost small" type="button" id="frb">${IC.rotate}Alle wedstrijden ophalen van RBFA</button></div><div id="fmatches"><p class="hint">Laden…</p></div></div>` : ""}`;
   $("#fwp").onclick = () => { FLD_W--; render(); }; $("#fwn").onclick = () => { FLD_W++; render(); }; const z = $("#fw0"); if (z) z.onclick = () => { FLD_W = 0; render(); };
-  $$("[data-dd]", v).forEach(b => b.onclick = () => { FLD_DAY = b.dataset.dd; render(); });
+  $$("[data-dd]", v).forEach(b => b.onclick = () => { FLD_DAY = b.dataset.dd; FLD_T = null; render(); });
   $$(".pf", v).forEach(g => { const pick = () => { FLD_SEL = FLD_SEL === g.dataset.f ? null : g.dataset.f; render().then?.(() => {}); setTimeout(() => $(".fpanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); };
-    g.onclick = pick; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } }; });
-  const fc = $("#fclose"); if (fc) fc.onclick = () => { FLD_SEL = null; render(); };
-  $$("[data-fd]", v).forEach(b => b.onclick = () => { FLD_DAY = b.dataset.fd; render(); });
+    g.onclick = () => { FLD_T = null; pick(); }; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } }; });
+  bindPanel();
   if (S.admin) { matchAdmin($("#fmatches"), list.filter(x => x.type === "wedstrijd"), bad, d1, d2); $("#frb").onclick = rbfaAll; }
 } });
 async function matchAdmin(host, ms, bad, d1, d2) {
   ms = ms.sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
   if (!ms.length) { host.innerHTML = `<p class="hint">Geen thuiswedstrijden deze week. Haal ze op van RBFA met de knop hierboven.</p>`; return; }
   host.innerHTML = `<div class="list">${ms.map(x => { const f = fieldOf(x.location); return `<div class="item static fma${bad.has(x.id) ? " clash" : ""}" data-m="${x.id}"><span class="main"><b>${esc(x.team)} – ${esc(x.opponent || "?")}</b><small>${new Date(x.date + "T12:00").toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}${x.cancelled ? " · afgelast" : ""}${bad.has(x.id) ? " · overlap op dit terrein" : ""}</small></span>
-    <input type="time" data-k="st" value="${esc(x.start || "")}" aria-label="Aftrap"><select data-k="f" aria-label="Terrein"><option value="">Terrein…</option>${CLUB_FIELDS.map(F => `<option value="${F.k}"${F.k === f ? " selected" : ""}>${esc(F.name)}</option>`).join("")}</select></div>`; }).join("")}</div>`;
+    <span class="fmat"><input type="time" data-k="st" value="${esc(x.start || "")}" aria-label="Aftrap">${V19() ? `<span class="muted">tot</span><input type="time" data-k="et" value="${esc(x.end || "")}" placeholder="${x.start ? hhmm(endMin(x)) : ""}" aria-label="Veld vrij om" title="Tot hoe laat deze wedstrijd het veld gebruikt${x.end ? "" : " (leeg = geschat " + (x.start ? hhmm(endMin(x)) : "?") + ")"}">` : ""}</span>
+    <select data-k="f" aria-label="Terrein"><option value="">Terrein…</option>${CLUB_FIELDS.map(F => `<option value="${F.k}"${F.k === f ? " selected" : ""}>${esc(F.name)}</option>`).join("")}</select>${V19() ? `<select data-k="p" aria-label="Deel van het veld">${partOpts(x.part, f)}</select>` : ""}</div>`; }).join("")}</div>
+    ${V19() ? `<p class="hint" style="margin:8px 0 0">Spelen er wedstrijden kort na elkaar, vul dan bij elke wedstrijd in tot hoe laat ze het veld gebruikt. Zonder einduur rekent de app 75 min (5v5), 90 min (8v8) of 105 min (11v11).</p>` : ""}`;
   $$("[data-m]", host).forEach(row => $$("[data-k]", row).forEach(inp => inp.onchange = async () => {
     const id = row.dataset.m, k = $("[data-k=f]", row).value, st = $("[data-k=st]", row).value || null;
-    const patch = { start_time: st, ...(k ? { location: fieldName(k) + " · OG Vorselaar, Riemenstraat 89, Vorselaar", rbfa_loc: false } : {}) };
+    const patch = { start_time: st, ...(k ? { location: fieldName(k) + " · OG Vorselaar, Riemenstraat 89, Vorselaar", rbfa_loc: false } : {}),
+      ...(V19() ? { end_time: $("[data-k=et]", row).value || null, field_part: $("[data-k=p]", row).value || null } : {}) };
     const ok = await safe(async () => { if (mode === "demo") await db.save("events", { id, ...patch }); else { const r = await sb.from("events").update(patch).eq("id", id); if (r.error) throw r.error; } return true; }, "Opgeslagen.");
     if (ok) { const e = S.events.find(x => x.id === id); if (e) Object.assign(e, patch); S.club = null; render(); } }));
 }

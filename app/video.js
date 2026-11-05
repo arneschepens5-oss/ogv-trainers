@@ -1,16 +1,16 @@
 /* OGV Platform — videoanalyse: tekenen op de clip (telestratie), bevriesmomenten, tags,
    beeld per beeld, export als video met tekeningen en als afbeelding. Projecten worden per trainer bewaard. */
 "use strict";
-const VA_COLORS = ["#FFD500", "#FFFFFF", "#EF4444", "#3B82F6", "#22C55E", "#111111"];
+const VA_COLORS = ["#FFD100", "#FFFFFF", "#EF4444", "#3B82F6", "#22C55E", "#111111"];
 const VA_TOOLS = [["arrow", "Pass", IC.arrow], ["run", "Loopactie", IC.dash], ["pen", "Vrij tekenen", IC.pen], ["line", "Lijn", IC.line], ["circle", "Speler omcirkelen", IC.circle], ["spot", "Spotlight", IC.spot],
   ["rect", "Zone", IC.rect], ["link", "Spelers verbinden", `<svg class="i" viewBox="0 0 24 24" ${P}><circle cx="5" cy="17" r="2"/><circle cx="12" cy="7" r="2"/><circle cx="19" cy="15" r="2"/><path d="m6.5 15.5 4-7M13.5 8.5l4 5"/></svg>`],
   ["text", "Tekst", IC.text], ["erase", "Gum: tik op een tekening", IC.trash]];
-const VA_TAGS = [["Goal", "#22C55E"], ["Kans", "#FFD500"], ["Balwinst", "#3B82F6"], ["Balverlies", "#EF4444"], ["Opbouw", "#A3A3A3"], ["Pressing", "#F97316"], ["Omschakeling", "#C084FC"], ["Stilstaande fase", "#14B8A6"]];
+const VA_TAGS = [["Goal", "#22C55E"], ["Kans", "#FFD100"], ["Balwinst", "#3B82F6"], ["Balverlies", "#EF4444"], ["Opbouw", "#A3A3A3"], ["Pressing", "#F97316"], ["Omschakeling", "#C084FC"], ["Stilstaande fase", "#14B8A6"]];
 const vfmt = s => { s = Math.max(0, s || 0); const m = Math.floor(s / 60), x = s - m * 60; return String(m).padStart(2, "0") + ":" + x.toFixed(1).padStart(4, "0"); };
 
 /* ---------- tekenen op een canvas (gedeeld door scherm en export) ---------- */
 function vaDrawShape(ctx, sh, W, H, preview) {
-  const lw = Math.max(2, W * .0045), P2 = p => [p[0] * W, p[1] * H], c = sh.c || "#FFD500";
+  const lw = Math.max(2, W * .0045), P2 = p => [p[0] * W, p[1] * H], c = sh.c || "#FFD100";
   ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = lw;
   ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = lw * 1.2;
   const head = (a, b) => { const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = lw * 4.2; ctx.beginPath(); ctx.moveTo(b[0], b[1]); ctx.lineTo(b[0] - L * Math.cos(ang - .45), b[1] - L * Math.sin(ang - .45)); ctx.lineTo(b[0] - L * Math.cos(ang + .45), b[1] - L * Math.sin(ang + .45)); ctx.closePath(); ctx.fill(); };
@@ -30,9 +30,9 @@ function vaDrawShape(ctx, sh, W, H, preview) {
     ctx.globalAlpha = .25; ctx.beginPath(); ctx.ellipse(a[0], a[1], rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
   else if (sh.k === "rect") { if (pts.length < 2) { ctx.restore(); return; } const [a, b] = pts; ctx.globalAlpha = .22; ctx.fillRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
     ctx.globalAlpha = 1; ctx.setLineDash([lw * 2, lw * 1.4]); ctx.strokeRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); ctx.setLineDash([]); }
-  else if (sh.k === "text" && pts.length) { const fs = Math.max(14, W * .026), p = pts[0]; ctx.shadowBlur = 0; ctx.font = `800 ${fs}px Archivo, Arial, sans-serif`; const tw = ctx.measureText(sh.text || "").width;
+  else if (sh.k === "text" && pts.length) { const fs = Math.max(14, W * .026), p = pts[0]; ctx.shadowBlur = 0; ctx.font = `800 ${fs}px Montserrat, Arial, sans-serif`; const tw = ctx.measureText(sh.text || "").width;
     ctx.fillStyle = "rgba(0,0,0,.72)"; const pad = fs * .35; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(p[0] - pad, p[1] - fs - pad * .6, tw + pad * 2, fs + pad * 1.6, fs * .3) : ctx.rect(p[0] - pad, p[1] - fs - pad * .6, tw + pad * 2, fs + pad * 1.6); ctx.fill();
-    ctx.fillStyle = c === "#111111" ? "#FFD500" : c; ctx.fillText(sh.text || "", p[0], p[1]); }
+    ctx.fillStyle = c === "#111111" ? "#FFD100" : c; ctx.fillText(sh.text || "", p[0], p[1]); }
   if (preview) { ctx.globalAlpha = 1; }
   ctx.restore();
 }
@@ -64,7 +64,7 @@ async function vaEditor(v, id) {
     : (await items.list("videoproject")).find(x => x.id === id);
   if (!proj) { v.innerHTML = `<div class="empty"><b>Analyse niet gevonden</b><a class="btn" href="#/videoanalyse">Terug</a></div>`; return; }
   const D = proj.data; D.drawings = D.drawings || []; D.tags = D.tags || [];
-  let tool = "arrow", color = "#FFD500", active = null, drawing = null, freeze = true, holdUntil = 0, lastT = 0, dirty = false, objUrl = null, exporting = false;
+  let tool = "arrow", color = "#FFD100", active = null, drawing = null, freeze = true, holdUntil = 0, lastT = 0, dirty = false, objUrl = null, exporting = false;
   v.innerHTML = backLink("#/videoanalyse", "Videoanalyse") + `<div class="ph"><div class="t"><input class="titlein" id="vt" value="${esc(proj.title)}" aria-label="Naam van de analyse"></div>
     <span class="hint" id="vsaved"></span><button class="btn" type="button" id="vsave">${IC.check}Opslaan</button></div>
   <div class="va"><div class="vamain">

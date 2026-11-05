@@ -4,7 +4,7 @@
 
 /* ============ registreren met de clubcode ============ */
 function viewRegister(v) {
-  v.innerHTML = `<div class="authbox"><h1>OGV<span>Trainers</span></h1><p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
   <form id="rf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" placeholder="bv. Jelle Lauwers"></label>
    <label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" required minlength="8" autocomplete="new-password"></label>
@@ -18,14 +18,14 @@ function viewRegister(v) {
     const code = f.code.value.trim().toUpperCase(); try { localStorage.setItem("ogv-invite", code); } catch (x) {}
     try { const { data, error } = await sb.auth.signUp({ email: f.email.value.trim(), password: f.pw.value, options: { data: { invite: code, full_name: f.nm.value.trim().replace(/\s+/g, " ") }, emailRedirectTo: location.origin + location.pathname } });
       if (error) err.textContent = /not allowed|disabled/i.test(error.message) ? "Registreren staat nog uit. Vraag de beheerder om het aan te zetten in Supabase." : /already registered|exists/i.test(error.message) ? "Er bestaat al een account met dit e-mailadres. Meld je aan." : /password/i.test(error.message) ? "Kies een sterker wachtwoord (minstens 8 tekens)." : error.message;
-      else if (!data.session) v.innerHTML = `<div class="authbox"><h1>OGV<span>Trainers</span></h1><div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
+      else if (!data.session) v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
     catch (x) { err.textContent = "Registreren lukt niet: controleer je internetverbinding."; }
     finally { if (err.textContent) { btn.disabled = false; btn.textContent = "Account aanmaken"; } } };
 }
 /* account bestaat maar is nog geen lid van de club */
 function viewJoin(v) {
   let saved = ""; try { saved = localStorage.getItem("ogv-invite") || ""; } catch (x) {}
-  v.innerHTML = `<div class="authbox"><h1>OGV<span>Trainers</span></h1><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
   <form id="jf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="OGV-…" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
   <div class="row"><button class="link" type="button" data-logout>Afmelden</button></div></div>`;
   $("[data-logout]", v).onclick = logout;
@@ -171,7 +171,8 @@ async function dbCheck(host) {
     ["Probleem melden", () => sb.from("feedback").select("id").limit(1)],
     ["Functies en contactlijst", () => sb.from("club_contacts").select("id").limit(1)],
     ["Vaste trainingen inplannen", () => sb.from("events").select("series").limit(1)],
-    ["Convocaties, berichten, oudercontacten en clubdashboard", () => sb.from("messages").select("id").limit(1)]];
+    ["Convocaties, berichten, oudercontacten en clubdashboard", () => sb.from("messages").select("id").limit(1)],
+    ["Velden verdelen (helft of kwart) en einduren", () => sb.from("events").select("field_part").limit(1)]];
   host.innerHTML = `<h2>Databasecontrole</h2><p class="hint" style="margin-top:0">Bezig met controleren…</p>`;
   const res = []; for (const [l, fn] of C) { let ok = false; try { const r = await fn(); ok = !r.error; } catch (e) { ok = false; } res.push([l, ok]); }
   const bad = res.filter(r => !r[1]).length;
@@ -329,7 +330,7 @@ function historyHtml(p) {
 
 /* ============ wie contacteer ik? — de club vult zelf in wie je bij welk probleem bereikt ============ */
 const CT_CATS = ["Administratie", "Sportief", "Medisch en welzijn", "Praktisch", "Algemeen"];
-const CT_COL = { Administratie: "#38BDF8", Sportief: "#FFD500", "Medisch en welzijn": "#FB7185", Praktisch: "#22C55E", Algemeen: "#A78BFA" };
+const CT_COL = { Administratie: "#38BDF8", Sportief: "#FFD100", "Medisch en welzijn": "#FB7185", Praktisch: "#22C55E", Algemeen: "#A78BFA" };
 const telHref = p => "tel:" + String(p || "").replace(/[^\d+]/g, "");
 const waHref = p => { let n = String(p || "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "32" + n.slice(1); return "https://wa.me/" + n; };
 let CT_Q = "";
@@ -445,8 +446,8 @@ function planForm(done) {
     $$("[data-wd]", d).forEach(b => b.setAttribute("aria-pressed", st.days.has(+b.dataset.wd)));
     $("#pldr", d).innerHTML = WD_ORDER.filter(dn => st.days.has(dn)).map(dn => { const x = st.days.get(dn); return `<div class="pldr" data-dr="${dn}"><b>${WD[dn]}</b>
       <label class="f">Van<input type="time" data-k="st" value="${esc(x.st)}" required></label><label class="f">Tot<input type="time" data-k="et" value="${esc(x.et)}"></label>
-      <label class="f plloc">Terrein<input data-k="loc" list="pllocs" value="${esc(x.loc)}" placeholder="bv. Terrein E of KGV"></label></div>`; }).join("");
-    $$("[data-dr] input", d).forEach(i => i.oninput = () => { st.days.get(+i.closest("[data-dr]").dataset.dr)[i.dataset.k] = i.value; delete f.dataset.ok; $("#plok", d).textContent = "Inplannen"; });
+      <label class="f plloc">Terrein<input data-k="loc" list="pllocs" value="${esc(x.loc)}" placeholder="bv. Terrein E of KGV"></label>${V19() ? `<label class="f plpart">Deel<select data-k="part">${partOpts(x.part, fieldOf(x.loc))}</select></label>` : ""}</div>`; }).join("");
+    $$("[data-dr] input, [data-dr] select", d).forEach(i => i.oninput = i.onchange = () => { st.days.get(+i.closest("[data-dr]").dataset.dr)[i.dataset.k] = i.value; delete f.dataset.ok; $("#plok", d).textContent = "Inplannen"; });
     $("#skl", d).innerHTML = st.skip.map(([a, b], i) => `<span class="chip on">${dShort(a)}${b && b !== a ? " – " + dShort(b) : ""}<button type="button" data-sk="${i}" aria-label="Weg">✕</button></span>`).join("");
     $$("[data-sk]", d).forEach(b => b.onclick = () => { st.skip.splice(+b.dataset.sk, 1); paint(); }); sum(); };
   $$("[data-tm]", d).forEach(b => b.onclick = () => { const k = b.dataset.tm; st.teams.has(k) ? st.teams.delete(k) : st.teams.add(k); paint(); });
@@ -463,14 +464,14 @@ function planForm(done) {
       if (mode === "demo") have = (await db.list("events", { type: "training" })).filter(e => tIds.includes(e.team_id));
       else { const r = await sb.from("events").select("team_id,date,start_time").eq("type", "training").in("team_id", tIds).gte("date", ds[0]).lte("date", ds[ds.length - 1]); if (r.error) throw r.error; have = r.data; }
       const key = (t, dt, s) => t + "|" + dt + "|" + String(s || "").slice(0, 5), seen = new Set(have.map(e => key(e.team_id, e.date, e.start_time)));
-      const rows = []; for (const t of tIds) for (const dt of ds) { const x = slot(dt); if (!seen.has(key(t, dt, x.st))) rows.push({ id: uid(), team_id: t, type: "training", date: dt, start_time: x.st, end_time: x.et || null, location: (x.loc || "").trim() || null, series, report: {} }); }
+      const rows = []; for (const t of tIds) for (const dt of ds) { const x = slot(dt); if (!seen.has(key(t, dt, x.st))) rows.push({ id: uid(), team_id: t, type: "training", date: dt, start_time: x.st, end_time: x.et || null, location: (x.loc || "").trim() || null, series, report: {}, ...(V19() && x.part && fieldOf(x.loc) ? { field_part: x.part } : {}) }); }
       if (!rows.length) { toast("Alles stond al in de kalender."); d.close(); return; }
       if (!f.dataset.ok && V14()) { /* overlap met andere ploegen op hetzelfde terrein? */
         let ex = []; try { ex = await fieldsData(ds[0], ds[ds.length - 1]); } catch (x) {}
-        const nw = rows.filter(r => r.location).map(r => ({ id: r.id, team: S.teams.find(t => t.id === r.team_id)?.name, date: r.date, start: r.start_time, end: r.end_time, location: r.location, mine: true }));
+        const nw = rows.filter(r => r.location).map(r => ({ id: r.id, team: S.teams.find(t => t.id === r.team_id)?.name, date: r.date, start: r.start_time, end: r.end_time, location: r.location, part: r.field_part || null, mine: true }));
         const bad = overlaps([...ex.filter(x => !tIds.includes(x.team_id)), ...nw]), hits = nw.filter(x => bad.has(x.id));
         if (hits.length) { const other = ex.filter(x => bad.has(x.id)), teamsHit = [...new Set(other.map(x => x.team))];
-          $("#plsum", d).innerHTML = `<b style="color:var(--warn)">Let op: ${hits.length} trainingen overlappen</b> met ${esc(teamsHit.join(", "))} op hetzelfde terrein, bv. ${dShort(hits[0].date)} op ${esc(hits[0].location)}. Pas het uur of het terrein aan, of plan toch in als dat zo afgesproken is.`;
+          $("#plsum", d).innerHTML = `<b style="color:var(--warn)">Let op: ${hits.length} trainingen overlappen</b> met ${esc(teamsHit.join(", "))} op hetzelfde terrein, bv. ${dShort(hits[0].date)} op ${esc(hits[0].location)}. Pas het uur of het terrein aan, geef elke ploeg een helft of een vak (kolom Deel), of plan toch in als dat zo afgesproken is.`;
           f.dataset.ok = "1"; btn.disabled = false; btn.textContent = "Toch inplannen"; return; } }
       if (mode === "demo") { for (const r of rows) await db.insert("events", r); }
       else for (let i = 0; i < rows.length; i += 200) { const r = await sb.from("events").insert(rows.slice(i, i + 200)); if (r.error) throw r.error; }

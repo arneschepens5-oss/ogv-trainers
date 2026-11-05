@@ -6,7 +6,7 @@
 const EX_PHASES = ["Opwarming", "Kern", "Wedstrijdvorm", "Afsluiting"];
 /* soort oefening: één woordenlijst voor de trainingsfiche en de bibliotheek */
 const EX_TYPES = ["Opwarming", "Tussenvorm", "Wedstrijdvorm", "Afwerkvorm", "Pasvorm", "Positiespel", "Duelvorm", "Techniekvorm", "Coördinatie", "Activatie met band", "Stretching", "Cooling down"];
-const TYPE_COL = { Opwarming: "#38BDF8", Tussenvorm: "#FFD500", Wedstrijdvorm: "#22C55E", Afwerkvorm: "#FB7185", Pasvorm: "#F97316", Positiespel: "#14B8A6", Duelvorm: "#E879F9", Techniekvorm: "#A3E635", "Coördinatie": "#60A5FA", "Activatie met band": "#F43F5E", "Stretching": "#2DD4BF", "Cooling down": "#A78BFA" };
+const TYPE_COL = { Opwarming: "#38BDF8", Tussenvorm: "#FFD100", Wedstrijdvorm: "#22C55E", Afwerkvorm: "#FB7185", Pasvorm: "#F97316", Positiespel: "#14B8A6", Duelvorm: "#E879F9", Techniekvorm: "#A3E635", "Coördinatie": "#60A5FA", "Activatie met band": "#F43F5E", "Stretching": "#2DD4BF", "Cooling down": "#A78BFA" };
 const TYPE_ALIAS = { partijvorm: "Wedstrijdvorm", spelvorm: "Wedstrijdvorm", afsluiting: "Cooling down", passingvorm: "Pasvorm", passvorm: "Pasvorm", rondo: "Positiespel", techniek: "Techniekvorm", afwerking: "Afwerkvorm", duel: "Duelvorm", coordinatie: "Coördinatie", activatie: "Activatie met band", "activatie band": "Activatie met band", weerstandsband: "Activatie met band", rekken: "Stretching", stretchen: "Stretching" };
 const FORM2TYPE = { Duelvorm: "Duelvorm", Kleine: "Wedstrijdvorm", Grote: "Wedstrijdvorm", Rondo: "Positiespel", Passingvorm: "Pasvorm", Afwerkvorm: "Afwerkvorm", Opbouwpatroon: "Tussenvorm", Technische: "Techniekvorm", Circuit: "Coördinatie", Spelvorm: "Opwarming", Oefening: "Tussenvorm" };
 function exType(x) {
@@ -74,9 +74,9 @@ route("sjabloon", { title: "Training zonder datum", auth: true, team: true, rend
 } });
 
 /* ============ trainingsplan: één lijst in de volgorde die de trainer zelf kiest ============ */
-const PHASE_COL = { Opwarming: "#38BDF8", Kern: "#FFD500", Wedstrijdvorm: "#22C55E", Afsluiting: "#A78BFA" };
+const PHASE_COL = { Opwarming: "#38BDF8", Kern: "#FFD100", Wedstrijdvorm: "#22C55E", Afsluiting: "#A78BFA" };
 const LABEL_SUG = EX_TYPES;
-const LPAL = ["#38BDF8", "#FFD500", "#22C55E", "#A78BFA", "#FB7185", "#F97316", "#14B8A6", "#E879F9"];
+const LPAL = ["#38BDF8", "#FFD100", "#22C55E", "#A78BFA", "#FB7185", "#F97316", "#14B8A6", "#E879F9"];
 const labelCol = l => !l ? "var(--line2)" : TYPE_COL[l] || PHASE_COL[l] || LPAL[[...l.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % LPAL.length];
 const hm = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const toMin = s => { const [h, m] = tm(s).split(":"); return +h * 60 + +m; };
@@ -309,7 +309,7 @@ function exFilterBar(host, list, f, onChange, compact) {
 /* ============ afdrukken: trainingsfiche zoals PSD ============ */
 async function printPlan(e) {
   const pl = normPlan(e.plan), el = document.createElement("div"); el.className = "print-only";
-  el.innerHTML = `<div class="pfiche"><header><div><h1>${esc(pl.theme || e.theme || "Training")}</h1><p>${esc(S.team?.name || "")} · ${e.date ? cap(dLong(e.date)) : "Training zonder datum"}${e.start_time ? ", " + tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : ""}${e.location ? " · " + esc(e.location) : ""}</p></div><img src="icons/icon-192.png" alt=""></header>
+  el.innerHTML = `<div class="pfiche"><header><div><h1>${esc(pl.theme || e.theme || "Training")}</h1><p>${esc(S.team?.name || "")} · ${e.date ? cap(dLong(e.date)) : "Training zonder datum"}${e.start_time ? ", " + tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : ""}${e.location ? " · " + esc(e.location) : ""}</p></div><img src="icons/logo.png" alt=""></header>
     <dl class="pmeta"><div><dt>Thema</dt><dd>${esc(pl.theme || e.theme || "–")}</dd></div><div><dt>Aantal spelers</dt><dd>${esc(pl.players || "–")}</dd></div><div><dt>Materiaal</dt><dd>${esc(pl.material || "–")}</dd></div><div><dt>Intensiteit</dt><dd>${pl.intensity ? pl.intensity + " – " + INTENS[pl.intensity] : "–"}</dd></div><div><dt>Totale duur</dt><dd>${planMinutes(pl)} min</dd></div></dl>
     ${pl.goal ? `<p class="pgoal"><b>Doel:</b> ${esc(pl.goal)}</p>` : ""}
     ${pl.items.map(x => `<section class="pex"><div class="ptxt"><h2>${x.phase ? esc(x.phase) + " : " : ""}${esc(x.name || "Oefening")}</h2>

@@ -169,8 +169,8 @@ function evalChart(ev) {
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Evolutie gemiddelde evaluatie">
   ${[1,2,3,4,5].map(n => `<line x1="${pad}" x2="${W - pad}" y1="${ys(n)}" y2="${ys(n)}" style="stroke:var(--line)"/><text x="6" y="${ys(n) + 4}" style="fill:var(--dim)" font-size="10">${n}</text>`).join("")}
   ${EV_MOMENTS.map(x => `<text x="${xs(x.m)}" y="${H - 2}" text-anchor="middle" style="fill:var(--dim)" font-size="10">${x.kort}</text>`).join("")}
-  <polyline fill="none" stroke="#FFD500" stroke-width="2.5" points="${pts.map(([m, n]) => xs(m) + "," + ys(n)).join(" ")}"/>
-  ${pts.map(([m, n]) => `<circle cx="${xs(m)}" cy="${ys(n)}" r="4" fill="#FFD500"/><text x="${xs(m)}" y="${ys(n) - 9}" text-anchor="middle" style="fill:var(--ink)" font-size="11" font-weight="700">${f1(n)}</text>`).join("")}</svg>`;
+  <polyline fill="none" stroke="#FFD100" stroke-width="2.5" points="${pts.map(([m, n]) => xs(m) + "," + ys(n)).join(" ")}"/>
+  ${pts.map(([m, n]) => `<circle cx="${xs(m)}" cy="${ys(n)}" r="4" fill="#FFD100"/><text x="${xs(m)}" y="${ys(n) - 9}" text-anchor="middle" style="fill:var(--ink)" font-size="11" font-weight="700">${f1(n)}</text>`).join("")}</svg>`;
 }
 function evalDetail(ev) { const a0 = ev[0], b0 = ev[ev.length - 1], two = ev.length > 1, nm = m => EV_MOMENTS[m - 1].kort;
   const cell = (a, b) => { const dl = two && a != null && b != null ? b - a : null; return `<td>${a == null ? "–" : f1(a)}</td>${two ? `<td>${b == null ? "–" : f1(b)}</td><td style="color:${dl > 0 ? "var(--ok)" : dl < 0 ? "var(--bad)" : "var(--muted)"}">${dl == null ? "–" : (dl > 0 ? "+" : "") + f1(dl)}</td>` : ""}`; };

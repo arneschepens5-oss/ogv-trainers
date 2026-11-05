@@ -38,7 +38,8 @@ async function rbfaSync(team) {
     if (!e) e = events.find(x => x.type === "wedstrijd" && !x.rbfa_id && x.date === date && (!x.opponent || normOpp(x.opponent) === normOpp(opp) || normOpp(opp).includes(normOpp(x.opponent))));
     if (e) {
       const before = JSON.stringify([e.rbfa_id, e.date, tm(e.start_time), e.home, e.opponent, e.location, e.rbfa_state, e.score_for, e.score_against, e.report?.series, e.report?.kind]);
-      e.rbfa_id = String(m.id); e.date = date; e.start_time = (time || "").slice(0, 5) || e.start_time; e.home = home; e.rbfa_state = state;
+      const st0 = tm(e.start_time); e.rbfa_id = String(m.id); e.date = date; e.start_time = (time || "").slice(0, 5) || e.start_time;
+      if (e.end_time && st0 && tm(e.start_time) !== st0) { const mm = t => { const [h, n] = String(t).split(":").map(Number); return h * 60 + n; }, d = mm(tm(e.end_time)) + mm(tm(e.start_time)) - mm(st0); if (d > 0 && d < 1440) e.end_time = String(Math.floor(d / 60)).padStart(2, "0") + ":" + String(d % 60).padStart(2, "0"); } /* aftrap verschoven: einduur schuift mee */ e.home = home; e.rbfa_state = state;
       if (!e.opponent) e.opponent = opp; if (!e.location || e.rbfa_loc) { e.location = loc; e.rbfa_loc = true; }
       if (m.showScore && m.outcome?.homeTeamGoals != null && e.score_for == null) { e.score_for = home ? m.outcome.homeTeamGoals : m.outcome.awayTeamGoals; e.score_against = home ? m.outcome.awayTeamGoals : m.outcome.homeTeamGoals; }
       e.report = e.report || {}; if (series && !e.report.series) e.report.series = series; if (series && !e.report.kind) e.report.kind = rbfaKind(series);

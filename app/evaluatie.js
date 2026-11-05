@@ -59,7 +59,7 @@ function evWindow(mo, t = S.team) { const y = parseInt(String(t?.season || seaso
 function evCurrent(t = S.team) { const now = new Date();
   for (const mo of EV_MOMENTS) { const w = evWindow(mo, t); if (now <= w.to) return mo.m; } return EV_LAST; }
 const evDelta = d => d == null ? "" : `<span class="dl ${d > 0.04 ? "up" : d < -0.04 ? "down" : ""}">${d > 0.04 ? "▲ +" : d < -0.04 ? "▼ " : "= "}${f1(Math.abs(d) < 0.05 ? 0 : d).replace(/^-/, "−")}</span>`;
-const evColor = v => v == null ? "var(--card3)" : v >= 4 ? "#34D17A" : v >= 3 ? "#A3D63B" : v >= 2.5 ? "#FFD500" : v >= 2 ? "#F59E0B" : "#F2615A";
+const evColor = v => v == null ? "var(--card3)" : v >= 4 ? "#34D17A" : v >= 3 ? "#A3D63B" : v >= 2.5 ? "#FFD100" : v >= 2 ? "#F59E0B" : "#F2615A";
 async function evPut(e) {
   try { await db.save("evaluations", e); } catch (err) { throw /details|column/i.test(err.message || "") ? new Error("voer eerst ogv-update-v6.sql uit in Supabase") : err; }
   const i = S.evals.findIndex(x => x.player_id === e.player_id && x.moment === e.moment); if (i >= 0) S.evals[i] = e; else S.evals.push(e);
@@ -188,7 +188,7 @@ function evPrint(players, m) {
   const el = document.createElement("div"); el.className = "print-only";
   el.innerHTML = players.map(p => { const e = evOf(p.id, m) || evNew(p.id, m), pr = evPrev(p.id, m), D = e.details || {}, a = evAvgOf(e, names), s = playerStats(p);
     const hist = EV_MOMENTS.map(x => [x, evAvgOf(evOf(p.id, x.m), names)]).filter(x => x[1] != null);
-    return `<div class="prep"><header><div><h1>${esc(pname(p))}</h1><p>${esc(S.team.name)} · Evaluatie ${mo.naam.toLowerCase()} · ${new Date(e.date || Date.now()).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" })}</p></div><img src="icons/icon-192.png" alt=""></header>
+    return `<div class="prep"><header><div><h1>${esc(pname(p))}</h1><p>${esc(S.team.name)} · Evaluatie ${mo.naam.toLowerCase()} · ${new Date(e.date || Date.now()).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" })}</p></div><img src="icons/logo.png" alt=""></header>
       <div class="ptop"><div class="pbig"><small>Gemiddelde</small><b>${f1(a)}</b><span>op 5${pr && a != null && evAvgOf(pr, names) != null ? ` · ${(a - evAvgOf(pr, names) >= 0 ? "+" : "")}${f1(a - evAvgOf(pr, names))} t.o.v. ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}` : ""}</span></div>
         <div class="phist">${hist.map(([x, v]) => `<div><i style="height:${Math.round(6 + (v - 1) / 4 * 54)}px"></i><b>${f1(v)}</b><small>${x.kort}</small></div>`).join("")}</div>
         <dl><dt>Aanwezig op training</dt><dd>${s.trTot ? s.trPct + "%" : "–"}</dd><dt>Wedstrijden</dt><dd>${s.matches}</dd>${D.position ? `<dt>Beste positie</dt><dd>${esc(D.position)}</dd>` : ""}</dl></div>

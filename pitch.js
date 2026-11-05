@@ -6,7 +6,7 @@ window.mountPitch = function (cv) {
   const ctx = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const L = 64, W = 42, HL = L / 2, HW = W / 2;            // veld 64 x 42 m
-  const Y = "#FFD500", WHITE = "#F2F2EE";
+  const Y = "#FFD100", WHITE = "#F2F2EE";
 
   // ---- camera ----
   let w = 0, h = 0, dpr = 1, f = 1, cam, R, U, F;

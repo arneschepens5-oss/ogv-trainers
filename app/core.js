@@ -313,13 +313,13 @@ function shell() {
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
-    <a class="brand" href="#/start"><img src="icons/icon-192.png" alt=""><span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
+    <a class="brand" href="#/start">${LOGO("side")}<span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
-    <header class="topbar"><img src="icons/icon-192.png" alt="">${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
+    <header class="topbar">${LOGO("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-family:var(--font-h)">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
     <div class="page" id="view"></div>
   </main>
   <nav class="tabbar" aria-label="Snelmenu">
@@ -451,7 +451,7 @@ function teamForm(t) {
 /* ============ aanmelden ============ */
 route("aanmelden", { title: "Aanmelden", render: v => viewLogin(v) });
 function viewLogin(v, msg) {
-  v.innerHTML = `<div class="authbox"><h1>OGV<span>Trainers</span></h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
   <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a>${LOCAL ? `<button class="link" type="button" id="demo">Bekijk de demo</button>` : ""}</div>
@@ -480,6 +480,9 @@ async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", em
 async function logout() { if (mode === "demo") { try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } else if (sb) await sb.auth.signOut();
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
+/* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */
+const LOGO = cls => `<span class="ogvlogo ${cls || ""}"><img class="lg-d" src="icons/logo-dark.png" alt="OG Vorselaar"><img class="lg-l" src="icons/logo.png" alt="OG Vorselaar"></span>`;
+
 /* ============ demo-gegevens (verzonnen) ============ */
 function demoSeed() {
   let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280, pick = a => a[Math.floor(rnd() * a.length)];
@@ -493,8 +496,8 @@ function demoSeed() {
     const opps = ["KFC Lille","Herenthout VV","Zandhoven","Wiekevorst","Bouwel","Nijlen","Pulle","Massenhoven","Grobbendonk","Viersel"];
     for (let w = -6; w <= 2; w++) {
       const wed = addDays(monday(today), w * 7 + 2), sat = addDays(monday(today), w * 7 + 5);
-      d.events.push({ id: uid(), team_id: team.id, type: "training", date: iso(wed), start_time: "18:00", end_time: "19:15", location: mine ? "Terrein C" : "KGV (terrein D)", theme: pick(THEMES.slice(0, 6)), report: {} });
-      d.events.push({ id: uid(), team_id: team.id, type: "wedstrijd", date: iso(sat), start_time: mine ? "10:00" : "11:30", location: w % 2 ? (mine ? "Terrein B" : "Terrein A") : "Uit", opponent: opps[(w + 6 + (mine ? 0 : 3)) % opps.length], home: !!(w % 2), report: {} });
+      d.events.push({ id: uid(), team_id: team.id, type: "training", date: iso(wed), start_time: "18:00", end_time: "19:15", location: "KGV (terrein D)", field_part: mine ? "h1" : "h2", theme: pick(THEMES.slice(0, 6)), report: {} });
+      d.events.push({ id: uid(), team_id: team.id, type: "wedstrijd", date: iso(sat), start_time: mine ? "10:00" : "11:30", end_time: mine ? "11:15" : null, location: w % 2 ? "Terrein B" : "Uit", opponent: opps[(w + 6 + (mine ? 0 : 3)) % opps.length], home: !!(w % 2), report: {} });
     }
     for (const e of d.events.filter(x => x.team_id === team.id && x.date <= iso(today))) {
       const present = [];

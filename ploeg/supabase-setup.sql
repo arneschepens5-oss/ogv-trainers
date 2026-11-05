@@ -961,6 +961,7 @@ grant execute on function public.parent_view(uuid) to anon, authenticated;
 alter table public.players add column if not exists player_token uuid not null default gen_random_uuid();
 create unique index if not exists players_player_token on public.players(player_token);
 alter table public.rsvp add column if not exists via text;
+alter table public.events add column if not exists field_part text;
 create or replace function public.parent_view(tok uuid) returns json
 language plpgsql stable security definer set search_path = public as $$
 declare p public.players%rowtype; ss date; kid boolean;
@@ -974,7 +975,7 @@ begin
         where tt.team_id = p.team_id and nullif(trim(u.raw_user_meta_data->>'full_name'), '') is not null), '[]'::json),
     'contacts', case when kid then '[]'::jsonb else coalesce(p.contacts, '[]'::jsonb) end, 'medical', case when kid then null else p.medical end, 'consent', case when kid then null else p.consent end, 'updated', case when kid then null else p.parent_updated end,
     'events', coalesce((select json_agg(json_build_object('id', e.id, 'type', e.type, 'date', e.date,
-        'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'), 'location', e.location,
+        'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'), 'location', e.location, 'part', e.field_part,
         'opponent', e.opponent, 'home', e.home, 'state', case when e.cancelled then 'afgelast' else e.rbfa_state end,
         'convo', case when e.convo ? 'sent' then json_build_object('selected', (e.convo->'players') ? p.id::text,
             'meet', e.convo->>'meet', 'place', e.convo->>'place', 'bring', e.convo->>'bring', 'note', e.convo->>'note') end,
@@ -1013,3 +1014,23 @@ begin
   return true;
 end $$;
 grant execute on function public.parent_rsvp(uuid, uuid, text, text) to anon, authenticated;
+
+-- =====================================================================
+-- Versie 19: terreinverdeling. De beheerder geeft een ploeg een heel veld, een helft (h1/h2)
+-- of een kwart (q1–q4) van een terrein, met een einduur, zodat wedstrijden kort na elkaar
+-- of twee ploegen op hetzelfde veld kunnen zonder dat het als overlap telt.
+-- =====================================================================
+alter table public.events add column if not exists field_part text;
+do $$ begin
+  alter table public.events add constraint events_field_part_chk check (field_part is null or field_part in ('h1','h2','q1','q2','q3','q4'));
+exception when duplicate_object then null; end $$;
+create or replace function public.club_fields(d1 date, d2 date) returns json
+language sql stable security definer set search_path = public as $$
+  select case when not public.is_member() then '[]'::json else coalesce((select json_agg(json_build_object('id', e.id, 'team_id', e.team_id, 'team', t.name, 'type', e.type,
+      'date', e.date, 'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'), 'location', e.location, 'part', e.field_part, 'opponent', e.opponent,
+      'format', t.format, 'cancelled', e.cancelled or coalesce(e.rbfa_state, '') = 'afgelast') order by e.date, e.start_time)
+    from public.events e join public.teams t on t.id = e.team_id
+    where e.date between d1 and least(d2, d1 + 400) and (e.type = 'training' or e.home is not false)), '[]'::json) end;
+$$;
+revoke all on function public.club_fields(date, date) from anon, public;
+grant execute on function public.club_fields(date, date) to authenticated;
