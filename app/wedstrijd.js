@@ -316,6 +316,12 @@ function liveView(v, e) {
   }
   const L = e.live, byId = id => S.players.find(p => p.id === id), nm = id => byId(id)?.first_name || "?";
   const push = ev => { L.log.push({ id: uid(), ts: Date.now(), ...ev }); liveSave(e); liveSaveRemote(e); paint(); };
+  /* per ongeluk gestart of opnieuw beginnen: terug naar het kiezen van de basisspelers, het logboek wordt gewist */
+  const liveReset = fromUndo => { const n = L.log.filter(x => x.type !== "start" || x.period > 1).length;
+    const d = dialog(`<div class="dlg"><h2>${fromUndo ? "Start ongedaan maken?" : "Opnieuw beginnen?"}</h2>
+      <p class="muted" style="margin-top:0">De klok gaat terug naar 0 en je kiest opnieuw de basisspelers.${n ? ` <b style="color:var(--ink)">${n} genoteerde ${n === 1 ? "actie wordt" : "acties worden"} gewist</b> (goals, wissels, notities).` : " Er is nog niets genoteerd."}</p>
+      <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="rsok">${fromUndo ? "Ja, ongedaan maken" : "Ja, opnieuw beginnen"}</button></div></div>`);
+    $("#rsok", d).onclick = () => { d.close(); micStop(); e.live = null; try { localStorage.removeItem("ogv-live-" + e.id); } catch (x) {} liveSaveRemote(e); toast("Live coachen staat terug op het begin."); liveView(v, e); }; };
   let pickMode = null, pickData = {};
   const paint = () => {
     const R = replay(L), bench = squad.filter(p => !R.on.includes(p.id)).map(p => p.id);
@@ -335,7 +341,7 @@ function liveView(v, e) {
     ${R.ended ? `<button class="btn" type="button" id="finish" style="width:100%;padding:16px;margin-top:14px">${IC.check}Verwerken in het wedstrijdverslag</button>` : ""}
     <div class="sec"><h2>Op het veld</h2><div class="field">${R.on.map(id => `<button type="button" class="on" disabled><span class="n">${byId(id)?.number ?? ""}</span>${esc(nm(id))}<em>${Math.round((R.play[id] || 0) / 60)}'</em></button>`).join("")}</div>
       <h2 style="margin-top:16px">Bank</h2><div class="field">${bench.map(id => `<button type="button" disabled><span class="n">${byId(id)?.number ?? ""}</span>${esc(nm(id))}<em>${Math.round((R.play[id] || 0) / 60)}'</em></button>`).join("") || '<span class="muted">Niemand</span>'}</div></div>
-    <div class="sec"><h2>Verloop</h2><div class="list log">${R.rows.slice().reverse().filter(r => !["pause","resume"].includes(r.type)).map(r => `<div class="item static"><span class="num">${Math.floor(r.s / 60) + 1}'</span><span class="main"><b>${liveLabel(r, nm)}</b></span></div>`).join("") || '<p class="muted">Nog niets.</p>'}</div></div></div>`;
+    <div class="sec"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Verloop</h2><button class="link" type="button" data-a="reset">${IC.undo}Opnieuw beginnen</button></div><div class="list log">${R.rows.slice().reverse().filter(r => !["pause","resume"].includes(r.type)).map(r => `<div class="item static"><span class="num">${Math.floor(r.s / 60) + 1}'</span><span class="main"><b>${liveLabel(r, nm)}</b></span></div>`).join("") || '<p class="muted">Nog niets.</p>'}</div></div></div>`;
     bind(R, bench);
   };
   const pickPanel = (R, bench) => {
@@ -354,7 +360,8 @@ function liveView(v, e) {
       else if (a === "against") push({ type: "against" }); else if (a === "chance") push({ type: "chance" });
       else if (a === "pause" || a === "resume") push({ type: a }); else if (a === "end") push({ type: "end", period: R.period });
       else if (a === "next") push({ type: "start", period: R.period + 1 });
-      else if (a === "undo") { const last = [...L.log].reverse().find(x => x.type !== "start" || L.log.length > 1); if (!last || (last.type === "start" && last.period === 1)) return; L.log.splice(L.log.lastIndexOf(last), 1); liveSave(e); liveSaveRemote(e); toast("Laatste actie ongedaan gemaakt."); paint(); } });
+      else if (a === "undo") { const last = L.log[L.log.length - 1]; if (!last || (last.type === "start" && last.period === 1)) { liveReset(true); return; } L.log.pop(); liveSave(e); liveSaveRemote(e); toast("Laatste actie ongedaan gemaakt."); paint(); }
+      else if (a === "reset") liveReset(false); });
     $$("[data-pk]", v).forEach(b => b.onclick = () => { const k = b.dataset.pk; pickData[k] = pickData[k] === b.dataset.id ? null : b.dataset.id; paint(); const nt = $("#nt"); if (nt && pickData._t) nt.value = pickData._t; });
     const nt = $("#nt"); if (nt) nt.oninput = () => pickData._t = nt.value;
     const c = $("[data-cancel]", v); if (c) c.onclick = () => { pickMode = null; paint(); };
