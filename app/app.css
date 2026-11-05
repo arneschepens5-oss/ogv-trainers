@@ -1100,3 +1100,55 @@ a.navbtn{text-decoration:none}
 .field button em.rs.ja{background:color-mix(in srgb,var(--s-ok,#16A34A) 25%,transparent)}.field button em.rs.nee{background:color-mix(in srgb,var(--s-bad,#E11D48) 25%,transparent)}
 ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14.5px;line-height:1.45}
 .tclist .item .main{flex:1 1 150px}
+/* ---- plattegrond en terreinen ---- */
+.fdays{margin-bottom:12px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}.fdays::-webkit-scrollbar{display:none}
+.fmapw{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:14px;align-items:start}
+@media (max-width:980px){.fmapw{grid-template-columns:1fr}}
+.fmap{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px;overflow:hidden}
+.clubmap{display:block;width:100%;height:auto;font-family:inherit;--paper:#EDEDE4}
+.clubmap .road{fill:none;stroke:#8A5A3B;stroke-width:12;stroke-linecap:round;opacity:.55}
+.clubmap .street{fill:none;stroke:var(--ink);stroke-width:7;opacity:.75}
+.clubmap .rd{font-size:12px;font-weight:700;fill:var(--muted)}
+.clubmap .lot{fill:#8A5A3B;opacity:.35}
+.clubmap .walk{fill:none;stroke:#E11D48;stroke-width:1.6;opacity:.7}
+.clubmap .walk2{fill:none;stroke:#F59E0B;stroke-width:2;opacity:.7}
+.clubmap .bld{fill:var(--card2);stroke:var(--muted);stroke-width:1.2}
+.clubmap .kant{fill:var(--card2);stroke:var(--muted);stroke-width:1.2}
+.clubmap .kk{fill:#38BDF8;opacity:.9}
+.clubmap .mt{font-size:11px;font-weight:700;fill:var(--muted)}
+.clubmap .kkl text{font-size:11px;font-weight:800;fill:#0284C7}
+.clubmap .ing path{fill:var(--yellow);stroke:#000;stroke-width:1}.clubmap .ing text{font-size:11px;font-weight:800;fill:var(--ink)}
+.clubmap .pk text{font-size:13px;font-weight:900;fill:#fff;paint-order:stroke;stroke:#2563EB;stroke-width:6px;stroke-linejoin:round}
+.clubmap .pf{cursor:pointer;outline:none}
+.clubmap .pf .pfg{transition:filter .15s}
+.clubmap .pf:hover .pfg,.clubmap .pf:focus-visible .pfg{filter:brightness(1.12)}
+.clubmap .pf .pfo{stroke:transparent;stroke-width:4}
+.clubmap .pf.sel .pfo{stroke:var(--yellow);stroke-width:5}
+.clubmap .pf.clash .pfo{stroke:#E11D48;stroke-width:4;stroke-dasharray:8 5}
+.clubmap .pf.sel.clash .pfo{stroke:var(--yellow);stroke-dasharray:none}
+.clubmap .pfl{font-size:38px;font-weight:900;fill:#FFD500;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:3px;pointer-events:none}
+.clubmap .pfl.s{font-size:18px}
+.clubmap .pfb circle{fill:#000;stroke:#FFD500;stroke-width:2}.clubmap .pfb text{font-size:12px;font-weight:900;fill:#FFD500}
+.clubmap .pfnow{fill:#22C55E;stroke:#fff;stroke-width:2;animation:pfp 1.4s ease-in-out infinite}
+@keyframes pfp{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.clubmap .pfnow{animation:none}}
+.flegend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);padding:8px 6px 2px}
+.flegend span{display:inline-flex;align-items:center;gap:6px}
+.lg{display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;font-style:normal;font-size:9px;font-weight:900}
+.lg.now{background:#22C55E}.lg.n{background:#000;color:#FFD500;border:1.5px solid #FFD500;width:16px;height:16px}.lg.clash{border:2px dashed #E11D48;border-radius:4px}.lg.kk{background:#38BDF8;border-radius:3px}
+.fpanel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;position:sticky;top:12px}
+.fpanel.empty0{border-style:dashed}
+.fbadge{display:grid;place-items:center;min-width:46px;height:46px;padding:0 8px;border-radius:12px;background:#2E8B3E;color:#FFD500;font-weight:900;font-size:20px}
+.fbadge.kgv{background:#1F8A5B;font-size:15px}
+.fldlist{display:flex;flex-direction:column;gap:6px}
+.fldlist .fldb{flex-direction:row;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:8px 10px}
+.fldlist .fldb b{font-size:14px}.fldlist .fldb span{font-weight:700;font-size:14px}.fldlist .fldb em{flex-basis:100%;font-size:12.5px}
+.fldb.live{border-color:#22C55E;box-shadow:inset 3px 0 0 #22C55E}
+.fweek{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.fweek button{border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;cursor:pointer;min-width:0}
+.fweek button small{font-size:10.5px;color:var(--muted);text-transform:capitalize;white-space:nowrap}.fweek button b{font-size:16px}.fweek button span{font-size:10px;color:var(--muted)}
+.fweek button[aria-pressed="true"]{border-color:var(--yellow);box-shadow:inset 0 0 0 1px var(--yellow)}
+.fma{flex-wrap:wrap;row-gap:8px}.fma .main{flex:1 1 200px}.fma input[type=time]{width:130px}.fma select{width:auto;min-width:150px}
+.fma.clash{box-shadow:inset 3px 0 0 #E11D48}
+.clubmap .pfl.k{font-size:26px}
+@media (max-width:980px){.fpanel{position:static}}

@@ -406,7 +406,7 @@ async function adminPlanning(host) {
 }
 async function planRefresh(teamIds) { if (S.team && teamIds.includes(S.team.id)) { try { await loadTeam(S.team.id); } catch (e) {} } }
 function planForm(done) {
-  const teams = S.teams.slice(), locs = [...new Set(S.events.map(e => e.location).filter(Boolean))];
+  const teams = S.teams.slice(), locs = [...new Set([...FIELD_NAMES, ...S.events.filter(e => e.type === "training").map(e => e.location).filter(Boolean)])];
   const st = { teams: new Set(S.team ? [S.team.id] : []), days: new Map([[1, { st: "18:00", et: "19:15", loc: "" }]]), skip: [] };
   const d = dialog(`<form class="dlg plform"><h2>Trainingen inplannen</h2>
     <label class="f full">Ploegen<span class="hint" style="font-weight:400">Kies er meerdere als ze op hetzelfde moment trainen.</span></label>
@@ -434,7 +434,7 @@ function planForm(done) {
     $$("[data-wd]", d).forEach(b => b.setAttribute("aria-pressed", st.days.has(+b.dataset.wd)));
     $("#pldr", d).innerHTML = WD_ORDER.filter(dn => st.days.has(dn)).map(dn => { const x = st.days.get(dn); return `<div class="pldr" data-dr="${dn}"><b>${WD[dn]}</b>
       <label class="f">Van<input type="time" data-k="st" value="${esc(x.st)}" required></label><label class="f">Tot<input type="time" data-k="et" value="${esc(x.et)}"></label>
-      <label class="f plloc">Terrein<input data-k="loc" list="pllocs" value="${esc(x.loc)}" placeholder="bv. E-plein"></label></div>`; }).join("");
+      <label class="f plloc">Terrein<input data-k="loc" list="pllocs" value="${esc(x.loc)}" placeholder="bv. Terrein E of KGV"></label></div>`; }).join("");
     $$("[data-dr] input", d).forEach(i => i.oninput = () => { st.days.get(+i.closest("[data-dr]").dataset.dr)[i.dataset.k] = i.value; delete f.dataset.ok; $("#plok", d).textContent = "Inplannen"; });
     $("#skl", d).innerHTML = st.skip.map(([a, b], i) => `<span class="chip on">${dShort(a)}${b && b !== a ? " – " + dShort(b) : ""}<button type="button" data-sk="${i}" aria-label="Weg">✕</button></span>`).join("");
     $$("[data-sk]", d).forEach(b => b.onclick = () => { st.skip.splice(+b.dataset.sk, 1); paint(); }); sum(); };

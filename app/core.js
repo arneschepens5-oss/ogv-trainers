@@ -488,8 +488,8 @@ function demoSeed() {
     const opps = ["KFC Lille","Herenthout VV","Zandhoven","Wiekevorst","Bouwel","Nijlen","Pulle","Massenhoven","Grobbendonk","Viersel"];
     for (let w = -6; w <= 2; w++) {
       const wed = addDays(monday(today), w * 7 + 2), sat = addDays(monday(today), w * 7 + 5);
-      d.events.push({ id: uid(), team_id: team.id, type: "training", date: iso(wed), start_time: "18:00", end_time: "19:15", location: "Terrein 3", theme: pick(THEMES.slice(0, 6)), report: {} });
-      d.events.push({ id: uid(), team_id: team.id, type: "wedstrijd", date: iso(sat), start_time: mine ? "10:00" : "11:30", location: w % 2 ? "Thuis" : "Uit", opponent: opps[(w + 6 + (mine ? 0 : 3)) % opps.length], home: !!(w % 2), report: {} });
+      d.events.push({ id: uid(), team_id: team.id, type: "training", date: iso(wed), start_time: "18:00", end_time: "19:15", location: mine ? "Terrein C" : "KGV (terrein D)", theme: pick(THEMES.slice(0, 6)), report: {} });
+      d.events.push({ id: uid(), team_id: team.id, type: "wedstrijd", date: iso(sat), start_time: mine ? "10:00" : "11:30", location: w % 2 ? (mine ? "Terrein B" : "Terrein A") : "Uit", opponent: opps[(w + 6 + (mine ? 0 : 3)) % opps.length], home: !!(w % 2), report: {} });
     }
     for (const e of d.events.filter(x => x.team_id === team.id && x.date <= iso(today))) {
       const present = [];

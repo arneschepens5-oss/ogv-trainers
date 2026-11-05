@@ -33,7 +33,7 @@ function eventForm(e, forceNew) {
   <div class="chips" id="typ"><button class="chip" type="button" data-t="training">Training</button><button class="chip" type="button" data-t="wedstrijd">Wedstrijd</button></div>
   <div class="fields"><label class="f">Datum<input type="date" name="date" required value="${esc(e.date)}"></label>
   <label class="f">Begin<input type="time" name="start_time" value="${esc(tm(e.start_time))}"></label><label class="f">Einde<input type="time" name="end_time" value="${esc(tm(e.end_time))}"></label>
-  <label class="f">Plaats<input name="location" value="${esc(e.location || "")}" placeholder="bv. Terrein 3"></label>
+  <label class="f">Plaats<input name="location" list="fldnames" value="${esc(e.location || "")}" placeholder="bv. Terrein A of KGV"><datalist id="fldnames">${(typeof FIELD_NAMES !== "undefined" ? FIELD_NAMES : []).map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
   <label class="f wo">Tegenstander<input name="opponent" value="${esc(e.opponent || "")}"></label>
   <label class="f wo">Thuis of uit<select name="home"><option value="1"${e.home !== false ? " selected" : ""}>Thuis</option><option value="0"${e.home === false ? " selected" : ""}>Uit</option></select></label>
   <label class="f full to">Thema<input name="theme" list="themes" value="${esc(e.theme || "")}" placeholder="bv. 1A Opbouw van achteruit"><datalist id="themes">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>

@@ -872,3 +872,13 @@ begin
 end $$;
 revoke all on function public.parent_update(uuid, jsonb, text, jsonb) from public;
 grant execute on function public.parent_update(uuid, jsonb, text, jsonb) to anon, authenticated;
+
+-- =====================================================================
+-- Versie 16: plattegrond en terreinen. Beheerders delen thuiswedstrijden in op een terrein en halen de
+-- wedstrijden van alle ploegen op bij RBFA; daarvoor mogen ze de kalender en de RBFA-koppeling van elke ploeg bijwerken.
+-- =====================================================================
+drop policy if exists "beheer trainingen inplannen" on public.events;
+drop policy if exists "beheer kalender" on public.events;
+create policy "beheer kalender" on public.events for all to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "beheer ploeg wijzigen" on public.teams;
+create policy "beheer ploeg wijzigen" on public.teams for update to authenticated using (public.is_admin()) with check (public.is_admin());
