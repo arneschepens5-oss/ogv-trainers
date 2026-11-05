@@ -366,10 +366,10 @@ async function adminPlanning(host) {
   const series = Object.entries(groups).map(([id, xs]) => { const days = [...new Set(xs.map(e => new Date(e.date + "T12:00").getDay()))].sort((a, b) => WD_ORDER.indexOf(a) - WD_ORDER.indexOf(b));
     const teams = [...new Set(xs.map(e => e.team_id))]; return { id, xs, days, teams, from: xs[0].date, to: xs[xs.length - 1].date, f: xs[0], left: xs.filter(e => e.date >= today).length }; })
     .sort((a, b) => tName(a.teams[0]).localeCompare(tName(b.teams[0]), "nl", { numeric: true }));
-  host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Vaste trainingen</h2><p class="hint" style="margin:4px 0 0">Zet de trainingen van een ploeg in één keer in haar kalender, bv. elke maandag en woensdag van 18:00 tot 19:15. Trainers zien ze meteen, kunnen er één aanpassen of schrappen en voegen zelf extra trainingen toe.</p></div>
+  host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Vaste trainingen</h2><p class="hint" style="margin:4px 0 0">Zet de trainingen van een ploeg in één keer in haar kalender, bv. maandag van 18:00 tot 19:30 op het E-plein en donderdag van 17:30 tot 19:00 op terrein 3. Trainers zien ze meteen, kunnen er één aanpassen of schrappen en voegen zelf extra trainingen toe.</p></div>
       <button class="btn" type="button" id="plnew">${IC.plus}Trainingen inplannen</button></div></div>
     ${series.length ? `<div class="list sec">${series.map(x => `<div class="item static plser"><span class="ic plic">${IC.cal}</span><span class="main"><b>${esc(x.teams.map(tName).join(", "))}</b>
-        <small>Elke ${x.days.map(d => WD[d].toLowerCase()).join(" en ")} · ${tm(x.f.start_time) || "?"}${x.f.end_time ? "–" + tm(x.f.end_time) : ""}${x.f.location ? " · " + esc(x.f.location) : ""}</small>
+        ${x.days.map(dn => { const e0 = x.xs.find(e => new Date(e.date + "T12:00").getDay() === dn); return `<small>Elke ${WD[dn].toLowerCase()} · ${tm(e0.start_time) || "?"}${e0.end_time ? "–" + tm(e0.end_time) : ""}${e0.location ? " · " + esc(e0.location) : ""}</small>`; }).join("")}
         <small>${dShort(x.from)} tot ${dShort(x.to)} · ${x.xs.length} trainingen, nog ${x.left} gepland</small></span>
         <button class="btn ghost small" type="button" data-pldel="${x.id}">Verwijderen</button></div>`).join("")}</div>`
       : `<div class="empty sec"><b>Nog niets ingepland</b>Tik op <b>Trainingen inplannen</b> om de vaste trainingen van een ploeg in haar kalender te zetten.</div>`}`;
@@ -386,14 +386,14 @@ async function adminPlanning(host) {
 async function planRefresh(teamIds) { if (S.team && teamIds.includes(S.team.id)) { try { await loadTeam(S.team.id); } catch (e) {} } }
 function planForm(done) {
   const teams = S.teams.slice(), locs = [...new Set(S.events.map(e => e.location).filter(Boolean))];
-  const st = { teams: new Set(S.team ? [S.team.id] : []), days: new Set([1]), skip: [] };
+  const st = { teams: new Set(S.team ? [S.team.id] : []), days: new Map([[1, { st: "18:00", et: "19:15", loc: "" }]]), skip: [] };
   const d = dialog(`<form class="dlg plform"><h2>Trainingen inplannen</h2>
     <label class="f full">Ploegen<span class="hint" style="font-weight:400">Kies er meerdere als ze op hetzelfde moment trainen.</span></label>
     <div class="plteams">${teams.map(t => `<button type="button" class="chip" data-tm="${t.id}">${esc(t.name)}</button>`).join("") || '<p class="hint">Maak eerst ploegen aan bij Ploegen en trainers.</p>'}</div>
-    <label class="f full" style="margin-top:12px">Dagen</label>
+    <label class="f full" style="margin-top:12px">Dagen<span class="hint" style="font-weight:400">Per dag een eigen uur en terrein.</span></label>
     <div class="pldays">${WD_ORDER.map(dn => `<button type="button" class="chip" data-wd="${dn}">${WD[dn].slice(0, 2)}</button>`).join("")}</div>
-    <div class="fields" style="margin-top:12px"><label class="f">Van<input type="time" name="st" value="18:00" required></label><label class="f">Tot<input type="time" name="et" value="19:15"></label>
-      <label class="f full">Terrein of plaats<input name="loc" list="pllocs" placeholder="bv. Terrein 3"><datalist id="pllocs">${locs.map(l => `<option value="${esc(l)}">`).join("")}</datalist></label>
+    <div class="pldayrows" id="pldr"></div><datalist id="pllocs">${locs.map(l => `<option value="${esc(l)}">`).join("")}</datalist>
+    <div class="fields" style="margin-top:12px">
       <label class="f">Vanaf<input type="date" name="from" value="${seasonStartIso()}" required></label><label class="f">Tot en met<input type="date" name="to" value="${seasonEndIso()}" required></label></div>
     <label class="f full" style="margin-top:12px">Niet trainen (vakanties, feestdagen)</label>
     <div class="plskip"><input type="date" id="sk1" aria-label="Van"><span>tot</span><input type="date" id="sk2" aria-label="Tot (mag leeg)"><button class="btn ghost small" type="button" id="skadd">${IC.plus}Toevoegen</button></div>
@@ -411,21 +411,27 @@ function planForm(done) {
     $("#plok", d).disabled = !(n && t); };
   const paint = () => { $$("[data-tm]", d).forEach(b => b.setAttribute("aria-pressed", st.teams.has(b.dataset.tm)));
     $$("[data-wd]", d).forEach(b => b.setAttribute("aria-pressed", st.days.has(+b.dataset.wd)));
+    $("#pldr", d).innerHTML = WD_ORDER.filter(dn => st.days.has(dn)).map(dn => { const x = st.days.get(dn); return `<div class="pldr" data-dr="${dn}"><b>${WD[dn]}</b>
+      <label class="f">Van<input type="time" data-k="st" value="${esc(x.st)}" required></label><label class="f">Tot<input type="time" data-k="et" value="${esc(x.et)}"></label>
+      <label class="f plloc">Terrein<input data-k="loc" list="pllocs" value="${esc(x.loc)}" placeholder="bv. E-plein"></label></div>`; }).join("");
+    $$("[data-dr] input", d).forEach(i => i.oninput = () => { st.days.get(+i.closest("[data-dr]").dataset.dr)[i.dataset.k] = i.value; });
     $("#skl", d).innerHTML = st.skip.map(([a, b], i) => `<span class="chip on">${dShort(a)}${b && b !== a ? " – " + dShort(b) : ""}<button type="button" data-sk="${i}" aria-label="Weg">✕</button></span>`).join("");
     $$("[data-sk]", d).forEach(b => b.onclick = () => { st.skip.splice(+b.dataset.sk, 1); paint(); }); sum(); };
   $$("[data-tm]", d).forEach(b => b.onclick = () => { const k = b.dataset.tm; st.teams.has(k) ? st.teams.delete(k) : st.teams.add(k); paint(); });
-  $$("[data-wd]", d).forEach(b => b.onclick = () => { const k = +b.dataset.wd; st.days.has(k) ? st.days.delete(k) : st.days.add(k); paint(); });
+  $$("[data-wd]", d).forEach(b => b.onclick = () => { const k = +b.dataset.wd;
+    if (st.days.has(k)) st.days.delete(k); else { const prev = [...st.days.values()].pop() || { st: "18:00", et: "19:15", loc: "" }; st.days.set(k, { ...prev }); } paint(); }); /* nieuwe dag neemt het uur van de vorige over */
   $("#skadd", d).onclick = () => { const a = $("#sk1", d).value, b = $("#sk2", d).value; if (!a) { toast("Kies eerst een datum."); return; } st.skip.push(b && b > a ? [a, b] : [a, null]); $("#sk1", d).value = $("#sk2", d).value = ""; paint(); };
   f.from.onchange = f.to.onchange = sum; paint();
   f.onsubmit = async ev => { ev.preventDefault(); const ds = dates(), tIds = [...st.teams]; if (!ds.length || !tIds.length) return;
     const btn = $("#plok", d); btn.disabled = true; btn.textContent = "Bezig…";
-    const series = uid(), stt = f.st.value, ett = f.et.value || null, loc = f.loc.value.trim() || null;
+    const series = uid(), slot = dt => st.days.get(new Date(dt + "T12:00").getDay());
+    if ([...st.days.values()].some(x => !x.st)) { btn.disabled = false; btn.textContent = "Inplannen"; toast("Vul bij elke dag een beginuur in."); return; }
     try {
       let have = [];
       if (mode === "demo") have = (await db.list("events", { type: "training" })).filter(e => tIds.includes(e.team_id));
       else { const r = await sb.from("events").select("team_id,date,start_time").eq("type", "training").in("team_id", tIds).gte("date", ds[0]).lte("date", ds[ds.length - 1]); if (r.error) throw r.error; have = r.data; }
       const key = (t, dt, s) => t + "|" + dt + "|" + String(s || "").slice(0, 5), seen = new Set(have.map(e => key(e.team_id, e.date, e.start_time)));
-      const rows = []; for (const t of tIds) for (const dt of ds) if (!seen.has(key(t, dt, stt))) rows.push({ id: uid(), team_id: t, type: "training", date: dt, start_time: stt, end_time: ett, location: loc, series, report: {} });
+      const rows = []; for (const t of tIds) for (const dt of ds) { const x = slot(dt); if (!seen.has(key(t, dt, x.st))) rows.push({ id: uid(), team_id: t, type: "training", date: dt, start_time: x.st, end_time: x.et || null, location: (x.loc || "").trim() || null, series, report: {} }); }
       if (!rows.length) { toast("Alles stond al in de kalender."); d.close(); return; }
       if (mode === "demo") { for (const r of rows) await db.insert("events", r); }
       else for (let i = 0; i < rows.length; i += 200) { const r = await sb.from("events").insert(rows.slice(i, i + 200)); if (r.error) throw r.error; }

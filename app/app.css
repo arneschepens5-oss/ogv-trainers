@@ -1071,3 +1071,7 @@ a.navbtn{text-decoration:none}
 .plser .main small{white-space:normal}
 @media (max-width:640px){.plser .main{flex:1 1 calc(100% - 52px)}.admtabs a{padding:10px 8px;font-size:13.5px}}
 @media (max-width:640px){.plser .plic{display:none}.plser .main{flex-basis:100%}.plser>.btn{margin-left:0}}
+.pldayrows{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.pldr{display:grid;grid-template-columns:96px 1fr 1fr 1.4fr;gap:8px;align-items:end;padding:10px 12px;border-radius:12px;background:var(--card2)}
+.pldr>b{align-self:center}.pldr .f{margin:0;font-size:12.5px}.pldr input{min-width:0}
+@media (max-width:640px){.pldr{grid-template-columns:1fr 1fr}.pldr>b,.pldr .plloc{grid-column:1/-1}}
