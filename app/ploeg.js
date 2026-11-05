@@ -103,7 +103,7 @@ function playerForm(p) {
   const d = dialog(`<form><h2>${n ? "Speler toevoegen" : "Fiche bewerken"}</h2><div class="fields">
   <label class="f">Voornaam<input name="first_name" required value="${esc(p.first_name)}"></label><label class="f">Achternaam<input name="last_name" value="${esc(p.last_name)}"></label>
   <label class="f">Rugnummer<input name="number" type="number" min="0" inputmode="numeric" value="${p.number ?? ""}"></label><label class="f">Geboortedatum<input name="birthdate" type="date" value="${esc(p.birthdate || "")}"></label>
-  <label class="f">Positie<select name="position">${["","Keeper","Verdediger","Middenvelder","Aanvaller"].map(x => `<option${x === (p.position || "") ? " selected" : ""}>${x}</option>`).join("")}</select></label>
+  <label class="f">Positie<select name="position"><option value="">–</option>${p.position && !POSNUM.some(q => posLabel(q[0]) === p.position) ? `<option selected>${esc(p.position)}</option>` : ""}${POSNUM.map(q => `<option value="${posLabel(q[0])}"${posLabel(q[0]) === p.position ? " selected" : ""}>${q[0]} · ${q[1]}</option>`).join("")}</select></label>
   <label class="f">Voorkeursvoet<select name="foot">${["","Rechts","Links","Beide"].map(x => `<option${x === (p.foot || "") ? " selected" : ""}>${x}</option>`).join("")}</select></label>
   ${V14() ? contactFields(p) : `<label class="f full">Contact ouders<input name="parent_contact" value="${esc(p.parent_contact || "")}" placeholder="Naam en gsm-nummer"></label>`}
   <label class="f full">Notities<textarea name="notes">${esc(p.notes || "")}</textarea></label>

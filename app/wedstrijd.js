@@ -230,11 +230,15 @@ function momentsTab(tv, e) {
 }
 
 /* ---------- opstelling per kwart ---------- */
-const POSLIST = { "2v2": ["A","B"], "3v3": ["L","M","R"], "5v5": ["K","LV","RV","M","SP"], "8v8": ["K","LB","CV","RB","LM","CM","RM","SP"], "11v11": ["K","RB","RCV","LCV","LB","6","8","10","RW","SP","LW"] };
+const POSLIST = { "2v2": ["A","B"], "3v3": ["L","M","R"], "5v5": ["1","3","7","11","9"], "8v8": ["1","2","3","5","7","8","11","9"], "11v11": ["1","2","3","4","5","6","8","10","7","9","11"] };
+/* oude posities (letters) uit eerdere opstellingen omzetten naar nummers */
+const POS_OLD = { "5v5": { K: "1", LV: "3", RV: "7", M: "11", SP: "9" }, "8v8": { K: "1", LB: "5", CV: "3", RB: "2", LM: "11", CM: "8", RM: "7", SP: "9" },
+  "11v11": { K: "1", RB: "2", RCV: "3", LCV: "4", LB: "5", RW: "7", SP: "9", LW: "11" } };
 function lineupTab(tv, e) {
   const mf = matchFormat(S.team), pos = POSLIST[S.team.format] || POSLIST["5v5"];
   e.lineup = e.lineup && e.lineup.grid ? e.lineup : { periods: mf.periods, minutes: mf.minutes, grid: {} };
-  const L = e.lineup, sv = saver(e);
+  const L = e.lineup, sv = saver(e), om = POS_OLD[S.team.format] || {};
+  for (const id in L.grid) L.grid[id] = (L.grid[id] || []).map(x => om[x] || x);
   const ps = active().filter(p => { const a = attOf(e.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; });
   const draw = () => {
     const n = L.periods, half = n * L.minutes / 2;
@@ -245,7 +249,7 @@ function lineupTab(tv, e) {
       <button class="btn ghost small" type="button" id="auto">Eerlijk verdelen</button><button class="btn ghost small" type="button" id="clear">Leegmaken</button></div>
       <div class="panel wrapx" style="padding:6px 10px"><table class="tbl lineup"><thead><tr><th>Speler</th>${Array.from({ length: n }, (_, k) => `<th>Kwart ${k + 1}</th>`).join("")}<th>Speeltijd</th></tr></thead><tbody>
       ${ps.map(p => { const row = L.grid[p.id] || [], played = row.filter(Boolean).length * L.minutes;
-        return `<tr><td>${esc(pname(p))}</td>${Array.from({ length: n }, (_, k) => `<td><select data-c="${p.id}:${k}" aria-label="${esc(pname(p))} kwart ${k + 1}"><option value="">Bank</option>${pos.map(x => `<option${row[k] === x ? " selected" : ""}>${x}</option>`).join("")}</select></td>`).join("")}
+        return `<tr><td>${esc(pname(p))}</td>${Array.from({ length: n }, (_, k) => `<td><select data-c="${p.id}:${k}" aria-label="${esc(pname(p))} kwart ${k + 1}"><option value="">Bank</option>${pos.map(x => `<option value="${x}"${row[k] === x ? " selected" : ""}>${x}${posLabel(x) ? " · " + posLabel(x).split(" · ")[1].toLowerCase() : ""}</option>`).join("")}</select></td>`).join("")}
         <td class="${played < half ? "warn" : ""}">${played} min</td></tr>`; }).join("")}</tbody></table></div>
       ${issues.length ? `<p class="hint" style="color:var(--warn)">${issues.map(esc).join(" · ")}</p>` : ps.length ? `<p class="hint" style="color:var(--ok)">Elke positie is in elk kwart ingevuld.</p>` : ""}
       <p class="hint">Oranje speeltijd = minder dan de helft van de wedstrijd. Bij live coachen start kwart 1 automatisch als basisopstelling.</p>`;
@@ -255,8 +259,8 @@ function lineupTab(tv, e) {
     $("#auto").onclick = () => { /* elke speler evenveel kwarten op het veld, posities roteren */
       L.grid = {}; const order = ps.slice(); let off = 0;
       for (let k = 0; k < L.periods; k++) { const on = []; for (let j = 0; j < Math.min(pos.length, order.length); j++) on.push(order[(off + j) % order.length]); off = (off + pos.length) % Math.max(order.length, 1);
-        const keeper = on.find(p => p.position === "Keeper") || null; const rest = on.filter(p => p !== keeper); const slots = pos.slice();
-        if (keeper && slots[0] === "K") { (L.grid[keeper.id] = L.grid[keeper.id] || [])[k] = slots.shift(); }
+        const keeper = on.find(isKeeper) || null; const rest = on.filter(p => p !== keeper); const slots = pos.slice();
+        if (keeper && slots[0] === "1") { (L.grid[keeper.id] = L.grid[keeper.id] || [])[k] = slots.shift(); }
         rest.forEach((p, j) => (L.grid[p.id] = L.grid[p.id] || [])[k] = slots[(j + k) % slots.length]); }
       sv(); draw(); toast("Speeltijd eerlijk verdeeld. Pas aan waar nodig."); };
   };

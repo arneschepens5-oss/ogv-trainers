@@ -230,6 +230,11 @@ const THEMES = [...Object.entries(PRINC).map(([k, v]) => k + " " + v), "Techniek
 const PILLARS = ["Techniek","Tactiek","Fysiek","Mentaal"];
 const DEF_CRIT = ["Techniek (controle over de bal)","Afwerking","Conditie","Coaching","Bijdrage aan de ploeg","Potentieel"];
 const DEF_TAGS = ["Zelfvertrouwen & durven","Zichtbaarheid & betrokkenheid","Te veel dribbelen","Afwerking","Positiespel","Rust & tijd aan de bal","Techniek & passing","Coaching & praten","Mentaliteit & focus","Duelkracht","Verdedigen"];
+/* posities met de gekende rugnummers */
+const POSNUM = [["1", "Doelman"], ["2", "Rechtsachter"], ["3", "Centrale verdediger"], ["4", "Centrale verdediger"], ["5", "Linksachter"], ["6", "Verdedigende middenvelder"],
+  ["7", "Rechtsbuiten"], ["8", "Centrale middenvelder"], ["9", "Spits"], ["10", "Aanvallende middenvelder"], ["11", "Linksbuiten"]];
+const posLabel = n => { const x = POSNUM.find(q => q[0] === String(n)); return x ? x[0] + " · " + x[1] : ""; };
+const isKeeper = p => /^1\b|keeper|doelman/i.test(p?.position || "");
 const STRENGTHS = ["Inzet","Durf","Balcontrole","Passing","Dribbel","Afwerking","Overzicht","Positie","Duelkracht","Snelheid","Coaching","Teamspeler","Leiderschap","Verdedigen","Keeperswerk"];
 const FORMAT_DEF = { "2v2":[2,10], "3v3":[4,10], "5v5":[4,15], "8v8":[4,15], "11v11":[2,40] };
 const matchFormat = t => ({ periods: t?.periods || FORMAT_DEF[t?.format]?.[0] || 4, minutes: t?.period_minutes || FORMAT_DEF[t?.format]?.[1] || 15 });
@@ -482,7 +487,7 @@ function demoSeed() {
   const mk = (name, cat, format, mine, names) => {
     const team = { id: uid(), name, category: cat, format, season: seasonNow(), criteria: EV_TEMPLATE.slice(), worktags: DEF_TAGS, share_ratings: !mine, periods: FORMAT_DEF[format][0], period_minutes: FORMAT_DEF[format][1] };
     d.teams.push(team); if (mine) d.team_trainers.push({ team_id: team.id, user_id: "demo", email: "demo@ogvorselaar.be" });
-    const pos = ["Keeper","Verdediger","Verdediger","Middenvelder","Middenvelder","Middenvelder","Aanvaller","Aanvaller","Verdediger","Aanvaller","Middenvelder","Verdediger"];
+    const pos = ["1 · Doelman","3 · Centrale verdediger","2 · Rechtsachter","8 · Centrale middenvelder","7 · Rechtsbuiten","11 · Linksbuiten","9 · Spits","10 · Aanvallende middenvelder","5 · Linksachter","9 · Spits","6 · Verdedigende middenvelder","4 · Centrale verdediger"];
     const ps = names.map((n, i) => ({ id: uid(), team_id: team.id, first_name: n[0], last_name: n[1], birthdate: (format === "5v5" ? "2018" : "2016") + "-0" + (1 + i % 9) + "-1" + (i % 9), number: i + 1, position: pos[i], foot: i % 4 ? "Rechts" : "Links", active: true }));
     d.players.push(...ps);
     const opps = ["KFC Lille","Herenthout VV","Zandhoven","Wiekevorst","Bouwel","Nijlen","Pulle","Massenhoven","Grobbendonk","Viersel"];

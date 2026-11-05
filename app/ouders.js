@@ -190,7 +190,7 @@ function importPlayers(clubWide) {
             for (const x of xs) { const key = (x.fn + " " + x.ln).toLowerCase().trim(), old = have.find(p => pname(p).toLowerCase().trim() === key);
               const cs = [x.phone && { name: "", rel: "", phone: x.phone, email: x.email }, x.phone2 && { name: "", rel: "", phone: x.phone2, email: "" }, !x.phone && x.email && { name: "", rel: "", phone: "", email: x.email }].filter(Boolean);
               const row = { ...(old || { id: uid(), team_id: tid, active: true }), first_name: x.fn, last_name: x.ln, birthdate: x.birth || old?.birthdate || null, number: x.number ?? old?.number ?? null,
-                position: ["Keeper", "Verdediger", "Middenvelder", "Aanvaller"].find(p => x.pos.toLowerCase().startsWith(p.slice(0, 4).toLowerCase())) || old?.position || null };
+                position: (n => n ? posLabel(n) : /keep|doel/i.test(x.pos) ? posLabel(1) : /aanv|spits/i.test(x.pos) ? posLabel(9) : /midd/i.test(x.pos) ? posLabel(8) : /verd/i.test(x.pos) ? posLabel(3) : "")((x.pos.match(/\b(1[01]|[1-9])\b/) || [])[1]) || old?.position || null };
               if (V14() && cs.length && !(old && pContacts(old).length)) { row.contacts = cs; row.parent_contact = cs.map(c => c.phone || c.email).join(" · "); }
               await db.save("players", row); old ? nUpd++ : nNew++; if (tid === S.team?.id) { const i = S.players.findIndex(p => p.id === row.id); if (i >= 0) S.players[i] = row; else S.players.push(row); } } }
           sortPlayers(); d.close(); toast(`${nNew} spelers toegevoegd${nUpd ? ", " + nUpd + " aangevuld" : ""}.`); render(); }
