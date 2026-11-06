@@ -31,31 +31,27 @@ function exFromLib(L) { return { id: uid(), phase: L.map === "opwarming" ? "Opwa
 const planMinutes = pl => (normPlan(pl).items || []).reduce((s, x) => s + exMinutes(x), 0);
 
 route("trainingen", { title: "Trainingen maken", auth: true, team: true, render: async v => {
-  const t = todayIso(), up = S.events.filter(e => e.type === "training" && e.date >= t), done = S.events.filter(e => e.type === "training" && e.date < t).reverse().slice(0, 10);
-  const tpls = (await items.listAll("training").catch(() => [])).filter(x => items.mine(x) && x.data?.source !== "PSD");
-  const it = e => { const pl = normPlan(e.plan), n = pl.items.length, mins = planMinutes(e.plan);
-    return `<div class="item" data-go="#/activiteit/${e.id}/plan"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(pl.theme || e.theme || "Training zonder thema")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}</small></span>
-    <span class="val">${n ? `<b>${n} oef.</b>${mins} min` : `<b style="color:var(--warn)">Maken</b>nog leeg`}</span></div>`; };
-  v.innerHTML = head("Trainingen maken", "Maak één oefening of stel een hele training samen, helemaal zoals jij ze wil opbouwen.", `<a class="btn ghost" href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a>`) +
-    `<div class="startpick"><button type="button" id="mk1"><span class="sp-ic">${toolIcon("cone")}</span><b>Eén oefening maken</b><small>Teken een oefening en bewaar ze in je bibliotheek. Je kan ze later in elke training gebruiken.</small></button>
-      <button type="button" id="mkT"><span class="sp-ic">${IC.plan}</span><b>Een hele training maken</b><small>Zet oefeningen in de volgorde die jij kiest, met de tijd per oefening. Op een datum of zonder datum.</small></button></div>` +
-    `<div class="sec"><h2>Geplande trainingen</h2>${up.length ? `<div class="list">${up.slice(0, 12).map(it).join("")}</div>` : `<div class="empty"><b>Geen trainingen gepland</b>Kies "Een hele training maken" om er een in te plannen.</div>`}</div>` +
-    (tpls.length ? `<div class="sec"><div class="row"><h2 style="margin:0">Trainingen zonder datum</h2><span class="spacer"></span><a class="link" href="#/sjablonen">Alle volledige trainingen in de bibliotheek</a></div><div class="list" style="margin-top:10px">${tpls.slice(0, 6).map(x => `<div class="item" data-go="#/sjabloon/${x.id}"><span class="num">${IC.copy}</span><span class="main"><b>${esc(x.title)}</b><small>${(normPlan(x.data).items || []).length} oefeningen · ${planMinutes(x.data)} min</small></span><button class="btn ghost small" type="button" data-tpl="${x.id}">Inplannen</button></div>`).join("")}</div></div>` : "") +
+  /* Een training maken staat los van de kalender. Je kiest zelf of je ze op een training zet en of ze in de clubbibliotheek komt. */
+  const t = todayIso(), hasPlan = e => normPlan(e.plan).items.length > 0;
+  const up = S.events.filter(e => e.type === "training" && e.date >= t && hasPlan(e)), done = S.events.filter(e => e.type === "training" && e.date < t && hasPlan(e)).reverse().slice(0, 8);
+  const mine = (await items.listAll("training").catch(() => [])).filter(x => items.mine(x) && x.data?.source !== "PSD");
+  const it = e => { const pl = normPlan(e.plan);
+    return `<div class="item" data-go="#/activiteit/${e.id}/plan"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(pl.theme || e.theme || "Training")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}</small></span>
+    <span class="val"><b>${pl.items.length} oef.</b>${planMinutes(e.plan)} min</span></div>`; };
+  const own = x => `<div class="item" data-go="#/sjabloon/${x.id}"><span class="num">${IC.plan}</span><span class="main"><b>${esc(x.title)}</b><small>${(normPlan(x.data).items || []).length} oefeningen · ${planMinutes(x.data)} min · ${x.shared ? `<span class="shdot" aria-hidden="true"></span>In de clubbibliotheek` : "Alleen voor jou"}</small></span><button class="btn ghost small" type="button" data-tpl="${x.id}">Op een training zetten</button></div>`;
+  v.innerHTML = head("Trainingen maken", "Maak een oefening of een hele training. Daarna kies je zelf of je ze op een training in de kalender zet en of je ze deelt in de clubbibliotheek.", `<a class="btn ghost" href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a>`) +
+    `<div class="startpick"><button type="button" id="mk1"><span class="sp-ic">${toolIcon("cone")}</span><b>Eén oefening maken</b><small>Teken een oefening en bewaar ze. Je kan ze later in elke training gebruiken.</small></button>
+      <button type="button" id="mkT"><span class="sp-ic">${IC.plan}</span><b>Een hele training maken</b><small>Zet oefeningen in de volgorde die jij kiest, met de tijd per oefening. Op een training zetten kan nadien.</small></button></div>` +
+    `<div class="sec"><div class="row"><h2 style="margin:0">Mijn trainingen</h2><span class="spacer"></span><a class="link" href="#/sjablonen">Alle trainingen in de bibliotheek</a></div>
+      ${mine.length ? `<div class="list" style="margin-top:10px">${mine.map(own).join("")}</div>` : `<div class="empty" style="margin-top:10px"><b>Nog geen eigen trainingen</b>Kies "Een hele training maken" om te beginnen.</div>`}</div>` +
+    (up.length ? `<div class="sec"><h2>Op de kalender</h2><div class="list">${up.slice(0, 12).map(it).join("")}</div></div>` : "") +
     (done.length ? `<div class="sec"><h2>Vorige trainingen</h2><div class="list">${done.map(it).join("")}</div></div>` : "");
   $("#mk1").onclick = () => exEditor({ id: uid(), phase: "", name: "", cats: [], minutes: 15, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } }, async x => {
     const r = await safe(() => items.save({ kind: "oefening", title: x.name, data: exData(x) }), "Bewaard in je bibliotheek bij Van mij."); if (!r) return;
     if (S.events.some(e => e.type === "training" && e.date >= todayIso())) toTraining({ ...JSON.parse(JSON.stringify(x)), id: uid() }, "Ook op een training zetten?"); });
-  $("#mkT").onclick = () => { const cand = up.slice(0, 8);
-    const d = dialog(`<div class="dlg"><h2>Een hele training maken</h2><p class="muted" style="margin:0">Voor welke training maak je het plan?</p>
-      <div class="list">${cand.map(e => { const n = normPlan(e.plan).items.length; return `<div class="item" data-e="${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(normPlan(e.plan).theme || e.theme || "Training")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${n ? " · heeft al " + n + " oefeningen" : " · nog leeg"}</small></span>${IC.plus}</div>`; }).join("")}
-        <div class="item" id="mkNew"><span class="num">${IC.cal || IC.plus}</span><span class="main"><b>Nieuwe training in de kalender</b><small>Kies een dag en uur, eventueel elke week</small></span>${IC.plus}</div>
-        <div class="item" id="mkFree"><span class="num">${IC.copy}</span><span class="main"><b>Zonder datum</b><small>Maak de training nu en plan ze later in. Ze komt in je bibliotheek.</small></span>${IC.plus}</div></div>
-      <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button></div></div>`);
-    $$("[data-e]", d).forEach(y => y.onclick = () => { d.close(); go("#/activiteit/" + y.dataset.e + "/plan"); });
-    $("#mkNew", d).onclick = () => eventForm({ type: "training", date: todayIso(), start_time: "18:00", end_time: "19:15" }, true);
-    $("#mkFree", d).onclick = async () => { const r = await safe(() => items.save({ kind: "training", title: "Nieuwe training", data: { v: 2, theme: "", items: [], ages: S.team?.category ? [S.team.category.toUpperCase().replace(/^P/, "")] : [] } })); d.close(); if (r) go("#/sjabloon/" + r.id); }; };
+  $("#mkT").onclick = async () => { const r = await safe(() => items.save({ kind: "training", title: "Nieuwe training", data: { v: 2, theme: "", items: [], ages: S.team?.category ? [S.team.category.toUpperCase().replace(/^P/, "")] : [] } })); if (r) go("#/sjabloon/" + r.id); };
   $$("[data-go]", v).forEach(x => x.onclick = ev => { if (ev.target.closest("[data-tpl]")) return; go(x.dataset.go); });
-  $$("[data-tpl]", v).forEach(b => b.onclick = ev => { ev.stopPropagation(); tplSchedule(tpls.find(z => z.id === b.dataset.tpl)); });
+  $$("[data-tpl]", v).forEach(b => b.onclick = ev => { ev.stopPropagation(); tplSchedule(mine.find(z => z.id === b.dataset.tpl)); });
 } });
 
 /* training zonder datum: zelfde plan-editor, bewaard als training in de bibliotheek */
@@ -64,12 +60,17 @@ route("sjabloon", { title: "Training zonder datum", auth: true, team: true, rend
   if (!row) { v.innerHTML = `<div class="empty"><b>Training niet gevonden</b><a class="btn" href="#/trainingen">Naar trainingen maken</a></div>`; return; }
   if (!items.mine(row)) { go("#/bibliotheek"); setTimeout(() => tplView(row), 300); return; }
   const pseudo = { id: row.id, plan: normPlan(row.data), start_time: null, end_time: null, date: null };
-  v.innerHTML = backLink("#/trainingen", "Trainingen maken") + head(esc(row.title), "Training zonder datum. Ze staat in je bibliotheek en je plant ze in wanneer je wil.",
-    `<span class="hint" id="saved"></span><button class="btn" type="button" id="tplan">${IC.plus}Inplannen</button><button class="btn ghost small" type="button" id="tdel">Verwijderen</button>`) + `<div id="tabv"></div>`;
+  v.innerHTML = backLink("#/trainingen", "Trainingen maken") + head(esc(row.title), "Je training wordt vanzelf bewaard. Zet ze op een training in de kalender wanneer je wil.",
+    `<span class="hint" id="saved"></span><button class="btn" type="button" id="tplan">${IC.cal}Op een training zetten</button><button class="btn ghost small" type="button" id="tdel">Verwijderen</button>`) +
+    `<div class="panel row tshare${row.shared ? " hl" : ""}" style="margin:0 0 14px"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="tsh"${row.shared ? " checked" : ""}>
+      <span><b>In de trainingsbibliotheek van de club</b><br><span class="hint" id="tshh">${row.shared ? "Alle trainers van de club zien en gebruiken deze training." : "Staat uit: alleen jij ziet deze training."}</span></span></label></div><div id="tabv"></div>`;
   const save = debounce(async () => { row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) }; if (pseudo.plan.theme) { row.title = pseudo.plan.theme; const h1 = $("h1.pg"); if (h1) h1.textContent = row.title; }
     const ok = await safe(() => items.save(row)); const s2 = $("#saved"); if (ok && s2) { s2.textContent = "Opgeslagen"; setTimeout(() => s2 && (s2.textContent = ""), 1500); } }, 700);
   planEditor($("#tabv"), pseudo, { save, tpl: true });
   $("#tplan").onclick = () => { row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) }; tplSchedule(row); };
+  $("#tsh").onchange = async ev => { const on = ev.target.checked; row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) };
+    const ok = await safe(async () => { await items.share(row, on); return true; }, on ? "Gedeeld in de clubbibliotheek." : "Niet meer gedeeld, alleen jij ziet ze nog.");
+    if (!ok) ev.target.checked = !on; $(".tshare", v)?.classList.toggle("hl", !!row.shared); const h = $("#tshh", v); if (h) h.textContent = row.shared ? "Alle trainers van de club zien en gebruiken deze training." : "Staat uit: alleen jij ziet deze training."; };
   $("#tdel").onclick = async () => { if (!confirm("Deze training verwijderen?")) return; await safe(() => items.del(row), "Verwijderd."); go("#/trainingen"); };
 } });
 
@@ -333,10 +334,14 @@ const srcLine = (m, x) => { const by = x.source === "PSD" ? "PSD-databank" + (x.
 function tplSchedule(x) {
   const t = todayIso(), up2 = S.events.filter(e => e.type === "training" && e.date >= t).slice(0, 12);
   if (!S.team) { toast("Kies eerst je ploeg."); return; }
-  if (!up2.length) { toast("Plan eerst een training in de kalender."); return; }
-  const d = dialog(`<div class="dlg"><h2>Sjabloon inplannen</h2><p class="muted" style="margin:0">Op welke training zet je "${esc(x.title)}"? Het bestaande plan van die training wordt vervangen.</p><div class="list">${up2.map(e => `<div class="item" data-e="${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(normPlan(e.plan).theme || e.theme || "Training")}</b><small>${dShort(e.date)}${normPlan(e.plan).items.length ? " · heeft al een plan" : ""}</small></span>${IC.plus}</div>`).join("")}</div><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button></div></div>`);
-  $$("[data-e]", d).forEach(y => y.onclick = async () => { const e = S.events.find(z => z.id === y.dataset.e); const pl = JSON.parse(JSON.stringify(x.data)); delete pl.source; delete pl.psd_id; delete pl.author; delete pl.ages;
-    pl.items.forEach(i => i.id = uid()); e.plan = pl; await safe(() => putEvent(e), "Sjabloon ingepland."); d.close(); go("#/activiteit/" + e.id + "/plan"); });
+  if (!up2.length) { toast("Er staat nog geen training in de kalender. Voeg er een toe bij Kalender."); return; }
+  const d = dialog(`<div class="dlg"><h2>Op een training zetten</h2><p class="muted" style="margin:0">Op welke training zet je "${esc(x.title)}"?</p><div class="list">${up2.map(e => { const n = normPlan(e.plan).items.length;
+    return `<div class="item" data-e="${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(normPlan(e.plan).theme || e.theme || "Training")}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${n ? ` · <span style="color:var(--warn)">heeft al een plan, dat wordt vervangen</span>` : ""}</small></span>${IC.plus}</div>`; }).join("")}</div>
+    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button></div></div>`);
+  $$("[data-e]", d).forEach(y => y.onclick = async () => { const e = S.events.find(z => z.id === y.dataset.e);
+    if (normPlan(e.plan).items.length && !confirm("Deze training heeft al een plan. Vervangen?")) return;
+    const pl = JSON.parse(JSON.stringify(x.data)); delete pl.source; delete pl.psd_id; delete pl.author; delete pl.ages; delete pl.shared_by;
+    pl.items.forEach(i => i.id = uid()); e.plan = pl; await safe(() => putEvent(e), "Op de training gezet."); d.close(); go("#/activiteit/" + e.id + "/plan"); });
 }
 function tplView(x, onChange) {
   const pl = normPlan(x.data);
