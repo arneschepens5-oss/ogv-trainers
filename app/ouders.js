@@ -356,7 +356,8 @@ function autoPlan(list, history, onlyEmpty) {
     const same = out.filter(o => o.x.team_id === x.team_id).map(o => [o.k, o.p]);
     const own = onlyEmpty && needsPart(x) ? AF_PARTS[size].map(p => [fieldOf(x.location), p]) : []; /* veld al gekozen: enkel het vak erbij zoeken */
     const cands = [...own, ...pu9, ...same, ...favOf(x).filter(([k, p]) => afFits(k, p, size)), ...afSpots(size)];
-    const hit = cands.find(([k, p]) => free(x, k, p));
+    const notA = /reserve/i.test(x.team || ""); /* Gewestelijke reserven spelen nooit op terrein A */
+    const hit = cands.find(([k, p]) => !(notA && k === "A") && free(x, k, p));
     if (!hit) { fail.push(x); continue; }
     const [k, p] = hit; occ.push({ date: x.date, k, m: partMask(p, k), a: minOf(x.start), b: endMin(x) });
     out.push({ x, k, p, kept: fieldOf(x.location) === k && (x.part || null) === p }); }
@@ -370,7 +371,7 @@ async function autoFieldsDialog(list, d1) {
   const show = onlyEmpty => { const { out, fail, skipped } = autoPlan(list, history, onlyEmpty);
     const day = x => new Date(x.date + "T12:00").toLocaleDateString("nl-BE", { weekday: "short", day: "numeric" });
     const d = dialog(`<div class="dlg"><h2>Weekend automatisch indelen</h2>
-      <p class="muted" style="margin:0">U6–U7 op terrein 1 of 2, U8–U9 een kwart, U10–U13 een half veld, U14 en ouder een heel veld, Futbalista een half veld. Eerst B, dan A, dan KGV, dan C. Elke ploeg krijgt waar mogelijk dezelfde plek als de vorige weken.</p>
+      <p class="muted" style="margin:0">U6–U7 op terrein 1 of 2, U8–U9 een kwart, U10–U13 een half veld, U14 en ouder een heel veld, Futbalista een half veld. Gewestelijke reserven nooit op A. Eerst B, dan A, dan KGV, dan C. Elke ploeg krijgt waar mogelijk dezelfde plek als de vorige weken.</p>
       ${hasSome ? `<div class="chips" role="group" aria-label="Wat indelen"><button class="chip" type="button" data-om="1" aria-pressed="${onlyEmpty}">Enkel wat nog niet ingedeeld is</button><button class="chip" type="button" data-om="0" aria-pressed="${!onlyEmpty}">Alles opnieuw indelen</button></div>` : ""}
       ${out.length ? `<div class="list" style="max-height:48dvh;overflow:auto">${out.map(o => `<div class="item static"><span class="main"><b>${esc(o.x.team)} – ${esc(o.x.opponent || "?")}</b><small>${day(o.x)} · ${esc(o.x.start)}</small></span><span class="val"><b>${esc(fieldName(o.k))}</b>${esc(o.p ? partLong(o.p, o.k) : "heel veld")}</span></div>`).join("")}</div>` : `<p class="hint">Niets om in te delen.</p>`}
       ${fail.length ? `<p class="hint" style="color:var(--warn);margin:0">Geen vrije plek gevonden voor: ${fail.map(x => esc(x.team) + " (" + day(x) + " " + esc(x.start) + ")").join(", ")}. Deel die zelf in.</p>` : ""}

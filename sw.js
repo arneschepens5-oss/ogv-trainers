@@ -1,6 +1,6 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v79";
-const SHELL = ["./", "index.html", "app/app.css?v=79", "app/core.js?v=79", "app/ploeg.js?v=79", "app/cijfers.js?v=79", "app/wedstrijd.js?v=79", "app/leerplan.js?v=79", "app/teken.js?v=79", "app/training.js?v=79", "app/video.js?v=79", "app/map.js?v=79", "app/rbfa.js?v=79", "app/club.js?v=79", "app/evaluatie.js?v=79", "app/kennis.js?v=79", "app/ouders.js?v=79", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=79",
+const CACHE = "ogv-platform-v80";
+const SHELL = ["./", "index.html", "app/app.css?v=80", "app/core.js?v=80", "app/ploeg.js?v=80", "app/cijfers.js?v=80", "app/wedstrijd.js?v=80", "app/leerplan.js?v=80", "app/teken.js?v=80", "app/training.js?v=80", "app/video.js?v=80", "app/map.js?v=80", "app/rbfa.js?v=80", "app/club.js?v=80", "app/evaluatie.js?v=80", "app/kennis.js?v=80", "app/ouders.js?v=80", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=80",
   "manifest.webmanifest", "icons/icon-192.png", "icons/logo.png", "icons/logo-dark.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
   "trainingen/trainingen.json", "matchday/", "tactiekbord/"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
