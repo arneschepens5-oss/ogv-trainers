@@ -55,7 +55,7 @@ function evItem(e) {
 function clubItem(e) {
   const r = res(e), tn = teamName(e.team_id);
   return `<div class="item" data-go="#/verslag/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
-    <span class="main"><b>${matchTitle(e, tn)}</b><small>${esc(S.teams.find(t => t.id === e.team_id)?.category || "")} · ${dShort(e.date)}${e.report?.goals?.length ? " · " + e.report.goals.filter(g => g.side === "for" && g.name).map(g => esc(g.name.split(" ")[0])).join(", ") : ""}</small></span>
+    <span class="main"><b>${matchTitle(e, tn)}</b><small>${esc(teamLbl(S.teams.find(t => t.id === e.team_id)))} · ${dShort(e.date)}${e.report?.goals?.length ? " · " + e.report.goals.filter(g => g.side === "for" && g.name).map(g => esc(g.name.split(" ")[0])).join(", ") : ""}</small></span>
     <span class="val">${r ? `<b>${e.home === false ? e.score_against + " - " + e.score_for : e.score_for + " - " + e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>` : `<b>–</b>`}</span></div>`;
 }
 

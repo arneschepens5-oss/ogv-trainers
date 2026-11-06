@@ -261,9 +261,12 @@ const matchFormat = t => ({ periods: t?.periods || FORMAT_DEF[t?.format]?.[0] ||
 /* ============ toestand ============ */
 const S = { teams: [], myTeamIds: [], team: null, players: [], events: [], att: [], evals: [], goals: [], trainers: [], club: null };
 const TEAM_KEY = "ogv-platform-team";
+/* korte ploegnaam: "OGV U11 C" → "U11 C"; code voor een badge: "U11C", "PU9" */
+const teamLbl = t => String(t?.name || "").replace(/^OGV\s+/i, "").trim() || t?.category || "Ploeg";
+const teamCode = t => teamLbl(t).replace(/\s+/g, "").replace(/^(Gew\.?)Reserven$/i, "Res").slice(0, 4);
 const myTeams = () => S.allTeams ? S.teams.slice() : S.teams.filter(t => S.myTeamIds.includes(t.id) || (S.teamAccess || []).includes(t.id));
 async function loadTeams() {
-  S.teams = (await db.list("teams")).sort((a, b) => (a.category || a.name).localeCompare(b.category || b.name, "nl", { numeric: true }));
+  S.teams = (await db.list("teams")).sort((a, b) => teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true }));
   const tt = mode === "demo" ? (await db.list("team_trainers", { user_id: "demo" })) : (await db.list("team_trainers", { user_id: user.id }));
   S.myTeamIds = tt.map(r => r.team_id);
 }
@@ -333,7 +336,7 @@ function shell() {
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · OG Vorselaar" : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
-  const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc((t.category || "OGV").slice(0, 4))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
+  const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
@@ -431,7 +434,7 @@ function nameForm() {
 /* nog geen ploeg: vragen of een collega de ploeg al aanmaakte, zodat er geen dubbele ploeg ontstaat */
 function noTeamHelp(host, done) {
   /* alleen de beheerder koppelt trainers aan ploegen: de trainer vraagt toegang, het verzoek komt bij de meldingen */
-  const teams = (S.teams || []).slice().sort((a, b) => (a.category || a.name).localeCompare(b.category || b.name, "nl", { numeric: true }));
+  const teams = (S.teams || []).slice().sort((a, b) => teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true }));
   host.innerHTML = `<div class="nth"><b>Vraag toegang tot je ploeg</b><p class="muted" style="margin:0">De beheerder van de club koppelt trainers aan hun ploeg. Kies je ploeg en verstuur je vraag: de beheerder krijgt ze meteen te zien.</p>
     <label class="f">Mijn ploeg<select id="ntt"><option value="">Kies je ploeg…</option>${teams.map(t => `<option value="${t.id}">${esc(t.name)}${t.season ? " · " + esc(t.season) : ""}</option>`).join("")}<option value="?">Mijn ploeg staat er niet tussen</option></select></label>
     <label class="f">Bericht <span class="hint">niet verplicht</span><input id="ntm" maxlength="200" placeholder="bv. Ik ben de nieuwe hulptrainer van de U9"></label>
@@ -450,14 +453,14 @@ function noTeamHelp(host, done) {
 function viewNoTeam(v) {
   const ts = myTeams();
   v.innerHTML = head("Kies je ploeg", ts.length ? "Met welke ploeg wil je werken?" : S.admin ? "Je bent nog aan geen ploeg gekoppeld. Als beheerder maak je ploegen aan en koppel je trainers in Beheer." : "Je bent nog aan geen ploeg gekoppeld.") +
-    (ts.length ? `<div class="list">${ts.map(t => `<div class="item" data-team="${t.id}"><span class="num">${esc((t.category || "").slice(0, 4))}</span><span class="main"><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · "))}</small></span>${IC.chev}</div>`).join("")}</div>` : "") +
+    (ts.length ? `<div class="list">${ts.map(t => `<div class="item" data-team="${t.id}"><span class="num">${esc(teamCode(t))}</span><span class="main"><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · "))}</small></span>${IC.chev}</div>`).join("")}</div>` : "") +
     (ts.length ? (S.admin ? `<p style="margin-top:18px"><button class="btn" type="button" id="nt">${IC.plus}Nieuwe ploeg</button></p>` : "") : S.admin ? `<p style="margin-top:18px"><a class="btn" href="#/clubbeheer/ploegen">Ploegen aanmaken in Beheer</a></p>` : `<div class="panel" id="nth" style="margin-top:6px"></div>`);
   $$("[data-team]", v).forEach(x => x.onclick = async () => { await loadTeam(x.dataset.team); render(); });
   const nt = $("#nt"); if (nt) nt.onclick = () => teamForm(); const nh = $("#nth"); if (nh) noTeamHelp(nh);
 }
 function pickTeam() {
   if (!db || (mode !== "demo" && !user)) { go("#/aanmelden"); return; }
-  const d = dialog(`<div class="dlg"><h2>Ploeg kiezen</h2><div class="list">${myTeams().map(t => `<div class="item" data-team="${t.id}"><span class="num">${esc((t.category || "").slice(0, 4))}</span><span class="main"><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · "))}</small></span>${t.id === S.team?.id ? IC.check : ""}</div>`).join("") || '<div id="nth"></div>'}</div>
+  const d = dialog(`<div class="dlg"><h2>Ploeg kiezen</h2><div class="list">${myTeams().map(t => `<div class="item" data-team="${t.id}"><span class="num">${esc(teamCode(t))}</span><span class="main"><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · "))}</small></span>${t.id === S.team?.id ? IC.check : ""}</div>`).join("") || '<div id="nth"></div>'}</div>
   <div class="row">${S.admin ? `<button class="btn ghost" type="button" id="nt">${IC.plus}Nieuwe ploeg</button>` : ""}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`);
   if (!myTeams().length && !S.admin) noTeamHelp($("#nth", d), () => d.close());
   $$("[data-team]", d).forEach(x => x.onclick = async () => { d.close(); await loadTeam(x.dataset.team); render(); });
