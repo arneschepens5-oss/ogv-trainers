@@ -62,6 +62,7 @@ const scNiv = a => a == null ? "" : a >= 8 ? "Top talent" : a >= 7 ? "Interessan
 const scCol = v => `hsl(${Math.round((v - 1) * 13.3)},72%,46%)`;
 let scTab = "db", scF = { q: "", p: "", s: "", n: "" };
 route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
+  if (!mag("scouting")) { v.innerHTML = head("Scoutingsdatabase", "") + `<div class="empty"><b>Geen toegang</b>De scoutingsdatabase is enkel voor wie daar het recht voor kreeg. Vraag het aan de beheerder van de club.</div>`; return; }
   v.innerHTML = head("Scoutingsdatabase", "Laden…"); const rows = await db.list("scouting"); const all = rows.map(r => ({ id: r.id, created_by: r.created_by, ...r.data }));
   if (id) { scoutForm(v, all.find(x => x.id === id) || null, all); return; }
   const list = all.filter(p => { const a = scAvg(p); return (!scF.q || (p.naam + " " + p.club).toLowerCase().includes(scF.q.toLowerCase())) && (!scF.p || [p.p1, p.p2, p.p3].includes(scF.p)) && (!scF.s || p.stat === scF.s) && (!scF.n || scNiv(a) === scF.n); })

@@ -1237,17 +1237,6 @@ ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
   .fldprint footer{margin-top:4mm;font-size:8.5pt;color:#777}
 }
 
-/* ---------- eenvoudig menu: "Meer functies" ---------- */
-.navmore{margin-top:6px}
-.navmore>summary{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:11px;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer;list-style:none;user-select:none}
-.navmore>summary::-webkit-details-marker{display:none}
-.navmore>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s}
-.navmore[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
-.navmore>summary:hover{background:var(--card2);color:var(--ink)}
-.navmore>summary:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
-.sheet .navmore{grid-column:1/-1}.sheet .navin{display:grid;grid-template-columns:1fr 1fr;gap:4px}.sheet .navin .navgrp{grid-column:1/-1}
-@media (max-width:900px){.sheet .navin{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sheet .navmore>summary{background:var(--card2);margin-top:6px}}
-.gidsdlg{padding:24px 22px 20px}
 /* ---------- startgids ---------- */
 .gidsdlg{max-width:520px}
 .gids h2{margin:6px 0 4px;font-size:26px}.gids .sub{margin:0 0 14px;color:var(--muted)}
@@ -1255,7 +1244,6 @@ ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
 .gl{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .gl li{display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line);border-left:4px solid var(--yellow);border-radius:12px;background:var(--card2)}
 .gl b{font-size:15px}.gl span{color:var(--muted);font-size:14px;line-height:1.45}
-@media (prefers-reduced-motion:reduce){.navmore>summary::after{transition:none}}
 
 /* ---------- donkere modus: duidelijker vlakken, randen en tekst ---------- */
 :root:not([data-theme="light"]) .side{border-right:1px solid var(--line)}

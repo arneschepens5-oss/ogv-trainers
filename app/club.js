@@ -36,8 +36,8 @@ function viewJoin(v) {
     S.member = true; toast("Welkom bij OGV Trainers."); startCloud(); };
 }
 async function clubStatus() {
-  if (mode === "demo") { S.member = true; S.admin = true; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || "";
+  if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; return; }
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
   catch (e) { S.member = true; S.admin = false; /* databaseversie 5 nog niet uitgevoerd: gedrag zoals vroeger */ }
@@ -82,8 +82,8 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
       <p class="hint">Een nieuwe code maken stopt de oude. Wie al lid is, blijft lid.</p></div>
     <div class="panel"><div class="row"><h2 style="margin:0">Wachten op toegang</h2>${info.waiting?.length ? `<span class="pill w">${info.waiting.length}</span>` : ""}</div>${info.waiting?.length ? `<div class="list" style="margin-top:10px">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
       : `<p class="hint" style="margin:8px 0 0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
-    <div class="sec"><div class="row"><h2 style="margin:0">Leden (${info.members.length})</h2><span class="spacer"></span><span class="hint">Geef iemand een functie (bv. TVJO, ICT) en eventueel toegang tot alle ploegen, zonder trainer van een ploeg te zijn.</span></div>
-    <div class="list memlist" style="margin-top:10px">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}${m.functie ? ` <span class="pill fn">${esc(m.functie)}</span>` : ""}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${m.all_teams ? "toegang tot alle ploegen" : (m.team_access || []).length ? "toegang tot " + (m.team_access.length) + " ploegen" + (m.teams ? " · trainer van " + esc(m.teams) : "") : esc(m.teams || "nog geen ploeg")}</small></span>
+    <div class="sec"><div class="row"><h2 style="margin:0">Leden (${info.members.length})</h2><span class="spacer"></span><span class="hint">Geef iemand een functie (bv. TVJO, scout) en de rechten die nodig zijn. Iemand hoeft geen trainer van een ploeg te zijn.</span></div>
+    <div class="list memlist" style="margin-top:10px">${info.members.map(m => `<div class="item static"><span class="av sm" aria-hidden="true">${esc((m.name || m.email || "?")[0].toUpperCase())}</span><span class="main"><b>${esc(m.name || m.email || "")}${m.functie ? ` <span class="pill fn">${esc(m.functie)}</span>` : ""}${(m.rechten || []).map(r => ` <span class="pill">${esc(RECHTEN.find(x => x[0] === r)?.[1] || r)}</span>`).join("")}</b><small>${m.name ? esc(m.email || "") + " · " : ""}${m.all_teams ? "toegang tot alle ploegen" : (m.team_access || []).length ? "toegang tot " + (m.team_access.length) + " ploegen" + (m.teams ? " · trainer van " + esc(m.teams) : "") : esc(m.teams || "nog geen ploeg")}</small></span>
       ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : ""}<button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button></div>`).join("")}</div></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
@@ -97,7 +97,8 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
 } });
 
 /* lid bewerken: functie, beheerder en toegang tot alle ploegen */
-const FUNCTIES = ["Trainer", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "ICT", "Scouting", "Bestuur", "Clubkinesist", "API"];
+const FUNCTIES = ["Trainer", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
+const RECHTEN = [["scouting", "Scoutingsdatabase", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
 function memberForm(m, rpc) {
   const me = m.user_id === user?.id;
   const d = dialog(`<form><h2>${esc(m.name || m.email)}</h2><p class="muted" style="margin:0">${esc(m.email || "")}${m.teams ? " · trainer van " + esc(m.teams) : ""}</p>
@@ -106,6 +107,7 @@ function memberForm(m, rpc) {
     ${V14() ? `<div class="f full" id="taw"${m.all_teams ? " hidden" : ""}><span>Of toegang tot bepaalde ploegen <small class="muted" style="font-weight:400">— bv. de coördinator onderbouw</small></span>
       <div class="chips" style="margin:6px 0">${BOUW.slice(1).map(([k, l]) => `<button class="chip" type="button" data-bw="${k}">${l}</button>`).join("")}<button class="chip" type="button" data-bw="none">Geen</button></div>
       <div class="plteams">${S.teams.map(t => `<button type="button" class="chip" data-ta="${t.id}" aria-pressed="${(m.team_access || []).includes(t.id)}">${esc(t.name)}</button>`).join("")}</div></div>` : ""}
+    <div class="f full"><span>Rechten <small class="muted" style="font-weight:400">— een beheerder heeft altijd alle rechten</small></span>${RECHTEN.map(([k, l, t]) => `<label class="check" style="margin-top:6px"><input type="checkbox" name="r_${k}"${(m.rechten || []).includes(k) ? " checked" : ""}> <span><b>${l}</b><br><small class="muted">${t}</small></span></label>`).join("")}</div>
     <label class="check"><input type="checkbox" name="adm"${m.role === "admin" ? " checked" : ""}${me ? " disabled" : ""}> <span><b>Beheerder</b><br><small class="muted">Toegang tot Beheer: meldingen, leden, ploegen, trainers koppelen en contactpersonen. Bv. voor het ICT-team.</small></span></label>
     <div class="row">${me ? "" : `<button class="link danger" type="button" id="rmm">Toegang intrekken</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
   const rm = $("#rmm", d); if (rm) rm.onclick = () => { if (confirm(`Toegang intrekken voor ${m.name || m.email}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) { d.close(); rpc("club_set_member", { uid: m.user_id, r: null }, "Toegang ingetrokken."); } };
@@ -119,6 +121,9 @@ function memberForm(m, rpc) {
     const r2 = await sb.rpc("club_set_access", { uid: m.user_id, alle: f.all.checked, fn: f.fn.value.trim() });
     if (r2.error) { toast(/club_set_access|function/i.test(r2.error.message) ? "Voer eerst ogv-database.sql uit (versie 12)." : r2.error.message); return; }
     if (V14()) { const r3 = await sb.rpc("club_set_team_access", { uid: m.user_id, teams: f.all.checked ? [] : [...ta] }); if (r3.error) { toast(r3.error.message); return; } }
+    const rr = RECHTEN.map(([k]) => k).filter(k => f["r_" + k].checked), had = (m.rechten || []).slice().sort().join();
+    if (rr.slice().sort().join() !== had || rr.length) { const r4 = await sb.rpc("club_set_rechten", { uid: m.user_id, r: rr });
+      if (r4.error) { toast(/club_set_rechten|function/i.test(r4.error.message) ? "Voer eerst supabase-rechten-v24.sql uit in Supabase." : r4.error.message); return; } }
     d.close(); toast("Opgeslagen."); render(); };
 }
 

@@ -156,7 +156,7 @@ function gidsSeen(v) { try { if (v) localStorage.setItem("ogv-gids-v1", "1"); re
 const GIDS = [
   ["Welkom bij OGV Trainers", "Alles voor je ploeg op één plek: kalender, spelers, wedstrijden en evaluaties.", [["Kies je ploeg", "Bovenaan in het menu. Train je meerdere ploegen, dan wissel je daar."], ["Je spelers staan er al", "Overgezet uit PSD. Kijk bij Spelers of alles klopt."], ["Ouders koppelen", "Bij Spelers deel je per kind een persoonlijke link. Ouders melden daarmee af en vullen hun gegevens in, zonder account."]]],
   ["Elke week", "Dit gebruik je het meest.", [["Kalender", "Trainingen en wedstrijden. Open een activiteit om aanwezigheden aan te duiden."], ["Wedstrijdblad", "Opstelling, wissels, doelpunten en per speler een cijfer en notitie."], ["Trainingen maken", "Bouw je training uit de clubbibliotheek, of start van een sjabloon."]]],
-  ["Hulp nodig?", "Het menu toont eerst wat je elke week nodig hebt.", [["Meer functies", "Onderaan het menu: animatiebord, videoanalyse, je eigen map en meer."], ["Probleem melden", "Iets werkt niet of mist er iets? Meld het meteen, de beheerder ziet het."], ["Weergave", "Kies licht of donker, onderaan het menu."]]]
+  ["Hulp nodig?", "Je vindt alles in het menu links (op de gsm onder Meer).", [["Mijn map", "Je eigen opslag, spelprincipes en het mixschema."], ["Probleem melden", "Iets werkt niet of mist er iets? Meld het meteen, de beheerder ziet het."], ["Weergave", "Kies licht of donker, onderaan het menu."]]]
 ];
 function startGids(i = 0) {
   const [h, sub, items] = GIDS[i], last = i === GIDS.length - 1;
@@ -168,6 +168,8 @@ function startGids(i = 0) {
   const nx = $("[data-next]", d), pv = $("[data-prev]", d), sk = $("[data-skip]", d);
   nx.onclick = () => last ? done() : startGids(i + 1); if (pv) pv.onclick = () => startGids(i - 1); if (sk) sk.onclick = done; nx.focus();
 }
+/* rechten: de beheerder mag alles; anderen enkel wat de beheerder aanvinkte (scouting, terreinen) */
+const mag = r => !!(S.admin || (S.rechten || []).includes(r));
 function dialog(html, cls = "") { const d = $("#dlg"); d.className = cls; d.innerHTML = html; d.showModal(); $$("[data-close]", d).forEach(b => b.onclick = () => d.close()); return d; }
 function download(name, text, type = "text/csv;charset=utf-8") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
 const csvCell = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
@@ -313,8 +315,6 @@ const NAV = [
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
-const NAV_CORE = new Set(["start", "ploeg", "kalender", "spelers", "evaluaties", "matchday", "live", "trainingen", "berichten", "contacten", "clubdashboard", "terreinen", "clubbeheer"]);
-function navMoreOpen(v) { try { if (v === undefined) return localStorage.getItem("ogv-navmore") === "1"; localStorage.setItem("ogv-navmore", v ? "1" : "0"); } catch (e) { return false; } }
 const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
@@ -323,12 +323,13 @@ let teardown = null;
 function shell() {
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g);
-  /* eenvoudig menu: wat een trainer elke week gebruikt staat altijd zichtbaar, de rest zit onder "Meer functies" */
-  const secs = S.admin ? [...nav, { g: "Beheer", items: [["clubbeheer", "Beheer", "gear"]] }] : nav;
-  const link = ([k, l, i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`;
-  const part = core => secs.map(sec => { const its = sec.items.filter(([k]) => NAV_CORE.has(k) === core); return its.length ? (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + its.map(link).join("") : ""; }).join("");
-  const moreOpen = navMoreOpen() || secs.some(sec => sec.items.some(([k]) => k === active && !NAV_CORE.has(k)));
-  const navHtml = part(true) + `<details class="navmore"${moreOpen ? " open" : ""}><summary>${IC.menu}<span>Meer functies</span></summary><div class="navin">${part(false)}</div></details>`;
+  /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
+  const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
+  const secs = (S.admin ? [...nav, { g: "Beheer", items: [["clubbeheer", "Beheer", "gear"]] }] : nav)
+    .filter(sec => hasTeam || !sec.team)
+    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => k !== "scouting" || mag("scouting")) })).filter(sec => sec.items.length);
+  const navHtml = secs.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
+    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("")).join("");
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · OG Vorselaar" : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
@@ -354,7 +355,6 @@ function shell() {
   </div>`;
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
-  $$(".navmore>summary").forEach(sm => sm.onclick = () => setTimeout(() => { const d = sm.parentElement; navMoreOpen(d.open); $$(".navmore").forEach(o => { if (o !== d) o.open = d.open; }); })); /* alleen een klik onthouden, niet het automatisch openklappen */
   $$("[data-gids]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); startGids(); });
   if (logged && !gidsSeen()) setTimeout(() => { if (!$("#dlg")?.open) startGids(); }, 600);
   bindThemeSwitch();
