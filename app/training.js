@@ -226,7 +226,9 @@ function exEditor(x, onSave, saveLabel) {
 }
 
 /* ============ indeling van oefenstof: thema, vorm en leeftijd ============ */
-const exPic = (x, ph) => x.diagram && dgFrames(x.diagram)[0].length ? diagramSVG(x.diagram) : x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : x.img_path ? `<img data-fp="${esc(x.img_path)}" alt="" loading="lazy">` : x.diagram ? diagramSVG(x.diagram) : (ph ?? `<span class="ph0">${IC.field}</span>`);
+/* oefening met stappen: tekening met een duidelijke filmpje-label */
+const dgAnimPic = dg => `<span class="dganim">${diagramSVG(dg)}<span class="dgbadge" aria-label="Filmpje met ${dgFrames(dg).length} stappen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>Filmpje · ${dgFrames(dg).length} stappen</span></span>`;
+const exPic = (x, ph) => x.diagram && dgFrames(x.diagram).length > 1 ? dgAnimPic(x.diagram) : x.diagram && dgFrames(x.diagram)[0].length ? diagramSVG(x.diagram) : x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : x.img_path ? `<img data-fp="${esc(x.img_path)}" alt="" loading="lazy">` : x.diagram ? diagramSVG(x.diagram) : (ph ?? `<span class="ph0">${IC.field}</span>`);
 /* thema's sluiten aan bij de basisprincipes van de club (1A opbouw, 1B/2A verdedigen, 2B doelkansen, 3 omschakeling) */
 const EX_THEMES = [
   ["Balgevoel en techniek", /^basics$/, /jongle|techniek|tecnhiek|balgevoel|voetenwerk|kap- en draai|kappen en draai|hoekje trappen|kopspel|senseball|balvaardig/],
@@ -452,7 +454,7 @@ route("sjablonen", { title: "Trainingsbibliotheek", render: () => { lbState().ty
 function exView(m, onChange) {
   const x = m.data, own = items.mine(m), fact = (k, val) => val ? `<dt>${k}</dt><dd>${esc(val)}</dd>` : "";
   const d = dialog(`<div class="dlg exview"><div class="row"><h2 style="margin-right:auto">${esc(m.title)}</h2><button class="xbtn" style="position:static" type="button" data-close aria-label="Sluiten">${IC.x}</button></div>
-    <div class="exvgrid"><div><div class="exvpic">${exPic(x)}</div>${x.diagram && dgFrames(x.diagram).length > 1 ? `<div class="row" style="margin-top:8px;gap:6px"><button class="btn ghost small" type="button" id="xv-play">▶ Afspelen</button><button class="btn ghost small" type="button" id="xv-vid">${IC.dl}Filmpje</button><span class="hint">${dgFrames(x.diagram).length} stappen</span></div>` : ""}</div><div class="exvinfo">
+    <div class="exvgrid"><div><div class="exvpic">${exPic(x)}</div>${x.diagram && dgFrames(x.diagram).length > 1 ? `<div class="row" style="margin-top:8px;gap:6px"><button class="btn small" type="button" id="xv-play">▶ Filmpje afspelen</button><button class="btn ghost small" type="button" id="xv-vid">${IC.dl}Filmpje downloaden</button><span class="hint" id="xv-st">${dgFrames(x.diagram).length} stappen</span></div>` : ""}</div><div class="exvinfo">
       <div class="chips">${exThemes(x).filter(z => z !== "Overige").map(c => `<span class="pill g">${esc(c)}</span>`).join("")}<span class="pill soort" style="--pc:${labelCol(exType(x))}">${esc(exType(x))}</span></div>
       ${x.goal ? `<p style="margin:0">${esc(x.goal)}</p>` : ""}
       <dl class="facts">${fact("Soort", exType(x))}${fact("Leeftijd", agesTxt(x.ages))}${fact("Duur", exMinutes(x) ? exMinutes(x) + " min" : "")}${fact("Inspanning", x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? ", " + x.rest + " s rust" : ""}` : "")}${fact("Intensiteit", x.intensity ? x.intensity + " – " + INTENS[x.intensity] : "")}${fact("Spelers", x.players)}${fact("Afmetingen", x.size)}${fact("Materiaal", x.material)}</dl>
@@ -462,7 +464,11 @@ function exView(m, onChange) {
       <button class="btn ghost" type="button" id="xv-ed">${own ? "Bewerken" : "Eigen kopie maken"}</button>
       <span class="spacer"></span>${own && mode !== "demo" ? `<button class="link" type="button" id="xv-sh">${m.shared ? "Niet meer delen" : "Delen met club"}</button>` : ""}${own ? `<button class="link" type="button" id="xv-del">Verwijderen</button>` : ""}</div></div>`, "wide xl");
   const xp = $("#xv-play", d); if (xp) { let stop = null; const pic = $(".exvpic", d);
-    xp.onclick = () => { if (stop) { stop(); stop = null; pic.innerHTML = exPic(x); xp.textContent = "▶ Afspelen"; return; } stop = dgPlay(pic, x.diagram); xp.textContent = "■ Stoppen"; };
+    const n = dgFrames(x.diagram).length, st = $("#xv-st", d);
+    const toggle = () => { if (stop) { stop(); stop = null; pic.innerHTML = exPic(x); bindPic(); xp.textContent = "▶ Filmpje afspelen"; st.textContent = n + " stappen"; return; }
+      stop = dgPlay(pic, x.diagram, { onStep: i => st.textContent = `Stap ${i + 1} van ${n}` }); xp.textContent = "■ Stoppen"; };
+    const bindPic = () => { const b = $(".dgbadge", pic); if (b) { b.setAttribute("role", "button"); b.tabIndex = 0; b.onclick = toggle; b.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }; } };
+    bindPic(); xp.onclick = toggle;
     d.addEventListener("close", () => stop && stop(), { once: true }); }
   const xvd = $("#xv-vid", d); if (xvd) xvd.onclick = () => dgVideo(x.diagram, x.name || m.title);
   const pb = $("#xv-plan", d); if (pb) pb.onclick = () => toTraining({ ...JSON.parse(JSON.stringify(x)), id: uid(), name: x.name || m.title });
