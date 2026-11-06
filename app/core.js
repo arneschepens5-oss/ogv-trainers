@@ -376,9 +376,16 @@ async function render() {
   if (r.page !== "aanmelden" && !logged) { viewLogin(v); return; }
   if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
-  try { const td = await def.render(v, r.id, r.sub);
+  /* nooit meer een leeg scherm: na een halve seconde "Laden…", na 12 seconden een knop om opnieuw te laden */
+  let settled = false;
+  const tLoad = setTimeout(() => { if (!settled && seq === renderSeq && !v.textContent.trim()) v.innerHTML = `<div class="empty"><span class="spin"></span> Laden…</div>`; }, 500);
+  const tSlow = setTimeout(() => { if (!settled && seq === renderSeq) { const b = document.createElement("div"); b.className = "empty slowload";
+    b.innerHTML = `<b>Dit duurt langer dan normaal</b>Misschien viel de verbinding even weg, bv. nadat je laptop of gsm in slaap was.<br><button class="btn" type="button">Opnieuw laden</button>`;
+    b.querySelector("button").onclick = () => location.reload(); v.prepend(b); } }, 12000);
+  try { const td = await def.render(v, r.id, r.sub); settled = true;
     if (typeof td === "function") { if (seq === renderSeq) teardown = td; else try { td(); } catch (x) {} } /* een nieuwere weergave kwam tussen */ }
-  catch (e) { console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
+  catch (e) { settled = true; console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
+  clearTimeout(tLoad); clearTimeout(tSlow); $(".slowload", v)?.remove();
   document.title = (def.title ? def.title + " | " : "") + "OGV Trainers";
   if (!def.keepScroll) scrollTo(0, 0);
 }
@@ -578,7 +585,9 @@ function boot() {
   if (new URLSearchParams(location.search).has("demo")) demo = true;
   if (!LOCAL) { demo = false; try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } /* demo alleen om lokaal te testen */
   if (window.supabase && window.supabase.createClient) {
-    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: "tb_auth" } });
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: "tb_auth",
+      /* geen browserslot rond het vernieuwen van de aanmelding: dat slot bleef soms hangen na slaapstand, waardoor elke opvraging bleef wachten (leeg scherm) */
+      lock: async (_name, _timeout, fn) => await fn() } });
     let started = false;
     sb.auth.onAuthStateChange((ev, session) => { if (mode === "demo") return;
       /* Supabase houdt tijdens deze melding een slot vast: databaseoproepen moeten erna gebeuren, anders blijft alles hangen. */
