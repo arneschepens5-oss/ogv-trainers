@@ -1054,3 +1054,11 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.club_fields(date, date) from anon, public;
 grant execute on function public.club_fields(date, date) to authenticated;
+
+-- =====================================================================
+-- Versie 21: beheerders mogen aanwezigheden, minuten, cijfers en notities van alle ploegen invoeren
+-- (nodig om de wedstrijdgegevens uit PSD voor alle ploegen over te zetten).
+-- =====================================================================
+drop policy if exists "beheer aanwezigheden" on public.attendance;
+create policy "beheer aanwezigheden" on public.attendance for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
