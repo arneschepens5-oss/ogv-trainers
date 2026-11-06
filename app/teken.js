@@ -143,10 +143,13 @@ function diagramSVG(dg, opts = {}) {
   dg = dg || { field: "5v5", objs: [] }; const { rot, W, H } = dgDims(dg), wit = dg.bg === "wit", lc = wit ? "#9AA79C" : "rgba(255,255,255,.8)";
   const bands = Array.from({ length: 10 }, (_, k) => k % 2 ? (rot ? `<rect x="0" y="${k * H / 10}" width="${W}" height="${H / 10}" fill="rgba(255,255,255,.045)"/>` : `<rect x="${k * W / 10}" y="0" width="${W / 10}" height="${H}" fill="rgba(255,255,255,.045)"/>`) : "").join("");
   const lines = rot ? `<g transform="translate(${W} 0) rotate(90)">${fieldLines(dg.field, H, W, lc)}</g>` : fieldLines(dg.field, W, H, lc);
-  const objs = (dg.objs || []).map((o, i) => objSVG(o, i, W, H, dg.bg)).join("");
+  /* stappen: buiten de tekentool tonen we stap 1; de tekentool en het afspelen geven zelf de voorwerpen mee */
+  const list = opts.objs || (opts.live ? dg.objs : dgFrames(dg)[0]) || [], op = opts.op || [];
+  const ghost = opts.ghost ? `<g opacity=".25" pointer-events="none">${opts.ghost.map((o, i) => objSVG(o, i, W, H, dg.bg)).join("").replace(/data-i="\d+"/g, "")}</g>` : "";
+  const objs = ghost + list.map((o, i) => { const g = objSVG(o, i, W, H, dg.bg); return op[i] != null && op[i] < 1 ? `<g opacity="${op[i].toFixed(3)}">${g}</g>` : g; }).join("");
   const M = 3;
   return `<svg class="dg" viewBox="${-M} ${-M} ${W + 2 * M} ${H + 2 * M}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Veldtekening"${opts.size ? ` width="${opts.size}" height="${Math.round(opts.size * (H + 2 * M) / (W + 2 * M))}"` : ""}>
-    <rect x="${-M}" y="${-M}" width="${W + 2 * M}" height="${H + 2 * M}" fill="${wit ? "#FFFFFF" : "#2F7D3B"}"/>${wit ? "" : bands}${lines}${objs}${opts.sel != null && opts.sel >= 0 ? selSVG(dg.objs[opts.sel], W, H) : ""}</svg>`;
+    <rect x="${-M}" y="${-M}" width="${W + 2 * M}" height="${H + 2 * M}" fill="${wit ? "#FFFFFF" : "#2F7D3B"}"/>${wit ? "" : bands}${lines}${objs}${opts.sel != null && opts.sel >= 0 ? selSVG(list[opts.sel], W, H) : ""}</svg>`;
 }
 
 /* ============ snelle opstellingen en organisaties (liggend veld, eigen ploeg speelt naar rechts) ============ */
@@ -183,13 +186,71 @@ function toolIcon(t) {
   return wrap(mini({ t, s: S, r: t === "goal" || t === "mini" ? 90 : t === "rebound" ? 90 : undefined, n: t === "k" ? "K" : t === "tr" ? "T" : t === "p" ? "7" : t === "step" ? "1" : undefined }));
 }
 
+/* ============ stappen en afspelen (zoals op het animatiebord) ============ */
+const dgFrames = dg => dg && Array.isArray(dg.frames) && dg.frames.length > 1 ? dg.frames : [dg?.objs || []];
+const dgRid = () => Math.random().toString(36).slice(2, 9);
+const dgEase = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+/* tussenbeeld tussen twee stappen: wat in beide stappen staat beweegt, wat verdwijnt of bijkomt vervaagt */
+function dgTween(A, B, t) {
+  const e = dgEase(t), byK = new Map(A.map(o => [o.k, o])), inB = new Set(B.map(o => o.k)), objs = [], op = [];
+  const L = (a, b) => a + (b - a) * e, ang = (a, b) => { let d = ((b - a + 540) % 360) - 180; return (a + d * e + 360) % 360; };
+  A.filter(o => !o.k || !inB.has(o.k)).forEach(o => { objs.push(o); op.push(1 - e); });
+  B.forEach(b => { const a = b.k && byK.get(b.k); if (!a) { objs.push(b); op.push(e); return; }
+    const o = { ...(e < .5 ? a : b) };
+    ["x", "y", "x2", "y2", "cx", "cy"].forEach(k => { if (a[k] != null && b[k] != null) o[k] = L(a[k], b[k]); });
+    if ((a.s || 1) !== (b.s || 1)) o.s = L(a.s || 1, b.s || 1);
+    if (a.r != null && b.r != null) o.r = ang(a.r, b.r);
+    if (a.pts && b.pts && a.pts.length === b.pts.length) o.pts = a.pts.map(([x, y], i) => [L(x, b.pts[i][0]), L(y, b.pts[i][1])]);
+    objs.push(o); op.push(1); });
+  return { objs, op };
+}
+const DG_HOLD = 700, DG_MOVE = 1300;
+const dgDuration = dg => { const n = dgFrames(dg).length; return n * DG_HOLD + (n - 1) * DG_MOVE + 600; };
+/* beeld op tijdstip ms */
+function dgAt(dg, ms) { const F = dgFrames(dg); let t = ms;
+  for (let i = 0; i < F.length; i++) { if (t < DG_HOLD || i === F.length - 1) return { objs: F[i], op: [], step: i }; t -= DG_HOLD;
+    if (t < DG_MOVE) return { ...dgTween(F[i], F[i + 1], t / DG_MOVE), step: i + (t / DG_MOVE > .5 ? 1 : 0) }; t -= DG_MOVE; }
+  return { objs: F[F.length - 1], op: [], step: F.length - 1 }; }
+/* afspelen in een element; geeft een stopfunctie terug */
+function dgPlay(el, dg, { loop = true, onStep, onEnd } = {}) {
+  const dur = dgDuration(dg), t0 = performance.now(); let raf = 0, last = -1, stopped = false;
+  const tick = now => { if (stopped) return; let ms = Math.max(0, now - t0); if (ms >= dur) { if (!loop) { const f = dgAt(dg, dur); el.innerHTML = diagramSVG(dg, { objs: f.objs }); onEnd && onEnd(); return; } ms %= dur; }
+    const f = dgAt(dg, ms); el.innerHTML = diagramSVG(dg, { objs: f.objs, op: f.op }); if (f.step !== last) { last = f.step; onStep && onStep(f.step); } raf = requestAnimationFrame(tick); };
+  raf = requestAnimationFrame(tick);
+  return () => { stopped = true; cancelAnimationFrame(raf); };
+}
+/* filmpje maken: alle beelden eerst klaarzetten, daarna aan 30 beelden per seconde opnemen */
+async function dgVideo(dg, name = "oefening") {
+  if (!("MediaRecorder" in window) || !HTMLCanvasElement.prototype.captureStream) { toast("Een filmpje maken lukt niet in deze browser. Gebruik een recente Chrome of Edge."); return; }
+  const fps = 30, dur = dgDuration(dg), n = Math.ceil(dur / 1000 * fps), size = 1280;
+  toast("Filmpje wordt gemaakt…");
+  const load = svg => new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); });
+  const imgs = []; for (let i = 0; i <= n; i++) { const f = dgAt(dg, i * 1000 / fps); imgs.push(await load(diagramSVG(dg, { objs: f.objs, op: f.op, size }))); }
+  const c = document.createElement("canvas"); c.width = imgs[0].width; c.height = imgs[0].height; const cx = c.getContext("2d"); cx.drawImage(imgs[0], 0, 0);
+  const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp9", "video/webm"], mime = types.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || "";
+  const rec = new MediaRecorder(c.captureStream(fps), mime ? { mimeType: mime, videoBitsPerSecond: 5e6 } : {}), chunks = [];
+  rec.ondataavailable = ev => ev.data.size && chunks.push(ev.data);
+  const done = new Promise(ok => rec.onstop = ok); rec.start();
+  await new Promise(ok => { const t0 = performance.now(); const step = now => { const i = Math.max(0, Math.min(imgs.length - 1, Math.floor((now - t0) / 1000 * fps))); cx.drawImage(imgs[i], 0, 0); if (i < imgs.length - 1) requestAnimationFrame(step); else setTimeout(ok, 120); }; requestAnimationFrame(step); });
+  rec.stop(); await done;
+  const type = (rec.mimeType || mime || "video/webm").split(";")[0], ext = type.includes("mp4") ? "mp4" : "webm", a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(chunks, { type })); a.download = (name || "oefening").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() + "." + ext; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast(ext === "mp4" ? "Filmpje gedownload." : "Filmpje gedownload (WebM). Speelt niet op elke iPhone; open de app in Safari voor MP4.");
+}
+
 function diagramEditor(host, dg, onChange, opts = {}) {
   dg.objs = dg.objs || []; dg.field = dg.field || "5v5";
-  let group = 0, tool = "select", sel = -1, drag = null, draft = null, pcol = "geel", lastHint = "";
-  const snap = () => JSON.stringify({ field: dg.field, vert: !!dg.vert, bg: dg.bg || "", objs: dg.objs });
+  let group = 0, tool = "select", sel = -1, drag = null, draft = null, pcol = "geel", lastHint = "", cur = 0, stopPlay = null;
+  /* stappen: dg.frames bevat alle stappen; dg.objs is altijd de stap waaraan je werkt */
+  if (Array.isArray(dg.frames) && dg.frames.length > 1) dg.objs = dg.frames[0]; else delete dg.frames;
+  const ensureK = () => (dg.frames || [dg.objs]).forEach(f => f.forEach(o => { if (!o.k) o.k = dgRid(); }));
+  ensureK();
+  const snap = () => JSON.stringify({ field: dg.field, vert: !!dg.vert, bg: dg.bg || "", objs: dg.objs, frames: dg.frames || null, cur });
   let hist = [snap()], hi = 0;
-  const commit = () => { const s = snap(); if (s === hist[hi]) return; hist = hist.slice(0, hi + 1); hist.push(s); if (hist.length > 80) hist.shift(); hi = hist.length - 1; onChange(); bar(); };
-  const restore = s => { const o = JSON.parse(s); dg.field = o.field; dg.vert = o.vert || undefined; dg.bg = o.bg || undefined; dg.objs = o.objs; sel = -1; onChange(); bar(); draw(); top(); };
+  const commit = () => { ensureK(); const s = snap(); if (s === hist[hi]) return; hist = hist.slice(0, hi + 1); hist.push(s); if (hist.length > 80) hist.shift(); hi = hist.length - 1; onChange(); bar(); steps(); };
+  const restore = s => { const o = JSON.parse(s); dg.field = o.field; dg.vert = o.vert || undefined; dg.bg = o.bg || undefined;
+    if (o.frames && o.frames.length > 1) { dg.frames = o.frames; cur = Math.min(o.cur || 0, o.frames.length - 1); dg.objs = dg.frames[cur]; } else { delete dg.frames; cur = 0; dg.objs = o.objs; }
+    sel = -1; onChange(); bar(); draw(); top(); steps(); };
   const undo = () => { if (hi > 0) restore(hist[--hi]); }, redo = () => { if (hi < hist.length - 1) restore(hist[++hi]); };
   const nextStep = () => String(dg.objs.filter(o => o.t === "step").length + 1);
   const roster = () => (typeof S !== "undefined" && S.players ? active() : []).map(p => p.first_name || pname(p)).filter(Boolean);
@@ -207,6 +268,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     <div class="dgtabs" role="tablist"><button type="button" class="dgsel" id="dgselb" aria-pressed="true" title="Selecteren en verplaatsen (Esc)"><svg viewBox="0 0 24 24" class="ti" aria-hidden="true"><path d="M6 3l12 9-5.5 1.2L16 20l-2.6 1.2-3-6.6L6 18z" fill="currentColor"/></svg><span>Kiezen</span></button>
       ${DG_GROUPS.map(([g], k) => `<button type="button" role="tab" data-g="${k}" aria-selected="${k === group}">${g}</button>`).join("")}</div>
     <div class="dgtools" id="dgt"></div>
+    <div class="dgsteps" id="dgs"></div>
     <div class="dgwrap" id="dgw"></div>
     <div class="dgctx" id="dgc"></div>
     <p class="hint dgh" id="dgh"></p></div>`;
@@ -228,11 +290,29 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     $("#dgun", host).disabled = hi <= 0; $("#dgre", host).disabled = hi >= hist.length - 1; };
   const svgPt = ev => { const svg = $("svg", wrap), m = svg.getScreenCTM().inverse(), pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const q = pt.matrixTransform(m), { W, H } = dgDims(dg);
     return { x: Math.max(0, Math.min(100, q.x / W * 100)), y: Math.max(0, Math.min(100, q.y / H * 100)) }; };
-  const draw = () => { const all = draft ? { ...dg, objs: [...dg.objs, draft] } : dg; wrap.innerHTML = diagramSVG(all, { sel: draft ? -1 : sel }); wrap.dataset.tool = tool; };
+  const MOVERS = new Set(["p", "k", "tr", "ball"]);
+  const draw = () => { if (stopPlay) return; const objs = draft ? [...dg.objs, draft] : dg.objs;
+    const ghost = dg.frames && cur > 0 ? dg.frames[cur - 1].filter(o => MOVERS.has(LEGACY_P[o.t] ? "p" : o.t)) : null;
+    wrap.innerHTML = diagramSVG(dg, { objs, ghost, sel: draft ? -1 : sel }); wrap.dataset.tool = tool; };
+  /* stappenbalk: stap kiezen, toevoegen, verwijderen, afspelen en filmpje */
+  const steps = () => { const el = $("#dgs", host), F = dgFrames(dg), many = F.length > 1;
+    el.innerHTML = `<span class="dgsl">Stappen</span>${F.map((_, i) => `<button type="button" class="dgstep" data-st="${i}" aria-pressed="${i === cur}"${stopPlay ? " disabled" : ""}>${i + 1}</button>`).join("")}
+      <button type="button" class="dgb" id="dgadd" title="Nieuwe stap: kopie van deze stap, daarna verschuif je spelers en bal"${stopPlay ? " disabled" : ""}>${IC.plus}<span>Stap</span></button>
+      ${many ? `<button type="button" class="dgb" id="dgplay">${stopPlay ? "■<span>Stoppen</span>" : "▶<span>Afspelen</span>"}</button><button type="button" class="dgb" id="dgvid"${stopPlay ? " disabled" : ""}>${IC.dl}<span>Filmpje</span></button><button type="button" class="dgb danger" id="dgsdel"${stopPlay ? " disabled" : ""}>Stap ${cur + 1} weg</button>`
+        : `<span class="hint dgsh">Maak een tweede stap om de oefening te laten bewegen.</span>`}`;
+    $$("[data-st]", el).forEach(b => b.onclick = () => { cur = +b.dataset.st; dg.objs = dg.frames[cur]; sel = -1; draw(); bar(); steps(); });
+    $("#dgadd", el).onclick = () => { const copy = JSON.parse(JSON.stringify(dg.objs)); if (!dg.frames) dg.frames = [dg.objs]; dg.frames.splice(cur + 1, 0, copy); cur++; dg.objs = dg.frames[cur]; sel = -1; commit(); draw(); steps();
+      toast(`Stap ${cur + 1} gemaakt. Versleep nu spelers en bal naar hun nieuwe plaats.`); };
+    const pl = $("#dgplay", el); if (pl) pl.onclick = () => { if (stopPlay) { stopPlay(); stopPlay = null; wrap.classList.remove("playing"); draw(); steps(); return; }
+      sel = -1; wrap.classList.add("playing"); stopPlay = dgPlay(wrap, dg, { onStep: i => $$("[data-st]", el).forEach(b => b.setAttribute("aria-pressed", +b.dataset.st === i)) }); steps(); };
+    const vd = $("#dgvid", el); if (vd) vd.onclick = () => dgVideo(dg, opts.name || "oefening");
+    const sd = $("#dgsdel", el); if (sd) sd.onclick = () => { if (!confirm(`Stap ${cur + 1} verwijderen?`)) return; dg.frames.splice(cur, 1); cur = Math.max(0, cur - 1);
+      if (dg.frames.length < 2) { dg.objs = dg.frames[0]; delete dg.frames; cur = 0; } else dg.objs = dg.frames[cur]; sel = -1; commit(); draw(); steps(); };
+  };
   /* contextbalk voor het gekozen voorwerp */
   const bar = () => { const c = $("#dgc", host); top(); const o = dg.objs[sel];
     if (!o) { c.innerHTML = dg.objs.length ? `<span class="hint">${dg.objs.length} ${dg.objs.length === 1 ? "voorwerp" : "voorwerpen"} op het veld</span><span class="spacer"></span><button class="dgb" type="button" id="dgpng">${IC.dl}<span>Afbeelding</span></button><button class="dgb danger" type="button" id="dgclr">Alles wissen</button>` : `<span class="hint">Het veld is nog leeg. Kies hierboven wat je wil plaatsen of gebruik "Snel plaatsen".</span>`;
-      const clr = $("#dgclr", c); if (clr) clr.onclick = () => { if (!confirm("Alles van het veld halen? Je kan dit ongedaan maken.")) return; dg.objs = []; sel = -1; commit(); draw(); };
+      const clr = $("#dgclr", c); if (clr) clr.onclick = () => { if (!confirm("Alles van het veld halen? Je kan dit ongedaan maken.")) return; dg.objs.splice(0); sel = -1; commit(); draw(); };
       const png = $("#dgpng", c); if (png) png.onclick = () => dgPng(dg); return; }
     const t = LEGACY_P[o.t] ? "p" : o.t, lbl = { p: "Nr.", k: "Nr.", tr: "Label", step: "Nr.", txt: " ", meas: " ", zone: "Tekst", oval: "Tekst" }[t];
     const noCol = new Set(["ball", "goal", "net"]), palette = noCol.has(t) ? [] : t === "p" || t === "k" || t === "tr" ? ["geel", "zwart", "blauw", "rood", "wit", "oranje", "groen", "paars"] : ["zwart", "wit", "geel", "oranje", "rood", "blauw", "groen", "paars"];
@@ -261,13 +341,13 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     $("#dgfw", c).onclick = () => { if (sel < dg.objs.length - 1) { const [z] = dg.objs.splice(sel, 1); dg.objs.push(z); sel = dg.objs.length - 1; commit(); draw(); } };
     $("#dgbw", c).onclick = () => { if (sel > 0) { const [z] = dg.objs.splice(sel, 1); dg.objs.unshift(z); sel = 0; commit(); draw(); } };
     $("#dgdup", c).onclick = dup; $("#dgdel", c).onclick = del; };
-  const dup = () => { const o = dg.objs[sel]; if (!o) return; const k = JSON.parse(JSON.stringify(o)); dgShift(k, o, 4, 4); if (k.t === "step") k.n = nextStep();
+  const dup = () => { const o = dg.objs[sel]; if (!o) return; const k = JSON.parse(JSON.stringify(o)); k.k = dgRid(); dgShift(k, o, 4, 4); if (k.t === "step") k.n = nextStep();
     if (k.t === "p" && /^\d+$/.test(k.n || "")) k.n = nextNum(k.c || "geel"); dg.objs.push(k); sel = dg.objs.length - 1; commit(); draw(); };
   const del = () => { if (sel < 0) return; dg.objs.splice(sel, 1); sel = -1; commit(); draw(); };
 
   wrap.style.touchAction = "none";
   wrap.onpointerdown = ev => {
-    if (ev.button > 0) return; const p = svgPt(ev), h = ev.target.closest("[data-h]"), hit = ev.target.closest("[data-i]");
+    if (ev.button > 0 || stopPlay) return; const p = svgPt(ev), h = ev.target.closest("[data-h]"), hit = ev.target.closest("[data-i]");
     if (h && sel >= 0) { drag = { h: h.dataset.h, p, o: JSON.parse(JSON.stringify(dg.objs[sel])) }; wrap.setPointerCapture(ev.pointerId); return; }
     if (tool === "select" || (hit && !LINEISH.has(tool) && tool !== "pen")) {
       if (hit) { sel = +hit.dataset.i; drag = { p, o: JSON.parse(JSON.stringify(dg.objs[sel])), moved: false }; wrap.setPointerCapture(ev.pointerId); }
@@ -306,7 +386,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
   $$("[data-g]", host).forEach(b => b.onclick = () => { group = +b.dataset.g; $$("[data-g]", host).forEach(x => x.setAttribute("aria-selected", x === b)); const first = DG_GROUPS[group][1][0][0]; setTool(first); });
   $("#dgf", host).onchange = e => { dg.field = e.target.value; if (FIELDS[dg.field].fixed) delete dg.vert; commit(); draw(); };
   $("#dgrot", host).onclick = () => { /* alles mee kantelen zodat de tekening blijft kloppen */ const to = !dg.vert;
-    dg.objs.forEach(o => { const x0 = o.x; dgMap(o, (a, b) => dgTurn(a, b, to));
+    (dg.frames || [dg.objs]).flat().forEach(o => { const x0 = o.x; dgMap(o, (a, b) => dgTurn(a, b, to));
       if (TURNS.has(o.t)) o.r = ((dgRot(o, x0)) + (to ? -90 : 90) + 360) % 360; });
     dg.vert = to || undefined; commit(); draw(); };
   $("#dgbg", host).onclick = () => { dg.bg = dg.bg === "wit" ? undefined : "wit"; commit(); draw(); };
@@ -317,7 +397,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
   $("#dgun", host).onclick = undo; $("#dgre", host).onclick = redo;
   $("#dgfs", host).onclick = () => { const on = !host.classList.contains("dgfull"); host.classList.toggle("dgfull", on); $("#dgfs", host).textContent = on ? "✕" : "⤢"; $("#dgfs", host).title = on ? "Klein scherm" : "Groot scherm"; draw(); };
   const key = ev => {
-    if (!host.isConnected) return; const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
+    if (!host.isConnected || stopPlay) return; const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "");
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !typing) { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "y" && !typing) { ev.preventDefault(); redo(); return; }
     if (typing) return;
@@ -329,8 +409,8 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     if (mv && sel >= 0) { ev.preventDefault(); const o = dg.objs[sel], f = ev.shiftKey ? 3 : .6; dgShift(o, JSON.parse(JSON.stringify(o)), mv[0] * f, mv[1] * f); draw(); clearTimeout(key.t); key.t = setTimeout(commit, 400); }
   };
   document.addEventListener("keydown", key, true);
-  tools(); setTool("select"); draw(); bar();
-  return () => document.removeEventListener("keydown", key, true);
+  tools(); setTool("select"); draw(); bar(); steps();
+  return () => { if (stopPlay) stopPlay(); if (dg.frames) dg.objs = dg.frames[0]; document.removeEventListener("keydown", key, true); };
 }
 /* een voorwerp verschuiven of omzetten, inclusief de punten van een vrije lijn */
 const dgShift = (o, base, dx, dy) => { ["x", "x2", "cx"].forEach(a => { if (base[a] != null) o[a] = base[a] + dx; }); ["y", "y2", "cy"].forEach(a => { if (base[a] != null) o[a] = base[a] + dy; }); if (base.pts) o.pts = base.pts.map(([a, b]) => [a + dx, b + dy]); };

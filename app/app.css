@@ -1254,3 +1254,12 @@ ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
 input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 /* twee kaarten naast elkaar starten op dezelfde hoogte */
 .grid2>.panel+.panel,.grid3>.panel+.panel{margin-top:0}
+
+/* ---------- stappen in de tekentool ---------- */
+.dgsteps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0}
+.dgsl{font-weight:800;font-size:13px;color:var(--muted);margin-right:2px}
+.dgstep{min-width:34px;height:34px;border-radius:10px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font-weight:800;cursor:pointer}
+.dgstep[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow);color:#111}
+.dgstep:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.dgsh{margin:0}
+.dgwrap.playing{cursor:default}

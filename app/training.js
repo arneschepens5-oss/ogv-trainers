@@ -196,7 +196,7 @@ function exEditor(x, onSave, saveLabel) {
       </aside></div></form>`, "exfull");
   const f = $("form", d); let stopDg = null;
   const mark = () => { dirty = true; };
-  const startDg = () => { x.diagram = x.diagram || { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] }; stopDg = diagramEditor($("#dgHost", d), x.diagram, mark, { full: true }); };
+  const startDg = () => { x.diagram = x.diagram || { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] }; stopDg = diagramEditor($("#dgHost", d), x.diagram, mark, { full: true, name: x.name }); };
   const showImg = () => { $("#dgHost", d).innerHTML = `<div class="eximg">${exPic(x, "")}</div>`; };
   if (hasImg() && !(x.diagram?.objs?.length)) showImg(); else startDg();
   const td = $("#toDraw", d); if (td) td.onclick = () => { x.img = null; x.img_path = null; mark(); td.parentElement.remove(); startDg(); };
@@ -226,7 +226,7 @@ function exEditor(x, onSave, saveLabel) {
 }
 
 /* ============ indeling van oefenstof: thema, vorm en leeftijd ============ */
-const exPic = (x, ph) => x.diagram && x.diagram.objs?.length ? diagramSVG(x.diagram) : x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : x.img_path ? `<img data-fp="${esc(x.img_path)}" alt="" loading="lazy">` : x.diagram ? diagramSVG(x.diagram) : (ph ?? `<span class="ph0">${IC.field}</span>`);
+const exPic = (x, ph) => x.diagram && dgFrames(x.diagram)[0].length ? diagramSVG(x.diagram) : x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : x.img_path ? `<img data-fp="${esc(x.img_path)}" alt="" loading="lazy">` : x.diagram ? diagramSVG(x.diagram) : (ph ?? `<span class="ph0">${IC.field}</span>`);
 /* thema's sluiten aan bij de basisprincipes van de club (1A opbouw, 1B/2A verdedigen, 2B doelkansen, 3 omschakeling) */
 const EX_THEMES = [
   ["Balgevoel en techniek", /^basics$/, /jongle|techniek|tecnhiek|balgevoel|voetenwerk|kap- en draai|kappen en draai|hoekje trappen|kopspel|senseball|balvaardig/],
@@ -452,7 +452,7 @@ route("sjablonen", { title: "Trainingsbibliotheek", render: () => { lbState().ty
 function exView(m, onChange) {
   const x = m.data, own = items.mine(m), fact = (k, val) => val ? `<dt>${k}</dt><dd>${esc(val)}</dd>` : "";
   const d = dialog(`<div class="dlg exview"><div class="row"><h2 style="margin-right:auto">${esc(m.title)}</h2><button class="xbtn" style="position:static" type="button" data-close aria-label="Sluiten">${IC.x}</button></div>
-    <div class="exvgrid"><div class="exvpic">${exPic(x)}</div><div class="exvinfo">
+    <div class="exvgrid"><div><div class="exvpic">${exPic(x)}</div>${x.diagram && dgFrames(x.diagram).length > 1 ? `<div class="row" style="margin-top:8px;gap:6px"><button class="btn ghost small" type="button" id="xv-play">▶ Afspelen</button><button class="btn ghost small" type="button" id="xv-vid">${IC.dl}Filmpje</button><span class="hint">${dgFrames(x.diagram).length} stappen</span></div>` : ""}</div><div class="exvinfo">
       <div class="chips">${exThemes(x).filter(z => z !== "Overige").map(c => `<span class="pill g">${esc(c)}</span>`).join("")}<span class="pill soort" style="--pc:${labelCol(exType(x))}">${esc(exType(x))}</span></div>
       ${x.goal ? `<p style="margin:0">${esc(x.goal)}</p>` : ""}
       <dl class="facts">${fact("Soort", exType(x))}${fact("Leeftijd", agesTxt(x.ages))}${fact("Duur", exMinutes(x) ? exMinutes(x) + " min" : "")}${fact("Inspanning", x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? ", " + x.rest + " s rust" : ""}` : "")}${fact("Intensiteit", x.intensity ? x.intensity + " – " + INTENS[x.intensity] : "")}${fact("Spelers", x.players)}${fact("Afmetingen", x.size)}${fact("Materiaal", x.material)}</dl>
@@ -461,6 +461,10 @@ function exView(m, onChange) {
     <div class="row exvact">${S.team && logged() ? `<button class="btn" type="button" id="xv-plan">${IC.plus}Toevoegen aan een training</button>` : ""}
       <button class="btn ghost" type="button" id="xv-ed">${own ? "Bewerken" : "Eigen kopie maken"}</button>
       <span class="spacer"></span>${own && mode !== "demo" ? `<button class="link" type="button" id="xv-sh">${m.shared ? "Niet meer delen" : "Delen met club"}</button>` : ""}${own ? `<button class="link" type="button" id="xv-del">Verwijderen</button>` : ""}</div></div>`, "wide xl");
+  const xp = $("#xv-play", d); if (xp) { let stop = null; const pic = $(".exvpic", d);
+    xp.onclick = () => { if (stop) { stop(); stop = null; pic.innerHTML = exPic(x); xp.textContent = "▶ Afspelen"; return; } stop = dgPlay(pic, x.diagram); xp.textContent = "■ Stoppen"; };
+    d.addEventListener("close", () => stop && stop(), { once: true }); }
+  const xvd = $("#xv-vid", d); if (xvd) xvd.onclick = () => dgVideo(x.diagram, x.name || m.title);
   const pb = $("#xv-plan", d); if (pb) pb.onclick = () => toTraining({ ...JSON.parse(JSON.stringify(x)), id: uid(), name: x.name || m.title });
   $("#xv-ed", d).onclick = () => { d.close(); exEditor({ ...JSON.parse(JSON.stringify(x)), name: x.name || m.title }, async y => {
     if (own) { m.title = y.name; m.data = { ...exData(y), shared_by: x.shared_by }; await safe(() => items.save(m), "Oefening opgeslagen."); }
