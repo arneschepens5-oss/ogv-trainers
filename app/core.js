@@ -151,6 +151,23 @@ const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 let toastT; function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2800); }
 async function safe(fn, ok) { try { const r = await fn(); if (ok) toast(ok); return r; } catch (e) { console.error(e); toast(isNetErr(e) ? "Geen verbinding: dit kon niet opgeslagen worden. Probeer opnieuw zodra je weer bereik hebt." : "Opslaan mislukt: " + (e.message || "onbekende fout")); } }
 function debounce(fn, ms = 600) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+/* startgids: drie korte schermen bij de eerste aanmelding, later terug te openen via "Startgids" */
+function gidsSeen(v) { try { if (v) localStorage.setItem("ogv-gids-v1", "1"); return localStorage.getItem("ogv-gids-v1") === "1"; } catch (e) { return true; } }
+const GIDS = [
+  ["Welkom bij OGV Trainers", "Alles voor je ploeg op één plek: kalender, spelers, wedstrijden en evaluaties.", [["Kies je ploeg", "Bovenaan in het menu. Train je meerdere ploegen, dan wissel je daar."], ["Je spelers staan er al", "Overgezet uit PSD. Kijk bij Spelers of alles klopt."], ["Ouders koppelen", "Bij Spelers deel je per kind een persoonlijke link. Ouders melden daarmee af en vullen hun gegevens in, zonder account."]]],
+  ["Elke week", "Dit gebruik je het meest.", [["Kalender", "Trainingen en wedstrijden. Open een activiteit om aanwezigheden aan te duiden."], ["Wedstrijdblad", "Opstelling, wissels, doelpunten en per speler een cijfer en notitie."], ["Trainingen maken", "Bouw je training uit de clubbibliotheek, of start van een sjabloon."]]],
+  ["Hulp nodig?", "Het menu toont eerst wat je elke week nodig hebt.", [["Meer functies", "Onderaan het menu: animatiebord, videoanalyse, je eigen map en meer."], ["Probleem melden", "Iets werkt niet of mist er iets? Meld het meteen, de beheerder ziet het."], ["Weergave", "Kies licht of donker, onderaan het menu."]]]
+];
+function startGids(i = 0) {
+  const [h, sub, items] = GIDS[i], last = i === GIDS.length - 1;
+  const d = dialog(`<div class="gids"><div class="gdots" aria-label="Stap ${i + 1} van ${GIDS.length}">${GIDS.map((_, j) => `<i${j === i ? ' class="on"' : ""}></i>`).join("")}</div>
+    <h2>${h}</h2><p class="sub">${sub}</p><ul class="gl">${items.map(([b, t]) => `<li><b>${b}</b><span>${t}</span></li>`).join("")}</ul>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:18px">${i ? `<button class="btn ghost" type="button" data-prev>Vorige</button>` : `<button class="btn ghost" type="button" data-skip>Overslaan</button>`}<button class="btn" type="button" data-next>${last ? "Aan de slag" : "Volgende"}</button></div></div>`, "gidsdlg");
+  const done = () => { gidsSeen(true); d.close(); };
+  d.onclose = () => gidsSeen(true);
+  const nx = $("[data-next]", d), pv = $("[data-prev]", d), sk = $("[data-skip]", d);
+  nx.onclick = () => last ? done() : startGids(i + 1); if (pv) pv.onclick = () => startGids(i - 1); if (sk) sk.onclick = done; nx.focus();
+}
 function dialog(html, cls = "") { const d = $("#dlg"); d.className = cls; d.innerHTML = html; d.showModal(); $$("[data-close]", d).forEach(b => b.onclick = () => d.close()); return d; }
 function download(name, text, type = "text/csv;charset=utf-8") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
 const csvCell = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
@@ -296,6 +313,8 @@ const NAV = [
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
+const NAV_CORE = new Set(["start", "ploeg", "kalender", "spelers", "evaluaties", "matchday", "live", "trainingen", "berichten", "contacten", "clubdashboard", "terreinen", "clubbeheer"]);
+function navMoreOpen(v) { try { if (v === undefined) return localStorage.getItem("ogv-navmore") === "1"; localStorage.setItem("ogv-navmore", v ? "1" : "0"); } catch (e) { return false; } }
 const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
@@ -304,8 +323,12 @@ let teardown = null;
 function shell() {
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g);
-  const navHtml = (S.admin ? [...nav, { g: "Beheer", items: [["clubbeheer", "Beheer", "gear"]] }] : nav).map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
-    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("")).join("");
+  /* eenvoudig menu: wat een trainer elke week gebruikt staat altijd zichtbaar, de rest zit onder "Meer functies" */
+  const secs = S.admin ? [...nav, { g: "Beheer", items: [["clubbeheer", "Beheer", "gear"]] }] : nav;
+  const link = ([k, l, i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`;
+  const part = core => secs.map(sec => { const its = sec.items.filter(([k]) => NAV_CORE.has(k) === core); return its.length ? (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + its.map(link).join("") : ""; }).join("");
+  const moreOpen = navMoreOpen() || secs.some(sec => sec.items.some(([k]) => k === active && !NAV_CORE.has(k)));
+  const navHtml = part(true) + `<details class="navmore"${moreOpen ? " open" : ""}><summary>${IC.menu}<span>Meer functies</span></summary><div class="navin">${part(false)}</div></details>`;
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · OG Vorselaar" : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
@@ -316,7 +339,7 @@ function shell() {
     <a class="brand" href="#/start">${LOGO("side")}<span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
+    <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
     <header class="topbar">${LOGO("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -327,10 +350,13 @@ function shell() {
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div><nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
+    <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
+  $$(".navmore>summary").forEach(sm => sm.onclick = () => setTimeout(() => { const d = sm.parentElement; navMoreOpen(d.open); $$(".navmore").forEach(o => { if (o !== d) o.open = d.open; }); })); /* alleen een klik onthouden, niet het automatisch openklappen */
+  $$("[data-gids]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); startGids(); });
+  if (logged && !gidsSeen()) setTimeout(() => { if (!$("#dlg")?.open) startGids(); }, 600);
   bindThemeSwitch();
   $$("[data-logout]").forEach(b => b.onclick = logout);
   $$("[data-setname], .acct .who b").forEach(b => b.onclick = () => mode !== "demo" && nameForm());

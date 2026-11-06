@@ -2,13 +2,13 @@
    Laptop: vaste zijbalk met alle onderdelen. Gsm: kopbalk + tabbalk onderaan + menu. */
 html{-webkit-text-size-adjust:100%;background:var(--bg)}
 :root{
-  --bg:#111111;--ink:#F2F2EE;--muted:#9EA098;--dim:#7A7C74;--line:#2A2C26;--line2:#3A3C35;
-  --card:#181916;--card2:#1F201C;--card3:#272823;--yellow:#FFD100;--yellow2:#FFE24D;
+  --bg:#0D0E0C;--ink:#F4F4F0;--muted:#B3B5AB;--dim:#8F9188;--line:#2F312A;--line2:#45473F;
+  --card:#191A17;--card2:#23241F;--card3:#2D2E28;--yellow:#FFD100;--yellow2:#FFE24D;
   --ok:#4ADE80;--warn:#F5A524;--bad:#F87171;--info:#7AA7FF;--violet:#C084FC;
   --s-ok:#4ADE80;--s-warn:#F5A524;--s-bad:#F87171;--s-info:#7AA7FF;--s-violet:#C084FC;
   --input:#0C0C0B;--glass:rgba(17,17,17,.94);--ytext:#FFD100;--ybg:#2A2600;--okbg:#132619;--badbg:#2E1414;--sharebg:#101A12;--shareline:#1E3A25;--sharetx:#BFE8CB;
   --font:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --side:256px;--sidebg:#111111;--navact:#1F201C;--top:64px;--r:18px;color-scheme:dark}
+  --side:256px;--sidebg:#121311;--navact:#262721;--top:64px;--r:18px;color-scheme:dark}
 :root[data-theme="light"]{--bg:#F3F3EE;--ink:#121311;--muted:#585A52;--dim:#7C7E75;--line:#E0E0D8;--line2:#C9C9BF;
   --card:#FFFFFF;--card2:#F2F2EC;--card3:#E7E7DF;--ok:#15803D;--warn:#B45309;--bad:#C2261D;--info:#1D5FD1;--violet:#7E22CE;
   --sidebg:#FFFFFF;--navact:#F1F1EA;--input:#FFFFFF;--glass:rgba(255,255,255,.95);--ytext:#7A5F00;--ybg:#FFF3B0;--okbg:#DCF5E3;--badbg:#FDE2E0;--sharebg:#EAF7EE;--shareline:#BFE3C9;--sharetx:#1F4D2C;color-scheme:light}
@@ -1236,3 +1236,33 @@ ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
   .pwarn{margin:4mm 0 0;padding:3mm;border:2px solid #E11D48;border-radius:6px;font-weight:700;color:#B91C1C}
   .fldprint footer{margin-top:4mm;font-size:8.5pt;color:#777}
 }
+
+/* ---------- eenvoudig menu: "Meer functies" ---------- */
+.navmore{margin-top:6px}
+.navmore>summary{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:11px;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer;list-style:none;user-select:none}
+.navmore>summary::-webkit-details-marker{display:none}
+.navmore>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s}
+.navmore[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
+.navmore>summary:hover{background:var(--card2);color:var(--ink)}
+.navmore>summary:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.sheet .navmore{grid-column:1/-1}.sheet .navin{display:grid;grid-template-columns:1fr 1fr;gap:4px}.sheet .navin .navgrp{grid-column:1/-1}
+@media (max-width:900px){.sheet .navin{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sheet .navmore>summary{background:var(--card2);margin-top:6px}}
+.gidsdlg{padding:24px 22px 20px}
+/* ---------- startgids ---------- */
+.gidsdlg{max-width:520px}
+.gids h2{margin:6px 0 4px;font-size:26px}.gids .sub{margin:0 0 14px;color:var(--muted)}
+.gdots{display:flex;gap:6px}.gdots i{width:22px;height:5px;border-radius:9px;background:var(--line2,var(--line))}.gdots i.on{background:var(--yellow)}
+.gl{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.gl li{display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line);border-left:4px solid var(--yellow);border-radius:12px;background:var(--card2)}
+.gl b{font-size:15px}.gl span{color:var(--muted);font-size:14px;line-height:1.45}
+@media (prefers-reduced-motion:reduce){.navmore>summary::after{transition:none}}
+
+/* ---------- donkere modus: duidelijker vlakken, randen en tekst ---------- */
+:root:not([data-theme="light"]) .side{border-right:1px solid var(--line)}
+:root:not([data-theme="light"]) .panel,:root:not([data-theme="light"]) .kpi,:root:not([data-theme="light"]) .list,:root:not([data-theme="light"]) .tile,:root:not([data-theme="light"]) .tr{box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 1px 2px rgba(0,0,0,.35)}
+:root:not([data-theme="light"]) .navgrp{color:#9B9D93}
+:root:not([data-theme="light"]) .chip:not([aria-pressed="true"]),:root:not([data-theme="light"]) .btn.ghost{border-color:var(--line2)}
+:root:not([data-theme="light"]) input:not([type=checkbox]):not([type=radio]):not([type=range]),:root:not([data-theme="light"]) select,:root:not([data-theme="light"]) textarea{border-color:var(--line2)}
+input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
+/* twee kaarten naast elkaar starten op dezelfde hoogte */
+.grid2>.panel+.panel,.grid3>.panel+.panel{margin-top:0}
