@@ -1274,3 +1274,6 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 .dganim .dgbadge svg,.excard .pic .dgbadge svg,.tplcard .dgbadge svg{width:15px!important;height:15px!important;border-radius:0!important;display:inline-block!important;flex:none}
 .dganim .dgbadge{white-space:nowrap;max-width:calc(100% - 16px)}
 .dganim .dgbadge{top:8px;bottom:auto}
+/* staand veld wordt in een kaart bijgesneden: het label hangt dan aan de kaart, niet aan de (hogere) tekening */
+.excard .pic,.tplcard .tstrip>div,.exvpic{position:relative}
+.excard .pic .dganim,.tplcard .tstrip .dganim{position:static}
