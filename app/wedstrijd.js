@@ -4,14 +4,18 @@
 
 /* ============ kalender ============ */
 let calFilter = "week", calType = "", calWeek = 0;
-function weekView(evs) { /* "Mijn planning": maandag tot zondag, zoals in PSD */
-  const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) + calWeek * 7), t = todayIso();
-  const days = [...Array(7)].map((_, i) => iso(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i)));
-  const wk = (() => { const d = new Date(Date.UTC(mon.getFullYear(), mon.getMonth(), mon.getDate() + 3)), y = new Date(Date.UTC(d.getUTCFullYear(), 0, 4)); return 1 + Math.round(((d - y) / 864e5 - 3 + (y.getUTCDay() + 6) % 7) / 7); })();
-  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost small" type="button" data-wk="-1" aria-label="Vorige week">‹</button><b style="font-size:17px">Week ${wk} · ${dShort(days[0])} – ${dShort(days[6])}</b><button class="btn ghost small" type="button" data-wk="1" aria-label="Volgende week">›</button>${calWeek ? `<button class="link" type="button" data-wk="0">Deze week</button>` : ""}</div>
-  <div class="week">${days.map(d => { const es = evs.filter(e => e.date === d).sort((a, b) => tm(a.start_time).localeCompare(tm(b.start_time)));
-    return `<div class="wd${d === t ? " today" : ""}"><div class="wh"><span>${parse(d).toLocaleDateString("nl-BE", { weekday: "short" })}</span><b>${dDay(d)}</b></div>${es.map(e => { const r = res(e);
-      return `<button type="button" class="wev ${e.type}${e.cancelled || e.rbfa_state === "afgelast" ? " off" : ""}" data-go="#/activiteit/${e.id}"><small>${tm(e.start_time)}${e.end_time ? "–" + tm(e.end_time) : ""}${e.series ? ` · <span title="Ingepland door de club">vast</span>` : ""}</small><b>${e.type === "wedstrijd" ? esc((e.home === false ? "@ " : "vs ") + (e.opponent || "Wedstrijd")) : esc(e.theme || "Training")}</b>${r ? `<span class="pill ${r}">${e.score_for}-${e.score_against}</span>` : e.location ? `<small>${esc(e.location)}</small>` : ""}</button>`; }).join("")}</div>`; }).join("")}</div>`;
+function weekView(evs) { /* "Mijn planning": vier weken onder elkaar, maandag tot zondag, zoals in PSD */
+  const now = new Date(), t = todayIso(), N = 4;
+  const mon0 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) + calWeek * 7);
+  const wkNr = mon => { const d = new Date(Date.UTC(mon.getFullYear(), mon.getMonth(), mon.getDate() + 3)), y = new Date(Date.UTC(d.getUTCFullYear(), 0, 4)); return 1 + Math.round(((d - y) / 864e5 - 3 + (y.getUTCDay() + 6) % 7) / 7); };
+  const weeks = [...Array(N)].map((_, w) => { const mon = new Date(mon0.getFullYear(), mon0.getMonth(), mon0.getDate() + w * 7);
+    return { mon, days: [...Array(7)].map((_, i) => iso(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i))) }; });
+  const first = weeks[0].days[0], last = weeks[N - 1].days[6];
+  const day = d => { const es = evs.filter(e => e.date === d).sort((a, b) => tm(a.start_time).localeCompare(tm(b.start_time)));
+    return `<div class="wd${d === t ? " today" : ""}${d < t ? " past" : ""}${es.length ? "" : " empty"}"><div class="wh"><span>${parse(d).toLocaleDateString("nl-BE", { weekday: "short" })}</span><b>${dDay(d)}</b></div>${es.map(e => { const r = res(e);
+      return `<button type="button" class="wev ${e.type}${e.cancelled || e.rbfa_state === "afgelast" ? " off" : ""}" data-go="#/activiteit/${e.id}"><small>${tm(e.start_time)}${e.end_time ? "–" + tm(e.end_time) : ""}${e.series ? ` · <span title="Ingepland door de club">vast</span>` : ""}</small><b>${e.type === "wedstrijd" ? esc((e.home === false ? "@ " : "vs ") + (e.opponent || "Wedstrijd")) : esc(e.theme || "Training")}</b>${r ? `<span class="pill ${r}">${e.score_for}-${e.score_against}</span>` : e.location ? `<small>${esc(e.location)}</small>` : ""}</button>`; }).join("")}</div>`; };
+  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost small" type="button" data-wk="-${N}" aria-label="Vorige vier weken">‹</button><b style="font-size:17px">${dShort(first)} – ${dShort(last)}</b><button class="btn ghost small" type="button" data-wk="${N}" aria-label="Volgende vier weken">›</button>${calWeek ? `<button class="link" type="button" data-wk="0">Vandaag</button>` : ""}</div>
+  ${weeks.map(w => `<div class="wkblock"><h3 class="wkh">Week ${wkNr(w.mon)} <small>${dShort(w.days[0])} – ${dShort(w.days[6])}</small></h3><div class="week">${w.days.map(day).join("")}</div></div>`).join("")}`;
 }
 route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   const t = todayIso();

@@ -1095,6 +1095,9 @@ a.navbtn{text-decoration:none}
 .fldb.wedstrijd{border-color:var(--yellow)}.fldb.clash{border-color:var(--s-bad,#E11D48);background:color-mix(in srgb,var(--s-bad,#E11D48) 14%,transparent)}
 .fldb.off{opacity:.45;text-decoration:line-through}.fld0{color:var(--muted);font-size:12px}
 @media (max-width:760px){.fldw{grid-template-columns:1fr}.fldd{flex-direction:row;flex-wrap:wrap;align-items:center}.fldd>small{width:56px}.fldd .fld0{display:none}.fldd:has(.fld0){display:none}}
+.wkblock+.wkblock{margin-top:16px}.wkh{margin:0 0 6px;font-size:15px;font-weight:800}.wkh small{font-weight:500;color:var(--muted);font-size:13px;margin-left:4px}
+.week .wd{min-height:118px}.wd.past{opacity:.7}
+@media (max-width:900px){.week .wd{min-height:0}.wd.empty{display:none}}
 .wev.off{opacity:.5}.wev.off b{text-decoration:line-through}
 .field button em.rs{font-style:normal;font-size:11px;font-weight:700;margin-left:4px;padding:1px 6px;border-radius:999px}
 .field button em.rs.ja{background:color-mix(in srgb,var(--s-ok,#16A34A) 25%,transparent)}.field button em.rs.nee{background:color-mix(in srgb,var(--s-bad,#E11D48) 25%,transparent)}
