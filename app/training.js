@@ -30,6 +30,20 @@ function exFromLib(L) { return { id: uid(), phase: L.map === "opwarming" ? "Opwa
   minutes: L.map === "thema" ? 60 : 15, org: L.bedoeling, size: L.veld || "", cats: L.principe ? ["TEAMTACTICS > " + PRINC[L.principe]] : L.thema ? ["BASICS > " + L.thema] : [] }; }
 const planMinutes = pl => (normPlan(pl).items || []).reduce((s, x) => s + exMinutes(x), 0);
 
+/* na het bewaren vragen of een nieuwe oefening of training in de clubbibliotheek mag */
+function askShare(row, kind = "oefening") {
+  /* wacht tot het venster van de tekentool dicht is: er is maar één venster tegelijk */
+  const free = () => new Promise(ok => { let n = 0; const t = () => (!$("#dlg")?.open || n++ > 20) ? ok() : setTimeout(t, 50); setTimeout(t, 30); });
+  return free().then(() => new Promise(res => { if (!row || row.shared) { res(false); return; }
+    const wat = kind === "training" ? "deze training" : "deze oefening";
+    const d = dialog(`<div class="dlg"><h2>Mag ${wat} in de trainingsbibliotheek?</h2><p class="muted" style="margin:0">Dan zien en gebruiken alle trainers van OG Vorselaar "${esc(row.title || "")}". Kies je nee, dan staat ${wat} alleen bij jou. Je kan dit later altijd aanpassen.</p>
+      <div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px"><button class="btn ghost" type="button" id="shNo">Nee, alleen voor mij</button><button class="btn" type="button" id="shYes">Ja, delen met de club</button></div></div>`);
+    let done = false; const fin = v => { if (done) return; done = true; d.close(); res(v); };
+    d.addEventListener("close", () => fin(false), { once: true });
+    $("#shNo", d).onclick = () => fin(false);
+    $("#shYes", d).onclick = async () => { const ok = await safe(async () => { await items.share(row, true); return true; }, kind === "training" ? "Training gedeeld in de clubbibliotheek." : "Oefening gedeeld in de clubbibliotheek."); fin(!!ok); };
+    $("#shYes", d).focus(); }));
+}
 route("trainingen", { title: "Trainingen maken", auth: true, team: true, render: async v => {
   /* Een training maken staat los van de kalender. Je kiest zelf of je ze op een training zet en of ze in de clubbibliotheek komt. */
   const t = todayIso(), hasPlan = e => normPlan(e.plan).items.length > 0;
@@ -47,7 +61,8 @@ route("trainingen", { title: "Trainingen maken", auth: true, team: true, render:
     (up.length ? `<div class="sec"><h2>Op de kalender</h2><div class="list">${up.slice(0, 12).map(it).join("")}</div></div>` : "") +
     (done.length ? `<div class="sec"><h2>Vorige trainingen</h2><div class="list">${done.map(it).join("")}</div></div>` : "");
   $("#mk1").onclick = () => exEditor({ id: uid(), phase: "", name: "", cats: [], minutes: 15, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } }, async x => {
-    const r = await safe(() => items.save({ kind: "oefening", title: x.name, data: exData(x) }), "Bewaard in je bibliotheek bij Van mij."); if (!r) return;
+    const r = await safe(() => items.save({ kind: "oefening", title: x.name, data: exData(x) }), "Oefening bewaard."); if (!r) return;
+    await askShare(r, "oefening");
     if (S.events.some(e => e.type === "training" && e.date >= todayIso())) toTraining({ ...JSON.parse(JSON.stringify(x)), id: uid() }, "Ook op een training zetten?"); });
   $("#mkT").onclick = async () => { const r = await safe(() => items.save({ kind: "training", title: "Nieuwe training", data: { v: 2, theme: "", items: [], ages: S.team?.category ? [S.team.category.toUpperCase().replace(/^P/, "")] : [] } })); if (r) go("#/sjabloon/" + r.id); };
   $$("[data-go]", v).forEach(x => x.onclick = ev => { if (ev.target.closest("[data-tpl]")) return; go(x.dataset.go); });
@@ -61,13 +76,19 @@ route("sjabloon", { title: "Training zonder datum", auth: true, team: true, rend
   if (!items.mine(row)) { go("#/bibliotheek"); setTimeout(() => tplView(row), 300); return; }
   const pseudo = { id: row.id, plan: normPlan(row.data), start_time: null, end_time: null, date: null };
   v.innerHTML = backLink("#/trainingen", "Trainingen maken") + head(esc(row.title), "Je training wordt vanzelf bewaard. Zet ze op een training in de kalender wanneer je wil.",
-    `<span class="hint" id="saved"></span><button class="btn" type="button" id="tplan">${IC.cal}Op een training zetten</button><button class="btn ghost small" type="button" id="tdel">Verwijderen</button>`) +
+    `<span class="hint" id="saved"></span><button class="btn ghost" type="button" id="tdone">Klaar</button><button class="btn" type="button" id="tplan">${IC.cal}Op een training zetten</button><button class="btn ghost small" type="button" id="tdel">Verwijderen</button>`) +
     `<div class="panel row tshare${row.shared ? " hl" : ""}" style="margin:0 0 14px"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="tsh"${row.shared ? " checked" : ""}>
       <span><b>In de trainingsbibliotheek van de club</b><br><span class="hint" id="tshh">${row.shared ? "Alle trainers van de club zien en gebruiken deze training." : "Staat uit: alleen jij ziet deze training."}</span></span></label></div><div id="tabv"></div>`;
   const save = debounce(async () => { row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) }; if (pseudo.plan.theme) { row.title = pseudo.plan.theme; const h1 = $("h1.pg"); if (h1) h1.textContent = row.title; }
     const ok = await safe(() => items.save(row)); const s2 = $("#saved"); if (ok && s2) { s2.textContent = "Opgeslagen"; setTimeout(() => s2 && (s2.textContent = ""), 1500); } }, 700);
   planEditor($("#tabv"), pseudo, { save, tpl: true });
   $("#tplan").onclick = () => { row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) }; tplSchedule(row); };
+  /* Klaar: één keer vragen of de training in de clubbibliotheek mag */
+  const askOnce = async () => { if (row.shared || row.data?.share_asked || !normPlan(pseudo.plan).items.length) return;
+    row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)), share_asked: true }; await safe(() => items.save(row)); await askShare(row, "training");
+    const cb = $("#tsh"); if (cb) cb.checked = !!row.shared; $(".tshare")?.classList.toggle("hl", !!row.shared); const h = $("#tshh"); if (h && row.shared) h.textContent = "Alle trainers van de club zien en gebruiken deze training."; };
+  $("#tdone").onclick = async () => { await askOnce(); go("#/trainingen"); };
+  const tp0 = $("#tplan").onclick; $("#tplan").onclick = async () => { await askOnce(); tp0(); };
   $("#tsh").onchange = async ev => { const on = ev.target.checked; row.data = { ...row.data, ...JSON.parse(JSON.stringify(pseudo.plan)) };
     const ok = await safe(async () => { await items.share(row, on); return true; }, on ? "Gedeeld in de clubbibliotheek." : "Niet meer gedeeld, alleen jij ziet ze nog.");
     if (!ok) ev.target.checked = !on; $(".tshare", v)?.classList.toggle("hl", !!row.shared); const h = $("#tshh", v); if (h) h.textContent = row.shared ? "Alle trainers van de club zien en gebruiken deze training." : "Staat uit: alleen jij ziet deze training."; };
@@ -139,7 +160,7 @@ async function planEditor(tv, e, opts = {}) {
       if (act === "down" && k < arr.length - 1) { [arr[k + 1], arr[k]] = [arr[k], arr[k + 1]]; change(); }
       if (act === "dup") { arr.splice(k + 1, 0, { ...JSON.parse(JSON.stringify(x)), id: uid() }); change(); }
       if (act === "del" && confirm(`"${x.name || "Oefening"}" uit deze training halen?`)) { arr.splice(k, 1); change(); }
-      if (act === "mine") safe(() => items.save({ kind: "oefening", title: x.name || "Oefening", data: exData(x) }), "Bewaard bij je oefeningen in de bibliotheek."); });
+      if (act === "mine") safe(() => items.save({ kind: "oefening", title: x.name || "Oefening", data: exData(x) }), "Bewaard bij je oefeningen in de bibliotheek.").then(r => r && askShare(r, "oefening")); });
     /* slepen met de muis */
     $$(".pl-row", tv).forEach(r => { r.ondragstart = ev => { dragId = r.dataset.id; r.classList.add("dragging"); ev.dataTransfer.effectAllowed = "move"; ev.dataTransfer.setData("text/plain", dragId); };
       r.ondragend = () => { dragId = null; r.classList.remove("dragging"); $$(".drop-before,.drop-after", tv).forEach(z => z.classList.remove("drop-before", "drop-after")); }; });
@@ -415,7 +436,7 @@ route("bibliotheek", { title: "Trainingsbibliotheek", render: async (v, id) => {
       <div id="lf"></div><p class="hint" id="cnt" style="margin:12px 0"></p><div id="grid"></div>`;
     $$("[data-type]", v).forEach(b => b.onclick = () => { f.type = b.dataset.type; f.soort = ""; f.theme = ""; lbSave(); shown = 36; shell(); });
     $$("[data-band]", v).forEach(b => b.onclick = () => { f.band = b.dataset.band; lbSave(); shown = 36; $$("[data-band]", v).forEach(x => x.setAttribute("aria-pressed", x === b)); bar(); grid(); });
-    const n = $("#new", v); if (n) n.onclick = () => exEditor({ id: uid(), phase: "Kern", name: "", cats: [], rest: 60, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } }, async x => { const r = await safe(() => items.save({ kind: "oefening", title: x.name, data: exData(x) }), "Oefening opgeslagen bij Van mij."); if (r) reload(); });
+    const n = $("#new", v); if (n) n.onclick = () => exEditor({ id: uid(), phase: "Kern", name: "", cats: [], rest: 60, diagram: { field: S.team?.format === "8v8" ? "8v8" : "5v5", objs: [] } }, async x => { const r = await safe(() => items.save({ kind: "oefening", title: x.name, data: exData(x) }), "Oefening bewaard."); if (r) { await askShare(r, "oefening"); reload(); } });
     bar(); grid();
   };
   const bar = () => { const base = D.list.filter(e => e.type === f.type), inBand = base.filter(e => libMatch(e, f, "theme"));
