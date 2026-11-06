@@ -1,5 +1,5 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v66";
+const CACHE = "ogv-platform-v67";
 const SHELL = ["./", "index.html", "app/app.css?v=66", "app/core.js?v=66", "app/ploeg.js?v=66", "app/cijfers.js?v=66", "app/wedstrijd.js?v=66", "app/leerplan.js?v=66", "app/teken.js?v=66", "app/training.js?v=66", "app/video.js?v=66", "app/map.js?v=66", "app/rbfa.js?v=66", "app/club.js?v=66", "app/evaluatie.js?v=66", "app/kennis.js?v=66", "app/ouders.js?v=66", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=66",
   "manifest.webmanifest", "icons/icon-192.png", "icons/logo.png", "icons/logo-dark.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
   "trainingen/trainingen.json", "matchday/", "tactiekbord/"];

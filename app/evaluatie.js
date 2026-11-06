@@ -67,10 +67,19 @@ async function evPut(e) {
 const evNew = (pid, m) => ({ id: uid(), team_id: S.team.id, player_id: pid, moment: m, date: todayIso(), scores: {}, comment: null });
 
 /* ============ overzicht ============ */
-let evMoment = null, evView = "spelers";
+let evMoment = null, evView = "spelers", evPub = { team: null, m: [], ok: null };
+function evPubHtml(m) {
+  if (evPub.ok === false) return `<div class="panel row evpub" style="margin:10px 0"><span class="hint">Delen met ouders en spelers kan pas nadat de beheerder <b>supabase-evaluaties-publiek.sql</b> uitvoerde.</span></div>`;
+  const on = evPub.m.includes(m);
+  return `<div class="panel row evpub${on ? " hl" : ""}" style="margin:10px 0"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="evPubT"${on ? " checked" : ""}${evPub.ok ? "" : " disabled"}>
+    <span><b>Zichtbaar in de ouder- en spelersapp</b><br><span class="hint">${on ? "Ouders en spelers zien nu hun eigen scores, sterktes, werkpunten en doelen van dit moment." : "Staat uit. Zet aan als de evaluaties af zijn en je ze wil delen. Privénotitie, niveau, advies en oudergesprek blijven altijd intern."}</span></span></label></div>`;
+}
 route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, pid, sub) => {
   if (evMoment == null) evMoment = evCurrent();
   if (pid) { if (+sub >= 1 && +sub <= EV_LAST) evMoment = +sub; return evForm(v, pid, evMoment); }
+  /* welke momenten de trainer zichtbaar zette voor ouders en spelers (lazy geladen per ploeg) */
+  if (evPub.team !== S.team.id) { evPub = { team: S.team.id, m: [], ok: null };
+    db.list("eval_publicaties", { team_id: S.team.id }).then(r => { evPub.m = r.map(x => x.moment); evPub.ok = true; render(); }).catch(() => { evPub.ok = false; render(); }); }
   const ps = active(), groups = evGroups(), names = evItems(), mo = EV_MOMENTS[evMoment - 1], w = evWindow(mo);
   const done = ps.filter(p => evDone(evOf(p.id, evMoment), names)).length, started = ps.filter(p => evStarted(evOf(p.id, evMoment))).length;
   const now = new Date(), open = now >= w.from && now <= w.to, late = now > w.to && done < ps.length, dfmt = d => d.toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
@@ -82,6 +91,7 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
       <span class="pr"><span style="width:${ps.length ? dn / ps.length * 100 : 0}%"></span></span><small class="ct">${dn ? dn + "/" + ps.length + " klaar" : st ? st + " bezig" : now > ww.to ? "niet gedaan" : "nog niet"}</small></button>`; }).join("")}</div>
   <div class="evhead"><div><h2 style="margin:0">${mo.naam}</h2><p class="hint" style="margin:2px 0 0">${open ? `Nu bezig · invullen tot ${dfmt(w.to)}` : now < w.from ? `Start op ${dfmt(w.from)}` : `Periode voorbij (${dfmt(w.from)} – ${dfmt(w.to)})`}${late && mo.verplicht ? ' · <b style="color:var(--bad)">nog niet afgerond</b>' : ""}</p></div>
     <div class="kpi mini"><small>Klaar</small><b>${done}<span>/${ps.length}</span></b></div><div class="kpi mini"><small>Gemiddelde ploeg</small><b>${f1(avg(ps.map(p => evAvgOf(evOf(p.id, evMoment), names)).filter(x => x != null)))}</b></div></div>
+  ${evPubHtml(evMoment)}
   <div class="ptabs" role="tablist">${[["spelers", "Per speler"], ["tabel", "Snel invullen"], ["ploeg", "Ploeganalyse"]].map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-selected="${evView === k}">${l}</button>`).join("")}</div><div id="evv"></div>`;
   const vv = $("#evv");
   if (!ps.length) vv.innerHTML = `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`;
@@ -104,6 +114,12 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
   $$("[data-v]", v).forEach(b => b.onclick = () => { evView = b.dataset.v; render(); });
   const up = $("#evUpgrade"); if (up) up.onclick = async () => { const t = S.team, old = t.criteria; t.criteria = EV_TEMPLATE.slice();
     if (await safe(async () => { await db.save("teams", t); return true; }, "Uitgebreide evaluatie staat aan.")) render(); else t.criteria = old; };
+  const pt = $("#evPubT"); if (pt) pt.onchange = async () => { const m = evMoment, on = pt.checked;
+    const ok = await safe(async () => {
+      if (mode === "demo") { if (on) await db.save("eval_publicaties", { team_id: S.team.id, moment: m, published_at: new Date().toISOString() }); else await db.del("eval_publicaties", { team_id: S.team.id, moment: m }); }
+      else { const { error } = await sb.rpc("set_eval_publicatie", { t: S.team.id, m, aan: on }); if (error) throw error; }
+      return true; }, on ? "Gedeeld met ouders en spelers." : "Niet meer zichtbaar voor ouders en spelers.");
+    if (ok) evPub.m = on ? [...new Set([...evPub.m, m])] : evPub.m.filter(x => x !== m); render(); };
   $("#evPrintAll").onclick = () => evPrint(ps.filter(p => evStarted(evOf(p.id, evMoment))), evMoment);
 } });
 function evTeamAnalysis(ps, groups, names) {
