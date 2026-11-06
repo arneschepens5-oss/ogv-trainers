@@ -1277,3 +1277,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 /* staand veld wordt in een kaart bijgesneden: het label hangt dan aan de kaart, niet aan de (hogere) tekening */
 .excard .pic,.tplcard .tstrip>div,.exvpic{position:relative}
 .excard .pic .dganim,.tplcard .tstrip .dganim{position:static}
+
+/* volgende activiteit: tekst krijgt de ruimte, knoppen schuiven op een smal scherm naar een eigen rij */
+.nextact{flex-wrap:wrap;align-items:center}
+.nextact .nxt{flex:1 1 220px;min-width:0}
+@media (max-width:600px){.nextact .nxt{flex-basis:calc(100% - 80px)}.nextact>.btn{flex:1 1 0}}

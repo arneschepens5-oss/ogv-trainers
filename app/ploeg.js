@@ -70,8 +70,8 @@ route("ploeg", { title: "Mijn ploeg", auth: true, team: true, render: v => {
   const best = rows.filter(r => r.rating).sort((a, b) => b.rating - a.rating).slice(0, 3);
   const lastM = [...ms].reverse()[0];
   v.innerHTML = head(esc(S.team.name), `${active().length} spelers · ${esc(S.team.format || "")} · seizoen ${esc(S.team.season || "")}`, `<a class="btn ghost" href="#/ploeg-instellingen">${IC.gear}Ploeg en trainers</a>`) +
-  (next ? `<div class="panel hl"><div class="row"><span class="date"><b>${dDay(next.date)}</b><small>${dMon(next.date)}</small></span>
-    <span style="flex:1;min-width:0"><small class="muted">${next.date === t ? "Vandaag" : "Volgende activiteit"}</small><b style="display:block;font-size:19px">${next.type === "wedstrijd" ? "Wedstrijd: " + matchTitle(next, "OGV") : "Training" + (next.theme ? ": " + esc(next.theme) : "")}</b>
+  (next ? `<div class="panel hl"><div class="row nextact"><span class="date"><b>${dDay(next.date)}</b><small>${dMon(next.date)}</small></span>
+    <span class="nxt"><small class="muted">${next.date === t ? "Vandaag" : "Volgende activiteit"}</small><b style="display:block;font-size:19px">${next.type === "wedstrijd" ? "Wedstrijd: " + matchTitle(next, "OGV") : "Training" + (next.theme ? ": " + esc(next.theme) : "")}</b>
     <small class="muted">${dLong(next.date)}${next.start_time ? ", " + tm(next.start_time) : ""}${next.location ? " · " + esc(next.location) : ""}</small></span>
     <a class="btn" href="#/activiteit/${next.id}">${next.type === "wedstrijd" ? "Voorbereiden" : "Openen"}</a>${next.type === "wedstrijd" ? `<a class="btn ghost" href="#/live/${next.id}">${IC.mic}Live</a>` : ""}</div></div>`
    : `<div class="empty"><b>Niets gepland</b>Zet je trainingen en wedstrijden in de kalender.<br><a class="btn" href="#/kalender">Naar de kalender</a></div>`) +
@@ -185,7 +185,7 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
   const t = S.team, mf = matchFormat(t);
   v.innerHTML = head("Ploeg en trainers", `${esc(t.name)} · ${esc([t.category, t.format, t.season].filter(Boolean).join(" · "))} · ${mf.periods} × ${mf.minutes} minuten`, `<button class="btn ghost" type="button" id="editT">Ploeg bewerken</button>`) +
   `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Wat zien andere trainers?</b><br>De uitslag en het wedstrijdverslag van elke wedstrijd zijn zichtbaar voor alle trainers van de club. Spelersfiches, trainingen, aanwezigheden en evaluaties blijven privé voor de trainers van deze ploeg.
-    <label class="check" style="margin-top:10px"><input type="checkbox" id="shareR"${t.share_ratings ? " checked" : ""}> Ook de spelersbeoordelingen van wedstrijden (cijfer en notities) delen met alle trainers</label></div></div>
+    <p style="margin:8px 0 0">Ook de cijfers en notities per speler bij wedstrijden zijn zichtbaar voor alle trainers van de club. Ouders en leden zonder ploeg (bv. een scout) zien ze niet.</p></div></div>
   <div class="grid2"><div class="panel"><h2>Trainers van deze ploeg</h2><div class="list">${S.trainers.map(x => `<div class="item static"><span class="main"><b>${esc(x.email || "Trainer")}</b>${x.user_id === user?.id ? "<small>jij</small>" : ""}</span></div>`).join("")}</div>
     ${S.admin ? `<form id="addTr" class="row" style="margin-top:12px"><input type="email" name="mail" required placeholder="e-mailadres co-trainer" style="flex:1;min-width:180px"><button class="btn">Toevoegen</button></form>
     <p class="hint">Als beheerder kan je ook alle ploegen beheren via <a href="#/clubbeheer/ploegen">Beheer → Ploegen en trainers</a>.</p>` : `<p class="hint" style="margin-bottom:0">Trainers toevoegen of weghalen doet de beheerder van de club. Stuur een melding via <b>Probleem melden</b> als er iemand bij moet of weg moet.</p>`}</div>
@@ -196,7 +196,7 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
   ${S.admin ? `<div class="sec panel"><h2>Nieuw seizoen</h2><p class="hint" style="margin-top:0">Schuif je spelers door naar een nieuwe ploeg voor volgend seizoen. Evaluaties en cijfers gaan mee als geschiedenis; deze ploeg blijft bewaard.</p><button class="btn ghost" type="button" id="season">${IC.rotate}Naar een nieuw seizoen</button></div>
   <div class="sec panel"><h2>Ploeg verwijderen</h2><p class="hint">Verwijdert de ploeg met alle spelers, activiteiten, aanwezigheden, evaluaties en doelen. Dit kan je niet ongedaan maken.</p><button class="btn danger" type="button" id="delT">Ploeg verwijderen</button></div>` : ""}`;
   $("#editT").onclick = () => teamForm(t); const se = $("#season"); if (se) se.onclick = seasonForm; rbfaPanel($("#rbfaP"));
-  $("#shareR").onchange = e => { t.share_ratings = e.target.checked; safe(() => db.save("teams", t), t.share_ratings ? "Spelersbeoordelingen worden gedeeld met alle trainers." : "Spelersbeoordelingen blijven privé."); };
+
   $("#saveLists").onclick = () => { t.criteria = $("#crit").value.split("\n").map(s => s.trim()).filter(Boolean); t.worktags = $("#tags").value.split("\n").map(s => s.trim()).filter(Boolean); safe(() => db.save("teams", t), "Opgeslagen."); };
   const at = $("#addTr"); if (at) at.onsubmit = async e => { e.preventDefault(); const mail = e.target.mail.value.trim();
     await safe(async () => { const r = await db.addTrainer(t.id, mail); if (r === "geen_account") { toast(mode === "demo" ? "In de demo kan je geen trainers toevoegen." : "Geen account gevonden voor " + mail + ". Vraag de beheerder om er een aan te maken."); return; }
