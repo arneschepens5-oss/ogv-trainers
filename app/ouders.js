@@ -308,6 +308,15 @@ function kkClashes(list) { const out = new Map(), use = [];
     const say = (me, ot) => out.set(me.x.id, `${me.k} is ook voor ${ot.who}${ot.x.id === me.x.id ? "" : " (" + ot.x.start + ")"}`); say(u, w); say(w, u); }
   return out; }
 const partTxt = x => { const k = fieldOf(x.location); return x.part && k ? partLong(x.part, k) : ""; };
+/* stil bewaren: geen melding bovenaan en geen herteken van de pagina (je blijft staan waar je zit) */
+async function quietSave(row, id, patch) {
+  const mark = (t, c) => { let s = row.querySelector(":scope > .fsaved"); if (!s) { s = document.createElement("small"); s.className = "fsaved"; s.setAttribute("aria-live", "polite"); s.style.cssText = "display:block;font-size:12px;font-weight:700;min-height:1.2em;margin-top:2px"; row.appendChild(s); }
+    s.textContent = t; s.style.color = c; clearTimeout(s._t); if (c !== "var(--bad, #C2261D)") s._t = setTimeout(() => { s.textContent = ""; }, 2200); };
+  mark("Bewaren…", "var(--muted)");
+  const ok = await safe(async () => { if (mode === "demo") await db.save("events", { id, ...patch }); else { const r = await sb.from("events").update(patch).eq("id", id); if (r.error) throw r.error; } return true; });
+  mark(ok ? "✓ Bewaard" : "Niet bewaard, probeer opnieuw", ok ? "var(--ok, #15803D)" : "var(--bad, #C2261D)");
+  if (ok) { const e = S.events.find(x => x.id === id); if (e) Object.assign(e, patch); S.club = null; }
+  return ok; }
 function overlaps(list) { const bad = new Set(), key = x => fieldOf(x.location) || x.location.trim().toLowerCase();
   const live = list.filter(x => !x.cancelled && x.location && minOf(x.start) != null);
   for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) { const a = live[i], b = live[j];
@@ -405,8 +414,7 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
     $$(".fpanel [data-tt]", v).forEach(b => b.onclick = () => { FLD_T = +b.dataset.tt; const w = $(".fpanel", v); w.outerHTML = panel(); bindPanel(); });
     $$("[data-pe]", v).forEach(row => $$("[data-k]", row).forEach(inp => inp.onchange = async () => {
       const id = row.dataset.pe, patch = { field_part: $("[data-k=p]", row).value || null, end_time: $("[data-k=e]", row).value || null, ...(V20() ? { kk_home: $("[data-k=kk]", row).value || null } : {}) };
-      const ok = await safe(async () => { if (mode === "demo") await db.save("events", { id, ...patch }); else { const r = await sb.from("events").update(patch).eq("id", id); if (r.error) throw r.error; } return true; }, "Opgeslagen.");
-      if (ok) { const e = S.events.find(x => x.id === id); if (e) Object.assign(e, patch); render(); } })); };
+      if (await quietSave(row, id, patch)) { const x = list.find(y => y.id === id); if (x) Object.assign(x, { part: patch.field_part, end: patch.end_time ? patch.end_time.slice(0, 5) : null, ...(V20() ? { kk_home: patch.kk_home } : {}) }); } })); };
   v.innerHTML = head("Terreinen", sub) +
     `<div class="row" style="gap:8px;margin-bottom:10px"><button class="ib" type="button" id="fwp" aria-label="Vorige week">${IC.chevl || "‹"}</button><b>${dShort(d1)} – ${dShort(d2)}</b><button class="ib" type="button" id="fwn" aria-label="Volgende week">${IC.chev}</button>${FLD_W ? `<button class="link" type="button" id="fw0">Deze week</button>` : ""}<span class="spacer"></span>${bad.size ? `<span class="pill loss">${bad.size} overlappend</span>` : list.length ? `<span class="pill w">geen overlap</span>` : ""}<button class="btn ghost small" type="button" id="fprint">${IC.print}Afdrukken</button></div>
     <div class="chips fdays">${days.map(dd => `<button class="chip" type="button" data-dd="${dd}" aria-pressed="${dd === FLD_DAY}">${dayLbl(dd)}${dd === today ? " · vandaag" : ""}</button>`).join("")}</div>
@@ -419,13 +427,14 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
     g.onclick = () => { FLD_T = null; pick(); }; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } }; });
   bindPanel();
   $("#fprint").onclick = () => printDialog(list, days, FLD_DAY);
-  if (S.admin) { matchAdmin($("#fmatches"), list.filter(x => x.type === "wedstrijd"), bad, d1, d2); $("#frb").onclick = rbfaAll; }
+  if (S.admin) { matchAdmin($("#fmatches"), list.filter(x => x.type === "wedstrijd"), bad, d1, d2, list); $("#frb").onclick = rbfaAll; }
 } });
-async function matchAdmin(host, ms, bad, d1, d2) {
+async function matchAdmin(host, ms, bad, d1, d2, all = ms) {
   ms = ms.sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
   if (!ms.length) { host.innerHTML = `<p class="hint">Geen thuiswedstrijden deze week. Haal ze op van RBFA met de knop hierboven.</p>`; return; }
-  const kc = kkClashes(ms), refs = [...new Set(ms.map(x => x.referee).filter(Boolean))];
-  host.innerHTML = `<datalist id="frefs">${refs.map(r => `<option value="${esc(r)}">`).join("")}<option value="Bondsscheidsrechter"><option value="Clubscheidsrechter"></datalist><div class="list">${ms.map(x => { const f = fieldOf(x.location); return `<div class="item static fma${bad.has(x.id) || kc.has(x.id) ? " clash" : ""}" data-m="${x.id}"><span class="main"><b>${esc(x.team)} – ${esc(x.opponent || "?")}</b><small>${new Date(x.date + "T12:00").toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}${x.cancelled ? " · afgelast" : ""}${bad.has(x.id) ? " · overlap op dit terrein" : ""}${kc.has(x.id) ? " · kleedkamer " + esc(kc.get(x.id)) : ""}</small></span>
+  let kc = kkClashes(ms); const refs = [...new Set(ms.map(x => x.referee).filter(Boolean))];
+  const flags = x => `${x.cancelled ? " · afgelast" : ""}${bad.has(x.id) ? " · overlap op dit terrein" : ""}${kc.has(x.id) ? " · kleedkamer " + esc(kc.get(x.id)) : ""}`;
+  host.innerHTML = `<datalist id="frefs">${refs.map(r => `<option value="${esc(r)}">`).join("")}<option value="Bondsscheidsrechter"><option value="Clubscheidsrechter"></datalist><div class="list">${ms.map(x => { const f = fieldOf(x.location); return `<div class="item static fma${bad.has(x.id) || kc.has(x.id) ? " clash" : ""}" data-m="${x.id}"><span class="main"><b>${esc(x.team)} – ${esc(x.opponent || "?")}</b><small>${new Date(x.date + "T12:00").toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}${flags(x)}</small></span>
     <span class="fmat"><input type="time" data-k="st" value="${esc(x.start || "")}" aria-label="Aftrap">${V19() ? `<span class="muted">tot</span><input type="time" data-k="et" value="${esc(x.end || "")}" aria-label="Veld vrij om" title="Tot hoe laat deze wedstrijd het veld gebruikt${x.end ? "" : " (leeg = geschat " + (x.start ? hhmm(endMin(x)) : "?") + ")"}">` : ""}</span>
     <select data-k="f" aria-label="Terrein"><option value="">Terrein…</option>${CLUB_FIELDS.map(F => `<option value="${F.k}"${F.k === f ? " selected" : ""}>${esc(F.name)}</option>`).join("")}</select>${V19() ? `<select data-k="p" aria-label="Deel van het veld">${partOpts(x.part, f)}</select>` : ""}
     ${V20() ? `<div class="fmx"><label><small>Kleedkamer ${esc(x.team)}</small><select data-k="kh">${kkOpts(x.kk_home)}</select></label><label><small>Kleedkamer ${esc(x.opponent || "bezoekers")}</small><select data-k="ka">${kkOpts(x.kk_away)}</select></label><label class="fref"><small>Scheidsrechter</small><input data-k="ref" list="frefs" value="${esc(x.referee || "")}" placeholder="naam of bond"></label></div>` : ""}</div>`; }).join("")}</div>
@@ -436,8 +445,15 @@ async function matchAdmin(host, ms, bad, d1, d2) {
     const patch = { start_time: st, ...(k ? { location: fieldName(k) + " · OG Vorselaar, Riemenstraat 89, Vorselaar", rbfa_loc: false } : {}),
       ...(V19() ? { end_time: $("[data-k=et]", row).value || null, field_part: $("[data-k=p]", row).value || null } : {}),
       ...(V20() ? { kk_home: $("[data-k=kh]", row).value || null, kk_away: $("[data-k=ka]", row).value || null, referee: $("[data-k=ref]", row).value.trim() || null } : {}) };
-    const ok = await safe(async () => { if (mode === "demo") await db.save("events", { id, ...patch }); else { const r = await sb.from("events").update(patch).eq("id", id); if (r.error) throw r.error; } return true; }, "Opgeslagen.");
-    if (ok) { const e = S.events.find(x => x.id === id); if (e) Object.assign(e, patch); S.club = null; render(); } }));
+    if (!(await quietSave(row, id, patch))) return;
+    const x = ms.find(y => y.id === id); if (!x) return;
+    Object.assign(x, { start: st ? st.slice(0, 5) : null, ...(patch.location ? { location: patch.location } : {}),
+      ...(V19() ? { end: patch.end_time ? patch.end_time.slice(0, 5) : null, part: patch.field_part } : {}),
+      ...(V20() ? { kk_home: patch.kk_home, kk_away: patch.kk_away, referee: patch.referee } : {}) });
+    /* waarschuwingen ter plaatse bijwerken, zonder de pagina te hertekenen */
+    bad = overlaps(all); kc = kkClashes(ms);
+    $$("[data-m]", host).forEach(r => { const y = ms.find(z => z.id === r.dataset.m); if (!y) return; r.classList.toggle("clash", bad.has(y.id) || kc.has(y.id));
+      const sm = $(".main small", r); if (sm) sm.innerHTML = new Date(y.date + "T12:00").toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" }) + flags(y); }); }));
 }
 
 /* ============ dagoverzicht afdrukken (om op de club op te hangen) ============ */
