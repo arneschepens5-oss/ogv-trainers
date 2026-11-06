@@ -313,13 +313,79 @@ async function quietSave(row, id, patch) {
   const mark = (t, c) => { let s = row.querySelector(":scope > .fsaved"); if (!s) { s = document.createElement("small"); s.className = "fsaved"; s.setAttribute("aria-live", "polite"); s.style.cssText = "display:block;font-size:12px;font-weight:700;min-height:1.2em;margin-top:2px"; row.appendChild(s); }
     s.textContent = t; s.style.color = c; clearTimeout(s._t); if (c !== "var(--bad, #C2261D)") s._t = setTimeout(() => { s.textContent = ""; }, 2200); };
   mark("Bewaren…", "var(--muted)");
-  const ok = await safe(async () => { if (mode === "demo") { await db.save("events", { id, ...patch }); return true; }
-    const r = await sb.rpc("zet_terreininfo", { ev: id, p: patch });
-    if (r.error && /zet_terreininfo/.test(r.error.message) && S.admin) { const u = await sb.from("events").update(patch).eq("id", id); if (u.error) throw u.error; return true; } /* script v24 nog niet uitgevoerd */
-    if (r.error) throw r.error; return true; });
+  const ok = await safe(() => saveEvField(id, patch));
   mark(ok ? "✓ Bewaard" : "Niet bewaard, probeer opnieuw", ok ? "var(--ok, #15803D)" : "var(--bad, #C2261D)");
   if (ok) { const e = S.events.find(x => x.id === id); if (e) Object.assign(e, patch); S.club = null; }
   return ok; }
+/* terreingegevens van één activiteit bewaren (via de functie met rechten "terreinen") */
+async function saveEvField(id, patch) {
+  if (mode === "demo") { await db.save("events", { id, ...patch }); return true; }
+  const r = await sb.rpc("zet_terreininfo", { ev: id, p: patch });
+  if (r.error && /zet_terreininfo/.test(r.error.message) && S.admin) { const u = await sb.from("events").update(patch).eq("id", id); if (u.error) throw u.error; return true; } /* script v24 nog niet uitgevoerd */
+  if (r.error) throw r.error; return true; }
+
+/* ============ weekend automatisch indelen ============
+   U6–U7: terrein 1 of 2 · U8–U9: een kwart per ploeg · U10–U13: een half veld · U14 en ouder: een heel veld.
+   Volgorde van de velden: B, dan A, dan KGV, dan C (E enkel als niets anders past). PU9 op zondag: onderste deel van het KGV.
+   Continuïteit: een ploeg krijgt eerst de plek waar ze de vorige weken het vaakst speelde, als die vrij is. */
+const AF_ORDER = ["B", "A", "D", "C", "E"];
+const teamAge = name => { const m = String(name || "").match(/U\s?(\d{1,2})/i); return m ? +m[1] : null; };
+function sizeOf(x) { const a = teamAge(x.team); if (a == null) return "full"; if (a <= 7) return "small"; if (a <= 9) return "q"; if (a <= 13) return "h"; return "full"; }
+const AF_PARTS = { small: [null], q: ["q1", "q2", "q3", "q4"], h: ["h1", "h2"], full: [null] };
+const afSpots = size => size === "small" ? [["1", null], ["2", null]] : AF_ORDER.flatMap(k => AF_PARTS[size].map(p => [k, p]));
+const afFits = (k, p, size) => size === "small" ? (k === "1" || k === "2") && !p : !["1", "2"].includes(k) && AF_PARTS[size].includes(p ?? null);
+function autoPlan(list, history, onlyEmpty) {
+  const wk = x => { const d = new Date(x.date + "T12:00").getDay(); return d === 0 || d === 6; };
+  /* "enkel lege": ook wedstrijden met een veld maar zonder kwart/helft terwijl de ploeg maar een deel nodig heeft */
+  const needsPart = x => { const k = fieldOf(x.location), z = sizeOf(x); return !!k && !x.part && (z === "q" || z === "h") && !["1", "2"].includes(k); };
+  const todo = list.filter(x => x.type === "wedstrijd" && wk(x) && !x.cancelled && minOf(x.start) != null && !(onlyEmpty && fieldOf(x.location) && !needsPart(x)));
+  const skipped = list.filter(x => x.type === "wedstrijd" && wk(x) && !x.cancelled && minOf(x.start) == null);
+  const ids = new Set(todo.map(x => x.id));
+  /* bezetting: alles wat al een terrein heeft en niet opnieuw ingedeeld wordt (ook trainingen) */
+  const occ = list.filter(x => !ids.has(x.id) && !x.cancelled && fieldOf(x.location) && minOf(x.start) != null).map(x => ({ date: x.date, k: fieldOf(x.location), m: partMask(x.part, fieldOf(x.location)), a: minOf(x.start), b: endMin(x) }));
+  const free = (x, k, p) => { const m = partMask(p, k), a = minOf(x.start), b = endMin(x); return !occ.some(o => o.date === x.date && o.k === k && (o.m & m) && a < o.b && o.a < b); };
+  /* vaste plek per ploeg uit de vorige weken */
+  const fav = new Map(); history.filter(h => h.type === "wedstrijd" && fieldOf(h.location)).forEach(h => { const key = h.team_id + "|" + fieldOf(h.location) + "|" + (h.part || ""); fav.set(key, (fav.get(key) || 0) + 1); });
+  const favOf = x => [...fav.entries()].filter(([key]) => key.startsWith(x.team_id + "|")).sort((a, b) => b[1] - a[1]).map(([key]) => { const [, k, p] = key.split("|"); return [k, p || null]; });
+  const rank = { full: 0, h: 1, q: 2, small: 3 };
+  todo.sort((a, b) => rank[sizeOf(a)] - rank[sizeOf(b)] || a.date.localeCompare(b.date) || (a.start || "").localeCompare(b.start || ""));
+  const out = [], fail = [];
+  for (const x of todo) { const size = sizeOf(x), sunday = new Date(x.date + "T12:00").getDay() === 0;
+    const pu9 = /\bPU9\b/i.test(x.team) && sunday ? [["D", "q3"], ["D", "q4"]] : [];
+    /* deze week al een plek voor dezelfde ploeg (andere dag)? dan die eerst */
+    const same = out.filter(o => o.x.team_id === x.team_id).map(o => [o.k, o.p]);
+    const own = onlyEmpty && needsPart(x) ? AF_PARTS[size].map(p => [fieldOf(x.location), p]) : []; /* veld al gekozen: enkel het vak erbij zoeken */
+    const cands = [...own, ...pu9, ...same, ...favOf(x).filter(([k, p]) => afFits(k, p, size)), ...afSpots(size)];
+    const hit = cands.find(([k, p]) => free(x, k, p));
+    if (!hit) { fail.push(x); continue; }
+    const [k, p] = hit; occ.push({ date: x.date, k, m: partMask(p, k), a: minOf(x.start), b: endMin(x) });
+    out.push({ x, k, p, kept: fieldOf(x.location) === k && (x.part || null) === p }); }
+  out.sort((a, b) => a.x.date.localeCompare(b.x.date) || (a.x.start || "").localeCompare(b.x.start || ""));
+  return { out, fail, skipped }; }
+async function autoFieldsDialog(list, d1) {
+  const wkm = list.filter(x => x.type === "wedstrijd" && [0, 6].includes(new Date(x.date + "T12:00").getDay()) && !x.cancelled);
+  if (!wkm.length) { toast("Geen thuiswedstrijden dit weekend."); return; }
+  let history = []; try { history = await fieldsData(iso(addDays(new Date(d1 + "T12:00"), -56)), iso(addDays(new Date(d1 + "T12:00"), -1))); } catch (e) {}
+  const hasSome = wkm.some(x => fieldOf(x.location));
+  const show = onlyEmpty => { const { out, fail, skipped } = autoPlan(list, history, onlyEmpty);
+    const day = x => new Date(x.date + "T12:00").toLocaleDateString("nl-BE", { weekday: "short", day: "numeric" });
+    const d = dialog(`<div class="dlg"><h2>Weekend automatisch indelen</h2>
+      <p class="muted" style="margin:0">U6–U7 op terrein 1 of 2, U8–U9 een kwart, U10–U13 een half veld, U14 en ouder een heel veld. Eerst B, dan A, dan KGV, dan C. Elke ploeg krijgt waar mogelijk dezelfde plek als de vorige weken.</p>
+      ${hasSome ? `<div class="chips" role="group" aria-label="Wat indelen"><button class="chip" type="button" data-om="1" aria-pressed="${onlyEmpty}">Enkel wat nog niet ingedeeld is</button><button class="chip" type="button" data-om="0" aria-pressed="${!onlyEmpty}">Alles opnieuw indelen</button></div>` : ""}
+      ${out.length ? `<div class="list" style="max-height:48dvh;overflow:auto">${out.map(o => `<div class="item static"><span class="main"><b>${esc(o.x.team)} – ${esc(o.x.opponent || "?")}</b><small>${day(o.x)} · ${esc(o.x.start)}</small></span><span class="val"><b>${esc(fieldName(o.k))}</b>${esc(o.p ? partLong(o.p, o.k) : "heel veld")}</span></div>`).join("")}</div>` : `<p class="hint">Niets om in te delen.</p>`}
+      ${fail.length ? `<p class="hint" style="color:var(--warn);margin:0">Geen vrije plek gevonden voor: ${fail.map(x => esc(x.team) + " (" + day(x) + " " + esc(x.start) + ")").join(", ")}. Deel die zelf in.</p>` : ""}
+      ${skipped.length ? `<p class="hint" style="margin:0">Zonder aftrapuur, dus overgeslagen: ${skipped.map(x => esc(x.team)).join(", ")}.</p>` : ""}
+      <p class="hint" style="margin:0">Je kan daarna alles nog met de hand aanpassen.</p>
+      <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn ghost" type="button" data-close>Annuleren</button>${out.length ? `<button class="btn" type="button" id="afgo">${out.length} wedstrijden indelen</button>` : ""}</div></div>`);
+    $$("[data-om]", d).forEach(b => b.onclick = () => show(b.dataset.om === "1"));
+    const go2 = $("#afgo", d); if (go2) go2.onclick = async () => { go2.disabled = true; go2.innerHTML = '<span class="spin"></span>Bezig…'; let ok = 0;
+      for (const o of out) { if (o.kept) { ok++; continue; }
+        const patch = { location: fieldName(o.k) + " · OG Vorselaar, Riemenstraat 89, Vorselaar", ...(V19() ? { field_part: o.p } : {}) };
+        if (await safe(() => saveEvField(o.x.id, patch))) { ok++; const e = S.events.find(z => z.id === o.x.id); if (e) Object.assign(e, patch); } }
+      d.close(); S.club = null; toast(`${ok} van ${out.length} wedstrijden ingedeeld. Pas aan wat je anders wil.`);
+      const y = scrollY; await render(); scrollTo(0, y); }; };
+  show(hasSome); }
+
 function overlaps(list) { const bad = new Set(), key = x => fieldOf(x.location) || x.location.trim().toLowerCase();
   const live = list.filter(x => !x.cancelled && x.location && minOf(x.start) != null);
   for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) { const a = live[i], b = live[j];
@@ -423,14 +489,15 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
     <div class="chips fdays">${days.map(dd => `<button class="chip" type="button" data-dd="${dd}" aria-pressed="${dd === FLD_DAY}">${dayLbl(dd)}${dd === today ? " · vandaag" : ""}</button>`).join("")}</div>
     <div class="fmapw"><div class="fmap">${clubMapSVG(stOf)}<div class="flegend"><span><i class="lg now"></i>nu bezig</span><span><i class="lg n">3</i>activiteiten die dag</span><span><i class="lg clash"></i>overlap</span><span><i class="lg kk"></i>kleedkamers</span></div></div>${panel()}</div>
     ${loose.length ? `<div class="sec panel"><h2>Niet op de plattegrond</h2><p class="hint" style="margin-top:0">Bij deze activiteiten staat geen terrein van de club (bv. "Terrein A" of "KGV").${mag("terreinen") ? " Wijs ze hieronder of in de kalender een terrein toe." : ""}</p><div class="fldlist">${loose.filter(x => x.date === FLD_DAY || !FLD_SEL).slice(0, 30).map(x => `<div class="fldb ${x.type}${x.cancelled ? " off" : ""}"><b>${dayLbl(x.date)} · ${x.start || "?"}</b><span>${esc(x.team)}</span><em>${esc(x.location || "geen plaats")}${x.type === "wedstrijd" ? " · vs " + esc(x.opponent || "") : ""}</em></div>`).join("")}</div></div>` : ""}
-    ${mag("terreinen") ? `<div class="sec panel" id="fadmin"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Thuiswedstrijden indelen</h2><p class="hint" style="margin:4px 0 0">Kies per thuiswedstrijd van deze week het terrein, de kleedkamers en de scheidsrechter. Het uur komt van RBFA (zoals in PSD); pas het aan als het anders afgesproken is. Ouders en trainers zien het terrein en hun kleedkamer meteen.</p></div>${S.admin ? `<button class="btn ghost small" type="button" id="frb">${IC.rotate}Alle wedstrijden ophalen van RBFA</button>` : ""}</div><div id="fmatches"><p class="hint">Laden…</p></div></div>` : ""}`;
+    ${mag("terreinen") ? `<div class="sec panel" id="fadmin"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Thuiswedstrijden indelen</h2><p class="hint" style="margin:4px 0 0">Kies per thuiswedstrijd van deze week het terrein, de kleedkamers en de scheidsrechter. Het uur komt van RBFA (zoals in PSD); pas het aan als het anders afgesproken is. Ouders en trainers zien het terrein en hun kleedkamer meteen.</p></div><div class="row" style="gap:6px"><button class="btn small" type="button" id="fauto">${IC.star}Weekend automatisch indelen</button>${S.admin ? `<button class="btn ghost small" type="button" id="frb">${IC.rotate}Alle wedstrijden ophalen van RBFA</button>` : ""}</div></div><div id="fmatches"><p class="hint">Laden…</p></div></div>` : ""}`;
   $("#fwp").onclick = () => { FLD_W--; render(); }; $("#fwn").onclick = () => { FLD_W++; render(); }; const z = $("#fw0"); if (z) z.onclick = () => { FLD_W = 0; render(); };
   $$("[data-dd]", v).forEach(b => b.onclick = () => { FLD_DAY = b.dataset.dd; FLD_T = null; render(); });
   $$(".pf", v).forEach(g => { const pick = () => { FLD_SEL = FLD_SEL === g.dataset.f ? null : g.dataset.f; render().then?.(() => {}); setTimeout(() => $(".fpanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); };
     g.onclick = () => { FLD_T = null; pick(); }; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } }; });
   bindPanel();
   $("#fprint").onclick = () => printDialog(list, days, FLD_DAY);
-  if (mag("terreinen")) { matchAdmin($("#fmatches"), list.filter(x => x.type === "wedstrijd"), bad, d1, d2, list); const rb = $("#frb"); if (rb) rb.onclick = rbfaAll; }
+  if (mag("terreinen")) { matchAdmin($("#fmatches"), list.filter(x => x.type === "wedstrijd"), bad, d1, d2, list); const rb = $("#frb"); if (rb) rb.onclick = rbfaAll;
+    const fa = $("#fauto"); if (fa) fa.onclick = () => autoFieldsDialog(list, d1); }
 } });
 async function matchAdmin(host, ms, bad, d1, d2, all = ms) {
   ms = ms.sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
