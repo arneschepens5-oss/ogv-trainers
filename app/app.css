@@ -1282,3 +1282,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 .nextact{flex-wrap:wrap;align-items:center}
 .nextact .nxt{flex:1 1 220px;min-width:0}
 @media (max-width:600px){.nextact .nxt{flex-basis:calc(100% - 80px)}.nextact>.btn{flex:1 1 0}}
+
+/* videoanalyse: spelers volgen */
+.mkrange{position:absolute;top:24px;height:5px;border-radius:4px;background:var(--c);opacity:.75;pointer-events:none}
+.tcol{width:22px;height:22px;border-radius:50%;background:var(--c);border:2px solid var(--line2);cursor:pointer;padding:0}
+.tcol[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--ink)}
+.vahold .btn{vertical-align:middle}
+.vaside .ptabs{overflow-x:auto;scrollbar-width:none}.vaside .ptabs::-webkit-scrollbar{display:none}.vaside .ptabs button{white-space:nowrap;flex:0 0 auto}
