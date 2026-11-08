@@ -1328,3 +1328,6 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
   .doslines{display:block;margin-top:14px}.doslines i{display:block;height:28px;border-bottom:1px solid #999}
   .dosnote .rate{border:1px solid #000}
 }
+/* Safari (iPhone) kneep de afbeelding van een oefening weg in een venster met beperkte hoogte */
+.excard>.pic{flex:none}
+.exs{grid-auto-rows:max-content;align-content:start}
