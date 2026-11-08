@@ -30,7 +30,6 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   if (!p) { v.innerHTML = `<div class="empty"><b>Speler niet gevonden</b><a class="link" href="#/dossier">Terug</a></div>`; return; }
   const s = playerStats(p), rows = matchRows(p.id), A = rows.map(x => x.a), idx = ps.findIndex(x => x.id === p.id);
   const prevP = idx > 0 ? ps[idx - 1] : null, nextP = idx >= 0 && idx < ps.length - 1 ? ps[idx + 1] : null;
-  const mf = matchFormat(S.team), full = mf.periods * mf.minutes;
   const age = p.birthdate ? Math.floor((Date.now() - parse(p.birthdate)) / 3.15576e10) : null;
   /* per groepje en per trainer */
   const bySquad = dosCount(rows.map(x => groupOf(x.e) || "Zonder groepje"));
@@ -38,8 +37,6 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const byRater = raters.map(r => { const xs = A.filter(a => a.rated_by === r); return { r, n: xs.length, avg: avg(xs.map(a => a.rating).filter(x => x != null)) }; });
   const unknownN = A.filter(a => !a.rated_by && (a.rating != null || a.note)).length;
   /* team-gemiddelden als vergelijkingspunt */
-  const teamMin = avg(ps.map(q => { const r = matchRows(q.id); return r.length ? r.reduce((t, x) => t + (+x.a.minutes || 0), 0) / r.length : null; }).filter(x => x != null));
-  const myMin = rows.length ? A.reduce((t, a) => t + (+a.minutes || 0), 0) / rows.length : null;
   const teamRate = avg(ps.map(q => playerStats(q).rating).filter(x => x != null));
   /* tags */
   const work = dosCount(A.flatMap(a => a.tags || [])), str = dosCount(A.flatMap(a => (a.strengths || []).filter(t => t !== "Kapitein")));
@@ -50,7 +47,6 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     .filter(x => x[1]).map(([k, t]) => ({ mo, k, t, by: (D.by_all || (D.by ? [D.by] : [])).join(", ") })); });
   const notes = rows.filter(x => x.a.note || x.a.rating != null).slice().reverse();
   const gs = S.goals.filter(g => g.player_id === p.id);
-  const share = rows.length && myMin != null ? Math.round(100 * myMin / full) : null;
 
   v.innerHTML = `<div class="row noprint" style="margin-bottom:10px;gap:8px">${backLink("#/dossier", "Alle dossiers")}<span class="spacer"></span>
       ${prevP ? `<a class="btn ghost small" href="#/dossier/${prevP.id}" title="${esc(pname(prevP))}">‹ Vorige</a>` : ""}${nextP ? `<a class="btn ghost small" href="#/dossier/${nextP.id}" title="${esc(pname(nextP))}">Volgende ›</a>` : ""}
@@ -59,10 +55,9 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   <div class="ph"><span class="num" style="width:60px;height:60px;border-radius:16px;background:var(--yellow);color:#000;font-size:26px;border:0">${p.number ?? ""}</span>
     <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">${esc([S.team.name, p.position, age != null ? age + " jaar" : "", p.birthdate ? "geboren " + parse(p.birthdate).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }) + " (" + qOf(p.birthdate) + ")" : ""].filter(Boolean).join(" · "))}</p>
     <p class="hint" style="margin:2px 0 0">Spelersdossier voor intern gebruik door de trainers · ${new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" })}</p></div></div>
-  <div class="kpis">
+  <div class="kpis dos3">
     <div class="kpi"><small>Aanwezig op training</small><b>${s.trTot ? s.trPct + "%" : "–"}</b><span>${s.trIn} van ${s.trTot}</span></div>
     <div class="kpi"><small>Wedstrijden</small><b>${s.matches}</b><span>${s.basis}× basis${s.matches ? " (" + pct(s.basis, s.matches) + "%)" : ""}</span></div>
-    <div class="kpi"><small>Speeltijd per wedstrijd</small><b>${myMin != null ? Math.round(myMin) + "'" : "–"}</b><span>${share != null ? share + "% van de wedstrijd" : ""}${teamMin != null ? " · ploeg " + Math.round(teamMin) + "'" : ""}</span></div>
     <div class="kpi"><small>Gemiddeld cijfer</small><b>${f1(s.rating)}</b><span>ploeg ${f1(teamRate)}${s.motm ? " · " + s.motm + "× man van de match" : ""}</span></div></div>
 
   <div class="grid2 sec">
