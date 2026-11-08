@@ -60,7 +60,7 @@ route("cijfers", { title: "Cijfers", auth: true, team: true, render: v => {
   const tr = trAll.map(e => { const as = S.att.filter(a => a.event_id === e.id); if (!as.length) return null; const n = as.filter(a => a.status === "aanwezig" || a.status === "te laat").length, of = P.length || as.length; return { e, n, of, p: pct(n, of) }; }).filter(Boolean);
   /* per speler */
   const rows = P.map(p => {
-    const ms = M.map(e => ({ e, a: attOf(e.id, p.id) })).filter(x => x.a && x.a.status === "aanwezig"), A = ms.map(x => x.a);
+    const ms = oneADay(M.map(e => ({ e, a: attOf(e.id, p.id) })).filter(x => x.a && x.a.status === "aanwezig")), A = ms.map(x => x.a);
     const trIn = tr.filter(t => { const a = attOf(t.e.id, p.id); return a && (a.status === "aanwezig" || a.status === "te laat"); }).length;
     const minutes = Math.round(A.reduce((s, a) => s + (+a.minutes || 0), 0)), goals = A.reduce((s, a) => s + (+a.goals || 0), 0), assists = A.reduce((s, a) => s + (+a.assists || 0), 0);
     const tags = {}; A.forEach(a => (a.tags || []).forEach(t => tags[t] = (tags[t] || 0) + 1));

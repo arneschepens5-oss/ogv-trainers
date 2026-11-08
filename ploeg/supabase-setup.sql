@@ -181,6 +181,8 @@ alter table public.attendance add column if not exists position    text;
 alter table public.attendance add column if not exists scores      jsonb not null default '{}';
 alter table public.attendance add column if not exists strengths   jsonb not null default '[]';
 alter table public.attendance add column if not exists player_name text;
+alter table public.attendance add column if not exists rated_by    text;
+alter table public.attendance add column if not exists rated_by_id uuid;
 
 -- Alle trainers zien de namen van alle ploegen, en alle wedstrijden met uitslag en verslag.
 drop policy if exists "ploeg lezen" on public.teams;

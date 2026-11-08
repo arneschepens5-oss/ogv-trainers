@@ -128,12 +128,12 @@ function bulkForm() {
 route("speler", { title: "Speler", auth: true, team: true, render: (v, id) => {
   const p = S.players.find(x => x.id === id); if (!p) { v.innerHTML = `<div class="empty"><b>Speler niet gevonden</b><a class="link" href="#/spelers">Terug naar spelers</a></div>`; return; }
   const s = playerStats(p), ev = S.evals.filter(x => x.player_id === p.id).sort((a, b) => a.moment - b.moment), gs = S.goals.filter(g => g.player_id === p.id);
-  const ms = past("wedstrijd").map(e => ({ e, a: attOf(e.id, p.id) })).filter(x => x.a && x.a.status === "aanwezig").reverse();
+  const ms = matchRows(p.id).reverse();
   const age = p.birthdate ? Math.floor((Date.now() - parse(p.birthdate)) / 3.15576e10) : null;
   const pil = PILLARS.map(k => [k, avg(ms.map(x => +x.a.scores?.[k]).filter(Boolean))]);
   v.innerHTML = backLink("#/spelers", "Spelers") + `<div class="ph"><span class="num" style="width:60px;height:60px;border-radius:16px;background:var(--yellow);color:#000;font-size:26px;border:0">${p.number ?? ""}</span>
    <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">${esc([p.position, p.foot ? p.foot + "voetig" : "", age != null ? age + " jaar" : ""].filter(Boolean).join(" · "))}</p></div>
-   <button class="btn ghost" type="button" id="editP">Fiche bewerken</button></div>
+   <a class="btn" href="#/dossier/${p.id}">${IC.book}Dossier</a><button class="btn ghost" type="button" id="editP">Fiche bewerken</button></div>
   <div class="kpis">
     <div class="kpi"><small>Aanwezig op training</small><b>${s.trTot ? s.trPct + "%" : "–"}</b><span>${s.trIn} van ${s.trTot}</span></div>
     <div class="kpi"><small>Wedstrijden</small><b>${s.matches}</b><span>${s.basis}× basis · ${s.minutes} min</span></div>
@@ -147,7 +147,7 @@ route("speler", { title: "Speler", auth: true, team: true, render: (v, id) => {
       <select data-gs="${g.id}" style="width:auto;padding:6px 8px;font-size:14px">${["bezig","gehaald","gestopt"].map(x => `<option${x === g.status ? " selected" : ""}>${x}</option>`).join("")}</select></div>`).join("")}</div>`
      : `<p class="hint">Zet een of twee concrete doelen per periode, bijvoorbeeld "met links leren passen over 10 meter".</p>`}</div></div>
   ${ms.length ? `<div class="sec"><h2>Wedstrijden</h2><div class="list">${ms.map(({ e, a }) => `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
-    <span class="main"><b>${e.report?.squad ? `<span class="pill g">${esc(e.report.squad)}</span> ` : ""}${esc(e.opponent || "Wedstrijd")}${e.report?.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b><small>${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · "))}</small>${a.note ? `<span class="notefull">${esc(a.note)}</span>` : ""}</span><span class="val"><b>${a.rating ?? "–"}</b>cijfer</span></div>`).join("")}</div></div>` : ""}
+    <span class="main"><b>${e.report?.squad ? `<span class="pill g">${esc(e.report.squad)}</span> ` : ""}${esc(e.opponent || "Wedstrijd")}${e.report?.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b><small>${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · "))}</small>${a.note ? `<span class="notefull">${esc(a.note)}</span>` : ""}${a.rated_by ? `<span class="rby">door ${esc(a.rated_by)}</span>` : ""}</span><span class="val"><b>${a.rating ?? "–"}</b>cijfer</span></div>`).join("")}</div></div>` : ""}
   ${contactsPanel(p)}${historyHtml(p)}`;
   $("#editP").onclick = () => playerForm(p); $("#addG").onclick = () => goalForm(p);
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));

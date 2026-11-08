@@ -61,6 +61,8 @@ function evCurrent(t = S.team) { const now = new Date();
 const evDelta = d => d == null ? "" : `<span class="dl ${d > 0.04 ? "up" : d < -0.04 ? "down" : ""}">${d > 0.04 ? "▲ +" : d < -0.04 ? "▼ " : "= "}${f1(Math.abs(d) < 0.05 ? 0 : d).replace(/^-/, "−")}</span>`;
 const evColor = v => v == null ? "var(--card3)" : v >= 4 ? "#34D17A" : v >= 3 ? "#A3D63B" : v >= 2.5 ? "#FFD100" : v >= 2 ? "#F59E0B" : "#F2615A";
 async function evPut(e) {
+  /* wie heeft deze evaluatie (mee) ingevuld? handig als twee trainers dezelfde ploeg volgen */
+  const nm = byName(); if (nm) { e.details = { ...(e.details || {}) }; e.details.by = nm; e.details.by_all = [...new Set([...(e.details.by_all || []), nm])]; }
   try { await db.save("evaluations", e); } catch (err) { throw /details|column/i.test(err.message || "") ? new Error("voer eerst ogv-update-v6.sql uit in Supabase") : err; }
   const i = S.evals.findIndex(x => x.player_id === e.player_id && x.moment === e.moment); if (i >= 0) S.evals[i] = e; else S.evals.push(e);
 }

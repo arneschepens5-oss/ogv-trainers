@@ -41,8 +41,9 @@ function notifyChange(before, after) {
 /* ============ convocatie per wedstrijd ============ */
 function convoTab(tv, e) {
   if (!V14()) { tv.innerHTML = needV14("De convocatie"); return; }
-  const ps = active(), C = e.convo || {}, home = e.home !== false;
-  const sel = new Set(C.players || ps.filter(p => rsvpOf(e.id, p.id)?.status !== "nee").map(p => p.id));
+  /* met groepjes (bv. PU9 A en B): enkel de spelers die niet in een ander groepje van die dag zitten */
+  const sib = siblings(e), ps = active().filter(p => !sib.some(x => isIn(attOf(x.id, p.id)))), C = e.convo || {}, home = e.home !== false;
+  const sel = new Set(C.players || ps.filter(p => sib.length ? isIn(attOf(e.id, p.id)) : rsvpOf(e.id, p.id)?.status !== "nee").map(p => p.id));
   const kick = tm(e.start_time), meetDef = kick ? (([h, m]) => { const t = h * 60 + m - 45; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); })(kick.split(":").map(Number)) : "";
   const v = { meet: C.meet ?? meetDef, place: C.place ?? (home ? "Kantine OG Vorselaar" : (e.location || "")), bring: C.bring ?? "Geel wedstrijdshirt, scheenbeschermers, drinkfles", note: C.note ?? "" };
   const paint = () => {

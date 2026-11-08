@@ -1289,3 +1289,41 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 .tcol[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--ink)}
 .vahold .btn{vertical-align:middle}
 .vaside .ptabs{overflow-x:auto;scrollbar-width:none}.vaside .ptabs::-webkit-scrollbar{display:none}.vaside .ptabs button{white-space:nowrap;flex:0 0 auto}
+/* groepjes per speeldag (bv. PU9 A en B) */
+.grpadd{display:flex;gap:12px;align-items:center;padding:14px 16px;margin-bottom:14px;border-radius:16px;border:1px dashed var(--line2);background:var(--card)}
+.grpadd .ic{color:var(--yellow);flex:none}.grpadd>div{flex:1;min-width:0}.grpadd b{display:block}.grpadd small{color:var(--muted);font-size:13px;line-height:1.4;display:block;margin-top:2px}
+.grp{margin-bottom:16px}
+.grpcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px}
+.grpcol{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--card2);border:1px solid var(--line);color:var(--ink);text-decoration:none;min-width:0}
+.grpcol.on{border-color:var(--yellow);box-shadow:inset 0 0 0 1px var(--yellow)}
+.grpcol .bdg{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--yellow);color:#000;font-weight:900}
+.grpcol>span:nth-child(2){flex:1;min-width:0}.grpcol b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.grpcol small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grpcol em{font-style:normal;font-weight:900;font-size:20px}
+.grpwarn{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--ink);font-size:13.5px}
+.grplist .item{padding-top:8px;padding-bottom:8px}
+.grpseg button{min-width:40px;font-weight:800}
+.grpseg button[aria-pressed="true"]:not(.grpnone){background:var(--yellow);border-color:var(--yellow);color:#000}
+.rby{font-size:12px;color:var(--dim);font-weight:600}
+/* spelersdossier */
+.dos .dosrow{display:flex;gap:6px;flex-wrap:wrap}
+.dos .dosh{font-size:13.5px;font-weight:700;color:var(--muted);margin:12px 0 6px}.dos .dosh:first-of-type{margin-top:4px}
+.dostbl{width:100%;border-collapse:collapse;font-size:14px}
+.dostbl th,.dostbl td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center}
+.dostbl th:first-child,.dostbl td:first-child{text-align:left}
+.dostbl td{font-weight:700}.dostbl td:first-child{font-weight:500;padding-left:18px}
+.dostbl tr.g td{background:var(--card2);font-weight:800}.dostbl tr.g td:first-child{padding-left:8px}
+.dostexts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px}
+.dostexts h3{font-size:14px;margin:0 0 4px}.dostexts p{margin:0;font-size:14px;line-height:1.5}
+.dosnotes{display:flex;flex-direction:column;gap:12px}
+.dosnote{display:flex;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line);break-inside:avoid}
+.dosnote:last-child{border-bottom:0;padding-bottom:0}
+.dosnote .rate{min-width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:900;font-size:18px;background:var(--rc,var(--card3));color:#111;flex:none}
+.dosnote>div{flex:1;min-width:0}.dosnote p{margin:4px 0;line-height:1.5;font-size:14.5px}
+.dosmeta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:14px}.dosmeta small{margin-left:auto}
+.doslines{display:none}
+@media print{
+  .dos .panel{border:1px solid #bbb;break-inside:avoid-page}
+  .dos .kpis{grid-template-columns:repeat(4,1fr)}
+  .doslines{display:block;margin-top:14px}.doslines i{display:block;height:28px;border-bottom:1px solid #999}
+  .dosnote .rate{border:1px solid #000}
+}

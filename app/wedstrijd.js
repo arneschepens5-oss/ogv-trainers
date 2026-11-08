@@ -40,6 +40,7 @@ function eventForm(e, forceNew) {
   <label class="f">Plaats<input name="location" list="fldnames" value="${esc(e.location || "")}" placeholder="bv. Terrein A of KGV"><datalist id="fldnames">${(typeof FIELD_NAMES !== "undefined" ? FIELD_NAMES : []).map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
   ${V19() ? `<label class="f">Deel van het veld<select name="field_part">${partOpts(e.field_part, fieldOf(e.location) || "A")}</select></label>` : ""}
   <label class="f wo">Tegenstander<input name="opponent" value="${esc(e.opponent || "")}"></label>
+  <label class="f wo">Groepje <span class="hint">(als je ploeg met 2 groepjes speelt)</span><input name="squad" list="squads" value="${esc(e.report?.squad || "")}" placeholder="bv. ${esc(teamLbl(S.team))} A"><datalist id="squads">${[...new Set(S.events.map(x => x.report?.squad).filter(Boolean))].sort().map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
   <label class="f wo">Thuis of uit<select name="home"><option value="1"${e.home !== false ? " selected" : ""}>Thuis</option><option value="0"${e.home === false ? " selected" : ""}>Uit</option></select></label>
   <label class="f full to">Thema<input name="theme" list="themes" value="${esc(e.theme || "")}" placeholder="bv. 1A Opbouw van achteruit"><datalist id="themes">${THEMES.map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
   ${n ? `<label class="f full to">Wekelijks herhalen tot <span class="hint">(leeg laten voor één keer)</span><input type="date" name="until"></label>` : ""}
@@ -56,7 +57,8 @@ function eventForm(e, forceNew) {
     const before = n ? null : { ...e };
     const dates = [f.date]; if (n && type === "training" && f.until) { let x = parse(f.date); for (;;) { x = addDays(x, 7); if (iso(x) > f.until || dates.length > 60) break; dates.push(iso(x)); } }
     let firstId;
-    await safe(async () => { for (const dt of dates) { const row = { ...(n ? { id: uid(), report: {} } : e), ...base, date: dt }; firstId = firstId || row.id; await putEvent(row); }
+    await safe(async () => { for (const dt of dates) { const row = { ...(n ? { id: uid(), report: {} } : e), ...base, date: dt }; firstId = firstId || row.id;
+        if (type === "wedstrijd") { row.report = { ...(row.report || {}) }; const sq = (f.squad || "").trim(); if (sq) row.report.squad = sq; else delete row.report.squad; } await putEvent(row); }
       d.close(); if (n && dates.length === 1) go("#/activiteit/" + firstId + (type === "training" ? "/plan" : "")); else render();
       if (before) notifyChange(before, S.events.find(x => x.id === e.id) || { ...e, ...base }); }, dates.length > 1 ? dates.length + " trainingen toegevoegd." : "Opgeslagen."); };
 }
@@ -90,20 +92,72 @@ function viewTraining(v, e, tab) {
   else attendanceView(tv, e);
 }
 function attendanceView(tv, e) {
-  const ps = active(), as = S.att.filter(a => a.event_id === e.id), c = s => as.filter(a => a.status === s).length;
-  tv.innerHTML = `<div class="row" style="margin-bottom:12px"><span class="muted" style="margin-right:auto" id="cnts">${c("aanwezig") + c("te laat")} aanwezig · ${c("verwittigd")} verwittigd · ${c("afwezig")} afwezig · ${c("geblesseerd")} geblesseerd · ${ps.length - as.length} nog niet ingevuld</span>
-    ${(rs => rs ? `<button class="btn ghost small" type="button" id="rsApply" title="Wie nog niet ingevuld is: komt = aanwezig, komt niet = verwittigd">Antwoorden ouders overnemen</button>` : "")(rsvpSummary(e))}<button class="btn small" type="button" id="allIn">Iedereen aanwezig</button></div>
+  const grp = e.type === "wedstrijd", sib = grp ? siblings(e) : [];
+  /* met groepjes: wie al in een ander groepje van die dag zit, hoort niet in deze lijst */
+  const ps = sib.length ? active().filter(p => !sib.some(x => isIn(attOf(x.id, p.id)))) : active();
+  const cntTxt = () => { const as = S.att.filter(a => a.event_id === e.id && ps.some(p => p.id === a.player_id)), c = s => as.filter(a => a.status === s).length;
+    return `${c("aanwezig") + c("te laat")} aanwezig · ${c("verwittigd")} verwittigd · ${c("afwezig")} afwezig · ${c("geblesseerd")} geblesseerd · ${ps.length - as.length} nog niet ingevuld`; };
+  tv.innerHTML = (grp ? `<div id="grpv"></div>` : "") + `<div class="row" style="margin-bottom:12px"><span class="muted" style="margin-right:auto" id="cnts">${cntTxt()}</span>
+    ${(rs => rs ? `<button class="btn ghost small" type="button" id="rsApply" title="Wie nog niet ingevuld is: komt = aanwezig, komt niet = verwittigd">Antwoorden ouders overnemen</button>` : "")(rsvpSummary(e))}<button class="btn small" type="button" id="allIn">${sib.length ? "Iedereen hierboven aanwezig" : "Iedereen aanwezig"}</button></div>
     ${(rs => rs ? `<div class="rsvpbar"><b>Ouders:</b> <span class="rsvp ja">${rs.ja} komen</span> <span class="rsvp nee">${rs.nee} komen niet</span> <span class="rsvp none">${rs.open} geen antwoord</span></div>` : "")(rsvpSummary(e))}
+    ${sib.length ? `<p class="hint" style="margin:0 0 10px">Spelers die in een ander groepje zitten, staan niet in deze lijst.</p>` : ""}
     ${ps.length ? `<div class="list">${ps.map(p => { const a = attOf(e.id, p.id);
       return `<div class="item static" data-p="${p.id}" style="flex-wrap:wrap"><span class="num">${p.number ?? ""}</span><span class="main" style="min-width:140px"><b>${esc(pname(p))}</b>${rsvpSummary(e) ? rsvpBadge(e, p) : ""}</span>
       <div class="seg">${STATUS.map(s => `<button type="button" data-s="${s}" aria-pressed="${a?.status === s}">${STATUS_L[s]}</button>`).join("")}</div></div>`; }).join("")}</div>`
-     : `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`}`;
-  const recount = () => { const as2 = S.att.filter(a => a.event_id === e.id), c2 = s => as2.filter(a => a.status === s).length;
-    $("#cnts").textContent = `${c2("aanwezig") + c2("te laat")} aanwezig · ${c2("verwittigd")} verwittigd · ${c2("afwezig")} afwezig · ${c2("geblesseerd")} geblesseerd · ${ps.length - as2.length} nog niet ingevuld`; };
+     : `<div class="empty"><b>${sib.length ? "Iedereen zit in een groepje" : "Nog geen spelers"}</b>${sib.length ? "" : `<a class="link" href="#/spelers">Voeg eerst je spelers toe</a>`}</div>`}`;
+  if (grp) groupPanel($("#grpv", tv), e);
+  const recount = () => { $("#cnts").textContent = cntTxt(); };
   $$("[data-p]", tv).forEach(row => $$(".seg button", row).forEach(b => b.onclick = async () => { const pid = row.dataset.p, old = attOf(e.id, pid) || { event_id: e.id, player_id: pid, team_id: S.team.id, tags: [], strengths: [], scores: {} };
-    const a = { ...old, status: b.dataset.s }; await safe(async () => { await putAtt(a); $$(".seg button", row).forEach(x => x.setAttribute("aria-pressed", x === b)); recount(); }); }));
+    const a = { ...old, status: b.dataset.s }; await safe(async () => { await putAtt(a); $$(".seg button", row).forEach(x => x.setAttribute("aria-pressed", x === b)); recount(); if (grp && sib.length) groupPanel($("#grpv", tv), e); }); }));
   const ra = $("#rsApply"); if (ra) ra.onclick = async () => { const n = await safe(() => rsvpApply(e)); if (n != null) { toast(n ? n + (n === 1 ? " antwoord" : " antwoorden") + " overgenomen." : "Iedereen met een antwoord is al ingevuld."); render(); } };
   $("#allIn").onclick = () => safe(async () => { for (const p of ps) { const a = attOf(e.id, p.id); if (!a || a.status !== "aanwezig") await putAtt({ ...(a || { event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {} }), status: "aanwezig" }); } render(); }, "Iedereen staat op aanwezig.");
+}
+
+/* ---------- groepjes: spelers per speeldag verdelen over de wedstrijden van die dag ---------- */
+const GROUP_LETTERS = ["A", "B", "C", "D"];
+const groupBase = e => { const g = groupOf(e) || dayMatches(e).map(groupOf).find(Boolean); return g ? g.replace(/\s+[A-D]$/i, "") : teamLbl(S.team); };
+const groupLetter = x => (groupOf(x).match(/\s([A-D])$/i) || [])[1]?.toUpperCase() || "";
+function groupPanel(host, e) {
+  if (!host) return;
+  const day = dayMatches(e).sort((a, b) => (groupOf(a) || "~").localeCompare(groupOf(b) || "~") || (a.start_time || "").localeCompare(b.start_time || ""));
+  if (day.length < 2) {
+    host.innerHTML = `<div class="grpadd noprint"><span class="ic">${IC.split}</span><div><b>Speelt je ploeg op deze dag met twee groepjes?</b><small>Voeg de wedstrijd van het andere groepje toe. Daarna verdeel je hier de spelers: wie bij de ene trainer speelt, telt niet mee bij de andere. Alles blijft in één ploeg.</small></div><button class="btn ghost small" type="button" id="grpAdd">${IC.plus}Tweede groepje</button></div>`;
+    $("#grpAdd", host).onclick = () => safe(async () => { const n = await addGroup(e); toast(`${groupOf(n)} toegevoegd. Verdeel nu de spelers.`); render(); });
+    return;
+  }
+  const ps = active(), lbl = x => groupOf(x) || "Zonder groepje", short = x => groupLetter(x) || lbl(x);
+  const where = p => day.filter(x => isIn(attOf(x.id, p.id)));
+  const cnt = x => ps.filter(p => isIn(attOf(x.id, p.id))).length, none = ps.filter(p => !where(p).length).length;
+  const dbl = ps.filter(p => where(p).length > 1);
+  host.innerHTML = `<div class="panel grp"><div class="row" style="margin-bottom:10px;gap:8px"><h2 style="margin:0;margin-right:auto">Verdeling over de groepjes</h2><span class="hint">${none ? none + " nog niet verdeeld" : "Iedereen is verdeeld"}</span></div>
+    <div class="grpcols">${day.map(x => `<a class="grpcol${x.id === e.id ? " on" : ""}" href="#/activiteit/${x.id}/aanwezig"><span class="bdg">${esc(short(x))}</span><span><b>${esc(lbl(x))}</b><small>${esc(x.opponent || "Tegenstander nog invullen")}${x.start_time ? " · " + tm(x.start_time) : ""}</small></span><em>${cnt(x)}</em></a>`).join("")}</div>
+    ${dbl.length ? `<p class="grpwarn">${dbl.length === 1 ? "1 speler staat" : dbl.length + " spelers staan"} in twee groepjes tegelijk (oude invoer). Tik het juiste groepje aan; wat in dat groepje genoteerd staat blijft bewaard.</p>` : ""}
+    <div class="list grplist">${ps.map(p => { const w = where(p);
+      return `<div class="item static" data-gp="${p.id}"><span class="num">${p.number ?? ""}</span><span class="main"><b>${esc(pname(p))}</b>${w.length > 1 ? `<small style="color:var(--warn)">staat in ${w.map(lbl).join(" én ")}</small>` : ""}</span>
+        <div class="seg grpseg">${day.map(x => `<button type="button" data-g="${x.id}" aria-pressed="${w.some(y => y.id === x.id)}" title="${esc(lbl(x))}">${esc(short(x))}</button>`).join("")}<button type="button" data-g="" aria-pressed="${!w.length}" class="grpnone">Niet mee</button></div></div>`; }).join("")}</div>
+    <p class="hint" style="margin:10px 0 0">Verplaats je een speler, dan verhuizen zijn cijfer en notities mee naar het nieuwe groepje. Cijfers, speeltijd en het spelersdossier tellen per speeldag maar één wedstrijd.</p></div>`;
+  $$("[data-gp]", host).forEach(row => $$("[data-g]", row).forEach(b => b.onclick = () => safe(async () => {
+    $$("[data-g]", row).forEach(x => x.disabled = true);
+    await moveGroup(e, row.dataset.gp, b.dataset.g || null); render(); })));
+}
+/* speler naar groepje (wedstrijd) tid verplaatsen, of uit alle groepjes van die dag halen (tid = null) */
+async function moveGroup(e, pid, tid) {
+  const rows = dayMatches(e).map(x => ({ x, a: attOf(x.id, pid) })), tgt = rows.find(r => r.x.id === tid);
+  const src = rows.find(r => r.x.id !== tid && isIn(r.a) && hasData(r.a)) || rows.find(r => r.x.id !== tid && isIn(r.a));
+  for (const r of rows) { if (r.x.id === tid || !r.a) continue;
+    if (tid || (isIn(r.a) && !hasData(r.a))) { await db.del("attendance", { event_id: r.x.id, player_id: pid }); S.att = S.att.filter(a => !(a.event_id === r.x.id && a.player_id === pid)); }
+    else if (isIn(r.a)) await putAtt({ ...r.a, status: "afwezig" }); }
+  if (!tid) return;
+  const keep = tgt.a && hasData(tgt.a) ? tgt.a : { ...(src?.a || {}) };
+  await putAtt({ tags: [], strengths: [], scores: {}, ...keep, event_id: tid, player_id: pid, team_id: S.team.id, status: keep.status === "te laat" ? "te laat" : "aanwezig" });
+}
+async function addGroup(e) {
+  const base = groupBase(e);
+  if (!groupOf(e)) { e.report = { ...(e.report || {}), squad: base + " A" }; await putEvent(e); }
+  const used = dayMatches(e).map(groupOf), letter = GROUP_LETTERS.find(l => !used.includes(base + " " + l)) || "B";
+  const n = { id: uid(), team_id: S.team.id, type: "wedstrijd", date: e.date, start_time: e.start_time || null, end_time: e.end_time || null, location: null, opponent: null,
+    home: e.home, report: { squad: base + " " + letter, ...(e.report?.kind ? { kind: e.report.kind } : {}) } };
+  await putEvent(n); return n;
 }
 
 /* ---------- wedstrijd ---------- */
@@ -120,7 +174,7 @@ function viewMatch(v, e, tab) {
 function reportTab(tv, e) {
   const R = e.report, sv = saver(e), ps = S.players;
   R.goals = R.goals || [];
-  const present = active().filter(p => { const a = attOf(e.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; });
+  const present = selPlayers(e);
   const opt = (sel) => `<option value="">–</option>${present.map(p => `<option value="${p.id}"${sel === p.id ? " selected" : ""}>${esc(pname(p))}</option>`).join("")}`;
   const draw = () => {
     const gf = R.goals.filter(g => g.side === "for").length, ga = R.goals.filter(g => g.side === "against").length;
@@ -180,7 +234,7 @@ function matchPlayersPanel(e) {
   return `<div class="sec panel mplayers"><div class="row" style="margin-bottom:6px"><h2 style="margin:0;margin-right:auto">Spelers</h2><span class="hint">${rows.length} gespeeld${av != null ? " · gemiddeld cijfer " + f1(av) : ""}</span><a class="btn ghost small noprint" href="#/activiteit/${e.id}/spelers">${IC.pen}Beoordelen</a></div>
     ${rows.map(({ p, a }) => `<div class="mp"><span class="rate${a.rating ? " on" : ""}" style="${a.rating ? `--rc:${a.rating >= 8 ? "#34D17A" : a.rating >= 6 ? "#A3D63B" : a.rating >= 5 ? "#FFD100" : "#F2615A"}` : ""}">${a.rating ?? "–"}</span>
       <div class="mpb"><div class="mph"><b>${esc(pname(p))}</b>${isCaptain(e, p, a) ? '<span class="pill w">Kapitein</span>' : ""}${e.report?.motm === p.id ? '<span class="pill w">Man van de match</span>' : ""}<small class="muted">${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : ""].filter(Boolean).join(" · "))}</small></div>
-      ${a.note ? `<p>${esc(a.note).replace(/\n/g, "<br>")}</p>` : `<p class="hint">Nog geen commentaar.</p>`}</div></div>`).join("")}</div>`;
+      ${a.note ? `<p>${esc(a.note).replace(/\n/g, "<br>")}</p>` : `<p class="hint">Nog geen commentaar.</p>`}${a.rated_by ? `<span class="rby">Beoordeeld door ${esc(a.rated_by)}</span>` : ""}</div></div>`).join("")}</div>`;
 }
 /* doelpunten en assists uit de lijst overnemen bij de spelers */
 async function syncGoalStats(e) {
@@ -191,11 +245,11 @@ async function syncGoalStats(e) {
     if ((row.goals || 0) !== g || (row.assists || 0) !== as) { row.goals = g || null; row.assists = as || null; await safe(() => putAtt(row)); } }
 }
 function playersTab(tv, e) {
-  const ps = active().filter(p => { const a = attOf(e.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; });
+  const ps = selPlayers(e);
   const absent = active().filter(p => !ps.includes(p));
   const card = p => { const a = attOf(e.id, p.id) || {};
     return `<details class="pcard" data-p="${p.id}"><summary><span class="num">${p.number ?? ""}</span><span style="flex:1;min-width:0"><b style="display:block">${esc(pname(p))}${e.report.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b>
-      ${a.note ? `<span class="notepv">${esc(a.note)}</span>` : ""}<small class="muted">${esc([a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld")}</small></span>
+      ${a.note ? `<span class="notepv">${esc(a.note)}</span>` : ""}<small class="muted">${esc([a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : "", a.rated_by ? "door " + a.rated_by : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld")}</small></span>
       <span class="rate${a.rating ? " on" : ""}">${a.rating ?? "–"}</span></summary>
     <div class="bd"><div class="stats">
       <label class="f">Rol<select data-k="role"><option value="">–</option><option${a.role === "basis" ? " selected" : ""}>basis</option><option${a.role === "wissel" ? " selected" : ""}>wissel</option></select></label>
@@ -212,10 +266,10 @@ function playersTab(tv, e) {
     ${absent.length ? `<p class="hint" style="margin-top:14px">Niet in de selectie: ${absent.map(p => esc(pname(p))).join(", ")}.</p>` : ""}`;
   $$(".pcard", tv).forEach(c => {
     const pid = c.dataset.p, get = () => ({ ...(attOf(e.id, pid) || { event_id: e.id, player_id: pid, team_id: S.team.id, status: "aanwezig", tags: [], strengths: [], scores: {} }) });
-    const refresh = () => { const a = attOf(e.id, pid) || {}; $("summary small", c).textContent = [a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld";
+    const refresh = () => { const a = attOf(e.id, pid) || {}; $("summary small", c).textContent = [a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : "", a.rated_by ? "door " + a.rated_by : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld";
       const rt = $(".rate", c); rt.textContent = a.rating ?? "–"; rt.classList.toggle("on", !!a.rating); };
     /* elke wijziging meteen lokaal bewaren, zodat snelle opeenvolgende tikken elkaar niet overschrijven */
-    const local = a => { if (a.status !== "aanwezig" && a.status !== "te laat") a.status = "aanwezig"; S.att = S.att.filter(z => !(z.event_id === e.id && z.player_id === pid)).concat([a]); refresh(); };
+    const local = a => { if (a.status !== "aanwezig" && a.status !== "te laat") a.status = "aanwezig"; a.rated_by = byName() || a.rated_by || null; a.rated_by_id = user?.id || a.rated_by_id || null; S.att = S.att.filter(z => !(z.event_id === e.id && z.player_id === pid)).concat([a]); refresh(); };
     const save = debounce(() => safe(() => putAtt({ ...attOf(e.id, pid) })), 500);
     $$("[data-k]", c).forEach(x => x.oninput = x.onchange = () => { const a = get(); a[x.dataset.k] = x.hasAttribute("data-n") ? (x.value === "" ? null : +x.value) : (x.value || null); local(a); save(); });
     $$("[data-rate]", c).forEach(b => b.onclick = () => { const a = get(); a.rating = a.rating === +b.dataset.rate ? null : +b.dataset.rate; $$("[data-rate]", c).forEach(x => x.setAttribute("aria-pressed", +x.dataset.rate === a.rating)); local(a); save(); });
@@ -244,7 +298,7 @@ function lineupTab(tv, e) {
   e.lineup = e.lineup && e.lineup.grid ? e.lineup : { periods: mf.periods, minutes: mf.minutes, grid: {} };
   const L = e.lineup, sv = saver(e), om = POS_OLD[S.team.format] || {};
   for (const id in L.grid) L.grid[id] = (L.grid[id] || []).map(x => om[x] || x);
-  const ps = active().filter(p => { const a = attOf(e.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; });
+  const ps = selPlayers(e);
   const draw = () => {
     const n = L.periods, half = n * L.minutes / 2;
     const issues = []; for (let k = 0; k < n; k++) { const used = ps.map(p => (L.grid[p.id] || [])[k]).filter(Boolean); const dup = used.filter((x, i) => used.indexOf(x) !== i); const miss = pos.filter(x => !used.includes(x));
@@ -312,7 +366,7 @@ function replay(L, now = Date.now()) {
 }
 const mmss = s => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
 function liveView(v, e) {
-  const team = S.team, mf = matchFormat(team), squad = active().filter(p => { const a = attOf(e.id, p.id); return !a || a.status === "aanwezig" || a.status === "te laat"; });
+  const team = S.team, mf = matchFormat(team), squad = selPlayers(e);
   try { const loc = JSON.parse(localStorage.getItem("ogv-live-" + e.id) || "null"); if (loc && (!e.live || (loc.log?.length || 0) > (e.live.log?.length || 0))) e.live = loc; } catch (x) {}
   const nOn = (POSLIST[team.format] || POSLIST["5v5"]).length;
   if (!e.live || !e.live.start) {

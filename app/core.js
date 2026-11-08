@@ -285,6 +285,24 @@ const active = () => S.players.filter(p => p.active !== false);
 const attOf = (e, p) => S.att.find(a => a.event_id === e && a.player_id === p);
 const past = type => S.events.filter(e => e.date <= todayIso() && !e.cancelled && (!type || e.type === type));
 const teamName = id => S.teams.find(t => t.id === id)?.name || "Ploeg";
+/* groepjes: een ploeg die op dezelfde dag meerdere wedstrijden speelt (bv. PU9 A bij de ene trainer, PU9 B bij de andere).
+   Alle spelers blijven in één ploeg; per speeldag zit elke speler in één groepje. */
+const dayMatches = e => e?.type === "wedstrijd" ? S.events.filter(x => x.type === "wedstrijd" && x.date === e.date && !x.cancelled && x.rbfa_state !== "afgelast") : [];
+const siblings = e => dayMatches(e).filter(x => x.id !== e.id);
+const isIn = a => !!a && (a.status === "aanwezig" || a.status === "te laat");
+/* zonder tweede groepje: iedereen die niet afgemeld is; met groepjes: enkel wie in dit groepje zit */
+const inSel = (e, p) => { const a = attOf(e.id, p.id); return a ? isIn(a) : !siblings(e).length; };
+const selPlayers = e => active().filter(p => inSel(e, p));
+const groupOf = e => e?.report?.squad || "";
+const byName = () => (typeof myName === "function" && myName()) || (user?.email || "").split("@")[0] || (mode === "demo" ? "Demo" : "");
+const hasData = a => !!a && (a.rating != null || a.minutes != null || !!a.note || (a.tags || []).length > 0 || a.goals != null);
+/* wedstrijden van een speler, één per speeldag: oude dubbele invoer (zelfde speler in A én B) telt maar één keer */
+function oneADay(list) {
+  const m = new Map(), w = x => (x.a.rating != null ? 4 : 0) + (x.a.minutes != null ? 2 : 0) + (x.a.note ? 1 : 0);
+  for (const it of list) { const cur = m.get(it.e.date); if (!cur || w(it) > w(cur)) m.set(it.e.date, it); }
+  return [...m.values()].sort((x, y) => x.e.date.localeCompare(y.e.date) || (x.e.start_time || "").localeCompare(y.e.start_time || ""));
+}
+const matchRows = pid => oneADay(past("wedstrijd").filter(e => e.rbfa_state !== "afgelast").map(e => ({ e, a: attOf(e.id, pid) })).filter(x => x.a && x.a.status === "aanwezig"));
 async function putAtt(a) { const p = S.players.find(x => x.id === a.player_id); if (p) a.player_name = pname(p);
   await db.save("attendance", a); const i = S.att.findIndex(x => x.event_id === a.event_id && x.player_id === a.player_id); if (i >= 0) S.att[i] = a; else S.att.push(a); }
 async function putEvent(e) { await db.save("events", e); const i = S.events.findIndex(x => x.id === e.id); if (i >= 0) S.events[i] = e; else S.events.push(e); sortEvents(); S.club = null; }
@@ -296,7 +314,7 @@ const matchTitle = (e, tname) => { const us = e.report?.squad ? "OGV " + e.repor
 function playerStats(p) {
   const tr = past("training").filter(e => S.att.some(a => a.event_id === e.id));
   const trIn = tr.filter(e => { const a = attOf(e.id, p.id); return a && (a.status === "aanwezig" || a.status === "te laat"); }).length;
-  const ms = past("wedstrijd").map(e => attOf(e.id, p.id)).filter(a => a && a.status === "aanwezig");
+  const ms = matchRows(p.id).map(x => x.a);
   const ev = S.evals.filter(x => x.player_id === p.id).sort((a, b) => a.moment - b.moment);
   const last = ev.length ? avg(Object.values(ev[ev.length - 1].scores || {}).map(Number)) : null;
   const tagc = {}; ms.forEach(a => (a.tags || []).forEach(t => tagc[t] = (tagc[t] || 0) + 1));
@@ -312,7 +330,7 @@ const ROUTES = {};
 function route(name, def) { ROUTES[name] = def; }
 const NAV = [
   { g: null, items: [["start", "Start", "home"]] },
-  { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"]] },
+  { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["dossier", "Spelersdossier", "book"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
