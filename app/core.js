@@ -401,7 +401,7 @@ function shell(fresh) {
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
-    <a class="brand" href="#/start">${LOGO("side")}<span><b>${esc(APPNAME())}</b><small>Jeugdwerking ${esc(clubName())}</small></span></a>${logged && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
+    <a class="brand" href="#/start">${LOGO("side")}<span><b>${esc(APPNAME())}</b><small>Jeugdwerking ${esc(clubName())}</small></span></a>${logged && S.platform && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
@@ -414,7 +414,7 @@ function shell(fresh) {
     ${[["start","Start","home"],["kalender","Kalender","cal"],["trainingen","Training","plan"],["matchday","Wedstrijdblad","sheet"]].map(([k,l,i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
-  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${logged && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${logged && S.platform && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
