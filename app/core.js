@@ -126,9 +126,12 @@ async function hydrateImgs(root = document) {
   els.forEach(e => { const c = fpCache.get(e.dataset.fp); if (c?.u) e.src = c.u; });
 }
 let hyT; new MutationObserver(() => { clearTimeout(hyT); hyT = setTimeout(() => hydrateImgs().catch(() => {}), 40); }).observe(document.documentElement, { childList: true, subtree: true });
+const CLUB_ITEMS = ["mixschema"];
 const items = {
   _c: {}, bust(kind) { if (kind) delete this._c[kind]; else this._c = {}; },
-  async list(kind) { const rows = await db.list("trainer_items", mode === "demo" ? { kind } : { kind, user_id: user.id }); return rows.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || "")); },
+  async list(kind) { /* een mixschema bevat spelers van de club: enkel die van de club waarin je nu werkt */
+    const q = mode === "demo" ? { kind } : { kind, user_id: user.id }; if (mode !== "demo" && CLUB_ITEMS.includes(kind) && CLUB.id) q.club_id = CLUB.id;
+    const rows = await db.list("trainer_items", q); return rows.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || "")); },
   async save(row) { this.bust(row.kind); row.updated_at = new Date().toISOString(); if (!row.id) row.id = uid(); if (mode === "demo") row.user_id = "demo"; else row.user_id = user.id; await db.save("trainer_items", row); return row; },
   async del(row) { this.bust(row.kind); if (row.file_path) await files.remove(row.file_path).catch(() => {}); await db.del("trainer_items", { id: row.id }); },
   /* eigen items plus wat andere trainers van de club gedeeld hebben */

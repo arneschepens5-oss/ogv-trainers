@@ -1335,3 +1335,29 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 .clubsw{display:flex;align-items:center;gap:8px;width:100%;margin:2px 0 10px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink-2,inherit);font:inherit;font-size:13px;font-weight:700;cursor:pointer}.clubsw:hover{border-color:var(--y,var(--yellow))}.clubsw .i{width:16px;height:16px}
 .dlg .list button.item{width:100%;text-align:left;background:var(--panel2,transparent);border:1px solid var(--line);color:var(--ink);font:inherit;cursor:pointer;border-radius:12px;margin-bottom:8px}.dlg .list button.item[aria-current="true"]{border-color:var(--y,var(--yellow));box-shadow:inset 3px 0 0 var(--y,var(--yellow))}.dlg .list button.item:hover{border-color:var(--y,var(--yellow))}
 .f input[type=color]{height:44px;padding:4px 6px;cursor:pointer;min-width:0}.f input[type=color]::-webkit-color-swatch-wrapper{padding:0}.f input[type=color]::-webkit-color-swatch{border:0;border-radius:8px}
+
+/* clubkleuren kiezen (Beheer > Club) */
+.palgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;margin:12px 0 16px}
+.pal{display:flex;flex-direction:column;padding:0;border-radius:14px;border:1px solid var(--line2);background:var(--card2);overflow:hidden;cursor:pointer;text-align:left;color:var(--ink)}
+.pal:hover{border-color:var(--dim)}
+.pal[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.pal .sw{display:flex;align-items:center;gap:5px;height:40px;padding:0 10px}
+.pal .sw i{display:block;height:12px;border-radius:999px;width:34px}
+.pal .sw i+i{width:16px}
+.pal b{font-size:13.5px;font-weight:700;padding:7px 10px 8px}
+.colf{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:16px}
+.cbox{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--card2)}
+.cbox .cl{font-weight:700;font-size:14.5px}
+.cbox small{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+.cin{display:flex;gap:8px;align-items:center}
+.cin input[type=color]{width:44px;height:44px;flex:none;padding:3px;border-radius:12px;border:1px solid var(--line2);background:var(--input);cursor:pointer}
+.cin input[type=color]::-webkit-color-swatch-wrapper{padding:0}.cin input[type=color]::-webkit-color-swatch{border:0;border-radius:9px}.cin input[type=color]::-moz-color-swatch{border:0;border-radius:9px}
+.cin .hex{flex:1;min-width:0;height:44px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.cbox.off .cin{opacity:.4}
+.tgl{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px;cursor:pointer;user-select:none}
+.tgl input{position:absolute;opacity:0;pointer-events:none}
+.tgl span{width:38px;height:22px;border-radius:999px;background:var(--line2);position:relative;flex:none;transition:background .15s}
+.tgl span:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.tgl input:checked+span{background:var(--yellow)}
+.tgl input:checked+span:after{transform:translateX(16px)}
+.tgl input:focus-visible+span{outline:2px solid var(--yellow);outline-offset:2px}

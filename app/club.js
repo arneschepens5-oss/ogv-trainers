@@ -134,6 +134,7 @@ function memberForm(m, rpc) {
 /* meldingen van trainers */
 let FB_F = "open";
 /* ============ club: naam, logo en kleur ============ */
+const CLUB_PALETTES = [["Geel", "#FFD100", "#111111"], ["Blauw", "#2F6FED", "#0B1E46"], ["Lichtblauw", "#38BDF8", "#0B2233"], ["Rood", "#E03131", "#3A0B0B"], ["Bordeaux", "#B0123F", "#2A0A14"], ["Groen", "#2FB344", "#0B2E17"], ["Paars", "#8E1A92", "#22082A"], ["Oranje", "#FF8A00", "#1A1208"]];
 function adminClub(host) {
   const st = CLUB.settings || {};
   host.innerHTML = `<form class="panel" id="clf" style="max-width:640px"><h2 style="margin-top:0">Gegevens van de club</h2>
@@ -141,24 +142,31 @@ function adminClub(host) {
     <label class="f">Officiële naam<input name="nm" required maxlength="80" value="${esc(CLUB.name || "")}"></label>
     <div class="row"><label class="f" style="flex:1">Korte naam (bv. OGV)<input name="sh" maxlength="12" value="${esc(CLUB.short || "")}"></label>
       <label class="f" style="flex:2">Naam in de app (bv. OG Vorselaar)<input name="full" maxlength="60" value="${esc(st.full || "")}" placeholder="${esc(CLUB.name || "")}"></label></div>
-    ${isOGV() ? `<p class="hint">OG Vorselaar gebruikt altijd de vaste clubkleuren geel en zwart.</p>` : ""}<div${isOGV() ? " hidden" : ""}><h3 style="margin:18px 0 6px">Kleuren van de app</h3><p class="hint" style="margin-top:0">De hoofdkleur gebruikt de app voor knoppen en accenten, de tweede kleur kleurt de achtergrond en de zijbalk een beetje. Je ziet het meteen; bewaar om het voor iedereen van de club te zetten.</p>
-    <div class="row"><label class="f" style="flex:1">Hoofdkleur<input name="color" type="color" value="${esc(st.color || "#FFD100")}"></label>
-      <label class="f" style="flex:1">Tweede kleur<input name="color2" type="color" value="${esc(st.color2 || "#111111")}"></label>
-      <label class="chk" style="flex:1;align-self:end;margin-bottom:12px"><input type="checkbox" name="use2"${st.color2 ? " checked" : ""}> Tweede kleur gebruiken</label></div>
-    <div class="row" style="gap:6px;margin:-4px 0 14px">${[["Geel/zwart", "#FFD100", "#111111"], ["Blauw/wit", "#2F6FED", "#0B1E46"], ["Rood/wit", "#E03131", "#3A0B0B"], ["Groen/wit", "#2FB344", "#0B2E17"], ["Paars/wit", "#8B5CF6", "#1E1240"], ["Oranje/zwart", "#FF8A00", "#1A1208"]].map(([l, a, b]) => `<button type="button" class="chip" data-pal="${a},${b}"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${a};box-shadow:4px 0 0 ${b};margin-right:8px"></span>${l}</button>`).join("")}</div></div>
-    <label class="f">Logo (PNG of JPG, vierkant werkt best)<input name="logo" type="file" accept="image/png,image/jpeg,image/webp"></label>
-    <div class="row" style="align-items:center;gap:12px"><span id="clprev">${LOGO("big")}</span>${st.logo ? `<button class="link" type="button" id="cllogox">Logo verwijderen</button>` : ""}</div>
+    ${isOGV() ? `<p class="hint">OG Vorselaar gebruikt altijd de vaste clubkleuren geel en zwart.</p>` : ""}<div${isOGV() ? " hidden" : ""}><h3 style="margin:22px 0 4px">Kleuren van de app</h3><p class="hint" style="margin-top:0">Kies de kleuren van je club. De hele app past zich meteen aan, zodat je het resultaat ziet. Met Bewaren geldt het voor iedereen van de club.</p>
+    <div class="palgrid" role="group" aria-label="Kant-en-klare kleuren">${CLUB_PALETTES.map(([l, a, b]) => `<button type="button" class="pal" data-pal="${a},${b}" aria-pressed="false"><span class="sw" style="background:${b}"><i style="background:${a}"></i><i style="background:${a};opacity:.45"></i></span><b>${l}</b></button>`).join("")}</div>
+    <div class="colf"><div class="cbox"><span class="cl">Hoofdkleur</span><small>Knoppen, accenten en het actieve menu</small><div class="cin"><input name="color" type="color" value="${esc(st.color || "#FFD100")}" aria-label="Hoofdkleur"><input name="colorx" class="hex" maxlength="7" spellcheck="false" value="${esc((st.color || "#FFD100").toUpperCase())}" aria-label="Hoofdkleur als code"></div></div>
+      <div class="cbox"><span class="cl">Tweede kleur</span><small>Kleurt achtergrond en zijbalk een beetje</small><div class="cin"><input name="color2" type="color" value="${esc(st.color2 || "#111111")}" aria-label="Tweede kleur"><input name="color2x" class="hex" maxlength="7" spellcheck="false" value="${esc((st.color2 || "#111111").toUpperCase())}" aria-label="Tweede kleur als code"></div>
+        <label class="tgl"><input type="checkbox" name="use2"${st.color2 ? " checked" : ""}><span></span>Tweede kleur gebruiken</label></div></div></div>
+    <h3 style="margin:4px 0 4px">Logo</h3><p class="hint" style="margin-top:0">PNG of JPG, een vierkant beeld werkt het best. Zonder logo maakt de app een schild in je clubkleuren.</p>
+    <div class="row" style="align-items:center;gap:14px"><span id="clprev">${LOGO("big")}</span><label class="btn ghost small" style="cursor:pointer">${IC.plus}Logo kiezen<input name="logo" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="link" type="button" id="cllogox"${st.logo ? "" : " hidden"}>Logo verwijderen</button></div>
     <div class="row" style="justify-content:flex-end"><button class="btn">Bewaren</button></div></form>`;
   let logo = st.logo || "";
   const f = $("#clf");
   f.logo.onchange = async () => { const file = f.logo.files[0]; if (!file) return;
     try { const img = await createImageBitmap(file), S2 = 160, c = document.createElement("canvas"); c.width = c.height = S2; const k = Math.min(S2 / img.width, S2 / img.height);
       c.getContext("2d").drawImage(img, (S2 - img.width * k) / 2, (S2 - img.height * k) / 2, img.width * k, img.height * k); logo = c.toDataURL("image/png");
-      $("#clprev").innerHTML = `<span class="ogvlogo big"><img src="${logo}" alt=""></span>`; } catch (e) { toast("Dit beeld kan niet gelezen worden."); } };
-  const lx = $("#cllogox"); if (lx) lx.onclick = () => { logo = ""; $("#clprev").innerHTML = ""; };
-  const orig = { ...st }, preview = () => { CLUB.settings = { ...st, color: f.color.value, color2: f.use2.checked ? f.color2.value : undefined }; applyClubTheme(); };
-  f.color.oninput = preview; f.color2.oninput = () => { f.use2.checked = true; preview(); }; f.use2.onchange = preview;
-  $$("[data-pal]", f).forEach(b => b.onclick = () => { const [a, c] = b.dataset.pal.split(","); f.color.value = a; f.color2.value = c; f.use2.checked = true; preview(); });
+      $("#clprev").innerHTML = `<span class="ogvlogo big"><img src="${logo}" alt=""></span>`; $("#cllogox").hidden = false; } catch (e) { toast("Dit beeld kan niet gelezen worden."); } };
+  const lx = $("#cllogox"); if (lx) lx.onclick = () => { logo = ""; lx.hidden = true; const keep = CLUB.settings; CLUB.settings = { ...keep, logo: undefined }; $("#clprev").innerHTML = LOGO("big"); CLUB.settings = keep; };
+  const orig = { ...st }, preview = () => { CLUB.settings = { ...st, color: f.color.value, color2: f.use2.checked ? f.color2.value : undefined }; applyClubTheme();
+    if (!logo) { const keep = CLUB.settings; CLUB.settings = { ...keep, logo: undefined }; $("#clprev").innerHTML = LOGO("big"); CLUB.settings = keep; } };
+  const sync = () => { f.colorx.value = f.color.value.toUpperCase(); f.color2x.value = f.color2.value.toUpperCase(); f.color2.closest(".cbox").classList.toggle("off", !f.use2.checked);
+    $$("[data-pal]", f).forEach(x => x.setAttribute("aria-pressed", String(x.dataset.pal.toLowerCase() === (f.color.value + "," + f.color2.value).toLowerCase() && f.use2.checked))); };
+  const upd = () => { sync(); preview(); };
+  f.color.oninput = upd; f.color2.oninput = () => { f.use2.checked = true; upd(); }; f.use2.onchange = upd;
+  const hexIn = (x, c, two) => x.oninput = () => { let h = x.value.trim(); if (h[0] !== "#") h = "#" + h; if (/^#[0-9a-f]{6}$/i.test(h)) { c.value = h.toLowerCase(); if (two) f.use2.checked = true; sync(); x.value = h.toUpperCase(); preview(); } };
+  hexIn(f.colorx, f.color); hexIn(f.color2x, f.color2, true); [f.colorx, f.color2x].forEach(x => x.onblur = sync);
+  $$("[data-pal]", f).forEach(b => b.onclick = () => { const [a, c] = b.dataset.pal.split(","); f.color.value = a.toLowerCase(); f.color2.value = c.toLowerCase(); f.use2.checked = true; upd(); });
+  sync();
   const restore = () => { if (!f.isConnected && CLUB.settings !== orig && !f.dataset.saved) { CLUB.settings = orig; applyClubTheme(); removeEventListener("hashchange", restore); } };
   addEventListener("hashchange", () => setTimeout(restore, 0));
   f.onsubmit = async e => { e.preventDefault(); if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
