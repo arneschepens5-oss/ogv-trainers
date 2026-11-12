@@ -4,7 +4,7 @@
 
 /* ============ registreren met de clubcode ============ */
 function viewRegister(v) {
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
   <form id="rf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" placeholder="bv. Jelle Lauwers"></label>
    <label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" required minlength="8" autocomplete="new-password"></label>
@@ -18,14 +18,14 @@ function viewRegister(v) {
     const code = f.code.value.trim().toUpperCase(); try { localStorage.setItem("ogv-invite", code); } catch (x) {}
     try { const { data, error } = await sb.auth.signUp({ email: f.email.value.trim(), password: f.pw.value, options: { data: { invite: code, full_name: f.nm.value.trim().replace(/\s+/g, " ") }, emailRedirectTo: location.origin + location.pathname } });
       if (error) err.textContent = /not allowed|disabled/i.test(error.message) ? "Registreren staat nog uit. Vraag de beheerder om het aan te zetten in Supabase." : /already registered|exists/i.test(error.message) ? "Er bestaat al een account met dit e-mailadres. Meld je aan." : /password/i.test(error.message) ? "Kies een sterker wachtwoord (minstens 8 tekens)." : error.message;
-      else if (!data.session) v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
+      else if (!data.session) v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
     catch (x) { err.textContent = "Registreren lukt niet: controleer je internetverbinding."; }
     finally { if (err.textContent) { btn.disabled = false; btn.textContent = "Account aanmaken"; } } };
 }
 /* account bestaat maar is nog geen lid van de club */
 function viewJoin(v) {
   let saved = ""; try { saved = localStorage.getItem("ogv-invite") || ""; } catch (x) {}
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
   <form id="jf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
   <div class="row"><button class="link" type="button" data-logout>Afmelden</button></div></div>`;
   $("[data-logout]", v).onclick = logout;
@@ -37,7 +37,7 @@ function viewJoin(v) {
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club) { Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club) { Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
     if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
@@ -141,8 +141,12 @@ function adminClub(host) {
     <label class="f">Officiële naam<input name="nm" required maxlength="80" value="${esc(CLUB.name || "")}"></label>
     <div class="row"><label class="f" style="flex:1">Korte naam (bv. OGV)<input name="sh" maxlength="12" value="${esc(CLUB.short || "")}"></label>
       <label class="f" style="flex:2">Naam in de app (bv. OG Vorselaar)<input name="full" maxlength="60" value="${esc(st.full || "")}" placeholder="${esc(CLUB.name || "")}"></label></div>
-    <div class="row"><label class="f" style="flex:1">Clubkleur<input name="color" type="color" value="${esc(st.color || "#0F3D2E")}"></label>
-      <label class="f" style="flex:2">Logo (PNG of JPG, vierkant werkt best)<input name="logo" type="file" accept="image/png,image/jpeg,image/webp"></label></div>
+    <h3 style="margin:18px 0 6px">Kleuren van de app</h3><p class="hint" style="margin-top:0">De hoofdkleur gebruikt de app voor knoppen en accenten, de tweede kleur kleurt de achtergrond en de zijbalk een beetje. Je ziet het meteen; bewaar om het voor iedereen van de club te zetten.</p>
+    <div class="row"><label class="f" style="flex:1">Hoofdkleur<input name="color" type="color" value="${esc(st.color || "#FFD100")}"></label>
+      <label class="f" style="flex:1">Tweede kleur<input name="color2" type="color" value="${esc(st.color2 || "#111111")}"></label>
+      <label class="chk" style="flex:1;align-self:end;margin-bottom:12px"><input type="checkbox" name="use2"${st.color2 ? " checked" : ""}> Tweede kleur gebruiken</label></div>
+    <div class="row" style="gap:6px;margin:-4px 0 14px">${[["Geel/zwart", "#FFD100", "#111111"], ["Blauw/wit", "#2F6FED", "#0B1E46"], ["Rood/wit", "#E03131", "#3A0B0B"], ["Groen/wit", "#2FB344", "#0B2E17"], ["Paars/wit", "#8B5CF6", "#1E1240"], ["Oranje/zwart", "#FF8A00", "#1A1208"]].map(([l, a, b]) => `<button type="button" class="chip" data-pal="${a},${b}"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${a};box-shadow:4px 0 0 ${b};margin-right:8px"></span>${l}</button>`).join("")}</div>
+    <label class="f">Logo (PNG of JPG, vierkant werkt best)<input name="logo" type="file" accept="image/png,image/jpeg,image/webp"></label>
     <div class="row" style="align-items:center;gap:12px"><span id="clprev">${LOGO("big")}</span>${st.logo ? `<button class="link" type="button" id="cllogox">Logo verwijderen</button>` : ""}</div>
     <div class="row" style="justify-content:flex-end"><button class="btn">Bewaren</button></div></form>`;
   let logo = st.logo || "";
@@ -152,11 +156,16 @@ function adminClub(host) {
       c.getContext("2d").drawImage(img, (S2 - img.width * k) / 2, (S2 - img.height * k) / 2, img.width * k, img.height * k); logo = c.toDataURL("image/png");
       $("#clprev").innerHTML = `<span class="ogvlogo big"><img src="${logo}" alt=""></span>`; } catch (e) { toast("Dit beeld kan niet gelezen worden."); } };
   const lx = $("#cllogox"); if (lx) lx.onclick = () => { logo = ""; $("#clprev").innerHTML = ""; };
+  const orig = { ...st }, preview = () => { CLUB.settings = { ...st, color: f.color.value, color2: f.use2.checked ? f.color2.value : undefined }; applyClubTheme(); };
+  f.color.oninput = preview; f.color2.oninput = () => { f.use2.checked = true; preview(); }; f.use2.onchange = preview;
+  $$("[data-pal]", f).forEach(b => b.onclick = () => { const [a, c] = b.dataset.pal.split(","); f.color.value = a; f.color2.value = c; f.use2.checked = true; preview(); });
+  const restore = () => { if (!f.isConnected && CLUB.settings !== orig && !f.dataset.saved) { CLUB.settings = orig; applyClubTheme(); removeEventListener("hashchange", restore); } };
+  addEventListener("hashchange", () => setTimeout(restore, 0));
   f.onsubmit = async e => { e.preventDefault(); if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
-    const settings = { ...st, full: f.full.value.trim() || undefined, color: f.color.value, logo: logo || undefined };
+    const settings = { ...st, full: f.full.value.trim() || undefined, color: f.color.value, color2: f.use2.checked ? f.color2.value : undefined, logo: logo || undefined };
     const { error } = await sb.rpc("club_save_settings", { nm: f.nm.value, sh: f.sh.value, s: settings });
     if (error) { toast(/club_save_settings|function/i.test(error.message) ? "Voer eerst het databasescript v29 uit." : error.message); return; }
-    Object.assign(CLUB, { name: f.nm.value.trim(), short: f.sh.value.trim() || CLUB.short, settings }); toast("Clubgegevens bewaard."); shell(); };
+    f.dataset.saved = "1"; Object.assign(CLUB, { name: f.nm.value.trim(), short: f.sh.value.trim() || CLUB.short, settings }); rememberClub(); applyClubTheme(); toast("Clubgegevens bewaard."); shell(); };
 }
 /* ============ platform: nieuwe clubs aanmaken (enkel voor de beheerder van het platform) ============ */
 async function adminPlatform(host) {
@@ -174,7 +183,7 @@ async function adminPlatform(host) {
   const f = $("#pcf");
   f.onsubmit = async e => { e.preventDefault(); const r = await sb.rpc("create_club", { nm: f.nm.value, sh: f.sh.value, admin_mail: f.mail.value });
     if (r.error) { toast(r.error.message); return; }
-    const txt = `Welkom bij Coachbord!\n\n1. Open ${link}\n2. Tik op Account aanmaken met ${f.mail.value}\n3. Clubcode: ${r.data.code}\n\nJe wordt automatisch beheerder van ${r.data.name}. Deel de clubcode daarna met je trainers.`;
+    const txt = `Welkom bij ${PRODUCT}!\n\n1. Open ${link}\n2. Tik op Account aanmaken met ${f.mail.value}\n3. Clubcode: ${r.data.code}\n\nJe wordt automatisch beheerder van ${r.data.name}. Deel de clubcode daarna met je trainers.`;
     $("#pcres").innerHTML = `<div class="panel sec"><h2 style="margin-top:0">${esc(r.data.name)} is aangemaakt</h2><p>Clubcode: <b>${esc(r.data.code)}</b>${r.data.admin ? " · de beheerder had al een account en is meteen beheerder." : ""}</p>
       <textarea readonly rows="6" style="width:100%">${esc(txt)}</textarea><div class="row"><button class="btn small" type="button" id="pccopy">Tekst kopiëren</button></div></div>`;
     $("#pccopy").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Gekopieerd."));

@@ -256,7 +256,8 @@ function brandClub() { const c = clubOf(); if (!c || c.short === "OGV") return;
   const nm = c.full || c.name; $(".brand span").textContent = $(".brand span").textContent.replace("OG Vorselaar", nm);
   const im = $(".brand img"); if (im) { if (c.logo) im.src = c.logo; else im.remove(); }
   $("#h").innerHTML = $("#h").innerHTML.replace("OGV <span>", esc(c.short || nm) + " <span>"); $("#sub").textContent = $("#sub").textContent.replace("OG Vorselaar", nm);
-  document.title = (c.short || nm) + " Ouders"; }
+  document.title = (c.short || nm) + " Ouders";
+  if (c.color) document.documentElement.style.setProperty("--yellow", c.color); }
 function header() {
   const ok = okKids();
   $("#h").innerHTML = ok.length === 1 ? (isKid(ok[0].tok) ? `Hey ${esc(ok[0].name)}<span>!</span>` : `Komt ${esc(ok[0].name)}<span>?</span>`) : `OGV <span>Ouders</span>`;

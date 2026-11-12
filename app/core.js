@@ -8,7 +8,31 @@ const CLUB = { id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {} 
 const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
 const clubShort = () => CLUB.short || clubName();
-const APPNAME = () => CLUB.settings?.app || (isOGV() ? "OGV Trainers" : "Coachbord");
+const PRODUCT = "Coachub";   /* naam van het platform voor andere clubs dan OG Vorselaar */
+const APPNAME = () => CLUB.settings?.app || (isOGV() ? "OGV Trainers" : PRODUCT);
+const APPTITLE = () => isOGV() && !CLUB.settings?.app ? "OGV<span>Trainers</span>" : esc(APPNAME()).replace(/(hub)$/i, "<span>$1</span>");
+/* laatst gekende club van dit toestel: zo staan naam, logo en kleuren meteen goed, ook op het aanmeldscherm */
+try { const c = JSON.parse(localStorage.getItem("ogv-club") || "null"); if (c && c.id) Object.assign(CLUB, c); } catch (e) {}
+function rememberClub() { try { localStorage.setItem("ogv-club", JSON.stringify({ id: CLUB.id, name: CLUB.name, short: CLUB.short, settings: CLUB.settings || {} })); } catch (e) {} }
+/* ---------- kleuren van de club over de hele app ---------- */
+const hexRgb = h => { h = String(h || "").replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); const n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const rgbHex = a => "#" + a.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
+const mixRgb = (a, b, t) => a.map((v, i) => v * (1 - t) + b[i] * t);
+const lumRgb = a => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(a[0]) + .7152 * f(a[1]) + .0722 * f(a[2]); };
+const CLUB_VARS = ["--yellow", "--yellow2", "--onY", "--ytext", "--ybg", "--bg", "--sidebg", "--card", "--card2", "--card3", "--navact", "--line", "--input"];
+function applyClubTheme() {
+  const st = CLUB.settings || {}, root = document.documentElement, el = root.style; CLUB_VARS.forEach(k => el.removeProperty(k));
+  if (!st.color && !st.color2) return;
+  const light = root.dataset.theme === "light", W = [255, 255, 255], K = [0, 0, 0], set = (k, v) => el.setProperty(k, Array.isArray(v) ? rgbHex(v) : v);
+  if (st.color) { const a = hexRgb(st.color), L = lumRgb(a), bg = light ? [243, 243, 238] : [13, 14, 12];
+    set("--yellow", a); set("--yellow2", mixRgb(a, W, .22)); set("--onY", L > .38 ? "#111111" : "#FFFFFF");
+    set("--ytext", light ? (L > .3 ? mixRgb(a, K, .5) : a) : (L < .12 ? mixRgb(a, W, .5) : a)); set("--ybg", mixRgb(bg, a, light ? .2 : .2)); }
+  if (st.color2) { const b = hexRgb(st.color2);   /* tweede kleur: lichte tint in achtergrond, zijbalk en kaarten */
+    if (light) { set("--bg", mixRgb([243, 243, 238], b, .07)); set("--sidebg", mixRgb(W, b, .05)); set("--card2", mixRgb([242, 242, 236], b, .07)); set("--card3", mixRgb([231, 231, 223], b, .09)); set("--navact", mixRgb([241, 241, 234], b, .12)); }
+    else { set("--bg", mixRgb([13, 14, 12], b, .12)); set("--sidebg", mixRgb([18, 19, 17], b, .2)); set("--card", mixRgb([25, 26, 23], b, .12)); set("--card2", mixRgb([35, 36, 31], b, .14)); set("--card3", mixRgb([45, 46, 40], b, .16));
+      set("--navact", mixRgb([38, 39, 33], b, .3)); set("--line", mixRgb([47, 49, 42], b, .2)); set("--input", mixRgb([12, 12, 11], b, .1)); } }
+  const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
+}
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
   evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
@@ -124,7 +148,7 @@ const fmtSize = b => b == null ? "" : b < 1024 * 1024 ? Math.max(1, Math.round(b
 const THEME_KEY = "ogv-theme";
 function getTheme() { try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; } }
 function applyTheme(t) { t = t || getTheme(); const eff = t === "system" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : t;
-  document.documentElement.dataset.theme = eff; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = eff === "light" ? "#F4F4EF" : "#000000"; }
+  document.documentElement.dataset.theme = eff; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = eff === "light" ? "#F4F4EF" : "#000000"; if (typeof applyClubTheme === "function") applyClubTheme(); }
 function setTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(t); }
 matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => { if (getTheme() === "system") applyTheme("system"); });
 applyTheme();
@@ -522,7 +546,7 @@ function teamForm(t) {
 /* ============ aanmelden ============ */
 route("aanmelden", { title: "Aanmelden", render: v => viewLogin(v) });
 function viewLogin(v, msg) {
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
   <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a>${LOCAL ? `<button class="link" type="button" id="demo">Bekijk de demo</button>` : ""}</div>
@@ -554,7 +578,7 @@ async function logout() { if (mode === "demo") { try { sessionStorage.removeItem
 /* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */
 const LOGO = cls => CLUB.settings?.logo ? `<span class="ogvlogo ${cls || ""}"><img src="${esc(CLUB.settings.logo)}" alt="${esc(clubName())}"></span>`
   : isOGV() ? `<span class="ogvlogo ${cls || ""}"><img class="lg-d" src="icons/logo-dark.png" alt="OG Vorselaar"><img class="lg-l" src="icons/logo.png" alt="OG Vorselaar"></span>`
-  : `<span class="ogvlogo ${cls || ""}"><svg viewBox="0 0 40 40" role="img" aria-label="${esc(clubName())}"><path d="M20 3 35 8v12c0 9-7 15-15 17C12 35 5 29 5 20V8z" fill="${esc(CLUB.settings?.color || "#0F3D2E")}" stroke="#FFD100" stroke-width="2"/><text x="20" y="25" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" font-family="Archivo,sans-serif">${esc(String(clubShort()).slice(0, 3).toUpperCase())}</text></svg></span>`;
+  : `<span class="ogvlogo ${cls || ""}"><svg viewBox="0 0 40 40" role="img" aria-label="${esc(clubName())}"><path d="M20 3 35 8v12c0 9-7 15-15 17C12 35 5 29 5 20V8z" fill="${esc(CLUB.settings?.color2 || "#151613")}" stroke="${esc(CLUB.settings?.color || "#FFD100")}" stroke-width="2"/><text x="20" y="25" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" font-family="Archivo,sans-serif">${esc(String(clubShort()).slice(0, 3).toUpperCase())}</text></svg></span>`;
 
 /* ============ demo-gegevens (verzonnen) ============ */
 function demoSeed() {
