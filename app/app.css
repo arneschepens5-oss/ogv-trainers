@@ -1361,3 +1361,23 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 .tgl input:checked+span{background:var(--yellow)}
 .tgl input:checked+span:after{transform:translateX(16px)}
 .tgl input:focus-visible+span{outline:2px solid var(--yellow);outline-offset:2px}
+/* platformbeheer */
+.plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.pclub{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:18px;background:var(--card);border:1px solid var(--line)}
+.pclub .ph1{display:flex;align-items:center;gap:12px}.pclub .ph1 b{display:block;font-size:17px;font-weight:800}.pclub .ph1 small{color:var(--muted);font-size:13px}
+.ogvlogo.plat{height:46px;flex:none}
+.pclub dl{display:grid;grid-template-columns:1fr auto;gap:10px;margin:0;padding:10px 12px;border-radius:12px;background:var(--card2)}
+.pclub dt{font-size:12px;color:var(--muted)}.pclub dd{margin:2px 0 0;font-size:14px;word-break:break-word}
+.pmock{display:flex;height:120px;border-radius:14px;overflow:hidden;border:1px solid var(--line2);margin:0 0 6px;background:var(--mg)}
+.pmock .ms{width:28%;background:var(--mb);display:flex;flex-direction:column;gap:8px;padding:14px 10px}
+.pmock .ms i{display:block;height:9px;border-radius:999px;background:#ffffff26}.pmock .ms i:first-child{background:var(--ma);width:70%}
+.pmock .mm{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:14px 16px;color:#F4F4F0}
+.pmock .mm b{font-size:15px}.pmock .mb{background:var(--ma);color:var(--mon);font-weight:700;font-size:12.5px;padding:6px 12px;border-radius:999px}
+.pmock .mc{display:flex;align-items:center;gap:6px;font-size:12px;color:#B3B5AB}.pmock .mc i{width:10px;height:10px;border-radius:3px;background:var(--ma)}
+/* logo van het platform */
+.ogvlogo.pmark svg{border-radius:22%}
+.brand .ogvlogo.pmark.side{height:46px}
+.ogvlogo.mini{height:16px;vertical-align:-3px;margin-right:6px}.ogvlogo.mini svg,.ogvlogo.mini img{height:16px}
+.authclub{display:flex;align-items:center;justify-content:center;gap:2px;margin:-6px 0 14px;color:var(--muted);font-weight:600}
+.ogvlogo.big.pmark{height:96px}
+dialog .ogvlogo.big{height:96px;margin:0}

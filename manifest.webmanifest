@@ -1,12 +1,12 @@
 {
-  "name": "OGV Trainers",
-  "short_name": "OGV Trainers",
-  "description": "Het trainersplatform van OG Vorselaar.",
+  "name": "FootballCoachHub",
+  "short_name": "FootballCoachHub",
+  "description": "Het trainersplatform voor jeugdvoetbalclubs: ploegen, trainingen, wedstrijden en evaluaties op één plek.",
   "lang": "nl",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#111111",
+  "background_color": "#0F4A33",
   "theme_color": "#111111",
   "icons": [
     {

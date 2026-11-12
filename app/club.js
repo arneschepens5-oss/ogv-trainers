@@ -4,7 +4,7 @@
 
 /* ============ registreren met de clubcode ============ */
 function viewRegister(v) {
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
+  v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
   <form id="rf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" placeholder="bv. Jelle Lauwers"></label>
    <label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" required minlength="8" autocomplete="new-password"></label>
@@ -18,14 +18,14 @@ function viewRegister(v) {
     const code = f.code.value.trim().toUpperCase(); try { localStorage.setItem("ogv-invite", code); } catch (x) {}
     try { const { data, error } = await sb.auth.signUp({ email: f.email.value.trim(), password: f.pw.value, options: { data: { invite: code, full_name: f.nm.value.trim().replace(/\s+/g, " ") }, emailRedirectTo: location.origin + location.pathname } });
       if (error) err.textContent = /not allowed|disabled/i.test(error.message) ? "Registreren staat nog uit. Vraag de beheerder om het aan te zetten in Supabase." : /already registered|exists/i.test(error.message) ? "Er bestaat al een account met dit e-mailadres. Meld je aan." : /password/i.test(error.message) ? "Kies een sterker wachtwoord (minstens 8 tekens)." : error.message;
-      else if (!data.session) v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
+      else if (!data.session) v.innerHTML = `<div class="authbox">${AUTHHEAD()}<div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
     catch (x) { err.textContent = "Registreren lukt niet: controleer je internetverbinding."; }
     finally { if (err.textContent) { btn.disabled = false; btn.textContent = "Account aanmaken"; } } };
 }
 /* account bestaat maar is nog geen lid van de club */
 function viewJoin(v) {
   let saved = ""; try { saved = localStorage.getItem("ogv-invite") || ""; } catch (x) {}
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
+  v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
   <form id="jf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
   <div class="row"><button class="link" type="button" data-logout>Afmelden</button></div></div>`;
   $("[data-logout]", v).onclick = logout;
@@ -50,7 +50,7 @@ const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang<span class=\"
 async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
 route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
-  const TABS = ADM_TABS.concat([["club", "Club"]], S.platform ? [["platform", "Alle clubs"]] : []);
+  const TABS = ADM_TABS.concat([["club", "Club"]]);
   const tab = TABS.some(t => t[0] === id) ? id : "meldingen";
   v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", club: "Club", platform: "Alle clubs" }[tab]}</h1></div></div>
     <nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
@@ -60,7 +60,6 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (tab === "meldingen") return adminFeedback(host);
   if (tab === "planning") return adminPlanning(host);
   if (tab === "club") return adminClub(host);
-  if (tab === "platform") return adminPlatform(host);
   if (tab === "systeem") { host.innerHTML = `<div class="panel" id="adm-db"></div>
     <div class="grid2 sec"><div class="panel"><h2>Back-up</h2><p class="hint" style="margin-top:0">Download alle gegevens van de club (ploegen, spelers, kalender, verslagen, evaluaties…) als één bestand. Doe dit minstens één keer per maand en bewaar het op een veilige plaats: het bevat gegevens van kinderen.</p>
       <button class="btn" type="button" id="bk">${IC.out}Back-up downloaden</button><p class="hint" id="bkl" style="margin-bottom:0"></p></div>
@@ -135,67 +134,117 @@ function memberForm(m, rpc) {
 let FB_F = "open";
 /* ============ club: naam, logo en kleur ============ */
 const CLUB_PALETTES = [["Geel", "#FFD100", "#111111"], ["Blauw", "#2F6FED", "#0B1E46"], ["Lichtblauw", "#38BDF8", "#0B2233"], ["Rood", "#E03131", "#3A0B0B"], ["Bordeaux", "#B0123F", "#2A0A14"], ["Groen", "#2FB344", "#0B2E17"], ["Paars", "#8E1A92", "#22082A"], ["Oranje", "#FF8A00", "#1A1208"]];
-function adminClub(host) {
-  const st = CLUB.settings || {};
-  host.innerHTML = `<form class="panel" id="clf" style="max-width:640px"><h2 style="margin-top:0">Gegevens van de club</h2>
-    <p class="hint" style="margin-top:0">Naam en logo staan in het menu, op afdrukken en op de ouderpagina's.</p>
-    <label class="f">Officiële naam<input name="nm" required maxlength="80" value="${esc(CLUB.name || "")}"></label>
-    <div class="row"><label class="f" style="flex:1">Korte naam (bv. OGV)<input name="sh" maxlength="12" value="${esc(CLUB.short || "")}"></label>
-      <label class="f" style="flex:2">Naam in de app (bv. OG Vorselaar)<input name="full" maxlength="60" value="${esc(st.full || "")}" placeholder="${esc(CLUB.name || "")}"></label></div>
-    ${isOGV() ? `<p class="hint">OG Vorselaar gebruikt altijd de vaste clubkleuren geel en zwart.</p>` : ""}<div${isOGV() ? " hidden" : ""}><h3 style="margin:22px 0 4px">Kleuren van de app</h3><p class="hint" style="margin-top:0">Kies de kleuren van je club. De hele app past zich meteen aan, zodat je het resultaat ziet. Met Bewaren geldt het voor iedereen van de club.</p>
+/* gedeelde velden voor naam, kleuren en logo: gebruikt in Beheer > Club en in het platformbeheer */
+function clubFieldsHtml(c, st, o = {}) {
+  return `<label class="f">Officiële naam<input name="nm" required maxlength="80" value="${esc(c.name || "")}"></label>
+    <div class="row"><label class="f" style="flex:1">Korte naam (bv. OGV)<input name="sh" maxlength="12" value="${esc(c.short || "")}"></label>
+      <label class="f" style="flex:2">Naam in de app (bv. OG Vorselaar)<input name="full" maxlength="60" value="${esc(st.full || "")}" placeholder="${esc(c.name || "")}"></label></div>
+    ${o.fixed ? `<p class="hint">OG Vorselaar gebruikt altijd de vaste clubkleuren geel en zwart.</p>` : ""}<div${o.fixed ? " hidden" : ""}><h3 style="margin:22px 0 4px">Kleuren van de app</h3><p class="hint" style="margin-top:0">${o.hint || "Kies de kleuren van je club. De hele app past zich meteen aan, zodat je het resultaat ziet. Met Bewaren geldt het voor iedereen van de club."}</p>
     <div class="palgrid" role="group" aria-label="Kant-en-klare kleuren">${CLUB_PALETTES.map(([l, a, b]) => `<button type="button" class="pal" data-pal="${a},${b}" aria-pressed="false"><span class="sw" style="background:${b}"><i style="background:${a}"></i><i style="background:${a};opacity:.45"></i></span><b>${l}</b></button>`).join("")}</div>
     <div class="colf"><div class="cbox"><span class="cl">Hoofdkleur</span><small>Knoppen, accenten en het actieve menu</small><div class="cin"><input name="color" type="color" value="${esc(st.color || "#FFD100")}" aria-label="Hoofdkleur"><input name="colorx" class="hex" maxlength="7" spellcheck="false" value="${esc((st.color || "#FFD100").toUpperCase())}" aria-label="Hoofdkleur als code"></div></div>
       <div class="cbox"><span class="cl">Tweede kleur</span><small>Kleurt achtergrond en zijbalk een beetje</small><div class="cin"><input name="color2" type="color" value="${esc(st.color2 || "#111111")}" aria-label="Tweede kleur"><input name="color2x" class="hex" maxlength="7" spellcheck="false" value="${esc((st.color2 || "#111111").toUpperCase())}" aria-label="Tweede kleur als code"></div>
         <label class="tgl"><input type="checkbox" name="use2"${st.color2 ? " checked" : ""}><span></span>Tweede kleur gebruiken</label></div></div></div>
-    <h3 style="margin:4px 0 4px">Logo</h3><p class="hint" style="margin-top:0">PNG of JPG, een vierkant beeld werkt het best. Zonder logo maakt de app een schild in je clubkleuren.</p>
-    <div class="row" style="align-items:center;gap:14px"><span id="clprev">${LOGO("big")}</span><label class="btn ghost small" style="cursor:pointer">${IC.plus}Logo kiezen<input name="logo" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="link" type="button" id="cllogox"${st.logo ? "" : " hidden"}>Logo verwijderen</button></div>
-    <div class="row" style="justify-content:flex-end"><button class="btn">Bewaren</button></div></form>`;
+    <h3 style="margin:4px 0 4px">Clublogo</h3><p class="hint" style="margin-top:0">PNG of JPG, een vierkant beeld werkt het best. Zonder logo maakt de app een schild in de clubkleuren.</p>
+    <div class="row" style="align-items:center;gap:14px"><span data-lprev></span><label class="btn ghost small" style="cursor:pointer">${IC.plus}Logo kiezen<input name="logo" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button class="link" type="button" data-lx${st.logo ? "" : " hidden"}>Logo verwijderen</button></div>`;
+}
+/* koppelt de velden; onChange(settings) bij elke wijziging; geeft een functie terug die de nieuwe instellingen geeft */
+function bindClubFields(f, c, st, onChange) {
   let logo = st.logo || "";
-  const f = $("#clf");
-  f.logo.onchange = async () => { const file = f.logo.files[0]; if (!file) return;
-    try { const img = await createImageBitmap(file), S2 = 160, c = document.createElement("canvas"); c.width = c.height = S2; const k = Math.min(S2 / img.width, S2 / img.height);
-      c.getContext("2d").drawImage(img, (S2 - img.width * k) / 2, (S2 - img.height * k) / 2, img.width * k, img.height * k); logo = c.toDataURL("image/png");
-      $("#clprev").innerHTML = `<span class="ogvlogo big"><img src="${logo}" alt=""></span>`; $("#cllogox").hidden = false; } catch (e) { toast("Dit beeld kan niet gelezen worden."); } };
-  const lx = $("#cllogox"); if (lx) lx.onclick = () => { logo = ""; lx.hidden = true; const keep = CLUB.settings; CLUB.settings = { ...keep, logo: undefined }; $("#clprev").innerHTML = LOGO("big"); CLUB.settings = keep; };
-  const orig = { ...st }, preview = () => { CLUB.settings = { ...st, color: f.color.value, color2: f.use2.checked ? f.color2.value : undefined }; applyClubTheme();
-    if (!logo) { const keep = CLUB.settings; CLUB.settings = { ...keep, logo: undefined }; $("#clprev").innerHTML = LOGO("big"); CLUB.settings = keep; } };
+  const cur = () => ({ ...st, full: f.full.value.trim() || undefined, color: f.color.value, color2: f.use2.checked ? f.color2.value : undefined, logo: logo || undefined });
+  const shield = () => { const keep = { id: CLUB.id, short: CLUB.short, name: CLUB.name, settings: CLUB.settings };
+    Object.assign(CLUB, { id: c.id, short: f.sh.value.trim() || c.short, name: f.nm.value.trim() || c.name, settings: cur() }); const h = LOGO("big"); Object.assign(CLUB, keep); $("[data-lprev]", f).innerHTML = h; };
   const sync = () => { f.colorx.value = f.color.value.toUpperCase(); f.color2x.value = f.color2.value.toUpperCase(); f.color2.closest(".cbox").classList.toggle("off", !f.use2.checked);
     $$("[data-pal]", f).forEach(x => x.setAttribute("aria-pressed", String(x.dataset.pal.toLowerCase() === (f.color.value + "," + f.color2.value).toLowerCase() && f.use2.checked))); };
-  const upd = () => { sync(); preview(); };
-  f.color.oninput = upd; f.color2.oninput = () => { f.use2.checked = true; upd(); }; f.use2.onchange = upd;
-  const hexIn = (x, c, two) => x.oninput = () => { let h = x.value.trim(); if (h[0] !== "#") h = "#" + h; if (/^#[0-9a-f]{6}$/i.test(h)) { c.value = h.toLowerCase(); if (two) f.use2.checked = true; sync(); x.value = h.toUpperCase(); preview(); } };
+  const upd = () => { sync(); shield(); onChange?.(cur()); };
+  f.color.oninput = upd; f.color2.oninput = () => { f.use2.checked = true; upd(); }; f.use2.onchange = upd; f.sh.oninput = shield;
+  const hexIn = (x, el, two) => x.oninput = () => { let h = x.value.trim(); if (h[0] !== "#") h = "#" + h; if (/^#[0-9a-f]{6}$/i.test(h)) { el.value = h.toLowerCase(); if (two) f.use2.checked = true; upd(); x.value = h.toUpperCase(); } };
   hexIn(f.colorx, f.color); hexIn(f.color2x, f.color2, true); [f.colorx, f.color2x].forEach(x => x.onblur = sync);
-  $$("[data-pal]", f).forEach(b => b.onclick = () => { const [a, c] = b.dataset.pal.split(","); f.color.value = a.toLowerCase(); f.color2.value = c.toLowerCase(); f.use2.checked = true; upd(); });
-  sync();
+  $$("[data-pal]", f).forEach(b => b.onclick = () => { const [a, k] = b.dataset.pal.split(","); f.color.value = a.toLowerCase(); f.color2.value = k.toLowerCase(); f.use2.checked = true; upd(); });
+  const lx = $("[data-lx]", f);
+  f.logo.onchange = async () => { const file = f.logo.files[0]; if (!file) return;
+    try { const img = await createImageBitmap(file), S2 = 160, cv = document.createElement("canvas"); cv.width = cv.height = S2; const k = Math.min(S2 / img.width, S2 / img.height);
+      cv.getContext("2d").drawImage(img, (S2 - img.width * k) / 2, (S2 - img.height * k) / 2, img.width * k, img.height * k); logo = cv.toDataURL("image/png"); lx.hidden = false; upd(); } catch (e) { toast("Dit beeld kan niet gelezen worden."); } };
+  lx.onclick = () => { logo = ""; lx.hidden = true; upd(); };
+  sync(); shield();
+  return cur;
+}
+function adminClub(host) {
+  const st = CLUB.settings || {};
+  host.innerHTML = `<form class="panel" id="clf" style="max-width:640px"><h2 style="margin-top:0">Gegevens van de club</h2>
+    <p class="hint" style="margin-top:0">Naam en logo staan in het menu, op afdrukken en op de ouderpagina's.</p>${clubFieldsHtml(CLUB, st, { fixed: isOGV() })}
+    <div class="row" style="justify-content:flex-end"><button class="btn">Bewaren</button></div></form>`;
+  const f = $("#clf"), orig = CLUB.settings;
+  const cur = bindClubFields(f, CLUB, st, s => { CLUB.settings = s; applyClubTheme(); });
   const restore = () => { if (!f.isConnected && CLUB.settings !== orig && !f.dataset.saved) { CLUB.settings = orig; applyClubTheme(); removeEventListener("hashchange", restore); } };
   addEventListener("hashchange", () => setTimeout(restore, 0));
   f.onsubmit = async e => { e.preventDefault(); if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
-    const settings = { ...st, full: f.full.value.trim() || undefined, color: f.color.value, color2: f.use2.checked ? f.color2.value : undefined, logo: logo || undefined };
+    const settings = cur();
     const { error } = await sb.rpc("club_save_settings", { nm: f.nm.value, sh: f.sh.value, s: settings });
     if (error) { toast(/club_save_settings|function/i.test(error.message) ? "Voer eerst het databasescript v29 uit." : error.message); return; }
     f.dataset.saved = "1"; Object.assign(CLUB, { name: f.nm.value.trim(), short: f.sh.value.trim() || CLUB.short, settings }); rememberClub(); applyClubTheme(); toast("Clubgegevens bewaard."); shell(); };
 }
-/* ============ platform: nieuwe clubs aanmaken (enkel voor de beheerder van het platform) ============ */
-async function adminPlatform(host) {
-  host.innerHTML = `<p class="hint">Laden…</p>`;
-  const { data, error } = await sb.rpc("platform_clubs"); if (error) { host.innerHTML = `<div class="empty"><b>Niet beschikbaar</b>${esc(error.message)}</div>`; return; }
-  const link = location.origin + location.pathname;
-  host.innerHTML = `<form class="panel" id="pcf" style="max-width:640px"><h2 style="margin-top:0">Nieuwe club</h2>
-      <p class="hint" style="margin-top:0">De club krijgt een eigen clubcode en ziet niets van andere clubs. Heeft de beheerder nog geen account, dan wordt hij beheerder zodra hij er een maakt met dit e-mailadres.</p>
-      <label class="f">Officiële naam<input name="nm" required maxlength="80" placeholder="bv. KFC Voorbeeld"></label>
-      <div class="row"><label class="f" style="flex:1">Korte naam<input name="sh" maxlength="12" placeholder="bv. KFCV"></label>
-        <label class="f" style="flex:2">E-mail van de beheerder<input name="mail" type="email" required placeholder="tvjo@club.be"></label></div>
-      <div class="row" style="justify-content:flex-end"><button class="btn">Club aanmaken</button></div></form>
-    <div id="pcres"></div>
-    <div class="sec"><h2>Clubs (${data.length})</h2><div class="list">${data.map(c => `<div class="item"><span class="main"><b>${esc(c.name)}</b><small>${c.teams} ploegen · ${c.members} leden · code ${esc(c.code || "–")}${c.pending_admin ? " · wacht op account van " + esc(c.pending_admin) : ""}</small></span></div>`).join("")}</div></div>`;
-  const f = $("#pcf");
-  f.onsubmit = async e => { e.preventDefault(); const r = await sb.rpc("create_club", { nm: f.nm.value, sh: f.sh.value, admin_mail: f.mail.value });
-    if (r.error) { toast(r.error.message); return; }
-    const txt = `Welkom bij ${PRODUCT}!\n\n1. Open ${link}\n2. Tik op Account aanmaken met ${f.mail.value}\n3. Clubcode: ${r.data.code}\n\nJe wordt automatisch beheerder van ${r.data.name}. Deel de clubcode daarna met je trainers.`;
-    $("#pcres").innerHTML = `<div class="panel sec"><h2 style="margin-top:0">${esc(r.data.name)} is aangemaakt</h2><p>Clubcode: <b>${esc(r.data.code)}</b>${r.data.admin ? " · de beheerder had al een account en is meteen beheerder." : ""}</p>
-      <textarea readonly rows="6" style="width:100%">${esc(txt)}</textarea><div class="row"><button class="btn small" type="button" id="pccopy">Tekst kopiëren</button></div></div>`;
-    $("#pccopy").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Gekopieerd."));
-    f.reset(); };
+
+/* ============ platform: clubs beheren zonder in hun gegevens te kijken (enkel voor de beheerder van het platform) ============ */
+const appLink = () => location.origin + location.pathname;
+const inviteText = (name, code, mail) => `Welkom bij ${PRODUCT}!\n\nJe club ${name} staat klaar.\n\n1. Open ${appLink()}\n2. Tik op Account aanmaken${mail ? " met " + mail : ""}\n3. Clubcode: ${code}\n\nAls beheerder deel je daarna de clubcode met je trainers.\n\nVragen? Mail naar ${CONTACT_MAIL}.`;
+const PLATFORM_DEMO = () => [{ id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {}, code: "OGV-DEMO42", admins: ["demo@ogvorselaar.be"], members: 14, teams: 12, players: 160, feedback_open: 2 },
+  { id: "demo-b", name: "KFC Voorbeeld", short: "KFCV", settings: { color: "#2F6FED", color2: "#0B1E46" }, code: "7F3A9C21", admins: [], pending_admin: "tvjo@kfcvoorbeeld.be", members: 0, teams: 0, players: 0, feedback_open: 0 }];
+route("platform", { title: "Platform", auth: true, render: async v => {
+  if (!S.platform && mode !== "demo") { v.innerHTML = `<div class="empty"><b>Alleen voor de beheerder van het platform</b></div>`; return; }
+  v.innerHTML = head("Platform", "Laden…");
+  let data; if (mode === "demo") data = PLATFORM_DEMO(); else { const r = await sb.rpc("platform_clubs");
+    if (r.error) { v.innerHTML = head("Platform", "") + `<div class="empty"><b>Nog niet klaar</b>${/platform_clubs|function/i.test(r.error.message) ? "Voer eerst het databasescript v33 uit in Supabase." : esc(r.error.message)}</div>`; return; } data = r.data || []; }
+  const sum = k => data.reduce((a, c) => a + (+c[k] || 0), 0);
+  const badge = c => { const keep = { id: CLUB.id, short: CLUB.short, name: CLUB.name, settings: CLUB.settings }; Object.assign(CLUB, { id: c.id, short: c.short, name: c.name, settings: c.settings || {} }); const h = LOGO("plat"); Object.assign(CLUB, keep); return h; };
+  v.innerHTML = head(`${esc(PRODUCT)} beheren`, "Clubs aanmaken en hun naam, kleuren, logo, beheerder en clubcode aanpassen. Spelers, ploegen en verslagen van een club zie je hier niet: die blijven van de club.", `<button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
+    `<div class="sec kpis"><div class="kpi"><small>Clubs</small><b>${data.length}</b><span>op het platform</span></div><div class="kpi"><small>Ploegen</small><b>${sum("teams")}</b><span>samen</span></div>
+      <div class="kpi"><small>Spelers</small><b>${sum("players")}</b><span>samen</span></div><div class="kpi"><small>Open meldingen</small><b>${sum("feedback_open")}</b><span><a class="link" href="#/clubbeheer/meldingen">bekijken</a></span></div></div>
+    <div class="sec"><h2>Clubs</h2><div class="plist">${data.map(c => `<div class="pclub"><div class="ph1">${badge(c)}<span><b>${esc(c.name)}</b><small>${c.teams} ploegen · ${c.players} spelers · ${c.members} leden</small></span></div>
+      <dl><div><dt>Beheerder</dt><dd>${(c.admins || []).length ? (c.admins || []).map(esc).join(", ") : c.pending_admin ? `<span class="pill">wacht op account</span> ${esc(c.pending_admin)}` : `<span class="pill loss">nog geen</span>`}</dd></div>
+        <div><dt>Clubcode</dt><dd><b>${esc(c.code || "–")}</b></dd></div></dl>
+      <div class="row"><button class="btn small" type="button" data-edit="${esc(c.id)}">${IC.gear}Aanpassen</button><button class="btn ghost small" type="button" data-inv="${esc(c.id)}">Uitnodiging kopiëren</button></div></div>`).join("")}</div></div>`;
+  $("#pnew").onclick = () => newClubDialog(() => render());
+  $$("[data-inv]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.inv); navigator.clipboard?.writeText(inviteText(c.name, c.code, c.pending_admin || (c.admins || [])[0])).then(() => toast("Uitnodiging gekopieerd. Plak ze in een mail aan de beheerder.")); });
+  $$("[data-edit]", v).forEach(b => b.onclick = () => editClubDialog(data.find(x => x.id === b.dataset.edit), () => render()));
+} });
+function newClubDialog(done) {
+  const d = dialog(`<form class="dlg" id="pcf"><h2>Nieuwe club</h2><p class="muted" style="margin-top:0">De club krijgt een eigen clubcode en ziet niets van andere clubs. Jij wordt geen lid van de club. Heeft de beheerder nog geen account, dan wordt hij beheerder zodra hij er een maakt met dit e-mailadres.</p>
+    <label class="f">Officiële naam<input name="nm" required maxlength="80" placeholder="bv. KFC Voorbeeld"></label>
+    <div class="row"><label class="f" style="flex:1">Korte naam<input name="sh" maxlength="12" placeholder="bv. KFCV"></label><label class="f" style="flex:2">E-mail van de beheerder<input name="mail" type="email" required placeholder="tvjo@club.be"></label></div>
+    <div id="pcres"></div><div class="row" style="justify-content:flex-end"><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Club aanmaken</button></div></form>`);
+  const f = $("#pcf", d);
+  f.onsubmit = async e => { e.preventDefault(); if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const r = await sb.rpc("create_club", { nm: f.nm.value, sh: f.sh.value, admin_mail: f.mail.value }); if (r.error) { toast(r.error.message); return; }
+    const txt = inviteText(r.data.name, r.data.code, f.mail.value.trim());
+    f.innerHTML = `<h2>${esc(r.data.name)} staat klaar</h2><p>Clubcode: <b>${esc(r.data.code)}</b>${r.data.admin ? ". De beheerder had al een account en is meteen beheerder." : ". De beheerder wordt dat zodra hij een account maakt."}</p>
+      <label class="f">Uitnodiging voor de beheerder<textarea readonly rows="9">${esc(txt)}</textarea></label><div class="row" style="justify-content:flex-end"><button class="btn ghost" type="button" id="pccopy">Tekst kopiëren</button><button class="btn" type="button" data-close>Klaar</button></div>`;
+    $("#pccopy", f).onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Gekopieerd."));
+    $$("[data-close]", f).forEach(b => b.onclick = () => d.close()); done?.(); };
+}
+function editClubDialog(c, done) {
+  const st = c.settings || {}, fixed = c.id === OGV_ID;
+  const d = dialog(`<form class="dlg" id="pef"><h2>${esc(c.name)}</h2><p class="muted" style="margin-top:0">Wat je hier aanpast, ziet iedereen van deze club meteen bij het openen van de app.</p>
+    ${clubFieldsHtml(c, st, { fixed, hint: "Het voorbeeld hieronder toont hoe de app er voor deze club uitziet." })}
+    ${fixed ? "" : `<div class="pmock" id="pmock"><span class="ms"><i></i><i></i><i></i></span><span class="mm"><b>Goeiemiddag, trainer</b><span class="mb">Volgende training</span><span class="mc"><i></i>Aanwezigheden</span></span></div>`}
+    <h3 style="margin:18px 0 4px">Beheerder van de club</h3><p class="hint" style="margin-top:0">Huidig: ${(c.admins || []).length ? (c.admins || []).map(esc).join(", ") : c.pending_admin ? esc(c.pending_admin) + " (wacht op account)" : "nog geen"}. Een extra beheerder aanduiden kan hier; trainers voegt de club zelf toe.</p>
+    <div class="row"><label class="f" style="flex:1;margin:0"><span class="sr">E-mail van de beheerder</span><input name="amail" type="email" placeholder="tvjo@club.be"></label><button class="btn ghost" type="button" id="pset">Aanduiden</button></div>
+    <h3 style="margin:18px 0 4px">Clubcode</h3><div class="row" style="align-items:center"><b style="font-size:18px;letter-spacing:.06em" id="pcode">${esc(c.code || "–")}</b><span class="spacer"></span><button class="btn ghost small" type="button" id="pcodenew">Nieuwe code maken</button></div>
+    <p class="hint">Een nieuwe code is nodig als de oude bij mensen buiten de club terechtkwam. Wie al lid is, blijft lid.</p>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" type="button" data-close>Sluiten</button><button class="btn">Bewaren</button></div></form>`, "xl");
+  const f = $("#pef", d), mock = $("#pmock", d);
+  const paint = s => { if (!mock) return; const a = s.color || "#FFD100", b = s.color2, on = lumRgb(hexRgb(a)) > .38 ? "#111" : "#fff";
+    mock.style.setProperty("--ma", a); mock.style.setProperty("--mon", on); mock.style.setProperty("--mb", b ? rgbHex(mixRgb([13, 14, 12], hexRgb(b), .2)) : "#121311"); mock.style.setProperty("--mg", b ? rgbHex(mixRgb([13, 14, 12], hexRgb(b), .1)) : "#0D0E0C"); };
+  const cur = bindClubFields(f, c, st, paint); paint(cur());
+  $("#pset", f).onclick = async () => { const m = f.amail.value.trim(); if (!m) { f.amail.focus(); return; } if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const r = await sb.rpc("platform_set_admin", { c: c.id, mail: m }); if (r.error) { toast(r.error.message); return; }
+    toast(r.data === "klaar" ? `${m} is nu beheerder van ${c.name}.` : `${m} wordt beheerder zodra hij een account maakt.`); f.amail.value = ""; done?.(); };
+  $("#pcodenew", f).onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Zeker? De oude code werkt dan niet meer"; return; } if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const r = await sb.rpc("platform_new_code", { c: c.id }); if (r.error) { toast(r.error.message); return; } $("#pcode", f).textContent = r.data; c.code = r.data; b.textContent = "Nieuwe code maken"; delete b.dataset.sure; toast("Nieuwe clubcode gemaakt."); done?.(); };
+  f.onsubmit = async e => { e.preventDefault(); if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const s = cur(); if (fixed) { delete s.color; delete s.color2; }
+    const r = await sb.rpc("platform_update_club", { c: c.id, nm: f.nm.value, sh: f.sh.value, s }); if (r.error) { toast(/platform_update_club|function/i.test(r.error.message) ? "Voer eerst het databasescript v33 uit." : r.error.message); return; }
+    if (c.id === CLUB.id) { Object.assign(CLUB, { name: f.nm.value.trim(), short: f.sh.value.trim() || CLUB.short, settings: s }); rememberClub(); applyClubTheme(); shell(); }
+    d.close(); toast("Bewaard."); done?.(); };
 }
 
 async function adminFeedback(host) {
@@ -374,7 +423,7 @@ function seasonForm() {
     <label class="f">Spelvorm<select name="format">${["2v2", "3v3", "5v5", "8v8", "11v11"].map(f => `<option${f === t.format ? " selected" : ""}>${f}</option>`).join("")}</select></label></div>
     <div class="f"><span>Spelers die meegaan</span><div class="pchecks">${ps.map(p => `<label class="check"><input type="checkbox" name="p" value="${p.id}" checked> ${esc(pname(p))}</label>`).join("")}</div></div>
     ${S.trainers.length > 1 ? `<label class="check"><input type="checkbox" name="co" checked> Ook mijn co-trainers toevoegen</label>` : ""}
-    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Nieuwe ploeg maken</button></div></form>`, "wide");
+    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Nieuwe ploeg maken</button></div></form>`, "xl");
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = ev.target, btn = $("button.btn:not(.ghost)", f); btn.disabled = true; btn.textContent = "Bezig…";
     const fmt = f.format.value, nt = { id: uid(), name: f.name.value.trim(), category: f.category.value.trim(), format: fmt, season: f.season.value.trim(), criteria: t.criteria || DEF_CRIT, worktags: t.worktags || DEF_TAGS,
       share_ratings: !!t.share_ratings, periods: fmt === t.format ? t.periods : (FORMAT_DEF[fmt] || [])[0] || null, period_minutes: fmt === t.format ? t.period_minutes : (FORMAT_DEF[fmt] || [])[1] || null };

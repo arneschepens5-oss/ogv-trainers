@@ -6,14 +6,18 @@ const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publisha
 const OGV_ID = "00000000-0000-4000-8000-000000000001";
 const CLUB = { id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {} };
 const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
+/* huisstijl van OG Vorselaar enkel als we weten dat dit toestel bij OGV hoort; anders die van het platform */
+const ogvBrand = () => isOGV() && (CLUB_KNOWN || mode === "demo" || !!user);
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
 const clubShort = () => CLUB.short || clubName();
-const PRODUCT = "FootballCoachHub";   /* naam van het platform voor andere clubs dan OG Vorselaar */
-const APPNAME = () => CLUB.settings?.app || (isOGV() ? "OGV Trainers" : PRODUCT);
-const APPTITLE = () => isOGV() && !CLUB.settings?.app ? "OGV<span>Trainers</span>" : esc(APPNAME()).replace(/(hub)$/i, "<span>$1</span>");
+const PRODUCT = "FootballCoachHub";
+const CONTACT_MAIL = "footballcoachhub@gmail.com";   /* naam van het platform voor andere clubs dan OG Vorselaar */
+const APPNAME = () => CLUB.settings?.app || (ogvBrand() ? "OGV Trainers" : PRODUCT);
+const APPTITLE = () => ogvBrand() && !CLUB.settings?.app ? "OGV<span>Trainers</span>" : esc(APPNAME()).replace(/(hub)$/i, "<span>$1</span>");
 /* laatst gekende club van dit toestel: zo staan naam, logo en kleuren meteen goed, ook op het aanmeldscherm */
-try { const c = JSON.parse(localStorage.getItem("ogv-club") || "null"); if (c && c.id) Object.assign(CLUB, c); } catch (e) {}
-function rememberClub() { try { localStorage.setItem("ogv-club", JSON.stringify({ id: CLUB.id, name: CLUB.name, short: CLUB.short, settings: CLUB.settings || {} })); } catch (e) {} }
+let CLUB_KNOWN = false; /* weten we al bij welke club dit toestel hoort? Zo niet, dan tonen we het platform en niet OG Vorselaar */
+try { const c = JSON.parse(localStorage.getItem("ogv-club") || "null"); if (c && c.id) { Object.assign(CLUB, c); CLUB_KNOWN = true; } } catch (e) {}
+function rememberClub() { CLUB_KNOWN = true; try { localStorage.setItem("ogv-club", JSON.stringify({ id: CLUB.id, name: CLUB.name, short: CLUB.short, settings: CLUB.settings || {} })); } catch (e) {} }
 /* ---------- kleuren van de club over de hele app ---------- */
 const hexRgb = h => { h = String(h || "").replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); const n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
 const rgbHex = a => "#" + a.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
@@ -392,7 +396,7 @@ function shell(fresh) {
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
-  const secs = (S.admin ? [...nav, { g: "Beheer", items: [["clubbeheer", "Beheer", "gear"]] }] : nav)
+  const secs = (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"]] : []), ...(S.platform ? [["platform", "Platform", "chart"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
     .map(sec => ({ ...sec, items: sec.items.filter(([k]) => k !== "scouting" || mag("scouting")) })).filter(sec => sec.items.length);
   const navHtml = secs.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
@@ -404,20 +408,20 @@ function shell(fresh) {
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
-    <a class="brand" href="#/start">${LOGO("side")}<span><b>${esc(APPNAME())}</b><small>Jeugdwerking ${esc(clubName())}</small></span></a>${logged && S.platform && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
+    <a class="brand" href="#/start">${ogvBrand() ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB_KNOWN || user ? LOGO("mini") + "Jeugdwerking " + esc(clubName()) : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
-    <header class="topbar">${LOGO("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
+    <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
     <div class="page" id="view"></div>
   </main>
   <nav class="tabbar" aria-label="Snelmenu">
     ${[["start","Start","home"],["kalender","Kalender","cal"],["trainingen","Training","plan"],["matchday","Wedstrijdblad","sheet"]].map(([k,l,i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
-  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${logged && S.platform && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
@@ -557,7 +561,7 @@ function teamForm(t) {
 /* ============ aanmelden ============ */
 route("aanmelden", { title: "Aanmelden", render: v => viewLogin(v) });
 function viewLogin(v, msg) {
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${APPTITLE()}</h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
+  v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
   <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a>${LOCAL ? `<button class="link" type="button" id="demo">Bekijk de demo</button>` : ""}</div>
@@ -586,6 +590,10 @@ async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", em
 async function logout() { if (mode === "demo") { try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } else if (sb) await sb.auth.signOut();
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
+/* aanmeldschermen: logo en naam van de club als we die kennen, anders van het platform */
+const AUTHHEAD = () => CLUB_KNOWN && isOGV() ? `${LOGO("big")}<h1>${APPTITLE()}</h1>` : CLUB_KNOWN ? `${PMARK("big")}<h1>${APPTITLE()}</h1><p class="authclub">${LOGO("mini")}${esc(clubName())}</p>` : `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1>`;
+/* logo van het platform (zelfde voor alle clubs) */
+const PMARK = cls => `<span class="ogvlogo pmark ${cls || ""}"><svg viewBox="0 0 512 512" role="img" aria-label="FootballCoachHub"><rect width="512" height="512" rx="112" fill="#0F4A33"/><path d="M36 256H476" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><circle cx="256" cy="256" r="138" fill="none" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><path d="M208.8 126.3L385.7 303.2L150.3 344.7Z" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linejoin="round"/><circle cx="256" cy="256" r="13" fill="#FFFFFF" fill-opacity=".5"/><circle cx="208.8" cy="126.3" r="46" fill="#F5C542" stroke="#0F4A33" stroke-width="14"/><circle cx="385.7" cy="303.2" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/><circle cx="150.3" cy="344.7" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/></svg></span>`;
 /* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */
 const LOGO = cls => CLUB.settings?.logo ? `<span class="ogvlogo ${cls || ""}"><img src="${esc(CLUB.settings.logo)}" alt="${esc(clubName())}"></span>`
   : isOGV() ? `<span class="ogvlogo ${cls || ""}"><img class="lg-d" src="icons/logo-dark.png" alt="OG Vorselaar"><img class="lg-l" src="icons/logo.png" alt="OG Vorselaar"></span>`
