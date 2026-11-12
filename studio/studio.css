@@ -104,7 +104,9 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--yel)
 .pane .empty b{display:block;color:var(--ink);margin-bottom:4px}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .field>span{font-size:12.5px;font-weight:700;color:var(--dim)}
-.field input[type=text],.field input:not([type]),.field textarea,.field select{width:100%;border:1px solid var(--line2);background:var(--panel2);border-radius:9px;padding:7px 9px}
+.field input[type=text],.field input[type=number],.field input:not([type]),.field textarea,.field select{width:100%;border:1px solid var(--line2);background:var(--panel2);border-radius:9px;padding:7px 9px;color:var(--ink)}
+.field select{height:auto;min-height:36px}
+.tool.grass[aria-pressed="true"]{background:#1f3a1a;color:#9BE15D;box-shadow:inset 0 0 0 1.5px #9BE15D}
 .field textarea{min-height:60px;resize:vertical}
 .seg{display:flex;gap:4px;flex-wrap:wrap}
 .seg button{flex:1;min-width:44px;height:32px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);cursor:pointer;font-weight:700;font-size:13px}
