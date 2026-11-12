@@ -37,7 +37,7 @@ function viewJoin(v) {
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; if (data.club) { Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club) { Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
     if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }

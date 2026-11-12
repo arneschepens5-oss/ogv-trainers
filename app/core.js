@@ -177,6 +177,16 @@ function startGids(i = 0) {
 }
 /* rechten: de beheerder mag alles; anderen enkel wat de beheerder aanvinkte (scouting, terreinen) */
 const mag = r => !!(S.admin || (S.rechten || []).includes(r));
+/* wisselen van club (wie bij meerdere clubs hoort, of de beheerder van het platform) */
+function clubSwitch() {
+  const d = dialog(`<div class="dlg"><h2>Club kiezen</h2><p class="muted" style="margin-top:0">Je werkt telkens in één club. Wat je ziet en aanpast, hoort bij die club.</p>
+    <div class="list">${(S.clubs || []).map(c => `<button class="item" type="button" data-cid="${esc(c.id)}"${c.id === CLUB.id ? ' aria-current="true"' : ""}><span class="main"><b>${esc(c.name)}</b><small>${c.id === CLUB.id ? "Hier werk je nu" : esc(c.short || "")}</small></span></button>`).join("")}</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`);
+  $$("[data-cid]", d).forEach(b => b.onclick = async () => { if (b.dataset.cid === CLUB.id) { d.close(); return; }
+    b.disabled = true; const { data, error } = await sb.rpc("switch_club", { c: b.dataset.cid });
+    if (error || !data) { toast(error && /switch_club|function/i.test(error.message) ? "Voer eerst het databasescript v30 uit." : "Wisselen lukte niet."); b.disabled = false; return; }
+    try { localStorage.removeItem(TEAM_KEY); } catch (e) {} location.hash = "#/start"; location.reload(); });
+}
 function dialog(html, cls = "") { const d = $("#dlg"); d.className = cls; d.innerHTML = html; d.showModal(); $$("[data-close]", d).forEach(b => b.onclick = () => d.close()); return d; }
 function download(name, text, type = "text/csv;charset=utf-8") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
 const csvCell = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
@@ -359,13 +369,13 @@ function shell() {
   const navHtml = secs.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
     `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("")).join("");
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
-  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · OG Vorselaar" : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
+  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName()) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
   const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
-    <a class="brand" href="#/start">${LOGO("side")}<span><b>${esc(APPNAME())}</b><small>Jeugdwerking ${esc(clubName())}</small></span></a>
+    <a class="brand" href="#/start">${LOGO("side")}<span><b>${esc(APPNAME())}</b><small>Jeugdwerking ${esc(clubName())}</small></span></a>${logged && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
@@ -378,7 +388,7 @@ function shell() {
     ${[["start","Start","home"],["kalender","Kalender","cal"],["trainingen","Training","plan"],["matchday","Wedstrijdblad","sheet"]].map(([k,l,i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
-  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div><nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${logged && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
@@ -386,7 +396,7 @@ function shell() {
   $$("[data-gids]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); startGids(); });
   if (logged && !gidsSeen()) setTimeout(() => { if (!$("#dlg")?.open) startGids(); }, 600);
   bindThemeSwitch();
-  $$("[data-logout]").forEach(b => b.onclick = logout);
+  $$("[data-logout]").forEach(b => b.onclick = logout); $$("[data-clubsw]").forEach(b => b.onclick = clubSwitch);
   $$("[data-setname], .acct .who b").forEach(b => b.onclick = () => mode !== "demo" && nameForm());
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
   $$("[data-report]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); reportProblem(); });

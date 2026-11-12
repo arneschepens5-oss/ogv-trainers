@@ -1332,3 +1332,5 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 /* Safari (iPhone) kneep de afbeelding van een oefening weg in een venster met beperkte hoogte */
 .excard>.pic{flex:none}
 .exs{grid-auto-rows:max-content;align-content:start}
+.clubsw{display:flex;align-items:center;gap:8px;width:100%;margin:2px 0 10px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink-2,inherit);font:inherit;font-size:13px;font-weight:700;cursor:pointer}.clubsw:hover{border-color:var(--y,#FFD100)}.clubsw .i{width:16px;height:16px}
+.dlg .list button.item{width:100%;text-align:left;background:var(--panel2,transparent);border:1px solid var(--line);color:var(--ink);font:inherit;cursor:pointer;border-radius:12px;margin-bottom:8px}.dlg .list button.item[aria-current="true"]{border-color:var(--y,#FFD100);box-shadow:inset 3px 0 0 var(--y,#FFD100)}.dlg .list button.item:hover{border-color:var(--y,#FFD100)}
