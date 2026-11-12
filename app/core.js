@@ -22,7 +22,7 @@ const lumRgb = a => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 
 const CLUB_VARS = ["--yellow", "--yellow2", "--onY", "--ytext", "--ybg", "--bg", "--sidebg", "--card", "--card2", "--card3", "--navact", "--line", "--input"];
 function applyClubTheme() {
   const st = CLUB.settings || {}, root = document.documentElement, el = root.style; CLUB_VARS.forEach(k => el.removeProperty(k));
-  if (!st.color && !st.color2) return;
+  if (isOGV() || (!st.color && !st.color2)) return;   /* OG Vorselaar houdt altijd de originele geel-zwarte kleuren */
   const light = root.dataset.theme === "light", W = [255, 255, 255], K = [0, 0, 0], set = (k, v) => el.setProperty(k, Array.isArray(v) ? rgbHex(v) : v);
   if (st.color) { const a = hexRgb(st.color), L = lumRgb(a), bg = light ? [243, 243, 238] : [13, 14, 12];
     set("--yellow", a); set("--yellow2", mixRgb(a, W, .22)); set("--onY", L > .38 ? "#111111" : "#FFFFFF");
