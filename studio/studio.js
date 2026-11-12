@@ -48,7 +48,7 @@ const TOOLS = [
   ["link", "Spelers verbinden (linie)", "K", "Tik de spelers één voor één aan. Dubbeltik of Enter om af te sluiten."],
   ["lens", "Vergrootglas", "G", "Sleep vanuit het midden: dat stuk van het beeld wordt uitvergroot."],
   ["zoom", "Camera inzoomen op dit moment", "C", "Sleep een kader: bij het afspelen zoomt het beeld daar vloeiend op in tijdens het bevriezen."],
-  ["track", "Speler volgen (automatisch)", "Y", "Sleep vanaf de voeten van de speler opzij. De app volgt hem daarna automatisch door de video."]
+  ["track", "Spelers volgen (automatisch)", "Y", "Tik spelers aan om ze te volgen of te verbinden. Eerst nog Spelers herkennen bij Volgen."]
 ];
 const TOOLMAP = Object.fromEntries(TOOLS.map(t => [t[0], t]));
 const LINE_KINDS = new Set(["pass", "run", "drib", "line"]);
@@ -98,7 +98,7 @@ function normData(d) {
   if (!Array.isArray(d.moments)) d.moments = (d.drawings || []).map(x => ({ id: uid(), t: x.t, hold: x.hold ?? 3, dur: 3, anim: true, zoom: null, shapes: (x.shapes || []).map(migrateShape) }));
   delete d.drawings;
   d.moments.forEach(m => { m.id = m.id || uid(); m.shapes = (m.shapes || []).map(s => ({ id: s.id || uid(), w: 1, ...s })); if (m.anim == null) m.anim = true; if (m.dur == null) m.dur = 3; });
-  d.tracks = d.tracks || []; d.tags = d.tags || []; d.inout = d.inout || null;
+  d.tracks = d.tracks || []; d.tags = d.tags || []; d.inout = d.inout || null; d.players = d.players || []; d.links = d.links || []; d.vis = d.vis || null;
   d.moments.sort((a, b) => a.t - b.t); return d;
 }
 
@@ -203,25 +203,44 @@ function labelAt(ctx, txt, x, y, W, c) {
 }
 
 /* ---------- volgers (automatisch gevolgde spelers) ---------- */
-const TSTYLES = [["spot", "Spotlight"], ["ring", "Ring aan de voeten"], ["mark", "Pijltje boven het hoofd"]];
 function trackAt(tr, t) { const P = tr.pts; if (!P || !P.length) return null; if (t < P[0][0] - .05 || t > P[P.length - 1][0] + .05) return null;
   let lo = 0, hi = P.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m][0] <= t) lo = m; else hi = m; }
-  const a = P[lo], b = P[hi]; if (b[0] === a[0] || t <= a[0]) return [a[1], a[2]]; if (t >= b[0]) return [b[1], b[2]]; const f = (t - a[0]) / (b[0] - a[0]);
-  return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; }
+  const a = P[lo], b = P[hi]; if (b[0] === a[0] || t <= a[0]) return [a[1], a[2], a[3] || 0]; if (t >= b[0]) return [b[1], b[2], b[3] || 0]; const f = (t - a[0]) / (b[0] - a[0]);
+  return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, (a[3] || 0) + ((b[3] || 0) - (a[3] || 0)) * f]; }
+/* positie van een herkende speler; bij een lange onderbreking (achter iemand anders) tonen we hem niet */
+function playerAt(pl, t) { const P = pl.pts; if (!P.length || t < P[0][0] - .07 || t > P[P.length - 1][0] + .07) return null;
+  let lo = 0, hi = P.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m][0] <= t) lo = m; else hi = m; } if (P[hi][0] - P[lo][0] > 1.3) return null; return trackAt(pl, t); }
+const TSTYLES = [["spot", "Spotlight"], ["ring", "Ring"], ["mark", "Pijltje"], ["none", "Geen"]];
+/* lijnen tussen gevolgde spelers: lijn (in volgorde), linie (rechtgetrokken langs de spelers) of zone (vlak ertussen) */
+const LKIND = { line: "Lijn", linie: "Linie", zone: "Zone" };
+function hull(P) { P = P.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]); const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); const lo = [], up = [];
+  for (const p of P) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (const p of P.slice().reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); } return lo.slice(0, -1).concat(up.slice(0, -1)); }
+function orderAlong(P) { if (P.length < 3) return P; const mx = P.reduce((s, p) => s + p[0], 0) / P.length, my = P.reduce((s, p) => s + p[1], 0) / P.length; let xx = 0, yy = 0, xy = 0;
+  P.forEach(p => { const dx = p[0] - mx, dy = p[1] - my; xx += dx * dx; yy += dy * dy; xy += dx * dy; }); const ang = .5 * Math.atan2(2 * xy, xx - yy), ux = Math.cos(ang), uy = Math.sin(ang);
+  return P.slice().sort((a, b) => (a[0] - mx) * ux + (a[1] - my) * uy - ((b[0] - mx) * ux + (b[1] - my) * uy)); }
+function drawLinks(ctx, links, tracks, t, W, H) {
+  (links || []).forEach(L => { const P = L.ids.map(id => tracks.find(x => x.id === id)).filter(tr => tr && !tr.hidden).map(tr => trackAt(tr, t)).filter(Boolean).map(p => [p[0] * W, p[1] * H]); if (P.length < 2) return;
+    const c = L.c || "#FFD100", lw = Math.max(2, W * .0035) * (L.w || 1); ctx.save(); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = lw; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = lw * 1.5;
+    if (L.k === "zone" && P.length >= 3) { const Hh = hull(P); ctx.beginPath(); Hh.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.globalAlpha = .24; ctx.fill(); ctx.globalAlpha = 1; ctx.setLineDash([lw * 2.5, lw * 1.8]); ctx.stroke(); }
+    else { const Q = L.k === "linie" ? orderAlong(P) : P; ctx.beginPath(); Q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+      Q.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], lw * 1.6, 0, Math.PI * 2); ctx.fill(); }); }
+    ctx.restore(); }); }
 function drawTracks(ctx, tracks, t, W, H) {
   const on = (tracks || []).map(tr => ({ tr, p: trackAt(tr, t) })).filter(x => x.p && !x.tr.hidden); if (!on.length) return;
   const lw = Math.max(2, W * .0045), spots = on.filter(x => (x.tr.style || "spot") === "spot");
   if (spots.length) { ctx.save(); ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.beginPath(); ctx.rect(-W, -H, W * 3, H * 3);
-    spots.forEach(({ tr, p }) => { const rx = (tr.r || .022) * W, x = p[0] * W, y = p[1] * H; ctx.moveTo(x + rx * 1.15, y - rx * 1.7); ctx.ellipse(x, y - rx * 1.7, rx * 1.15, rx * 2.1, 0, 0, Math.PI * 2); });
+    spots.forEach(({ tr, p }) => { const rx = p[2] ? p[2] * H * .34 : (tr.r || .022) * W, x = p[0] * W, y = p[1] * H; ctx.moveTo(x + rx * 1.15, y - rx * 1.7); ctx.ellipse(x, y - rx * 1.7, rx * 1.15, rx * 2.1, 0, 0, Math.PI * 2); });
     ctx.fill("evenodd"); ctx.restore(); }
-  on.forEach(({ tr, p }) => { const c = tr.c || "#FFD100", rx = (tr.r || .022) * W, ry = rx * .36, x = p[0] * W, y = p[1] * H, st = tr.style || "spot";
+  on.forEach(({ tr, p }) => { const c = tr.c || "#FFD100", rx = p[2] ? Math.max(W * .006, p[2] * H * .34) : (tr.r || .022) * W, ry = rx * .36, x = p[0] * W, y = p[1] * H, st = tr.style || "spot";
     ctx.save(); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = lw * 1.1; ctx.lineCap = "round"; ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = lw * 1.2;
     if (tr.trail) { const seg = tr.pts.filter(q => q[0] <= t && q[0] >= t - 3); if (seg.length > 1) { ctx.save(); ctx.globalAlpha = .85; ctx.setLineDash([lw * 1.6, lw * 1.4]); ctx.beginPath(); seg.forEach((q, i) => i ? ctx.lineTo(q[1] * W, q[2] * H) : ctx.moveTo(q[1] * W, q[2] * H)); ctx.lineTo(x, y); ctx.stroke(); ctx.restore(); } }
     if (st === "spot") { const g = ctx.createLinearGradient(x, y - rx * 4.6, x, y); g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(255,255,255,.22)");
       ctx.save(); ctx.shadowBlur = 0; ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - rx * .5, y - rx * 4.6); ctx.lineTo(x + rx * .5, y - rx * 4.6); ctx.lineTo(x + rx, y); ctx.lineTo(x - rx, y); ctx.closePath(); ctx.fill(); ctx.restore(); }
     if (st === "spot" || st === "ring") { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = .25; ctx.fill(); ctx.globalAlpha = 1; }
-    if (st === "mark") { const top = y - rx * 4.3, s2 = rx * .7; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x - s2, top - s2 * 1.3); ctx.lineTo(x + s2, top - s2 * 1.3); ctx.closePath(); ctx.fill(); }
-    if (tr.name) labelAt(ctx, tr.name, x, y - rx * (st === "mark" ? 5.6 : 4.5), W, c);
+    if (st === "mark") { const top = y - (p[2] ? p[2] * H * 1.05 : rx * 4.3), s2 = rx * .7; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x - s2, top - s2 * 1.3); ctx.lineTo(x + s2, top - s2 * 1.3); ctx.closePath(); ctx.fill(); }
+    if (st === "none" && !tr.name) { ctx.restore(); return; }
+    if (tr.name) labelAt(ctx, tr.name, x, y - (p[2] ? p[2] * H * 1.12 : rx * 4.2) - (st === "mark" ? rx * 1.3 : 0), W, c);
     ctx.restore(); }); }
 
 /* volgen met genormaliseerde kruiscorrelatie, kleur van het shirt en voorspelde beweging */
@@ -265,12 +284,13 @@ const seekTo = (vid, t) => new Promise(res => { let done = false; const fin = ()
    view = zichtbaar deel van het beeld (camera), shapes = [{sh, p}]
    ===================================================================== */
 function composeFrame(ctx, W, H, o) {
-  const { vid, view = { x: 0, y: 0, w: 1, h: 1 }, shapes = [], t = 0, tracks = [] } = o;
+  const { vid, view = { x: 0, y: 0, w: 1, h: 1 }, shapes = [], t = 0, tracks = [], links = [] } = o;
   ctx.save(); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
   if (vid && vid.videoWidth) { const vw = vid.videoWidth, vh = vid.videoHeight; try { ctx.drawImage(vid, view.x * vw, view.y * vh, view.w * vw, view.h * vh, 0, 0, W, H); } catch (e) {} }
   ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   ctx.translate(-view.x / view.w * W, -view.y / view.h * H); ctx.scale(1 / view.w, 1 / view.h);
   drawTracks(ctx, tracks, t, W, H);
+  drawLinks(ctx, links, tracks, t, W, H);
   /* spotlights eerst (die maken het beeld donker), daarna de rest erover */
   shapes.filter(x => x.sh.k === "spot").forEach(x => drawShape(ctx, x.sh, W, H, x.p, vid));
   shapes.filter(x => x.sh.k !== "spot").forEach(x => drawShape(ctx, x.sh, W, H, x.p, vid));
@@ -298,6 +318,7 @@ let P = null, D = null;                     /* analyse (rij) en gegevens */
 let tool = "pass", color = "#FFD100", width = 1, sel = null, selM = null, drag = null, draft = null;
 let frozen = null, lastT = 0, exporting = false, tracking = null, fixing = null, objUrl = null, localFile = null, clip = null, tab = "edit";
 const hist = { a: [], i: -1 };
+let pick = [], hoverP = null, openTr = null;                 /* aangetikte herkende spelers */
 
 const toast = (msg, ms = 3200) => { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), ms); };
 const hint = msg => { const h = $("#hintbar"); h.textContent = msg || ""; h.classList.toggle("on", !!msg); clearTimeout(hint.h); if (msg) hint.h = setTimeout(() => h.classList.remove("on"), 4500); };
@@ -344,8 +365,9 @@ function paint() {
   if (!vid.videoWidth) return;
   const st = liveState(), W = BX.w, H = BX.h; ctx.setTransform(dpr, 0, 0, dpr, BX.x * dpr, BX.y * dpr);
   const shapes = draft && draft.k !== "zoom" && draft.k !== "track" ? [...st.shapes, { sh: draft, p: 1 }] : draft?.k === "track" ? [...st.shapes, { sh: { ...draft, k: "spot" }, p: 1 }] : st.shapes;
-  composeFrame(ctx, W, H, { vid, view: st.view, shapes, t: vid.currentTime, tracks: D.tracks });
+  composeFrame(ctx, W, H, { vid, view: st.view, shapes, t: vid.currentTime, tracks: D.tracks, links: D.links });
   if (!st.edit) return;
+  if (showPlayers()) drawPlayerOverlay(W, H);
   /* hulplijnen in bewerkmodus: inzoomkader, selectie, handvatten */
   const m = st.m;
   if (m?.zoom || draft?.k === "zoom") { const z = draft?.k === "zoom" ? draft.z : m.zoom; if (z) { ctx.save(); ctx.strokeStyle = "#FFD100"; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.strokeRect(z.x * W, z.y * H, z.w * W, z.w * H); ctx.setLineDash([]);
@@ -383,6 +405,30 @@ function distTo(sh, x, y, W, H) {
 }
 function hitShape(m, n) { if (!m) return null; for (let i = m.shapes.length - 1; i >= 0; i--) { if (distTo(m.shapes[i], n[0], n[1], BX.w, BX.h) < 10) return m.shapes[i]; } return null; }
 function hitHandle(sh, n) { return handles(sh).find(h => Math.hypot((h.p[0] - n[0]) * BX.w, (h.p[1] - n[1]) * BX.h) < 13) || null; }
+
+/* ---------- herkende spelers op het beeld ---------- */
+const showPlayers = () => tool === "track" && D && D.players.length && vid.paused && !frozen && !tracking && !exporting;
+const playersNow = () => D.players.map(pl => { const q = playerAt(pl, vid.currentTime); return q && { pl, x: q[0], y: q[1], h: q[2] }; }).filter(Boolean);
+function playerHit(n) { const W = BX.w, H = BX.h; let best = null, bd = 1e9;
+  playersNow().forEach(o => { const hp = o.h * H, cx = o.x * W, top = o.y * H - hp, bot = o.y * H + hp * .15, half = Math.max(12, hp * .3), px = n[0] * W, py = n[1] * H;
+    if (px < cx - half || px > cx + half || py < top - 6 || py > bot + 6) return; const d = Math.abs(px - cx) + Math.abs(py - (top + bot) / 2) * .4; if (d < bd) { bd = d; best = o; } });
+  return best; }
+function drawPlayerOverlay(W, H) {
+  ctx.save(); const L = playersNow();
+  L.forEach(o => { const hp = o.h * H, rx = Math.max(7, hp * .36), x = o.x * W, y = o.y * H, i = pick.indexOf(o.pl.id), on = i >= 0, hv = hoverP === o.pl.id, fol = D.tracks.some(tr => tr.pid === o.pl.id);
+    ctx.lineWidth = on ? 3 : hv ? 2.2 : 1.4; ctx.strokeStyle = on ? "#FFD100" : hv ? "#fff" : fol ? "rgba(255,209,0,.7)" : "rgba(255,255,255,.62)";
+    ctx.setLineDash(on || hv ? [] : [4, 3]); ctx.beginPath(); ctx.ellipse(x, y, rx, rx * .38, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    if (hv || on) { ctx.globalAlpha = on ? .9 : .5; ctx.strokeRect(x - Math.max(8, hp * .28), y - hp, Math.max(16, hp * .56), hp * 1.02); ctx.globalAlpha = 1; }
+    if (on) { const r = Math.max(9, W * .009); ctx.fillStyle = "#FFD100"; ctx.beginPath(); ctx.arc(x, y - hp - r - 3, r, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#111"; ctx.font = `800 ${r * 1.2}px Archivo, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(i + 1), x, y - hp - r - 2); } });
+  ctx.restore(); }
+/* volger maken (of hergebruiken) voor een herkende speler */
+function followerFor(pl, style) {
+  let tr = D.tracks.find(x => x.pid === pl.id);
+  if (!tr) { tr = { id: uid(), pid: pl.id, name: "", c: color, style: style || "ring", trail: false, r: .02, pts: pl.pts.map(q => [q[0], q[1], q[2], q[3]]) }; D.tracks.push(tr); }
+  else if (style) tr.style = style;
+  return tr; }
+/* een volger vanaf dit beeld verder laten lopen met een andere (de juiste) herkende speler */
+function switchTo(tr, pl, t) { tr.pts = tr.pts.filter(q => q[0] < t - .001).concat(pl.pts.filter(q => q[0] >= t - .001).map(q => [q[0], q[1], q[2], q[3]])); tr.pid = pl.id; }
 
 /* ---------- afspelen met bevriesmomenten ---------- */
 function tick() {
@@ -430,7 +476,12 @@ let badgeN = 1, lastDown = 0;
 cv.addEventListener("pointerdown", e => {
   if (!vid.videoWidth || exporting || tracking) return; e.preventDefault(); if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); const n = toN(e);
   if (frozen) stopFreeze(); if (!vid.paused) vid.pause();
-  if (fixing) { const tr = D.tracks.find(x => x.id === fixing); fixing = null; if (tr) runTrack(tr, vid.currentTime, n[0], n[1]); return; }
+  if (fixing) { const tr = D.tracks.find(x => x.id === fixing); fixing = null; const ph = D.players.length ? playerHit(n) : null;
+    if (tr && ph) { switchTo(tr, ph.pl, vid.currentTime); commit(); toast("Verbeterd: vanaf hier volgt hij deze speler."); return; }
+    if (tr) runTrack(tr, vid.currentTime, n[0], n[1]); return; }
+  if (showPlayers()) { const ph = playerHit(n);
+    if (ph) { const id = ph.pl.id, i = pick.indexOf(id); if (i >= 0) pick.splice(i, 1); else pick.push(id); if (tab !== "track") { tab = "track"; renderTabs(); } else renderSide(); return; }
+    if (playersNow().length) { if (pick.length) { pick = []; renderSide(); } else hint("Tik op een speler (de stippellijntjes aan de voeten). Sleep om iemand te volgen die niet herkend werd."); } }
   const m = curMoment(), s = sel && shapeById(sel);
   /* handvat van de geselecteerde vorm verslepen kan met elk gereedschap */
   if (s && s.m === m) { const h = hitHandle(s.s, n); if (h) { drag = { type: "h", h, s: s.s, n0: n, orig: JSON.parse(JSON.stringify(s.s)) }; cv.setPointerCapture(e.pointerId); return; } }
@@ -451,11 +502,12 @@ cv.addEventListener("pointermove", e => {
       else if (h.k === "mid") { const a = s.pts[0], b = s.pts[1]; s.q = [2 * n[0] - (a[0] + b[0]) / 2, 2 * n[1] - (a[1] + b[1]) / 2]; if (Math.hypot((n[0] - (a[0] + b[0]) / 2) * BX.w, (n[1] - (a[1] + b[1]) / 2) * BX.h) < 6) s.q = null; }
       else if (h.k === "r") { s.r = clamp(Math.abs(n[0] - s.pts[0][0]), .008, .4); } }
     drag.moved = true; return; }
+  if (!draft && showPlayers()) { const ph = playerHit(n), id = ph ? ph.pl.id : null; if (id !== hoverP) hoverP = id; cv.style.cursor = ph ? "pointer" : "crosshair"; return; }
   if (!draft) { if (tool === "sel" || sel) { const m = curMoment(), s = sel && shapeById(sel); cv.style.cursor = s && s.m === m && hitHandle(s.s, n) ? "grab" : tool === "sel" ? (hitShape(m, n) ? "move" : "default") : "crosshair"; } return; }
   if (draft.k === "poly" || draft.k === "link") { draft._hover = n; return; }
   if (draft.k === "zoom") { const a = draft.a, w = clamp(Math.max(Math.abs(n[0] - a[0]), Math.abs(n[1] - a[1])), .08, 1); draft.z = { x: clamp(Math.min(a[0], n[0] < a[0] ? a[0] - w : a[0]), 0, 1 - w), y: clamp(n[1] < a[1] ? a[1] - w : a[1], 0, 1 - w), w }; return; }
   if (draft.k === "pen") { const l = draft.pts[draft.pts.length - 1]; if (Math.hypot((n[0] - l[0]) * BX.w, (n[1] - l[1]) * BX.h) > 2.5) draft.pts.push(n); return; }
-  if (["ring", "spot", "lens", "track"].includes(draft.k)) { draft.r = clamp(Math.hypot((n[0] - draft.pts[0][0]), (n[1] - draft.pts[0][1]) * BX.h / BX.w), .008, .4); return; }
+  if (["ring", "spot", "lens", "track"].includes(draft.k)) { draft._moved = true; draft.r = clamp(Math.hypot((n[0] - draft.pts[0][0]), (n[1] - draft.pts[0][1]) * BX.h / BX.w), .008, .4); return; }
   draft.pts[1] = n;
 });
 cv.addEventListener("pointerup", () => {
@@ -463,6 +515,7 @@ cv.addEventListener("pointerup", () => {
   if (!draft || draft.k === "poly" || draft.k === "link") return;
   const d = draft; draft = null;
   if (d.k === "zoom") { if (d.z.w >= .99) return; const mm = ensureMoment(); mm.zoom = { ...d.z }; if (!mm.hold) mm.hold = 3; commit(); toast("Inzoomkader gezet. Bij het afspelen zoomt het beeld hier vloeiend op in."); setTool("sel"); return; }
+  if (d.k === "track" && D.players.length && !d._moved) return;
   if (d.k === "track") { const tr = { id: uid(), name: "", c: d.c, style: "spot", trail: false, r: Math.max(.012, d.r || .022), pts: [] }; D.tracks.push(tr); tab = "track"; renderTabs(); runTrack(tr, vid.currentTime, d.pts[0][0], d.pts[0][1]); return; }
   if (LINE_KINDS.has(d.k) && Math.hypot((d.pts[1][0] - d.pts[0][0]) * BX.w, (d.pts[1][1] - d.pts[0][1]) * BX.h) < 12) return;
   if (d.k === "pen" && d.pts.length < 3) return;
@@ -497,7 +550,7 @@ function renderTimeline() {
   const L = dur(); if (!D) return;
   const pct = t => (L ? clamp(t / L, 0, 1) * 100 : 0) + "%";
   $("#laneM").innerHTML = D.moments.map(m => `<button class="mk${m.id === selM ? " sel" : ""}${m.hold ? "" : " nohold"}" data-m="${m.id}" style="left:${pct(m.t)}" title="Moment ${fmt(m.t)} · ${m.shapes.length} tekening(en)${m.hold ? " · bevriest " + m.hold + " s" : ""}">${m.zoom ? "⌕" : m.shapes.length}</button>`).join("");
-  $("#laneT").innerHTML = D.tracks.filter(tr => tr.pts.length > 1).map(tr => `<span class="rg" style="left:${pct(tr.pts[0][0])};width:calc(${pct(tr.pts[tr.pts.length - 1][0])} - ${pct(tr.pts[0][0])});background:${tr.c}" title="${esc(tr.name || "Gevolgde speler")}"></span>`).join("");
+  $("#laneT").innerHTML = (D.vis ? `<span class="rg vis" style="left:${pct(D.vis.a)};width:calc(${pct(D.vis.b)} - ${pct(D.vis.a)})" title="Spelers herkend"></span>` : "") + D.tracks.filter(tr => tr.pts.length > 1).map(tr => `<span class="rg" style="left:${pct(tr.pts[0][0])};width:calc(${pct(tr.pts[tr.pts.length - 1][0])} - ${pct(tr.pts[0][0])});background:${tr.c}" title="${esc(tr.name || "Gevolgde speler")}"></span>`).join("");
   $("#laneG").innerHTML = D.tags.map(g => `<span class="tg" style="left:${pct(g.t)};--c:${g.c}" title="${esc(g.l)} · ${fmt(g.t)}">${esc(g.l)}</span>`).join("");
   const io = $("#inout"), lane = $("#laneM"); if (D.inout && L && lane) { const r = lane.getBoundingClientRect(), tr = $("#tl").getBoundingClientRect(); io.style.display = "block"; io.style.left = (r.left - tr.left + D.inout.a / L * r.width) + "px"; io.style.width = ((D.inout.b - D.inout.a) / L * r.width) + "px"; } else io.style.display = "none";
 }
@@ -521,7 +574,7 @@ async function filmstrip() {
 
 /* ---------- zijpaneel ---------- */
 function renderTabs() { $$(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab)); renderSide(); }
-$$(".tabs [data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; renderTabs(); });
+$$(".tabs [data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; if (tab === "track" && tool !== "track") setTool("track"); renderTabs(); });
 const seg = (id, opts, val) => `<div class="seg" id="${id}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${String(v) === String(val)}">${l}</button>`).join("")}</div>`;
 const colsHtml = (id, val) => `<div class="cols" id="${id}">${COLORS.map(c => `<button type="button" data-c="${c}" style="--c:${c}" aria-label="Kleur ${CNAME[c]}" aria-pressed="${c === val}"></button>`).join("")}</div>`;
 const bindSeg = (id, fn) => $$(`#${id} [data-v]`).forEach(b => b.onclick = () => fn(b.dataset.v));
@@ -606,23 +659,85 @@ function paneList(pane) {
   const io = $("#ioX"); if (io) io.onclick = () => { D.inout = null; commit(); };
 }
 function paneTrack(pane) {
-  pane.innerHTML = `<h3>Spelers volgen</h3><p>Kies links <b>Speler volgen</b> (Y) en sleep vanaf de voeten van de speler opzij, zo breed als de speler. De app volgt hem automatisch. Klopt het ergens niet? Ga naar dat beeld, kies <b>Verbeteren</b> en tik de speler aan.</p>
-    ${D.tracks.length ? D.tracks.map(tr => { const a = tr.pts[0]?.[0] ?? 0, b = tr.pts[tr.pts.length - 1]?.[0] ?? 0;
-      return `<div class="it" style="flex-direction:column;align-items:stretch;cursor:default;gap:8px;margin-bottom:8px"><div class="row"><span class="ic" style="background:${tr.c};color:#111">${ico("track", 17)}</span><input data-tn="${tr.id}" value="${esc(tr.name || "")}" placeholder="Naam (bv. 7 Lars)" aria-label="Naam" style="flex:1;min-width:0;border:1px solid var(--line2);background:var(--panel);border-radius:8px;padding:6px 8px"><button class="x" data-tdel="${tr.id}" aria-label="Verwijderen">${ico("x", 16)}</button></div>
-        <small class="note"><button class="chipbtn" data-tgo="${a}">${fmt(a)}</button> tot <button class="chipbtn" data-tgo="${b}">${fmt(b)}</button> · ${tr.pts.length} posities</small>
-        ${seg("ts" + tr.id, TSTYLES, tr.style || "spot")}${colsHtml("tc" + tr.id, tr.c)}
-        <div class="row"><label class="chk"><input type="checkbox" data-ttr="${tr.id}"${tr.trail ? " checked" : ""}> Looplijn tonen</label><label class="chk"><input type="checkbox" data-thd="${tr.id}"${tr.hidden ? "" : " checked"}> Zichtbaar</label></div>
-        <div class="row"><button class="btn ghost small" data-tfix="${tr.id}">Verbeteren</button><button class="btn ghost small" data-tmore="${tr.id}">Verder volgen</button></div></div>`; }).join("")
-      : `<div class="empty"><b>Nog niemand gevolgd</b>Pauzeer de video, kies Speler volgen en sleep vanaf de voeten van een speler.</div>`}`;
+  const t = vid.currentTime, V = D.vis, inR = V && t >= V.a - .05 && t <= V.b + .05, now = inR ? playersNow() : [];
+  pick = pick.filter(id => D.players.some(p => p.id === id));
+  const pl = id => D.players.find(p => p.id === id), teamOf = pick.length ? pl(pick[0]).tm : -1;
+  let top;
+  if (!vid.videoWidth) top = `<div class="empty"><b>Kies eerst een clip</b>Daarna herkent de studio de spelers voor je.</div>`;
+  else if (!V) top = `<h3>Spelers herkennen</h3><p>De studio zoekt zelf alle spelers in een stuk video en volgt ze. Daarna tik je ze gewoon aan: een spotlight, ring of naam blijft dan aan die speler hangen, en lijnen tussen spelers bewegen mee.</p>
+    <button class="btn" id="vRun">${ico("track", 16)} Spelers herkennen</button><p class="note" style="margin-top:8px">Werkt het best met een vaste camera of een beeld dat rustig meedraait. De eerste keer laadt de herkenning (4 tot 20 MB).</p>`;
+  else if (!inR) top = `<h3>Spelers herkennen</h3><p>Herkend van <button class="chipbtn" id="vGo">${fmt(V.a)}</button> tot ${fmt(V.b)}. Op dit beeld (${fmt(t)}) nog niet.</p><button class="btn" id="vRun">${ico("track", 16)} Hier herkennen</button>`;
+  else if (!pick.length) top = `<h3>${now.length} spelers op dit beeld</h3><p>Tik op het beeld één of meer spelers aan (de stippellijntjes aan hun voeten). Daarna kies je hier wat er moet gebeuren.</p>
+    <p class="note">Herkend van ${fmt(V.a)} tot ${fmt(V.b)}. <button class="chipbtn" id="vRun">Ander stuk herkennen</button></p>`;
+  else top = `<h3>${pick.length === 1 ? "1 speler gekozen" : pick.length + " spelers gekozen"}</h3>
+    <div class="field"><span>Laten volgen met</span><div class="seg">${TSTYLES.slice(0, 3).map(([v, l]) => `<button type="button" data-pst="${v}">${l}</button>`).join("")}</div></div>
+    ${pick.length === 1 ? `<div class="field"><span>Naam boven de speler (mag leeg)</span><input id="pName" maxlength="24" placeholder="bv. 7 Lars" value="${esc(D.tracks.find(x => x.pid === pick[0])?.name || "")}"></div>` : ""}
+    ${pick.length >= 2 ? `<div class="field"><span>Verbinden</span><div class="seg"><button type="button" data-plk="line">Lijn</button><button type="button" data-plk="linie">Linie</button>${pick.length >= 3 ? `<button type="button" data-plk="zone">Zone</button>` : ""}</div></div>` : `<p class="note">Kies meer spelers om ze met een lijn, linie of zone te verbinden.</p>`}
+    <div class="row">${teamOf >= 0 ? `<button class="btn ghost small" id="pTeam">Hele ploeg kiezen</button>` : ""}<button class="btn ghost small" id="pClr">Keuze wissen</button></div>`;
+  const SN = Object.fromEntries(TSTYLES);
+  const fol = D.tracks.length ? `<h4>Gevolgde spelers</h4>` + D.tracks.map((tr, i) => { const a = tr.pts[0]?.[0] ?? 0, b = tr.pts[tr.pts.length - 1]?.[0] ?? 0, op = openTr === tr.id;
+      return `<div class="it fol${op ? " open" : ""}" style="flex-direction:column;align-items:stretch;cursor:default;gap:8px;margin-bottom:6px"><div class="row" style="flex-wrap:nowrap"><span class="ic" style="background:${tr.c};color:#111">${ico("track", 17)}</span><input data-tn="${tr.id}" value="${esc(tr.name || "")}" placeholder="Speler ${i + 1} (naam)" aria-label="Naam" style="flex:1;min-width:0;border:1px solid var(--line2);background:var(--panel);border-radius:8px;padding:6px 8px">
+        <button class="x" data-topen="${tr.id}" title="${op ? "Minder" : "Stijl, kleur en verbeteren"}" aria-label="Instellingen" aria-expanded="${op}">${ico(op ? "up" : "sel", 16)}</button><button class="x" data-tdel="${tr.id}" aria-label="Verwijderen">${ico("x", 16)}</button></div>
+        <small class="note">${SN[tr.style || "spot"]} · <button class="chipbtn" data-tgo="${a}">${fmt(a)}</button> tot <button class="chipbtn" data-tgo="${b}">${fmt(b)}</button></small>
+        ${op ? `${seg("ts" + tr.id, TSTYLES, tr.style || "spot")}${colsHtml("tc" + tr.id, tr.c)}
+        <div class="row"><label class="chk"><input type="checkbox" data-ttr="${tr.id}"${tr.trail ? " checked" : ""}> Looplijn</label><label class="chk"><input type="checkbox" data-thd="${tr.id}"${tr.hidden ? "" : " checked"}> Zichtbaar</label></div>
+        <div class="row"><button class="btn ghost small" data-tfix="${tr.id}" title="Volgt hij ergens de verkeerde? Ga naar dat beeld en tik daarna de juiste speler aan.">Verbeteren vanaf hier</button>${tr.pid ? "" : `<button class="btn ghost small" data-tmore="${tr.id}">Verder volgen</button>`}</div>` : ""}</div>`; }).join("") : "";
+  const lk = D.links.length ? `<h4>Lijnen tussen spelers</h4><div class="list">` + D.links.map(L => `<div class="it" style="cursor:default"><span class="ic" style="background:${L.c};color:#111">${ico(L.k === "zone" ? "poly" : "link", 16)}</span><span class="mn"><b>${LKIND[L.k]}</b><small>${L.ids.map(id => esc(D.tracks.find(x => x.id === id)?.name || "")).filter(Boolean).join(", ") || L.ids.length + " spelers"}</small></span>${colsHtml("lc" + L.id, L.c)}<button class="x" data-ldel="${L.id}" aria-label="Verwijderen">${ico("x", 16)}</button></div>`).join("") + `</div>` : "";
+  pane.innerHTML = top + fol + lk;
+  const r = $("#vRun"); if (r) r.onclick = recogniseDialog; const g = $("#vGo"); if (g) g.onclick = () => seek(V.a);
+  $$("[data-pst]", pane).forEach(b => b.onclick = () => { pick.forEach(id => { const tr = followerFor(pl(id), b.dataset.pst); if (pick.length > 1 && !tr.c) tr.c = color; }); commit(); toast(pick.length === 1 ? "Deze speler wordt nu gevolgd." : pick.length + " spelers worden nu gevolgd."); });
+  const pn = $("#pName"); if (pn) { pn.oninput = () => { const tr = followerFor(pl(pick[0]), D.tracks.find(x => x.pid === pick[0])?.style || "ring"); tr.name = pn.value.slice(0, 24); paint(); }; pn.onchange = commit; }
+  $$("[data-plk]", pane).forEach(b => b.onclick = () => { const ids = pick.map(id => { const tr = D.tracks.find(x => x.pid === id) || followerFor(pl(id), "none"); return tr.id; });
+    D.links.push({ id: uid(), k: b.dataset.plk, ids, c: color, w: 1 }); pick = []; commit(); toast(`${LKIND[b.dataset.plk]} gemaakt. Ze beweegt mee met de spelers.`); });
+  const pt = $("#pTeam"); if (pt) pt.onclick = () => { now.forEach(o => { if (o.pl.tm === teamOf && !pick.includes(o.pl.id)) pick.push(o.pl.id); }); renderSide(); };
+  const pc = $("#pClr"); if (pc) pc.onclick = () => { pick = []; renderSide(); };
   const T = id => D.tracks.find(x => x.id === id);
   D.tracks.forEach(tr => { bindSeg("ts" + tr.id, v => { tr.style = v; commit(); }); bindCols("tc" + tr.id, c => { tr.c = c; commit(); }); });
+  $$("[data-topen]", pane).forEach(b => b.onclick = () => { openTr = openTr === b.dataset.topen ? null : b.dataset.topen; renderSide(); });
+  D.links.forEach(L => bindCols("lc" + L.id, c => { L.c = c; commit(); }));
   $$("[data-tn]", pane).forEach(i => { i.oninput = () => { T(i.dataset.tn).name = i.value.slice(0, 24); }; i.onchange = commit; });
   $$("[data-ttr]", pane).forEach(i => i.onchange = () => { T(i.dataset.ttr).trail = i.checked; commit(); });
   $$("[data-thd]", pane).forEach(i => i.onchange = () => { T(i.dataset.thd).hidden = !i.checked; commit(); });
   $$("[data-tgo]", pane).forEach(b => b.onclick = () => seek(+b.dataset.tgo));
-  $$("[data-tfix]", pane).forEach(b => b.onclick = () => { vid.pause(); stopFreeze(); fixing = b.dataset.tfix; toast("Tik op de voeten van de speler op dit beeld. De app volgt vanaf hier opnieuw.", 5000); });
+  $$("[data-tfix]", pane).forEach(b => b.onclick = () => { vid.pause(); stopFreeze(); fixing = b.dataset.tfix; if (D.players.length) setTool("track"); toast("Tik nu op het beeld de juiste speler aan. Vanaf dit beeld volgt de app hem.", 5000); });
   $$("[data-tmore]", pane).forEach(b => b.onclick = async () => { const tr = T(b.dataset.tmore), l = tr.pts[tr.pts.length - 1]; if (!l) return; await seekTo(vid, l[0]); runTrack(tr, l[0], l[1], l[2]); });
-  $$("[data-tdel]", pane).forEach(b => b.onclick = () => { if (!confirm("Deze gevolgde speler verwijderen?")) return; D.tracks = D.tracks.filter(x => x.id !== b.dataset.tdel); commit(); });
+  $$("[data-tdel]", pane).forEach(b => b.onclick = () => { if (!confirm("Deze gevolgde speler verwijderen?")) return; const id = b.dataset.tdel; D.tracks = D.tracks.filter(x => x.id !== id);
+    D.links.forEach(L => L.ids = L.ids.filter(x => x !== id)); D.links = D.links.filter(L => L.ids.length >= 2); commit(); });
+  $$("[data-ldel]", pane).forEach(b => b.onclick = () => { D.links = D.links.filter(L => L.id !== b.dataset.ldel); commit(); });
+}
+
+/* ---------- spelers herkennen over een stuk video ---------- */
+function recogniseDialog() {
+  if (!vid.videoWidth) return; if (!window.OGVVision) { toast("De herkenning kon niet geladen worden. Herlaad de pagina."); return; }
+  const L = dur(), t = vid.currentTime, opts = [];
+  if (D.inout) opts.push(["io", `Clip ${fmt(D.inout.a)} – ${fmt(D.inout.b)}`, D.inout.a, D.inout.b]);
+  opts.push(["10", `Vanaf hier, 10 s`, t, Math.min(L, t + 10)], ["20", `Vanaf hier, 20 s`, t, Math.min(L, t + 20)]);
+  if (L <= 60) opts.push(["all", "Hele video", 0, L]);
+  const d = $("#dlg"); let choice = opts[0][0], q = "auto";
+  d.innerHTML = `<h2>Spelers herkennen</h2><p>De studio zoekt in elk beeld alle spelers en koppelt ze aan elkaar, ook als ze even achter iemand verdwijnen. Dat gebeurt op je eigen toestel: de video gaat nergens naartoe.</p>
+    <div class="field"><span>Welk stuk</span>${seg("vR", opts.map(o => [o[0], o[1]]), choice)}</div>
+    <div class="field"><span>Nauwkeurigheid</span>${seg("vQ", [["auto", "Automatisch"], ["fast", "Snel"], ["fine", "Kleine spelers"]], q)}</div>
+    <p class="note">Automatisch kijkt zelf of de spelers klein in beeld staan. Snel volstaat als de camera dicht bij de spelers staat. Reken op een halve tot twee minuten per 10 seconden video, sneller op een recente computer.</p>
+    <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" id="vX">Annuleren</button><button class="btn" id="vGo2">Herkennen</button></div>`;
+  d.showModal(); bindSeg("vR", v => { choice = v; $$("#vR [data-v]").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === v)); }); bindSeg("vQ", v => { q = v; $$("#vQ [data-v]").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === v)); });
+  $("#vX").onclick = () => d.close();
+  $("#vGo2").onclick = () => { const o = opts.find(x => x[0] === choice); d.close(); recognise(o[2], o[3], q); };
+}
+async function recognise(a, b, q) {
+  if (tracking || b - a < .3) return; vid.pause(); stopFreeze(); tracking = { stop: false };
+  $("#busy").hidden = false; $("#busyMsg").textContent = "Herkenning laden…"; $("#busyStop").onclick = () => { tracking.stop = true; };
+  try {
+    const res = await OGVVision.analyse(vid.currentSrc || vid.src, { a, b, fps: q === "fast" ? 6 : 8, tiles: q === "fast" ? 0 : q === "fine" ? 2 : "auto", crossOrigin: vid.crossOrigin,
+      stopped: () => tracking.stop,
+      onProgress: p => { $("#busyMsg").textContent = p.phase === "model" ? "Herkenning laden (eenmalig)…" : p.phase === "link" ? "Spelers aan elkaar koppelen…"
+        : `Spelers zoeken… ${Math.round(p.k / p.N * 100)}%${p.eta ? " · nog ongeveer " + (p.eta > 90 ? Math.round(p.eta / 60) + " min" : Math.round(p.eta) + " s") : ""}`; } });
+    if (!res.players.length) { toast("Geen spelers gevonden in dit stuk. Staat de camera erg ver? Kies dan Kleine spelers.", 6000); }
+    else { const last = Math.max(...res.players.map(p => p.pts[p.pts.length - 1][0]));
+      D.players = res.players; D.vis = { a, b: Math.min(b, last), ep: res.ep, n: res.players.length };
+      D.tracks.forEach(tr => { if (tr.pid) tr.pid = null; }); pick = [];
+      toast(`${res.players.length} spelers herkend${tracking.stop ? " (gestopt)" : ""}. Tik er één of meer aan.`, 5000); }
+  } catch (e) { const m = String(e.message || e); toast(m === "BEVEILIGD" ? "Herkennen lukt niet voor deze video (beveiligde bron). Kies de video van je toestel." : "Herkennen lukte niet: " + m, 6000); }
+  tracking = null; $("#busy").hidden = true; tab = "track"; setTool("track"); await seekTo(vid, a); commit(); renderTabs();
 }
 function paneTags(pane) {
   pane.innerHTML = `<h3>Fases taggen</h3><p>Tik een tag om deze fase op ${fmt(vid.currentTime)} te markeren. Zo vind je goals, kansen en balverlies snel terug.</p>
@@ -632,7 +747,7 @@ function paneTags(pane) {
   $$("[data-gt]", pane).forEach(r => r.onclick = e => { if (e.target.closest("[data-gdel]")) return; seek(+r.dataset.gt); });
   $$("[data-gdel]", pane).forEach(b => b.onclick = () => { D.tags = D.tags.filter(g => g.id !== b.dataset.gdel); commit(); });
 }
-const helpBlock = () => `<h4>Snel aan de slag</h4><div class="kv"><kbd>Spatie</kbd><span>Afspelen / pauzeren</span><kbd>← →</kbd><span>Eén beeld verder of terug</span><kbd>V</kbd><span>Selecteren</span><kbd>P R D</kbd><span>Pass, loopactie, dribbel</span><kbd>O S</kbd><span>Ring, spotlight</span><kbd>Y</kbd><span>Speler volgen</span><kbd>C</kbd><span>Inzoomen</span><kbd>Ctrl Z</kbd><span>Ongedaan maken</span></div>`;
+const helpBlock = () => `<h4>Snel aan de slag</h4><div class="kv"><kbd>Spatie</kbd><span>Afspelen / pauzeren</span><kbd>← →</kbd><span>Eén beeld verder of terug</span><kbd>V</kbd><span>Selecteren</span><kbd>P R D</kbd><span>Pass, loopactie, dribbel</span><kbd>O S</kbd><span>Ring, spotlight</span><kbd>Y</kbd><span>Spelers aantikken en volgen</span><kbd>C</kbd><span>Inzoomen</span><kbd>Ctrl Z</kbd><span>Ongedaan maken</span></div>`;
 
 /* ---------- moment bekijken en kopiëren ---------- */
 function previewMoment(m) { stopFreeze(); vid.pause(); const from = Math.max(0, m.t - 1.5); vid.currentTime = from; lastT = from - .001; clip = { b: Math.min(dur(), m.t + 2) }; $("#freezeOn").checked = true; setTimeout(() => vid.play().catch(() => {}), 120); }
@@ -689,7 +804,7 @@ $("#exportBtn").onclick = () => {
   $("#exGo").onclick = () => { const r = range === "all" || !D.inout ? [0, dur()] : [D.inout.a, D.inout.b]; exportVideo({ a: r[0], b: r[1], h: q, intro: $("#exIntro").checked, sub: $("#exSub").value.trim() }); };
 };
 function snapshotPng() { const vw = vid.videoWidth, vh = vid.videoHeight, c = document.createElement("canvas"); c.width = vw; c.height = vh; const x = c.getContext("2d"), st = liveState();
-  composeFrame(x, vw, vh, { vid, view: st.view, shapes: st.shapes, t: vid.currentTime, tracks: D.tracks });
+  composeFrame(x, vw, vh, { vid, view: st.view, shapes: st.shapes, t: vid.currentTime, tracks: D.tracks, links: D.links });
   try { c.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = slug(P.title) + "-" + fmt(vid.currentTime).replace(/[:.]/g, "-") + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, "image/png"); }
   catch (e) { toast("Afbeelding maken lukt niet voor deze video (beveiligde bron)."); } }
 const slug = s => (s || "analyse").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "analyse";
@@ -719,7 +834,7 @@ async function exportVideo({ a, b, h, intro, sub }) {
       if (!fz) { const hit = D.moments.find(m => m.hold > 0 && m.t > lastE && m.t <= t + .01 && m.t <= b); if (hit) { vid.pause(); vid.currentTime = hit.t; fz = { m: hit, s: now }; } }
       if (fz) { const el = (now - fz.s) / 1000; view = camAt(fz.m, el); shapes = shapesAt(fz.m, el); if (el >= fz.m.hold) { lastE = fz.m.t; fz = null; vid.play().catch(() => {}); } }
       else { lastE = Math.max(lastE, t); shapes = D.moments.filter(m => !m.hold && t >= m.t && t <= m.t + (m.dur || 3)).flatMap(m => m.shapes.map(sh => ({ sh, p: m.anim ? clamp((t - m.t) / .45, 0, 1) : 1 }))); }
-      composeFrame(x, W, H, { vid, view, shapes, t, tracks: D.tracks });
+      composeFrame(x, W, H, { vid, view, shapes, t, tracks: D.tracks, links: D.links });
       const el = (now - t0) / 1000; if (now - shown > 200) { shown = now; $("#exP").style.width = Math.min(100, el / total * 100) + "%"; $("#exM").textContent = `${fmt(el)} van ongeveer ${fmt(total)}`; }
       if (!fz && (t >= b - .02 || vid.ended)) { vid.pause(); setTimeout(r, 150); return; }
       requestAnimationFrame(f); };
@@ -759,7 +874,7 @@ document.addEventListener("keydown", e => {
   if (ctl && k.toLowerCase() === "v") { if (clipboard && vid.videoWidth) { const m = ensureMoment(); const c = { ...JSON.parse(JSON.stringify(clipboard)), id: uid() }; m.shapes.push(c); sel = c.id; commit(); } return; }
   if (ctl) return;
   if (k === " ") { e.preventDefault(); playPause(); return; }
-  if (k === "Escape") { if (draft) { if (draft.k === "poly" || draft.k === "link") finishPoly(); else draft = null; } else if (fixing) fixing = null; else { sel = null; renderSide(); } return; }
+  if (k === "Escape") { if (draft) { if (draft.k === "poly" || draft.k === "link") finishPoly(); else draft = null; } else if (fixing) fixing = null; else if (pick.length) { pick = []; renderSide(); } else { sel = null; renderSide(); } return; }
   if (k === "Enter") { finishPoly(); return; }
   if ((k === "Delete" || k === "Backspace") && s) { e.preventDefault(); delShape(); return; }
   if (k.startsWith("Arrow") && s && vid.paused) { e.preventDefault(); const st = e.shiftKey ? .02 : .004, dx = k === "ArrowLeft" ? -st : k === "ArrowRight" ? st : 0, dy = k === "ArrowUp" ? -st : k === "ArrowDown" ? st : 0;

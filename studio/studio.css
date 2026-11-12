@@ -84,6 +84,7 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--yel)
 .tl-lane .mk.sel{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ink)}
 .tl-lane .mk.nohold{background:transparent;border:2px solid var(--yel);color:var(--yel)}
 .tl-lane .rg{position:absolute;top:5px;height:10px;border-radius:5px;opacity:.8}
+.tl-lane .rg.vis{top:3px;height:14px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.16) 0 4px,rgba(255,255,255,.06) 4px 8px);border:1px solid rgba(255,255,255,.25);opacity:1}
 .tl-lane .tg{position:absolute;top:2px;height:16px;margin-left:-2px;border-left:3px solid var(--c);padding-left:4px;font-size:10.5px;font-weight:700;color:var(--ink);white-space:nowrap;border-radius:0}
 .tl-inout{position:absolute;top:4px;bottom:4px;border:2px solid rgba(255,209,0,.7);border-radius:8px;background:rgba(255,209,0,.06);pointer-events:none;display:none}
 .tl-head{position:absolute;top:2px;bottom:2px;width:0;pointer-events:none}
