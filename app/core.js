@@ -8,7 +8,7 @@ const CLUB = { id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {} 
 const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
 const clubShort = () => CLUB.short || clubName();
-const PRODUCT = "Coachub";   /* naam van het platform voor andere clubs dan OG Vorselaar */
+const PRODUCT = "FootballCoachHub";   /* naam van het platform voor andere clubs dan OG Vorselaar */
 const APPNAME = () => CLUB.settings?.app || (isOGV() ? "OGV Trainers" : PRODUCT);
 const APPTITLE = () => isOGV() && !CLUB.settings?.app ? "OGV<span>Trainers</span>" : esc(APPNAME()).replace(/(hub)$/i, "<span>$1</span>");
 /* laatst gekende club van dit toestel: zo staan naam, logo en kleuren meteen goed, ook op het aanmeldscherm */

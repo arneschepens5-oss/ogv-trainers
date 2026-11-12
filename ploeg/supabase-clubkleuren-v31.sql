@@ -1,4 +1,4 @@
--- OGV Trainers / Coachub · v31 · clubkleur ook op de ouderpagina. Veilig om opnieuw uit te voeren.
+-- OGV Trainers / FootballCoachHub · v31 · clubkleur ook op de ouderpagina. Veilig om opnieuw uit te voeren.
 do $$
 declare d text;
 begin
