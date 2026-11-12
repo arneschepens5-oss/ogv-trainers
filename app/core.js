@@ -382,7 +382,9 @@ function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
 let teardown = null;
 
-function shell() {
+/* shell(true) = nieuwe lege pagina (enkel bij het openen van een pagina); shell() = enkel menu en zijbalk vernieuwen, de getoonde pagina blijft staan */
+function shell(fresh) {
+  const oldView = fresh ? null : $("#view");
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
@@ -415,6 +417,7 @@ function shell() {
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${logged && (S.clubs || []).length > 1 ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
+  if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   $$("[data-gids]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); startGids(); });
@@ -426,12 +429,17 @@ function shell() {
   $$("[data-report]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); reportProblem(); });
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
 }
-let renderSeq = 0;
+let renderSeq = 0, rendering = 0;
 async function render() {
-  const seq = ++renderSeq;
+  const seq = ++renderSeq; rendering++;
+  try { await renderPage(seq); } finally { rendering--; }
+}
+/* vangnet: staat er ooit toch een lege pagina (zonder dat er iets aan het laden is), dan wordt ze opnieuw opgebouwd */
+setInterval(() => { const v = $("#view"); if (v && !rendering && !v.children.length && !v.textContent.trim() && !document.hidden) { console.warn("Lege pagina hersteld"); render(); } }, 1500);
+async function renderPage(seq) {
   if (teardown) { try { teardown(); } catch (e) {} teardown = null; }
   const r = cur(), def = ROUTES[r.page] || ROUTES.start;
-  shell(); const v = $("#view");
+  shell(true); const v = $("#view");
   if (def.wide) v.classList.add("wide");
   const logged = !!db && (mode === "demo" || !!user);
   /* alles achter aanmelden en de clubcode, behalve het aanmeldscherm zelf */
@@ -567,7 +575,7 @@ async function startCloud() {
   await clubStatus(); if (!S.member) { render(); return; } if (typeof v14Check === "function") await v14Check(); setTimeout(fbCount, 1500); setInterval(fbCount, 120000);
   try { await loadTeams(); const last = (() => { try { return localStorage.getItem(TEAM_KEY); } catch (e) {} })();
     const pick = myTeams().find(t => t.id === last) || (myTeams().length === 1 ? myTeams()[0] : null); if (pick) await loadTeam(pick.id); }
-  catch (e) { console.error(e); db = null; mode = null; shell(); viewLogin($("#view"), /relation|does not exist|schema cache|column/i.test(e.message || "") ? "De database is nog niet klaargezet. De beheerder moet eerst supabase-setup.sql uitvoeren." : "Laden mislukt: " + (e.message || e)); return; }
+  catch (e) { console.error(e); db = null; mode = null; shell(true); viewLogin($("#view"), /relation|does not exist|schema cache|column/i.test(e.message || "") ? "De database is nog niet klaargezet. De beheerder moet eerst supabase-setup.sql uitvoeren." : "Laden mislukt: " + (e.message || e)); return; }
   if (cur().page === "aanmelden") location.hash = "#/start"; else render();
 }
 async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", email: "demo" }; S.member = true; S.admin = true; S.v14 = true; try { sessionStorage.setItem("ogv-mode", "demo"); } catch (e) {}
