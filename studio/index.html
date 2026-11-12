@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0C0A">
+<title>OGV Videostudio</title>
+<link rel="icon" href="../icons/favicon.png">
+<script src="../gate.js?v=1"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<link rel="stylesheet" href="studio.css?v=1">
+</head>
+<body>
+<header class="top">
+  <a class="back" href="../#/videoanalyse" aria-label="Terug naar OGV Trainers"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <img class="logo" src="../icons/logo-dark.png" alt="" width="28" height="28">
+  <input id="title" class="title" value="Nieuwe analyse" aria-label="Naam van de analyse" maxlength="80">
+  <span id="saved" class="saved" aria-live="polite"></span>
+  <span class="grow"></span>
+  <button class="tb" id="undo" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+  <button class="tb" id="redo" title="Opnieuw (Ctrl+Shift+Z)" aria-label="Opnieuw"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+  <button class="tb" id="help" title="Sneltoetsen en uitleg (?)" aria-label="Uitleg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7M12 17.2h.01"/></svg></button>
+  <button class="btn" id="exportBtn"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Exporteren</button>
+</header>
+
+<main class="work">
+  <nav class="rail" id="rail" aria-label="Gereedschap"></nav>
+
+  <section class="center">
+    <div class="stage" id="stage">
+      <canvas id="cv" aria-label="Videobeeld met tekeningen"></canvas>
+      <video id="vid" playsinline preload="auto" muted></video>
+      <div class="drop" id="drop">
+        <b>Kies een clip</b>
+        <span>Sleep een video hierheen, of kies er een van je toestel of uit je opslag.</span>
+        <div class="row"><label class="btn">Video van dit toestel<input type="file" id="file" accept="video/*" hidden></label><button class="btn ghost" id="fromStore">Uit mijn opslag</button></div>
+      </div>
+      <div class="badge" id="momentBadge" hidden></div>
+      <div class="busy" id="busy" hidden><span id="busyMsg"></span><button class="btn small" id="busyStop">Stoppen</button></div>
+      <div class="hintbar" id="hintbar" aria-live="polite"></div>
+    </div>
+
+    <div class="transport">
+      <button class="tb big" id="play" title="Afspelen / pauzeren (spatie)" aria-label="Afspelen"></button>
+      <button class="tb" data-step="-1" title="1 seconde terug (Shift+←)" aria-label="1 seconde terug">−1s</button>
+      <button class="tb" data-step="-0.04" title="Beeld terug (←)" aria-label="Beeld terug"><svg viewBox="0 0 24 24"><path d="M18 6 9 12l9 6zM6 6v12"/></svg></button>
+      <button class="tb" data-step="0.04" title="Beeld vooruit (→)" aria-label="Beeld vooruit"><svg viewBox="0 0 24 24"><path d="m6 6 9 6-9 6zM18 6v12"/></svg></button>
+      <button class="tb" data-step="1" title="1 seconde vooruit (Shift+→)" aria-label="1 seconde vooruit">+1s</button>
+      <span class="time" id="time">00:00.0 / 00:00.0</span>
+      <span class="grow"></span>
+      <button class="chipbtn" id="addMoment" title="Moment toevoegen op dit beeld (M)">+ Moment</button>
+      <button class="chipbtn" id="setIn" title="Begin van de clip voor export (I)">Begin [</button>
+      <button class="chipbtn" id="setOut" title="Einde van de clip voor export (E)">] Einde</button>
+      <select id="rate" aria-label="Snelheid"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="1.5">1,5×</option><option value="2">2×</option></select>
+      <label class="chk" title="Bij het afspelen stopt de video op elk moment met tekeningen"><input type="checkbox" id="freezeOn" checked> Bevriezen</label>
+    </div>
+
+    <div class="timeline" id="tl">
+      <div class="tl-strip" id="strip"></div>
+      <div class="tl-rows">
+        <div class="tl-row" data-row="moments"><span class="tl-lab">Momenten</span><div class="tl-lane" id="laneM"></div></div>
+        <div class="tl-row" data-row="tracks"><span class="tl-lab">Volgen</span><div class="tl-lane" id="laneT"></div></div>
+        <div class="tl-row" data-row="tags"><span class="tl-lab">Tags</span><div class="tl-lane" id="laneG"></div></div>
+      </div>
+      <div class="tl-inout" id="inout"></div>
+      <div class="tl-head" id="head"><i></i></div>
+    </div>
+  </section>
+
+  <aside class="side" id="side">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="edit" aria-selected="true">Bewerken</button>
+      <button role="tab" data-tab="list" aria-selected="false">Momenten</button>
+      <button role="tab" data-tab="track" aria-selected="false">Volgen</button>
+      <button role="tab" data-tab="tags" aria-selected="false">Tags</button>
+    </div>
+    <div class="pane" id="pane"></div>
+  </aside>
+</main>
+
+<dialog id="dlg"></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../tactiekbord/vendor/supabase-2.118.0.js"></script>
+<script src="studio.js?v=1"></script>
+</body>
+</html>

@@ -119,15 +119,19 @@ function vaTracker(vid) {
 const vaSeek = (vid, t) => new Promise(res => { const done = () => { vid.removeEventListener("seeked", done); res(); }; vid.addEventListener("seeked", done); vid.currentTime = t; setTimeout(done, 1500); });
 
 /* ---------- overzicht van analyses ---------- */
+/* de analyses zelf openen in de aparte Videostudio (studio/) */
+const studioUrl = id => "studio/" + (id && id !== "nieuw" ? "?p=" + encodeURIComponent(id) : "?new=1");
 route("videoanalyse", { title: "Videoanalyse", auth: true, render: async (v, id) => {
-  if (id) return vaEditor(v, id);
+  if (id) { v.innerHTML = `<div class="empty"><span class="spin"></span> Videostudio openen…</div>`; location.href = studioUrl(id); return; }
   v.innerHTML = head("Videoanalyse", "Laden…"); const list = await items.list("videoproject");
-  v.innerHTML = head("Videoanalyse", "Laad een clip, teken pijlen, looplijnen, zones en spotlights rechtstreeks op het beeld, zet momenten vast en exporteer het resultaat als video voor je spelers.",
-    `<a class="btn" href="#/videoanalyse/nieuw">${IC.plus}Nieuwe analyse</a>`) +
-    `<div class="grid2">${[["Speler volgen", "Zet een spotlight, ring of naam op een speler: de app volgt hem automatisch terwijl de video loopt.", "eye"], ["Teken op het beeld", "Pijlen, looplijnen, zones, vlakken, verbindingslijnen en tekst. Elke tekening bevriest het beeld op dat moment.", "pen"],
-      ["Momenten taggen", "Markeer goals, kansen, balverlies of pressing en spring er met één tik naartoe.", "tag"], ["Delen met spelers", "Exporteer de clip met alle tekeningen als video, of een beeld als afbeelding.", "dl"]]
-      .map(([b, s, i]) => `<div class="tile" style="cursor:default"><span class="ic">${IC[i]}</span><span><b>${b}</b><small>${s}</small></span></div>`).join("")}</div>
-    <div class="sec"><h2>Mijn analyses</h2>${list.length ? `<div class="list">${list.map(p => `<div class="item" data-go="#/videoanalyse/${p.id}"><span class="num">${IC.video}</span><span class="main"><b>${esc(p.title)}</b><small>${esc(p.data.file_name || "")} · ${(n => n + (n === 1 ? " tekenmoment" : " tekenmomenten"))((p.data.drawings || []).length)} · ${(n => n + (n === 1 ? " moment" : " momenten"))((p.data.tags || []).length)}${(p.data.tracks || []).length ? " · " + p.data.tracks.length + " gevolgd" : ""} · ${new Date(p.updated_at).toLocaleDateString("nl-BE")}</small></span>${p.data.file_path ? '<span class="pill t">In mijn opslag</span>' : '<span class="pill g">Video op toestel</span>'}</div>`).join("")}</div>`
+  const cnt = p => { const ms = p.data.moments || p.data.drawings || []; return `${ms.length} ${ms.length === 1 ? "moment" : "momenten"}${(p.data.tracks || []).length ? " · " + p.data.tracks.length + " gevolgd" : ""}${(p.data.tags || []).length ? " · " + p.data.tags.length + " tags" : ""}`; };
+  v.innerHTML = head("Videoanalyse", "Analyseer wedstrijdbeelden in de Videostudio: teken passes, loopacties en zones, laat de video bevriezen en inzoomen, volg spelers automatisch en exporteer een video voor je spelers.",
+    `<a class="btn" href="${studioUrl()}">${IC.plus}Nieuwe analyse</a>`) +
+    `<div class="grid2">${[["Tekenen als op tv", "Passes met curve, loopacties, dribbels, ringen, spotlights, zones, linies, nummers, tekst en een vergrootglas. Alles achteraf aan te passen.", "pen"],
+      ["Bevriezen en inzoomen", "Op elk moment stopt het beeld, zoomt het in op wat telt en verschijnen je tekeningen één voor één.", "eye"],
+      ["Spelers automatisch volgen", "Zet een spotlight of naam op een speler: de studio volgt hem door de video.", "spot"], ["Klaar om te delen", "Exporteer als mp4 met titelkaart, of een beeld als afbeelding.", "dl"]]
+      .map(([b, s, i]) => `<div class="tile" style="cursor:default"><span class="ic">${IC[i] || IC.video}</span><span><b>${b}</b><small>${s}</small></span></div>`).join("")}</div>
+    <div class="sec"><h2>Mijn analyses</h2>${list.length ? `<div class="list">${list.map(p => `<a class="item" href="${studioUrl(p.id)}"><span class="num">${IC.video}</span><span class="main"><b>${esc(p.title)}</b><small>${esc(p.data.file_name || "")} · ${cnt(p)}</small></span>${IC.chev}</a>`).join("")}</div>`
       : `<div class="empty"><b>Nog geen analyses</b>Start een nieuwe analyse met een clip van je toestel of uit je opslag.</div>`}</div>`;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
