@@ -2,6 +2,13 @@
    Alle onderdelen (ploeg, wedstrijd, training, scouting...) registreren hun pagina's via route(). */
 "use strict";
 const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
+/* ============ club: alle clubgegevens (naam, logo, instellingen) komen uit de database ============ */
+const OGV_ID = "00000000-0000-4000-8000-000000000001";
+const CLUB = { id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {} };
+const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
+const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
+const clubShort = () => CLUB.short || clubName();
+const APPNAME = () => CLUB.settings?.app || (isOGV() ? "OGV Trainers" : "Coachbord");
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
   evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
@@ -154,7 +161,7 @@ function debounce(fn, ms = 600) { let t; return (...a) => { clearTimeout(t); t =
 /* startgids: drie korte schermen bij de eerste aanmelding, later terug te openen via "Startgids" */
 function gidsSeen(v) { try { if (v) localStorage.setItem("ogv-gids-v1", "1"); return localStorage.getItem("ogv-gids-v1") === "1"; } catch (e) { return true; } }
 const GIDS = [
-  ["Welkom bij OGV Trainers", "Alles voor je ploeg op één plek: kalender, spelers, wedstrijden en evaluaties.", [["Kies je ploeg", "Bovenaan in het menu. Train je meerdere ploegen, dan wissel je daar."], ["Je spelers staan er al", "Overgezet uit PSD. Kijk bij Spelers of alles klopt."], ["Ouders koppelen", "Bij Spelers deel je per kind een persoonlijke link. Ouders melden daarmee af en vullen hun gegevens in, zonder account."]]],
+  ["Welkom bij " + APPNAME(), "Alles voor je ploeg op één plek: kalender, spelers, wedstrijden en evaluaties.", [["Kies je ploeg", "Bovenaan in het menu. Train je meerdere ploegen, dan wissel je daar."], ["Je spelers staan er al", "Overgezet uit PSD. Kijk bij Spelers of alles klopt."], ["Ouders koppelen", "Bij Spelers deel je per kind een persoonlijke link. Ouders melden daarmee af en vullen hun gegevens in, zonder account."]]],
   ["Elke week", "Dit gebruik je het meest.", [["Kalender", "Trainingen en wedstrijden. Open een activiteit om aanwezigheden aan te duiden."], ["Wedstrijdblad", "Opstelling, wissels, doelpunten en per speler een cijfer en notitie."], ["Trainingen maken", "Bouw je training uit de clubbibliotheek, of start van een sjabloon."]]],
   ["Hulp nodig?", "Je vindt alles in het menu links (op de gsm onder Meer).", [["Mijn map", "Je eigen opslag, spelprincipes en het mixschema."], ["Probleem melden", "Iets werkt niet of mist er iets? Meld het meteen, de beheerder ziet het."], ["Weergave", "Kies licht of donker, onderaan het menu."]]]
 ];
@@ -262,7 +269,7 @@ const matchFormat = t => ({ periods: t?.periods || FORMAT_DEF[t?.format]?.[0] ||
 const S = { teams: [], myTeamIds: [], team: null, players: [], events: [], att: [], evals: [], goals: [], trainers: [], club: null };
 const TEAM_KEY = "ogv-platform-team";
 /* korte ploegnaam: "OGV U11 C" → "U11 C"; code voor een badge: "U11C", "PU9" */
-const teamLbl = t => String(t?.name || "").replace(/^OGV\s+/i, "").trim() || t?.category || "Ploeg";
+const teamLbl = t => String(t?.name || "").replace(new RegExp("^(OGV|" + String(clubShort()).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")\\s+", "i"), "").trim() || t?.category || "Ploeg";
 const teamCode = t => teamLbl(t).replace(/\s+/g, "").replace(/^(Gew\.?)Reserven$/i, "Res").slice(0, 4);
 const myTeams = () => S.allTeams ? S.teams.slice() : S.teams.filter(t => S.myTeamIds.includes(t.id) || (S.teamAccess || []).includes(t.id));
 async function loadTeams() {
@@ -309,7 +316,7 @@ async function putEvent(e) { await db.save("events", e); const i = S.events.find
 async function loadClub(force) { if (S.club && !force) return S.club; S.club = (await db.list("events", { type: "wedstrijd" })).sort((a, b) => (b.date + (b.start_time || "")).localeCompare(a.date + (a.start_time || ""))); return S.club; }
 const res = e => e.score_for == null || e.score_against == null ? null : e.score_for > e.score_against ? "win" : e.score_for < e.score_against ? "loss" : "draw";
 const RES_L = { win: "Gewonnen", loss: "Verloren", draw: "Gelijk" };
-const matchTitle = (e, tname) => { const us = e.report?.squad ? "OGV " + e.report.squad : tname || "OGV"; return e.opponent ? (e.home === false ? esc(e.opponent) + " – " + esc(us) : esc(us) + " – " + esc(e.opponent)) : "Wedstrijd"; };
+const matchTitle = (e, tname) => { const us = e.report?.squad ? clubShort() + " " + e.report.squad : tname || clubShort(); return e.opponent ? (e.home === false ? esc(e.opponent) + " – " + esc(us) : esc(us) + " – " + esc(e.opponent)) : "Wedstrijd"; };
 
 function playerStats(p) {
   const tr = past("training").filter(e => S.att.some(a => a.event_id === e.id));
@@ -358,13 +365,13 @@ function shell() {
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
-    <a class="brand" href="#/start">${LOGO("side")}<span><b>OGV Trainers</b><small>Jeugdwerking OG Vorselaar</small></span></a>
+    <a class="brand" href="#/start">${LOGO("side")}<span><b>${esc(APPNAME())}</b><small>Jeugdwerking ${esc(clubName())}</small></span></a>
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
     <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button><button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
-    <header class="topbar">${LOGO("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">OGV Trainers</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
+    <header class="topbar">${LOGO("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
     <div class="page" id="view"></div>
   </main>
   <nav class="tabbar" aria-label="Snelmenu">
@@ -407,7 +414,7 @@ async function render() {
     if (typeof td === "function") { if (seq === renderSeq) teardown = td; else try { td(); } catch (x) {} } /* een nieuwere weergave kwam tussen */ }
   catch (e) { settled = true; console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
   clearTimeout(tLoad); clearTimeout(tSlow); $(".slowload", v)?.remove();
-  document.title = (def.title ? def.title + " | " : "") + "OGV Trainers";
+  document.title = (def.title ? def.title + " | " : "") + APPNAME();
   if (!def.keepScroll) scrollTo(0, 0);
 }
 addEventListener("hashchange", () => { const d = $("#dlg"); if (d?.open) d.close(); render(); }); /* terugknop op gsm sluit ook een open venster */
@@ -505,7 +512,7 @@ function teamForm(t) {
 /* ============ aanmelden ============ */
 route("aanmelden", { title: "Aanmelden", render: v => viewLogin(v) });
 function viewLogin(v, msg) {
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
   <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a>${LOCAL ? `<button class="link" type="button" id="demo">Bekijk de demo</button>` : ""}</div>
@@ -535,7 +542,9 @@ async function logout() { if (mode === "demo") { try { sessionStorage.removeItem
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
 /* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */
-const LOGO = cls => `<span class="ogvlogo ${cls || ""}"><img class="lg-d" src="icons/logo-dark.png" alt="OG Vorselaar"><img class="lg-l" src="icons/logo.png" alt="OG Vorselaar"></span>`;
+const LOGO = cls => CLUB.settings?.logo ? `<span class="ogvlogo ${cls || ""}"><img src="${esc(CLUB.settings.logo)}" alt="${esc(clubName())}"></span>`
+  : isOGV() ? `<span class="ogvlogo ${cls || ""}"><img class="lg-d" src="icons/logo-dark.png" alt="OG Vorselaar"><img class="lg-l" src="icons/logo.png" alt="OG Vorselaar"></span>`
+  : `<span class="ogvlogo ${cls || ""}"><svg viewBox="0 0 40 40" role="img" aria-label="${esc(clubName())}"><path d="M20 3 35 8v12c0 9-7 15-15 17C12 35 5 29 5 20V8z" fill="${esc(CLUB.settings?.color || "#0F3D2E")}" stroke="#FFD100" stroke-width="2"/><text x="20" y="25" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" font-family="Archivo,sans-serif">${esc(String(clubShort()).slice(0, 3).toUpperCase())}</text></svg></span>`;
 
 /* ============ demo-gegevens (verzonnen) ============ */
 function demoSeed() {

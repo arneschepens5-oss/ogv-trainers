@@ -1197,6 +1197,7 @@ ul.tight{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
 @media (prefers-reduced-motion:reduce){.p3d .z{transition:none}}
 
 .ogvlogo{display:inline-block;line-height:0}.ogvlogo img{height:100%;width:auto;display:block}.ogvlogo .lg-l{display:none}
+.ogvlogo svg{height:100%;width:auto;aspect-ratio:1;display:block}
 :root[data-theme="light"] .ogvlogo .lg-d{display:none}:root[data-theme="light"] .ogvlogo .lg-l{display:block}
 .brand .ogvlogo.side{height:52px;width:auto;border:0;padding:0;margin:0;display:inline-block}.ogvlogo.big{height:150px;margin:0 0 18px}
 /* kleedkamers en scheidsrechter bij thuiswedstrijden (v66) */

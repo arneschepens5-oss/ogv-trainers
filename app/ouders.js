@@ -45,7 +45,7 @@ function convoTab(tv, e) {
   const sib = siblings(e), ps = active().filter(p => !sib.some(x => isIn(attOf(x.id, p.id)))), C = e.convo || {}, home = e.home !== false;
   const sel = new Set(C.players || ps.filter(p => sib.length ? isIn(attOf(e.id, p.id)) : rsvpOf(e.id, p.id)?.status !== "nee").map(p => p.id));
   const kick = tm(e.start_time), meetDef = kick ? (([h, m]) => { const t = h * 60 + m - 45; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); })(kick.split(":").map(Number)) : "";
-  const v = { meet: C.meet ?? meetDef, place: C.place ?? (home ? "Kantine OG Vorselaar" : (e.location || "")), bring: C.bring ?? "Geel wedstrijdshirt, scheenbeschermers, drinkfles", note: C.note ?? "" };
+  const v = { meet: C.meet ?? meetDef, place: C.place ?? (home ? "Kantine " + clubName() : (e.location || "")), bring: C.bring ?? "Geel wedstrijdshirt, scheenbeschermers, drinkfles", note: C.note ?? "" };
   const paint = () => {
     const rs = p => rsvpOf(e.id, p.id)?.status, conf = [...sel].map(id => rs({ id })), ja = conf.filter(x => x === "ja").length, nee = conf.filter(x => x === "nee").length;
     tv.innerHTML = `<div class="grid2"><div class="panel"><h2>Afspraak</h2><div class="fields">
@@ -90,7 +90,7 @@ route("berichten", { title: "Berichten", auth: true, render: async v => {
   const list = await loadMessages(80), canClub = S.admin, canTeam = !!S.team, pm = await loadParentMsgs();
   v.innerHTML = head("Berichten", "Berichten van de club en van je ploeg. Ouders zien ze bovenaan hun persoonlijke link, 30 dagen lang of tot de datum die je kiest.",
     canClub || canTeam ? `<button class="btn" type="button" id="newmsg">${IC.plus}Nieuw bericht</button>` : "") +
-    (pm.length ? `<div class="sec"><h2>Van ouders${S.team ? " · " + esc(S.team.name) : ""}</h2><p class="hint" style="margin-top:0">Wat ouders via OGV Ouders naar de trainers van de ploeg stuurden. Antwoorden gaat via bellen of WhatsApp.</p><div class="msgs" id="pmsgs">${parentMsgsHtml(pm)}</div></div><h2 class="sec">Van de club en de ploeg</h2>` : "") +
+    (pm.length ? `<div class="sec"><h2>Van ouders${S.team ? " · " + esc(S.team.name) : ""}</h2><p class="hint" style="margin-top:0">Wat ouders via ${esc(clubShort())} Ouders naar de trainers van de ploeg stuurden. Antwoorden gaat via bellen of WhatsApp.</p><div class="msgs" id="pmsgs">${parentMsgsHtml(pm)}</div></div><h2 class="sec">Van de club en de ploeg</h2>` : "") +
     (list.length ? `<div class="msgs">${list.map(m => `<div class="msgw">${msgCard(m)}<div class="row" style="gap:6px;margin-top:8px"><a class="btn ghost small" target="_blank" rel="noopener" href="${shareWA(m.title + (m.body ? "\n\n" + m.body : ""))}">${IC.wa}Delen</a>${(m.team_id ? true : S.admin) && (m.created_by === user?.id || S.admin || mode === "demo") ? `<button class="btn ghost small" type="button" data-delm="${m.id}">Verwijderen</button>` : ""}</div></div>`).join("")}</div>`
       : `<div class="empty"><b>Geen berichten</b>Zet hier bv. een afgelasting door het weer, een clubfeest of een oproep voor vrijwilligers.</div>`);
   const nb = $("#newmsg"); if (nb) nb.onclick = () => msgForm(); bindParentMsgs(v, pm);
@@ -137,7 +137,7 @@ function contactsPanel(p) {
   return `<div class="sec panel"><div class="row"><h2 style="margin:0;margin-right:auto">Ouders en noodcontact</h2></div>
     ${p.medical ? `<div class="medw">${IC.eye}<div><b>Medisch</b><p>${esc(p.medical).replace(/\n/g, "<br>")}</p></div></div>` : ""}
     ${cs.length ? `<div class="list" style="margin-top:8px">${cs.map(c => `<div class="item static" style="flex-wrap:wrap;row-gap:8px"><span class="main"><b>${esc(c.name || "Contact")}${c.rel ? ` <span class="muted" style="font-weight:500">· ${esc(c.rel)}</span>` : ""}</b><small>${esc([c.phone, c.email].filter(Boolean).join(" · "))}</small></span><span class="row" style="gap:6px">${contactBtns(c)}</span></div>`).join("")}</div>`
-      : `<p class="hint">Nog geen contactgegevens. Ouders vullen ze zelf in via hun link (OGV Ouders), of jij via <b>Fiche bewerken</b>.</p>`}
+      : `<p class="hint">Nog geen contactgegevens. Ouders vullen ze zelf in via hun link (${esc(clubShort())} Ouders), of jij via <b>Fiche bewerken</b>.</p>`}
     ${consentLine(p)}${p.parent_updated ? `<p class="hint" style="margin:8px 0 0">Door de ouders bijgewerkt op ${new Date(p.parent_updated).toLocaleDateString("nl-BE", { day: "numeric", month: "long" })}.</p>` : ""}${p.notes ? `<p style="margin:12px 0 0"><span class="muted">Notities:</span> ${esc(p.notes)}</p>` : ""}</div>`;
 }
 function contactFields(p) {
@@ -382,7 +382,7 @@ async function autoFieldsDialog(list, d1) {
     $$("[data-om]", d).forEach(b => b.onclick = () => show(b.dataset.om === "1"));
     const go2 = $("#afgo", d); if (go2) go2.onclick = async () => { go2.disabled = true; go2.innerHTML = '<span class="spin"></span>Bezig…'; let ok = 0;
       for (const o of out) { if (o.kept) { ok++; continue; }
-        const patch = { location: fieldName(o.k) + " · OG Vorselaar, Riemenstraat 89, Vorselaar", ...(V19() ? { field_part: o.p } : {}) };
+        const patch = { location: fieldName(o.k) + (isOGV() ? " · OG Vorselaar, Riemenstraat 89, Vorselaar" : ""), ...(V19() ? { field_part: o.p } : {}) };
         if (await safe(() => saveEvField(o.x.id, patch))) { ok++; const e = S.events.find(z => z.id === o.x.id); if (e) Object.assign(e, patch); } }
       d.close(); S.club = null; toast(`${ok} van ${out.length} wedstrijden ingedeeld. Pas aan wat je anders wil.`);
       const y = scrollY; await render(); scrollTo(0, y); }; };
@@ -492,6 +492,9 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
     <div class="fmapw"><div class="fmap">${clubMapSVG(stOf)}<div class="flegend"><span><i class="lg now"></i>nu bezig</span><span><i class="lg n">3</i>activiteiten die dag</span><span><i class="lg clash"></i>overlap</span><span><i class="lg kk"></i>kleedkamers</span></div></div>${panel()}</div>
     ${loose.length ? `<div class="sec panel"><h2>Niet op de plattegrond</h2><p class="hint" style="margin-top:0">Bij deze activiteiten staat geen terrein van de club (bv. "Terrein A" of "KGV").${mag("terreinen") ? " Wijs ze hieronder of in de kalender een terrein toe." : ""}</p><div class="fldlist">${loose.filter(x => x.date === FLD_DAY || !FLD_SEL).slice(0, 30).map(x => `<div class="fldb ${x.type}${x.cancelled ? " off" : ""}"><b>${dayLbl(x.date)} · ${x.start || "?"}</b><span>${esc(x.team)}</span><em>${esc(x.location || "geen plaats")}${x.type === "wedstrijd" ? " · vs " + esc(x.opponent || "") : ""}</em></div>`).join("")}</div></div>` : ""}
     ${mag("terreinen") ? `<div class="sec panel" id="fadmin"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Thuiswedstrijden indelen</h2><p class="hint" style="margin:4px 0 0">Kies per thuiswedstrijd van deze week het terrein, de kleedkamers en de scheidsrechter. Het uur komt van RBFA (zoals in PSD); pas het aan als het anders afgesproken is. Ouders en trainers zien het terrein en hun kleedkamer meteen.</p></div><div class="row" style="gap:6px"><button class="btn small" type="button" id="fauto">${IC.star}Weekend automatisch indelen</button>${S.admin ? `<button class="btn ghost small" type="button" id="frb">${IC.rotate}Alle wedstrijden ophalen van RBFA</button>` : ""}</div></div><div id="fmatches"><p class="hint">Laden…</p></div></div>` : ""}`;
+  /* de plattegrond en de automatische indeling zijn op maat van OG Vorselaar; voor een andere club zetten we die samen klaar bij de opstart */
+  if (!isOGV()) { const mw = $(".fmapw", v); if (mw) mw.outerHTML = `<div class="panel"><b>Plattegrond van jullie terreinen</b><p class="hint" style="margin:4px 0 0">Die zetten we samen klaar bij de opstart van jullie club. Tot dan zie je hieronder de activiteiten per terrein zoals ze in de kalender staan.</p></div>`;
+    $("#fauto", v)?.remove(); }
   $("#fwp").onclick = () => { FLD_W--; render(); }; $("#fwn").onclick = () => { FLD_W++; render(); }; const z = $("#fw0"); if (z) z.onclick = () => { FLD_W = 0; render(); };
   $$("[data-dd]", v).forEach(b => b.onclick = () => { FLD_DAY = b.dataset.dd; FLD_T = null; render(); });
   $$(".pf", v).forEach(g => { const pick = () => { FLD_SEL = FLD_SEL === g.dataset.f ? null : g.dataset.f; render().then?.(() => {}); setTimeout(() => $(".fpanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); };
@@ -514,7 +517,7 @@ async function matchAdmin(host, ms, bad, d1, d2, all = ms) {
     ${mag("terreinen") && !V20() ? `<p class="hint" style="margin:6px 0 0">Kleedkamers en scheidsrechters toewijzen? Voer ogv-database.sql (versie 20) uit in Supabase.</p>` : ""}`;
   $$("[data-m]", host).forEach(row => $$("[data-k]", row).forEach(inp => inp.onchange = async () => {
     const id = row.dataset.m, k = $("[data-k=f]", row).value, st = $("[data-k=st]", row).value || null;
-    const patch = { start_time: st, ...(k ? { location: fieldName(k) + " · OG Vorselaar, Riemenstraat 89, Vorselaar", rbfa_loc: false } : {}),
+    const patch = { start_time: st, ...(k ? { location: fieldName(k) + (isOGV() ? " · OG Vorselaar, Riemenstraat 89, Vorselaar" : ""), rbfa_loc: false } : {}),
       ...(V19() ? { end_time: $("[data-k=et]", row).value || null, field_part: $("[data-k=p]", row).value || null } : {}),
       ...(V20() ? { kk_home: $("[data-k=kh]", row).value || null, kk_away: $("[data-k=ka]", row).value || null, referee: $("[data-k=ref]", row).value.trim() || null } : {}) };
     if (!(await quietSave(row, id, patch))) return;
@@ -558,15 +561,15 @@ function printFieldDays(pages, what) {
     const fld = x => { const k = fieldOf(x.location); return k ? `<span class="pfb${CLUB_FIELDS.find(f => f.k === k)?.kgv ? " kgv" : ""}">${esc(CLUB_FIELDS.find(f => f.k === k).short)}</span>${x.part ? `<small>${esc(partLong(x.part, k).replace(/^[½¼] · /, ""))}</small>` : ""}` : `<small>${esc(x.location || "–")}</small>`; };
     const row = x => `<tr><td class="fx-t">${esc(x.start || "?")}<small>${x.end || minOf(x.start) != null ? "tot " + (x.end || hhmm(endMin(x))) : ""}</small></td><td class="fx-n"><b>${esc(x.team)}</b>${x.type === "wedstrijd" ? `<small>tegen ${esc(x.opponent || "?")}</small>` : `<small>training</small>`}</td>
       <td class="fx-f">${fld(x)}</td><td class="fx-k">${esc(x.kk_home || "")}</td>${what !== "alles" || matches.length ? `<td class="fx-k">${x.type === "wedstrijd" ? esc(x.kk_away || "") : ""}</td><td class="fx-r">${x.type === "wedstrijd" ? esc(x.referee || "") : ""}</td>` : ""}</tr>`;
-    const head = what !== "alles" || matches.length ? `<th>Uur</th><th>OGV-ploeg</th><th>Terrein</th><th>Kleedkamer OGV</th><th>Kleedkamer bezoekers</th><th>Scheidsrechter</th>` : `<th>Uur</th><th>Ploeg</th><th>Terrein</th><th>Kleedkamer</th>`;
+    const head = what !== "alles" || matches.length ? `<th>Uur</th><th>${esc(clubShort())}-ploeg</th><th>Terrein</th><th>Kleedkamer ${esc(clubShort())}</th><th>Kleedkamer bezoekers</th><th>Scheidsrechter</th>` : `<th>Uur</th><th>Ploeg</th><th>Terrein</th><th>Kleedkamer</th>`;
     const used = new Map(); xs.forEach(x => { const k = fieldOf(x.location); if (k) used.set(k, (used.get(k) || 0) + 1); });
-    return `<section class="fldprint"><header><img src="icons/logo.png" alt=""><div><p>KVV OG Vorselaar · terreinen</p><h1>${esc(cap(new Date(dd + "T12:00").toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })))}</h1></div>
+    return `<section class="fldprint"><header><img src="icons/logo.png" alt=""><div><p>${esc(CLUB.name)} · terreinen</p><h1>${esc(cap(new Date(dd + "T12:00").toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })))}</h1></div>
       <div class="pcount"><b>${matches.length}</b>${matches.length === 1 ? "wedstrijd" : "wedstrijden"}${trains.length ? `<br><b>${trains.length}</b>${trains.length === 1 ? "training" : "trainingen"}` : ""}</div></header>
       <div class="pbody"><table><thead><tr>${head}</tr></thead><tbody>${xs.map(row).join("")}</tbody></table>
       <aside><div class="pmap">${clubMapSVG(k => ({ n: used.get(k) || 0, sel: used.has(k), now: false, clash: false }))}</div>
       <ul class="pkk"><li><b>A1–A3</b> bij de kantine</li><li><b>B1–B4</b> bij terrein B · EHBO en scheidsrechter</li><li><b>E4–E8</b> bij terrein E</li></ul></aside></div>
       ${xs.some(x => kc.has(x.id)) ? `<p class="pwarn">Let op: ${[...new Set(xs.filter(x => kc.has(x.id)).map(x => kc.get(x.id)))].map(esc).join(" · ")}</p>` : ""}
-      <footer>Afgedrukt ${new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long" })} om ${hhmm(new Date().getHours() * 60 + new Date().getMinutes())} · wijzigingen staan altijd in OGV Trainers en OGV Ouders · Komoan OG!</footer></section>`; }).join("");
+      <footer>Afgedrukt ${new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long" })} om ${hhmm(new Date().getHours() * 60 + new Date().getMinutes())} · wijzigingen staan altijd in ${esc(APPNAME())} en ${esc(clubShort())} Ouders${isOGV() ? " · Komoan OG!" : ""}</footer></section>`; }).join("");
   document.body.appendChild(el); document.documentElement.classList.add("printing");
   const done = () => { el.remove(); document.documentElement.classList.remove("printing"); removeEventListener("afterprint", done); };
   addEventListener("afterprint", done); setTimeout(() => print(), 250);

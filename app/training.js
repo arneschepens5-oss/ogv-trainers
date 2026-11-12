@@ -36,7 +36,7 @@ function askShare(row, kind = "oefening") {
   const free = () => new Promise(ok => { let n = 0; const t = () => (!$("#dlg")?.open || n++ > 20) ? ok() : setTimeout(t, 50); setTimeout(t, 30); });
   return free().then(() => new Promise(res => { if (!row || row.shared) { res(false); return; }
     const wat = kind === "training" ? "deze training" : "deze oefening";
-    const d = dialog(`<div class="dlg"><h2>Mag ${wat} in de trainingsbibliotheek?</h2><p class="muted" style="margin:0">Dan zien en gebruiken alle trainers van OG Vorselaar "${esc(row.title || "")}". Kies je nee, dan staat ${wat} alleen bij jou. Je kan dit later altijd aanpassen.</p>
+    const d = dialog(`<div class="dlg"><h2>Mag ${wat} in de trainingsbibliotheek?</h2><p class="muted" style="margin:0">Dan zien en gebruiken alle trainers van ${esc(clubName())} "${esc(row.title || "")}". Kies je nee, dan staat ${wat} alleen bij jou. Je kan dit later altijd aanpassen.</p>
       <div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px"><button class="btn ghost" type="button" id="shNo">Nee, alleen voor mij</button><button class="btn" type="button" id="shYes">Ja, delen met de club</button></div></div>`);
     let done = false; const fin = v => { if (done) return; done = true; d.close(); res(v); };
     d.addEventListener("close", () => fin(false), { once: true });
@@ -342,7 +342,7 @@ async function printPlan(e) {
       ${x.org ? `<h3>Opstelling / Organisatie &amp; richtlijnen</h3><p>${esc(x.org).replace(/\n/g, "<br>")}</p>` : ""}${x.criteria ? `<h3>Uitvoeringscriteria / Aandachtspunten</h3><p>${esc(x.criteria).replace(/\n/g, "<br><br>")}</p>` : ""}
       ${x.material ? `<h3>Materiaal</h3><p>${esc(x.material)}</p>` : ""}${x.size ? `<h3>Afmetingen</h3><p>${esc(x.size)}</p>` : ""}</div>
       <div class="pimg">${exPic(x, "")}</div></section>`).join("")}
-    <footer>OGV Trainers · Kvv OG Vorselaar</footer></div>`;
+    <footer>${esc(APPNAME())} · ${esc(CLUB.name)}</footer></div>`;
   document.body.appendChild(el); document.documentElement.classList.add("printing");
   await hydrateImgs(el).catch(() => {});
   const imgs = [...el.querySelectorAll("img")]; imgs.forEach(i => { i.loading = "eager"; });
@@ -422,7 +422,7 @@ const libCard = e => e.type === "training" && e.strip != null
 const libBody = e => `<div class="bd"><b class="lt">${esc(e.title)}</b>
   <div class="chips">${e.themes.filter(z => z !== "Overige").slice(0, 2).map(c => `<span class="pill g">${esc(c)}</span>`).join("")}${e.soort ? `<span class="pill soort" style="--pc:${labelCol(e.soort)}">${esc(e.soort)}</span>` : ""}</div>
   ${e.meta ? `<small class="muted">${esc(e.meta)}</small>` : ""}${e.sub ? `<p class="clamp">${esc(e.sub)}</p>` : ""}
-  <small class="hint lsrc src-${e.src}">${e.row?.shared ? `<span class="shdot" aria-hidden="true"></span>` : ""}${esc(e.src === "club" ? "Clubtraining OG Vorselaar" : e.src === "psd" ? "PSD-databank" + (e.author ? " · " + e.author : "") : e.src === "anderen" ? "Gedeeld door " + (e.author || "een clubtrainer") : e.row?.shared ? "Van jou, gedeeld met de club" : "Van jou")}</small></div>`;
+  <small class="hint lsrc src-${e.src}">${e.row?.shared ? `<span class="shdot" aria-hidden="true"></span>` : ""}${esc(e.src === "club" ? "Clubtraining " + clubName() : e.src === "psd" ? "PSD-databank" + (e.author ? " · " + e.author : "") : e.src === "anderen" ? "Gedeeld door " + (e.author || "een clubtrainer") : e.row?.shared ? "Van jou, gedeeld met de club" : "Van jou")}</small></div>`;
 
 route("bibliotheek", { title: "Trainingsbibliotheek", render: async (v, id) => {
   v.innerHTML = head("Trainingsbibliotheek", "Laden…");

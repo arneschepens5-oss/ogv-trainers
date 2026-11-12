@@ -82,7 +82,7 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
   const f = (sel, k) => $(sel).oninput = e => { scF[k] = e.target.value; render(); }; f("#fq", "q"); f("#fp", "p"); f("#fs", "s"); f("#fn", "n");
   $("#fq").focus(); const q = $("#fq"); q.setSelectionRange(q.value.length, q.value.length);
   $("#exp").onclick = () => { const h = ["Naam", "Club", "Geboortedatum", "Voorkeursvoet", "Lengte (cm)", "Hoofdpositie", "Alternatieve positie 2", "Alternatieve positie 3", ...SC_COMP, "Algemeen cijfer", "Niveau", "Sterktes / spelbeschrijving", "Werkpunten", "Situatie & context", "Status", "Gescout op", "Wedstrijd / bron", "Scout"];
-    download("Scoutingsdatabase_OG_Vorselaar.csv", "﻿" + [h.map(csvCell).join(";"), ...all.map(p => [p.naam, p.club, p.geb, p.voet, p.len, p.p1, p.p2, p.p3, ...SC_COMP.map((c, i) => scNum(p["k" + i]) ? String(p["k" + i]).replace(".", ",") : ""), scAvg(p) == null ? "" : f1(scAvg(p)), scNiv(scAvg(p)), p.sterk, p.werk, p.ctx, p.stat, p.dat, p.bron, p.scout].map(csvCell).join(";"))].join("\r\n")); };
+    download("Scoutingsdatabase_" + String(clubName()).replace(/\W+/g, "_") + ".csv", "﻿" + [h.map(csvCell).join(";"), ...all.map(p => [p.naam, p.club, p.geb, p.voet, p.len, p.p1, p.p2, p.p3, ...SC_COMP.map((c, i) => scNum(p["k" + i]) ? String(p["k" + i]).replace(".", ",") : ""), scAvg(p) == null ? "" : f1(scAvg(p)), scNiv(scAvg(p)), p.sterk, p.werk, p.ctx, p.stat, p.dat, p.bron, p.scout].map(csvCell).join(";"))].join("\r\n")); };
 } });
 function scoutForm(v, p, all) {
   const isNew = !p; p = p ? { ...p } : { stat: "Nieuw", dat: todayIso(), scout: (() => { try { return localStorage.getItem("scout") || ""; } catch (e) { return ""; } })() };

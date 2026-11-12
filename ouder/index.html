@@ -250,6 +250,13 @@ function weekLabel(k) { const t = weekKey(todayIso()), diff = Math.round((dayFmt
 function allEvents() { const rows = []; for (const k of sel()) for (const e of (data[k.tok]?.events || [])) rows.push({ e, k }); return rows.sort((a, b) => (a.e.date + (a.e.start || "")).localeCompare(b.e.date + (b.e.start || ""))); }
 
 /* ---------- kop en tabbladen ---------- */
+/* andere club dan OG Vorselaar: naam en logo uit de gegevens */
+function clubOf() { for (const k of okKids()) { const c = data[k.tok]?.club; if (c) return c; } return null; }
+function brandClub() { const c = clubOf(); if (!c || c.short === "OGV") return;
+  const nm = c.full || c.name; $(".brand span").textContent = $(".brand span").textContent.replace("OG Vorselaar", nm);
+  const im = $(".brand img"); if (im) { if (c.logo) im.src = c.logo; else im.remove(); }
+  $("#h").innerHTML = $("#h").innerHTML.replace("OGV <span>", esc(c.short || nm) + " <span>"); $("#sub").textContent = $("#sub").textContent.replace("OG Vorselaar", nm);
+  document.title = (c.short || nm) + " Ouders"; }
 function header() {
   const ok = okKids();
   $("#h").innerHTML = ok.length === 1 ? (isKid(ok[0].tok) ? `Hey ${esc(ok[0].name)}<span>!</span>` : `Komt ${esc(ok[0].name)}<span>?</span>`) : `OGV <span>Ouders</span>`;
@@ -257,6 +264,7 @@ function header() {
   $("[data-v=gegevens]").hidden = !parentKids().length; if (view === "gegevens" && !parentKids().length) view = "agenda";
   $("[data-v=berichten] .lb").textContent = parentKids().length ? "Berichten" : "Nieuws";
   const one = ok.length === 1 ? data[ok[0].tok] : null;
+  setTimeout(brandClub, 0);
   $("#sub").textContent = one ? [one.team, one.number ? "nummer " + one.number : "", (one.trainers || []).length ? "trainer: " + one.trainers.join(", ") : ""].filter(Boolean).join(" · ") : ok.length ? `${ok.length} kinderen bij OG Vorselaar` : "";
   $("#kids").innerHTML = ok.length > 1 ? `<button type="button" data-k="" aria-pressed="${!only}">Iedereen</button>` + ok.map(k => `<button type="button" data-k="${k.tok}" aria-pressed="${only === k.tok}"><span class="dot" style="--c:${kidCol(k.tok)}"></span>${esc(k.name)}</button>`).join("") : "";
   $$("[data-k]").forEach(b => b.onclick = () => { only = b.dataset.k || null; draw(); });

@@ -4,11 +4,11 @@
 
 /* ============ registreren met de clubcode ============ */
 function viewRegister(v) {
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
   <form id="rf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" placeholder="bv. Jelle Lauwers"></label>
    <label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" required minlength="8" autocomplete="new-password"></label>
-   <label class="f">Clubcode<input name="code" required autocomplete="off" placeholder="OGV-…" style="text-transform:uppercase"></label>
+   <label class="f">Clubcode<input name="code" required autocomplete="off" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label>
    <div class="err" id="rerr"></div><button class="btn">Account aanmaken</button></form>
   <div class="row"><button class="link" type="button" id="toLogin">Ik heb al een account</button></div></div>`;
   $("#toLogin").onclick = () => viewLogin(v);
@@ -18,26 +18,27 @@ function viewRegister(v) {
     const code = f.code.value.trim().toUpperCase(); try { localStorage.setItem("ogv-invite", code); } catch (x) {}
     try { const { data, error } = await sb.auth.signUp({ email: f.email.value.trim(), password: f.pw.value, options: { data: { invite: code, full_name: f.nm.value.trim().replace(/\s+/g, " ") }, emailRedirectTo: location.origin + location.pathname } });
       if (error) err.textContent = /not allowed|disabled/i.test(error.message) ? "Registreren staat nog uit. Vraag de beheerder om het aan te zetten in Supabase." : /already registered|exists/i.test(error.message) ? "Er bestaat al een account met dit e-mailadres. Meld je aan." : /password/i.test(error.message) ? "Kies een sterker wachtwoord (minstens 8 tekens)." : error.message;
-      else if (!data.session) v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
+      else if (!data.session) v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
     catch (x) { err.textContent = "Registreren lukt niet: controleer je internetverbinding."; }
     finally { if (err.textContent) { btn.disabled = false; btn.textContent = "Account aanmaken"; } } };
 }
 /* account bestaat maar is nog geen lid van de club */
 function viewJoin(v) {
   let saved = ""; try { saved = localStorage.getItem("ogv-invite") || ""; } catch (x) {}
-  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>OGV<span>Trainers</span></h1><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
-  <form id="jf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="OGV-…" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
+  v.innerHTML = `<div class="authbox">${LOGO("big")}<h1>${isOGV() ? "OGV<span>Trainers</span>" : "Coach<span>bord</span>"}</h1><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
+  <form id="jf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
   <div class="row"><button class="link" type="button" data-logout>Afmelden</button></div></div>`;
   $("[data-logout]", v).onclick = logout;
   $("#jf").onsubmit = async e => { e.preventDefault(); const btn = $("button.btn", e.target); btn.disabled = true;
     const { data, error } = await sb.rpc("join_club", { code: e.target.code.value.trim() });
     if (error || !data) { $("#jerr").textContent = error ? error.message : "Deze clubcode klopt niet."; btn.disabled = false; return; }
     try { localStorage.removeItem("ogv-invite"); } catch (x) {}
-    S.member = true; toast("Welkom bij OGV Trainers."); startCloud(); };
+    S.member = true; toast("Welkom bij " + APPNAME() + "."); startCloud(); };
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; if (data.club) { Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
+    if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
   catch (e) { S.member = true; S.admin = false; /* databaseversie 5 nog niet uitgevoerd: gedrag zoals vroeger */ }
@@ -49,14 +50,17 @@ const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang<span class=\"
 async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
 route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
-  const tab = ADM_TABS.some(t => t[0] === id) ? id : "meldingen";
-  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · OG Vorselaar</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem" }[tab]}</h1></div></div>
-    <nav class="admtabs" aria-label="Beheer">${ADM_TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
+  const TABS = ADM_TABS.concat([["club", "Club"]], S.platform ? [["platform", "Alle clubs"]] : []);
+  const tab = TABS.some(t => t[0] === id) ? id : "meldingen";
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", club: "Club", platform: "Alle clubs" }[tab]}</h1></div></div>
+    <nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
   const host = $("#admv"); try { $(".admtabs a[aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" }); } catch (x) {}
   const getInfo = async () => { if (mode === "demo") return { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
     const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
   if (tab === "meldingen") return adminFeedback(host);
   if (tab === "planning") return adminPlanning(host);
+  if (tab === "club") return adminClub(host);
+  if (tab === "platform") return adminPlatform(host);
   if (tab === "systeem") { host.innerHTML = `<div class="panel" id="adm-db"></div>
     <div class="grid2 sec"><div class="panel"><h2>Back-up</h2><p class="hint" style="margin-top:0">Download alle gegevens van de club (ploegen, spelers, kalender, verslagen, evaluaties…) als één bestand. Doe dit minstens één keer per maand en bewaar het op een veilige plaats: het bevat gegevens van kinderen.</p>
       <button class="btn" type="button" id="bk">${IC.out}Back-up downloaden</button><p class="hint" id="bkl" style="margin-bottom:0"></p></div>
@@ -87,11 +91,11 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
       ${m.role === "admin" ? `<span class="pill w">Beheerder</span>` : ""}${m.user_id === user?.id ? `<span class="hint">jij</span>` : ""}<button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button></div>`).join("")}</div></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
-  const txt = `Je bent uitgenodigd voor OGV Trainers, het trainersplatform van OG Vorselaar.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${info.code}\n\nDeel deze code niet buiten de club.`;
+  const txt = `Je bent uitgenodigd voor ${APPNAME()}, het trainersplatform van ${clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${info.code}\n\nDeel deze code niet buiten de club.`;
   $("#wa").href = "https://wa.me/?text=" + encodeURIComponent(txt);
   $("#share").onclick = () => {
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else { navigator.clipboard?.writeText(txt); toast("Uitnodiging gekopieerd."); } };
-  $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 6 tekens):", "OGV-" + Math.random().toString(36).slice(2, 8).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
+  $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 6 tekens):", String(clubShort()).replace(/\W/g, "").toUpperCase().slice(0, 4) + "-" + Math.random().toString(36).slice(2, 8).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
   $$("[data-ok]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.ok, r: "trainer" }, "Toegelaten."));
   $$("[data-edm]", v).forEach(b => b.onclick = () => memberForm(info.members.find(m => m.user_id === b.dataset.edm), rpc));
 } });
@@ -129,6 +133,54 @@ function memberForm(m, rpc) {
 
 /* meldingen van trainers */
 let FB_F = "open";
+/* ============ club: naam, logo en kleur ============ */
+function adminClub(host) {
+  const st = CLUB.settings || {};
+  host.innerHTML = `<form class="panel" id="clf" style="max-width:640px"><h2 style="margin-top:0">Gegevens van de club</h2>
+    <p class="hint" style="margin-top:0">Naam en logo staan in het menu, op afdrukken en op de ouderpagina's.</p>
+    <label class="f">Officiële naam<input name="nm" required maxlength="80" value="${esc(CLUB.name || "")}"></label>
+    <div class="row"><label class="f" style="flex:1">Korte naam (bv. OGV)<input name="sh" maxlength="12" value="${esc(CLUB.short || "")}"></label>
+      <label class="f" style="flex:2">Naam in de app (bv. OG Vorselaar)<input name="full" maxlength="60" value="${esc(st.full || "")}" placeholder="${esc(CLUB.name || "")}"></label></div>
+    <div class="row"><label class="f" style="flex:1">Clubkleur<input name="color" type="color" value="${esc(st.color || "#0F3D2E")}"></label>
+      <label class="f" style="flex:2">Logo (PNG of JPG, vierkant werkt best)<input name="logo" type="file" accept="image/png,image/jpeg,image/webp"></label></div>
+    <div class="row" style="align-items:center;gap:12px"><span id="clprev">${LOGO("big")}</span>${st.logo ? `<button class="link" type="button" id="cllogox">Logo verwijderen</button>` : ""}</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn">Bewaren</button></div></form>`;
+  let logo = st.logo || "";
+  const f = $("#clf");
+  f.logo.onchange = async () => { const file = f.logo.files[0]; if (!file) return;
+    try { const img = await createImageBitmap(file), S2 = 160, c = document.createElement("canvas"); c.width = c.height = S2; const k = Math.min(S2 / img.width, S2 / img.height);
+      c.getContext("2d").drawImage(img, (S2 - img.width * k) / 2, (S2 - img.height * k) / 2, img.width * k, img.height * k); logo = c.toDataURL("image/png");
+      $("#clprev").innerHTML = `<span class="ogvlogo big"><img src="${logo}" alt=""></span>`; } catch (e) { toast("Dit beeld kan niet gelezen worden."); } };
+  const lx = $("#cllogox"); if (lx) lx.onclick = () => { logo = ""; $("#clprev").innerHTML = ""; };
+  f.onsubmit = async e => { e.preventDefault(); if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const settings = { ...st, full: f.full.value.trim() || undefined, color: f.color.value, logo: logo || undefined };
+    const { error } = await sb.rpc("club_save_settings", { nm: f.nm.value, sh: f.sh.value, s: settings });
+    if (error) { toast(/club_save_settings|function/i.test(error.message) ? "Voer eerst het databasescript v29 uit." : error.message); return; }
+    Object.assign(CLUB, { name: f.nm.value.trim(), short: f.sh.value.trim() || CLUB.short, settings }); toast("Clubgegevens bewaard."); shell(); };
+}
+/* ============ platform: nieuwe clubs aanmaken (enkel voor de beheerder van het platform) ============ */
+async function adminPlatform(host) {
+  host.innerHTML = `<p class="hint">Laden…</p>`;
+  const { data, error } = await sb.rpc("platform_clubs"); if (error) { host.innerHTML = `<div class="empty"><b>Niet beschikbaar</b>${esc(error.message)}</div>`; return; }
+  const link = location.origin + location.pathname;
+  host.innerHTML = `<form class="panel" id="pcf" style="max-width:640px"><h2 style="margin-top:0">Nieuwe club</h2>
+      <p class="hint" style="margin-top:0">De club krijgt een eigen clubcode en ziet niets van andere clubs. Heeft de beheerder nog geen account, dan wordt hij beheerder zodra hij er een maakt met dit e-mailadres.</p>
+      <label class="f">Officiële naam<input name="nm" required maxlength="80" placeholder="bv. KFC Voorbeeld"></label>
+      <div class="row"><label class="f" style="flex:1">Korte naam<input name="sh" maxlength="12" placeholder="bv. KFCV"></label>
+        <label class="f" style="flex:2">E-mail van de beheerder<input name="mail" type="email" required placeholder="tvjo@club.be"></label></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn">Club aanmaken</button></div></form>
+    <div id="pcres"></div>
+    <div class="sec"><h2>Clubs (${data.length})</h2><div class="list">${data.map(c => `<div class="item"><span class="main"><b>${esc(c.name)}</b><small>${c.teams} ploegen · ${c.members} leden · code ${esc(c.code || "–")}${c.pending_admin ? " · wacht op account van " + esc(c.pending_admin) : ""}</small></span></div>`).join("")}</div></div>`;
+  const f = $("#pcf");
+  f.onsubmit = async e => { e.preventDefault(); const r = await sb.rpc("create_club", { nm: f.nm.value, sh: f.sh.value, admin_mail: f.mail.value });
+    if (r.error) { toast(r.error.message); return; }
+    const txt = `Welkom bij Coachbord!\n\n1. Open ${link}\n2. Tik op Account aanmaken met ${f.mail.value}\n3. Clubcode: ${r.data.code}\n\nJe wordt automatisch beheerder van ${r.data.name}. Deel de clubcode daarna met je trainers.`;
+    $("#pcres").innerHTML = `<div class="panel sec"><h2 style="margin-top:0">${esc(r.data.name)} is aangemaakt</h2><p>Clubcode: <b>${esc(r.data.code)}</b>${r.data.admin ? " · de beheerder had al een account en is meteen beheerder." : ""}</p>
+      <textarea readonly rows="6" style="width:100%">${esc(txt)}</textarea><div class="row"><button class="btn small" type="button" id="pccopy">Tekst kopiëren</button></div></div>`;
+    $("#pccopy").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Gekopieerd."));
+    f.reset(); };
+}
+
 async function adminFeedback(host) {
   let data = [];
   if (mode === "demo") data = [{ id: "1", kind: "Er werkt iets niet", name: "Jelle Lauwers", email: "jelle@voorbeeld.be", page: "#/trainingen", message: "Als ik op Bewaren tik bij een oefening, gebeurt er niets.", info: { versie: "38", toestel: "iPhone Safari", scherm: "390×844" }, status: "nieuw", created_at: new Date(Date.now() - 36e5).toISOString() },
@@ -145,7 +197,7 @@ async function adminFeedback(host) {
         <header><span class="fbkind">${esc(x.kind || "Melding")}</span><span class="hint">${ago(x.created_at)}</span></header>
         <p class="fbmsg">${esc(x.message)}</p>
         <div class="fbmeta"><span class="av sm" aria-hidden="true">${esc((x.name || x.email || "?")[0].toUpperCase())}</span><span><b>${esc(x.name || x.email || "Trainer")}</b>${x.name && x.email ? `<small>${esc(x.email)}</small>` : ""}</span></div>
-        <div class="fbacts">${x.kind === "Toegang tot ploeg" && x.info?.ploeg && x.user_id && x.status !== "afgehandeld" ? `<button class="btn small" type="button" data-link="${x.id}">Koppelen aan ${esc(x.info.ploegnaam || "ploeg")}</button>` : ""}${x.page ? `<a class="btn ghost small" href="${esc(x.page)}">${x.kind === "Toegang tot ploeg" ? "Ploegen en trainers" : "Open pagina"}</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Je melding in OGV Trainers")}&body=${encodeURIComponent("Dag " + (x.name || "") + ",\n\nBedankt voor je melding:\n\"" + x.message + "\"\n\n")}">Antwoorden</a>` : ""}
+        <div class="fbacts">${x.kind === "Toegang tot ploeg" && x.info?.ploeg && x.user_id && x.status !== "afgehandeld" ? `<button class="btn small" type="button" data-link="${x.id}">Koppelen aan ${esc(x.info.ploegnaam || "ploeg")}</button>` : ""}${x.page ? `<a class="btn ghost small" href="${esc(x.page)}">${x.kind === "Toegang tot ploeg" ? "Ploegen en trainers" : "Open pagina"}</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Je melding in " + APPNAME())}&body=${encodeURIComponent("Dag " + (x.name || "") + ",\n\nBedankt voor je melding:\n\"" + x.message + "\"\n\n")}">Antwoorden</a>` : ""}
           ${Object.keys(x.info || {}).length ? `<button class="link" type="button" data-inf="${x.id}">Technische info</button>` : ""}<span class="spacer"></span><button class="btn small${x.status === "afgehandeld" ? " ghost" : ""}" type="button" data-st="${x.id}">${x.status === "afgehandeld" ? "Heropenen" : "Afgehandeld"}</button></div></article>`).join("")}</div>`
       : `<div class="empty"><b>${FB_F === "open" ? "Geen open meldingen" : "Niets gevonden"}</b>${FB_F === "open" ? "Alles is afgehandeld. Nieuwe meldingen verschijnen hier en als getal in het menu." : ""}</div>`}`;
   $$("[data-fbf]", host).forEach(b => b.onclick = () => { FB_F = b.dataset.fbf; adminFeedback(host); });
@@ -196,7 +248,7 @@ async function rbfaCreateTeams(done) {
   const teams = S.teams || [], season = seasonNow();
   const rows = list.map(r => { const linked = teams.find(t => String(t.rbfa_team_id || "") === String(r.id)), cat = ageOf(r.name) ? "U" + ageOf(r.name) : "",
       same = !linked && cat && teams.find(t => (t.category || "").toUpperCase().replace(/^P/, "") === cat.toUpperCase() || ageOf(t.name) === ageOf(r.name));
-    return { r, linked, same, cat, name: "OGV " + rbfaName(r.name), format: formatFor(r.name) }; })
+    return { r, linked, same, cat, name: clubShort() + " " + rbfaName(r.name), format: formatFor(r.name) }; })
     .sort((a, b) => (ageOf(a.r.name) ?? 99) - (ageOf(b.r.name) ?? 99) || a.r.name.localeCompare(b.r.name, "nl"));
   d.querySelector(".dlg").innerHTML = `<h2>Ploegen van RBFA</h2><p class="muted" style="margin:0">${rows.length} ploegen gevonden bij RBFA voor seizoen ${season}. Vink aan welke je wil aanmaken. Ploegen die al bestaan of die bij een bestaande ploeg lijken te horen, staan uitgevinkt.</p>
     <div class="rbfalist">${rows.map((x, i) => `<label class="rbfarow${x.linked ? " done" : ""}"><input type="checkbox" data-i="${i}"${x.linked || x.same ? "" : " checked"}${x.linked ? " disabled" : ""}>
@@ -260,16 +312,16 @@ async function parentLinks() {
   if (mode === "demo") for (const p of ps) { await ensureToken(p); if (!p.player_token) { p.player_token = uid(); await db.save("players", p); } }
   if (ps.some(p => !p.parent_token)) { toast("Voer eerst het databasescript ogv-database.sql uit in Supabase."); return; }
   const kidOK = ps.every(p => p.player_token);
-  const msgO = p => `Dag ouders van ${p.first_name}! 👋\nVia de app OGV Ouders zien jullie de trainingen, wedstrijden en convocaties van ${S.team.name}, laten jullie weten of ${p.first_name} komt en vullen jullie je contactgegevens in.\n\nOpen deze link één keer en zet de app op je beginscherm: ${parentUrl(p)}\n\nHeb je nog een kind bij de club? Open ook die link: het komt er gewoon bij. Deze link is persoonlijk, stuur hem niet door.`;
+  const msgO = p => `Dag ouders van ${p.first_name}! 👋\nVia de app ${clubShort()} Ouders zien jullie de trainingen, wedstrijden en convocaties van ${S.team.name}, laten jullie weten of ${p.first_name} komt en vullen jullie je contactgegevens in.\n\nOpen deze link één keer en zet de app op je beginscherm: ${parentUrl(p)}\n\nHeb je nog een kind bij de club? Open ook die link: het komt er gewoon bij. Deze link is persoonlijk, stuur hem niet door.`;
   const msgS = p => `Hey ${p.first_name}! ⚽\nMet deze link zie je al je trainingen en wedstrijden van ${S.team.name}, of je geselecteerd bent en hoe je seizoen loopt. Je kan ook zelf zeggen of je komt.\n\nOpen hem op je gsm en zet hem op je beginscherm: ${playerUrl(p)}\n\nDeze link is alleen voor jou: stuur hem niet door.`;
-  const d = dialog(`<div class="dlg"><h2>Links voor OGV Ouders</h2>
+  const d = dialog(`<div class="dlg"><h2>Links voor ${esc(clubShort())} Ouders</h2>
     <div class="chips" style="margin:8px 0 10px"><button class="chip" type="button" data-plm="ouder">Voor ouders</button><button class="chip" type="button" data-plm="speler"${kidOK ? "" : " disabled title=\"Voer eerst ogv-database.sql (versie 18) uit\""}>Voor spelers met een eigen gsm</button></div>
     <p class="hint" style="margin:0" id="plh"></p><div class="list" id="pll" style="margin-top:10px"></div>
     <div class="row"><span class="spacer"></span><button class="btn" type="button" data-close>Klaar</button></div></div>`, "wide");
   const draw = () => { const kid = PL_MODE === "speler" && kidOK, url = kid ? playerUrl : parentUrl, msg = kid ? msgS : msgO;
     $$("[data-plm]", d).forEach(b => b.setAttribute("aria-pressed", b.dataset.plm === (kid ? "speler" : "ouder")));
     $("#plh", d).innerHTML = kid ? `Spelers met een eigen gsm (meestal vanaf U12) krijgen hun eigen link: agenda, convocaties, hun seizoen en het nieuws, en ze geven zelf door of ze komen. Ze zien <b style="color:var(--ink)">geen</b> contactgegevens, medische info of toestemmingen en kunnen de trainer geen berichten sturen; dat blijft bij de ouders. <b style="color:var(--ink)">Stuur elke link apart</b>, liefst via de ouders.`
-      : `Elke speler heeft een eigen link naar de app <b>OGV Ouders</b>. Ouders zien daarin de activiteiten van de komende 6 weken, convocaties, het seizoen en berichten, tikken aan of hun kind komt, sturen de trainer een bericht en vullen zelf hun contactgegevens, medische info en toestemming voor beeldmateriaal in.<br><b style="color:var(--ink)">Stuur elke link apart</b>, niet in de groepschat: wie de link heeft, kan antwoorden voor die speler.`;
+      : `Elke speler heeft een eigen link naar de app <b>${esc(clubShort())} Ouders</b>. Ouders zien daarin de activiteiten van de komende 6 weken, convocaties, het seizoen en berichten, tikken aan of hun kind komt, sturen de trainer een bericht en vullen zelf hun contactgegevens, medische info en toestemming voor beeldmateriaal in.<br><b style="color:var(--ink)">Stuur elke link apart</b>, niet in de groepschat: wie de link heeft, kan antwoorden voor die speler.`;
     $("#pll", d).innerHTML = ps.map(p => `<div class="item static plink" data-p="${p.id}"><span class="main"><b>${esc(pname(p))}</b><small>${esc(url(p))}</small></span>
       <a class="btn small" href="https://wa.me/?text=${encodeURIComponent(msg(p))}" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost small" href="${esc(url(p))}" target="_blank" rel="noopener" title="Zie wat ${kid ? "de speler" : "de ouders"} ziet">Bekijk</a><button class="btn ghost small" type="button" data-cp="${p.id}">${IC.copy}Kopiëren</button><button class="link" type="button" data-new="${p.id}" title="Maak een nieuwe link; de oude werkt dan niet meer">Nieuwe link</button></div>`).join("");
     $$("[data-cp]", d).forEach(b => b.onclick = () => { const p = S.players.find(x => x.id === b.dataset.cp); navigator.clipboard?.writeText(msg(p)).then(() => toast("Bericht met link gekopieerd."), () => toast(url(p))); });

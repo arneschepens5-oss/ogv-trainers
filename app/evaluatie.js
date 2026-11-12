@@ -213,7 +213,7 @@ function evPrint(players, m) {
       <div class="pgroups">${groups.map(g => `<div class="pg"><h2>${esc(g.name)} <span>${f1(evAvgOf(e, g.items.map(i => i.name)))}</span></h2>${g.items.map(i => { const c = evScore(e, i.name), b = pr ? evScore(pr, i.name) : null;
         return `<div class="pr"><span>${esc(i.name)}</span><span class="pb"><i style="width:${c == null ? 0 : c / 5 * 100}%"></i>${b != null ? `<em style="left:${b / 5 * 100}%"></em>` : ""}</span><b>${c == null ? "–" : f1(c)}</b></div>`; }).join("")}</div>`).join("")}</div>
       <div class="ptexts">${[["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen tot de volgende evaluatie", D.goals], ["Boodschap van de trainer", D.parents], m === EV_LAST && D.advice ? ["Advies volgend seizoen", D.advice] : null].filter(x => x && x[1]).map(([k, t]) => `<div><h3>${k}</h3><p>${esc(t).replace(/\n/g, "<br>")}</p></div>`).join("")}</div>
-      <footer>Schaal: 1 nog niet · 2 soms · 3 meestal · 4 bijna altijd · 5 uitblinker. Het streepje is de vorige evaluatie. · OG Vorselaar jeugdwerking</footer></div>`; }).join("");
+      <footer>Schaal: 1 nog niet · 2 soms · 3 meestal · 4 bijna altijd · 5 uitblinker. Het streepje is de vorige evaluatie. · ${esc(clubName())} jeugdwerking</footer></div>`; }).join("");
   document.body.appendChild(el); document.documentElement.classList.add("printing");
   const done = () => { el.remove(); document.documentElement.classList.remove("printing"); removeEventListener("afterprint", done); };
   addEventListener("afterprint", done); setTimeout(() => print(), 150);

@@ -49,7 +49,7 @@ function evItem(e) {
   const right = e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast</span>` : e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
     : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : ((rs => rs && e.date >= todayIso() ? `<b style="color:var(--ok)">${rs.ja} komen</b>${rs.nee ? rs.nee + " niet · " : ""}${rs.open} open` : "")(rsvpSummary(e)) || (e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : ""));
   return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
-    <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, "OGV") : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span>${e.series ? ` <span class="pill" title="Ingepland door de club">Vast</span>` : ""}${e.cancelled ? ` <span class="pill loss">Afgelast</span>` : ""}</b>
+    <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, clubShort()) : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span>${e.series ? ` <span class="pill" title="Ingepland door de club">Vast</span>` : ""}${e.cancelled ? ` <span class="pill loss">Afgelast</span>` : ""}</b>
     <small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.theme ? " · " + esc(e.theme) : e.location ? " · " + esc(e.location) : ""}</small></span><span class="val">${right}</span></div>`;
 }
 function clubItem(e) {
@@ -71,7 +71,7 @@ route("ploeg", { title: "Mijn ploeg", auth: true, team: true, render: v => {
   const lastM = [...ms].reverse()[0];
   v.innerHTML = head(esc(S.team.name), `${active().length} spelers · ${esc(S.team.format || "")} · seizoen ${esc(S.team.season || "")}`, `<a class="btn ghost" href="#/ploeg-instellingen">${IC.gear}Ploeg en trainers</a>`) +
   (next ? `<div class="panel hl"><div class="row nextact"><span class="date"><b>${dDay(next.date)}</b><small>${dMon(next.date)}</small></span>
-    <span class="nxt"><small class="muted">${next.date === t ? "Vandaag" : "Volgende activiteit"}</small><b style="display:block;font-size:19px">${next.type === "wedstrijd" ? "Wedstrijd: " + matchTitle(next, "OGV") : "Training" + (next.theme ? ": " + esc(next.theme) : "")}</b>
+    <span class="nxt"><small class="muted">${next.date === t ? "Vandaag" : "Volgende activiteit"}</small><b style="display:block;font-size:19px">${next.type === "wedstrijd" ? "Wedstrijd: " + matchTitle(next, clubShort()) : "Training" + (next.theme ? ": " + esc(next.theme) : "")}</b>
     <small class="muted">${dLong(next.date)}${next.start_time ? ", " + tm(next.start_time) : ""}${next.location ? " · " + esc(next.location) : ""}</small></span>
     <a class="btn" href="#/activiteit/${next.id}">${next.type === "wedstrijd" ? "Voorbereiden" : "Openen"}</a>${next.type === "wedstrijd" ? `<a class="btn ghost" href="#/live/${next.id}">${IC.mic}Live</a>` : ""}</div></div>`
    : `<div class="empty"><b>Niets gepland</b>Zet je trainingen en wedstrijden in de kalender.<br><a class="btn" href="#/kalender">Naar de kalender</a></div>`) +
