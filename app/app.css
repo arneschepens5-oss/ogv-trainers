@@ -1381,3 +1381,26 @@ input[type=checkbox],input[type=radio]{accent-color:var(--yellow)}
 .authclub{display:flex;align-items:center;justify-content:center;gap:2px;margin:-6px 0 14px;color:var(--muted);font-weight:600}
 .ogvlogo.big.pmark{height:96px}
 dialog .ogvlogo.big{height:96px;margin:0}
+/* clubinstellingen */
+.csteps{display:flex;gap:6px;list-style:none;margin:16px 0 18px;padding:0;overflow-x:auto}
+.csteps a{display:flex;align-items:center;gap:8px;padding:8px 14px 8px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-weight:700;font-size:14px;white-space:nowrap;text-decoration:none}
+.csteps a span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--card2);font-size:12.5px}
+.csteps a.done span{background:var(--yellow);color:var(--onY)}
+.csteps a[aria-current]{color:var(--ink);border-color:var(--ink)}.csteps a[aria-current] span{background:var(--ink);color:var(--bg)}
+.csfoot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+.csm{display:grid;grid-template-columns:minmax(120px,1.4fr) auto auto auto 36px;gap:8px;align-items:center;margin-bottom:8px}
+.csm label{display:flex;align-items:center;gap:6px}.csm input[name=from],.csm input[name=to]{width:76px}
+.csm .tgl{margin:0;font-size:13px}
+@media (max-width:620px){.csm{grid-template-columns:1fr 1fr;}.csm input[name=naam]{grid-column:1/-1}}
+.chkl{display:flex;align-items:center;gap:8px;cursor:pointer}
+.csmods{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.csmod{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);cursor:pointer}
+.csmod b{display:block;font-size:14.5px}.csmod small{color:var(--muted);font-size:12.5px}.csmod .tgl{margin:0}
+.cscats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.cscat{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2)}
+.cscat:has(input:disabled){opacity:.5}
+.setupbar{display:flex;align-items:center;gap:14px;margin-bottom:16px;text-decoration:none;color:var(--ink);border:1px solid var(--yellow)}
+.setupbar .bdg{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--yellow);color:var(--onY);flex:none}
+.setupbar>span:nth-child(2){flex:1}.setupbar b{display:block}.setupbar small{color:var(--muted)}
+.chkl input[type=radio],.chkl input[type=checkbox]{width:18px;height:18px;flex:none;margin:0;accent-color:var(--yellow)}
+#cse h2,#csp h2{margin:24px 0 6px}#cse h2:first-child{margin-top:0}

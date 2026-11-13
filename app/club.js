@@ -37,7 +37,8 @@ function viewJoin(v) {
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club) { Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
+    Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
     if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
@@ -46,11 +47,12 @@ async function clubStatus() {
 
 /* ============ clubbeheer ============ */
 /* ============ beheer: aparte pagina's voor meldingen, toegang, ploegen en systeem ============ */
-const ADM_TABS = [["meldingen", "Meldingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["planning", "Trainingen"], ["systeem", "Systeem"]];
+const ADM_TABS = [["meldingen", "Meldingen"], ["instellingen", "Instellingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["planning", "Trainingen"], ["systeem", "Systeem"]];
 async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
 route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
   const TABS = ADM_TABS.concat([["club", "Club"]]);
+  if (id === "instellingen") { location.replace("#/clubinstellingen"); return; }
   const tab = TABS.some(t => t[0] === id) ? id : "meldingen";
   v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", club: "Club", platform: "Alle clubs" }[tab]}</h1></div></div>
     <nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
@@ -74,7 +76,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
     return dbCheck($("#adm-db")); }
   let info; try { info = await getInfo(); } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message)}</div>`; return; }
   if (tab === "ploegen") {
-    host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van OG Vorselaar op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
+    host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van ${esc(clubName())} op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
       ${V14() ? `<div class="panel sec"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Spelers importeren uit PSD</h2><p class="hint" style="margin:4px 0 0">Exporteer de spelerslijst van de hele club uit PSD als Excel, met een kolom voor de ploeg. Alle spelers komen in één keer in de juiste ploeg, met de gsm-nummers van de ouders.</p></div><button class="btn ghost" type="button" id="impAll">${IC.out}Excel kiezen</button></div></div>` : ""}
       <div class="sec" id="adm-teams"><p class="hint">Laden…</p></div>`;
     $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render()); const ia = $("#impAll"); if (ia) ia.onclick = () => importPlayers(true); return adminTeams($("#adm-teams"), info); }
@@ -626,3 +628,107 @@ function accountDialog() {
     try { localStorage.removeItem("ogv-club"); localStorage.removeItem(TEAM_KEY); } catch (err) {}
     await sb.auth.signOut().catch(() => {}); d.close(); toast("Je account is verwijderd."); location.hash = "#/start"; location.reload(); };
 }
+
+/* ============ clubinstellingen: bij de opstart stap voor stap, daarna altijd aan te passen ============ */
+const CS_STEPS = [["club", "Club"], ["evaluaties", "Evaluaties"], ["onderdelen", "Onderdelen"], ["ploegen", "Ploegen"], ["trainers", "Trainers"]];
+/* onderdelen die een club kan uitzetten; de basis (start, kalender, spelers, trainingen) staat altijd aan */
+const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste momenten"], ["dossier", "Spelersdossier", "Alles van een speler op één pagina"], ["cijfers", "Cijfers", "Statistieken van de ploeg"],
+  ["live", "Live coachen", "Klok, doelpunten en wissels langs de lijn"], ["matchday", "Wedstrijdblad", "Opstelling om af te drukken"], ["videoanalyse", "Videoanalyse", "Videostudio met spelersherkenning"],
+  ["animatiebord", "Animatiebord", "Bewegende spelpatronen"], ["mixschema", "Mixschema", "Rotatieschema voor gemengde ploegen"], ["principes", "Mijn spelprincipes", "Eigen video's per principe"],
+  ["berichten", "Berichten", "Mededelingen aan trainers"], ["terreinen", "Terreinen", "Veldindeling en plattegrond"], ["contacten", "Wie contacteer ik?", "Contactlijst van de club"],
+  ["scouting", "Scoutingsdatabase", "Spelers van andere clubs volgen"], ["clubdashboard", "Clubdashboard", "Overzicht voor de jeugdcoördinator"]];
+const CS_CATS = [["U6", "2v2"], ["U7", "3v3"], ["U8", "5v5"], ["U9", "5v5"], ["U10", "8v8"], ["U11", "8v8"], ["U12", "8v8"], ["U13", "8v8"], ["U14", "11v11"], ["U15", "11v11"], ["U16", "11v11"], ["U17", "11v11"], ["U19", "11v11"], ["U21", "11v11"]];
+async function csSave(patch, msg) {
+  const settings = { ...(CLUB.settings || {}), ...patch };
+  if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm: CLUB.name, sh: CLUB.short, s: settings }); if (error) { toast(error.message); return false; } }
+  CLUB.settings = settings; rememberClub(); applyClubTheme(); if (msg) toast(msg + (mode === "demo" ? " (in de demo enkel op dit toestel)" : "")); return true;
+}
+route("clubinstellingen", { title: "Instellingen van de club", auth: true, render: async (v, id) => {
+  if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
+  const st = CLUB.settings || {}, step = CS_STEPS.some(x => x[0] === id) ? id : "club", i = CS_STEPS.findIndex(x => x[0] === step), first = !st.setup_done;
+  const nextHref = i < CS_STEPS.length - 1 ? "#/clubinstellingen/" + CS_STEPS[i + 1][0] : "#/start";
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} ${first ? "Je club instellen" : "Instellingen"} · ${esc(clubName())}</small><h1 class="pg">${first ? "Zet je club klaar" : "Instellingen van de club"}</h1>
+      <p class="sub" style="margin:4px 0 0">${first ? "Vijf korte stappen. Je kan alles later nog aanpassen via Beheer › Instellingen." : "Kies zelf hoe jullie club werkt. Wijzigingen gelden meteen voor alle trainers."}</p></div></div>
+    <ol class="csteps">${CS_STEPS.map(([k, l], n) => `<li><a href="#/clubinstellingen/${k}"${k === step ? ' aria-current="step"' : ""}${n < i ? ' class="done"' : ""}><span>${n + 1}</span>${l}</a></li>`).join("")}</ol><div id="csv"></div>`;
+  const host = $("#csv"), foot = (label = "Bewaren en verder") => `<div class="row csfoot"><a class="btn ghost" href="${i ? "#/clubinstellingen/" + CS_STEPS[i - 1][0] : "#/start"}">${i ? "Vorige" : "Later"}</a><span class="spacer"></span><button class="btn">${label}</button></div>`;
+  const go = () => { location.hash = nextHref; };
+
+  if (step === "club") {
+    host.innerHTML = `<form class="panel" id="csf" style="max-width:700px">${clubFieldsHtml(CLUB, st, { fixed: isOGV() })}${foot()}</form>`;
+    const f = $("#csf"), cur = bindClubFields(f, CLUB, st, s => { CLUB.settings = s; applyClubTheme(); });
+    f.onsubmit = async e => { e.preventDefault(); const s = cur();
+      if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm: f.nm.value, sh: f.sh.value, s }); if (error) { toast(error.message); return; } }
+      Object.assign(CLUB, { name: f.nm.value.trim() || CLUB.name, short: f.sh.value.trim() || CLUB.short, settings: s }); rememberClub(); applyClubTheme(); shell(); go(); };
+    return; }
+
+  if (step === "evaluaties") {
+    const ev = st.eval || {}, ms = (Array.isArray(ev.moments) && ev.moments.length ? ev.moments : EV_PRESETS.vijf.moments).map(x => ({ ...x }));
+    const rowHtml = (x, n) => `<div class="csm" data-r="${n}"><input name="naam" value="${esc(x.naam || "")}" placeholder="Naam" aria-label="Naam moment ${n + 1}" maxlength="30">
+      <label><span class="hint">van</span><input name="from" value="${esc(x.from || "")}" placeholder="MM-DD" maxlength="5" inputmode="numeric" aria-label="Van (maand-dag)"></label>
+      <label><span class="hint">tot</span><input name="to" value="${esc(x.to || "")}" placeholder="MM-DD" maxlength="5" inputmode="numeric" aria-label="Tot (maand-dag)"></label>
+      <label class="tgl sm"><input type="checkbox" name="verplicht"${x.verplicht ? " checked" : ""}><span></span>verplicht</label><button class="ib" type="button" data-del title="Moment verwijderen" aria-label="Moment verwijderen">${IC.x || "×"}</button></div>`;
+    host.innerHTML = `<form class="panel" id="cse" style="max-width:820px">
+      <h2 style="margin-top:0">Wanneer evalueren jullie?</h2><p class="hint" style="margin-top:0">Trainers zien per moment wanneer de evaluaties klaar moeten zijn. Data als maand-dag, bv. 12-01 voor 1 december. Het seizoen start in juli.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">${Object.entries(EV_PRESETS).map(([k, p]) => `<button class="btn ghost small" type="button" data-pre="${k}">${p.naam}</button>`).join("")}</div>
+      <div id="csms">${ms.map(rowHtml).join("")}</div><button class="link" type="button" id="csadd" style="margin:4px 0 8px">${IC.plus}Moment toevoegen</button>
+      <h2>Schaal</h2><div class="row" style="gap:18px;flex-wrap:wrap">
+        <label class="chkl"><input type="radio" name="scale" value="woorden"${ev.scale !== "cijfers" ? " checked" : ""}><span>Woorden <span class="hint">(nog niet, soms, meestal, bijna altijd, uitblinker)</span></span></label>
+        <label class="chkl"><input type="radio" name="scale" value="cijfers"${ev.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label></div>
+      <h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Eén onderdeel per regel. Een regel die begint met # is een groep. Na een | volgt de uitleg voor de trainer. Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button></div>
+      <textarea name="tpl" rows="14" spellcheck="false" style="width:100%;font-family:inherit">${esc((Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT).join("\n"))}</textarea>
+      ${S.teams?.length ? `<label class="chkl" style="margin-top:8px"><input type="checkbox" name="all"> Ook toepassen op de ${S.teams.length} bestaande ploegen <span class="hint">(evaluaties die al ingevuld zijn blijven bewaard)</span></label>` : ""}
+      ${foot()}</form>`;
+    const f = $("#cse"), list = $("#csms", f);
+    const wire = () => $$("[data-del]", list).forEach(b => b.onclick = () => { if ($$(".csm", list).length > 1) b.closest(".csm").remove(); else toast("Hou minstens één moment."); });
+    wire();
+    $$("[data-pre]", f).forEach(b => b.onclick = () => { list.innerHTML = EV_PRESETS[b.dataset.pre].moments.map(rowHtml).join(""); wire(); });
+    $("#csadd", f).onclick = () => { list.insertAdjacentHTML("beforeend", rowHtml({ naam: "", from: "", to: "" }, $$(".csm", list).length)); wire(); };
+    $$("[data-tpl]", f).forEach(b => b.onclick = () => { f.tpl.value = (b.dataset.tpl === "kort" ? EV_TEMPLATE_SHORT : EV_TEMPLATE_DEFAULT).join("\n"); });
+    f.onsubmit = async e => { e.preventDefault();
+      const moments = $$(".csm", list).map(r => ({ naam: $("[name=naam]", r).value.trim(), from: $("[name=from]", r).value.trim(), to: $("[name=to]", r).value.trim(), verplicht: $("[name=verplicht]", r).checked }));
+      const bad = moments.find(x => !x.naam || !evMd(x.from) || !evMd(x.to)); if (bad) { toast("Geef elk moment een naam en een datum als maand-dag, bv. 12-01."); return; }
+      const template = f.tpl.value.split("\n").map(x => x.trim()).filter(Boolean); if (!template.some(l => !l.startsWith("#"))) { toast("Vul minstens één onderdeel in."); return; }
+      if (!(await csSave({ eval: { moments, scale: f.scale.value, template } }, "Evaluaties ingesteld."))) return;
+      if (f.all?.checked) { let n = 0; for (const t of S.teams) { try { await db.save("teams", { ...t, criteria: template.slice() }); t.criteria = template.slice(); n++; } catch (x) {} } toast(`Toegepast op ${n} ploegen.`); }
+      go(); };
+    return; }
+
+  if (step === "onderdelen") {
+    const off = new Set(st.hidden || []);
+    host.innerHTML = `<form class="panel" id="cso" style="max-width:820px"><h2 style="margin-top:0">Welke onderdelen gebruiken jullie?</h2>
+      <p class="hint" style="margin-top:0">Wat uit staat, verdwijnt uit het menu voor iedereen van de club. Start, kalender, spelers en trainingen staan altijd aan.</p>
+      <div class="csmods">${CS_MODULES.map(([k, l, d]) => `<label class="csmod"><span><b>${esc(l)}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" name="${k}"${off.has(k) ? "" : " checked"}><span></span></span></label>`).join("")}</div>${foot()}</form>`;
+    const f = $("#cso");
+    f.onsubmit = async e => { e.preventDefault(); const hidden = CS_MODULES.map(m => m[0]).filter(k => !f[k].checked);
+      if (await csSave({ hidden }, "Onderdelen bewaard.")) { shell(); go(); } };
+    return; }
+
+  if (step === "ploegen") {
+    const have = new Set((S.teams || []).map(t => (t.category || t.name || "").toUpperCase()));
+    host.innerHTML = `<form class="panel" id="csp" style="max-width:820px"><h2 style="margin-top:0">Ploegen</h2>
+      ${(S.teams || []).length ? `<p>De club heeft al ${S.teams.length} ploegen: ${S.teams.map(t => esc(t.name)).join(", ")}.</p>` : `<p class="hint" style="margin-top:0">Vink aan welke ploegen jullie hebben. Het speelformat volgt de regels van Voetbal Vlaanderen; je kan het per ploeg nog wijzigen. Heeft een leeftijd meerdere ploegen, pas dan de naam aan (bv. U9 A en U9 B) in Beheer › Ploegen.</p>`}
+      <div class="cscats">${CS_CATS.map(([c, fm]) => `<label class="chkl cscat"><input type="checkbox" name="c" value="${c}"${have.has(c) ? " disabled" : ""}> <b>${c}</b> <span class="hint">${fm.replace("v", " tegen ")}</span></label>`).join("")}</div>
+      <p class="hint">${rbfaClub() ? `Ploegen ophalen bij RBFA, met hun wedstrijden, kan ook: <a class="link" href="#/clubbeheer/ploegen">Beheer › Ploegen</a>.` : "Koppeling met RBFA: vraag ze aan bij FootballCoachHub, dan komen wedstrijden vanzelf in de kalender."}</p>
+      <p id="csps" class="hint"></p>${foot("Aanmaken en verder")}</form>`;
+    const f = $("#csp");
+    f.onsubmit = async e => { e.preventDefault(); const pick = $$("input[name=c]:checked", f).map(x => x.value); if (!pick.length) { go(); return; }
+      if (mode === "demo") { toast("In de demo worden geen ploegen aangemaakt."); go(); return; }
+      const btn = $("button.btn:not(.ghost)", f); btn.disabled = true; let made = 0, warn = "";
+      for (const c of pick) { const format = (CS_CATS.find(x => x[0] === c) || [])[1] || "8v8"; $("#csps", f).textContent = `${c} aanmaken…`;
+        const row = { id: uid(), name: c, category: c, format, season: seasonNow(), criteria: EV_TEMPLATE.slice(), periods: FORMAT_DEF[format][0], period_minutes: FORMAT_DEF[format][1] };
+        try { await db.insert("teams", row); made++; await sb.rpc("admin_set_trainer", { t: row.id, uid: user.id, on_team: false }); } catch (x) { warn = x.message || String(x); } }
+      await loadTeams().catch(() => {}); btn.disabled = false; toast(`${made} ploegen aangemaakt.` + (warn ? " " + warn : "")); if (made) go(); };
+    return; }
+
+  if (step === "trainers") {
+    let code = "–"; try { code = mode === "demo" ? "DEMO-1234" : (await sb.rpc("club_admin_info")).data?.code || "–"; } catch (x) {}
+    const link = location.origin + location.pathname + "#/aanmelden";
+    const txt = `Je bent uitgenodigd voor ${APPNAME()}, het trainersplatform van ${clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${code}\n\nDeel deze code niet buiten de club.`;
+    host.innerHTML = `<form class="panel" id="cst" style="max-width:820px"><h2 style="margin-top:0">Trainers uitnodigen</h2><p class="hint" style="margin-top:0">Trainers maken zelf een account met de clubcode en komen meteen in jullie club. Daarna koppel je ze aan hun ploeg in Beheer › Ploegen, en geef je in Beheer › Toegang extra rechten (bv. scouting).</p>
+      <div class="codebox"><b translate="no">${esc(code)}</b><button class="btn ghost small" type="button" id="cscp">${IC.copy}Uitnodiging kopiëren</button><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">${IC.wa}Via WhatsApp</a></div>
+      ${foot(first ? "Klaar" : "Bewaren")}</form>`;
+    $("#cscp").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Uitnodiging gekopieerd."));
+    $("#cst").onsubmit = async e => { e.preventDefault(); if (await csSave({ setup_done: true }, first ? "Je club staat klaar." : "Bewaard.")) { shell(); location.hash = "#/start"; } };
+  }
+} });

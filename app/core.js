@@ -7,6 +7,8 @@ const OGV_ID = "00000000-0000-4000-8000-000000000001";
 const CLUB = { id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {} };
 const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 /* huisstijl van OG Vorselaar enkel als we weten dat dit toestel bij OGV hoort; anders die van het platform */
+/* onderdelen die de club heeft uitgezet (Beheer > Instellingen) */
+const clubOff = page => (CLUB.settings?.hidden || []).includes(page);
 const ogvBrand = () => isOGV() && (CLUB_KNOWN || mode === "demo" || !!user);
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
 const clubShort = () => CLUB.short || clubName();
@@ -26,6 +28,7 @@ const mixRgb = (a, b, t) => a.map((v, i) => v * (1 - t) + b[i] * t);
 const lumRgb = a => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(a[0]) + .7152 * f(a[1]) + .0722 * f(a[2]); };
 const CLUB_VARS = ["--yellow", "--yellow2", "--onY", "--ytext", "--ybg", "--bg", "--sidebg", "--card", "--card2", "--card3", "--navact", "--line", "--input"];
 function applyClubTheme() {
+  if (typeof evApplyClub === "function") evApplyClub();
   const st = CLUB.settings || {}, root = document.documentElement, el = root.style; CLUB_VARS.forEach(k => el.removeProperty(k));
   if (isOGV() || (!st.color && !st.color2)) return;   /* OG Vorselaar houdt altijd de originele geel-zwarte kleuren */
   const light = root.dataset.theme === "light", W = [255, 255, 255], K = [0, 0, 0], set = (k, v) => el.setProperty(k, Array.isArray(v) ? rgbHex(v) : v);
@@ -394,7 +397,8 @@ let teardown = null;
 function shell(fresh) {
   const oldView = fresh ? null : $("#view");
   const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
-  const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g);
+  const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g)
+    .map(g => ({ ...g, items: g.items.filter(([k]) => !clubOff(k)) })).filter(g => g.items.length);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
   const secs = (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"]] : []), ...(S.platform ? [["platform", "Platform", "chart"]] : [])] }] : nav)
@@ -454,6 +458,7 @@ async function renderPage(seq) {
   /* alles achter aanmelden en de clubcode, behalve het aanmeldscherm zelf */
   if (r.page !== "aanmelden" && !logged) { viewLogin(v); return; }
   if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
+  if (clubOff(r.page)) { v.innerHTML = `<div class="empty"><b>Dit onderdeel staat uit voor ${esc(clubName())}</b>${S.admin ? `Zet het aan in <a class="link" href="#/clubinstellingen/onderdelen">Beheer › Instellingen</a>.` : "Vraag je clubbeheerder als je het wil gebruiken."}</div>`; return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   /* nooit meer een leeg scherm: na een halve seconde "Laden…", na 12 seconden een knop om opnieuw te laden */
   let settled = false;

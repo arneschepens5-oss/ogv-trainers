@@ -12,7 +12,8 @@ route("start", { title: "Start", render: async v => {
   const recent = recentOf(S.club);
   const first = (myName() || "").trim().split(/\s+/)[0];
   const todo = t ? past().filter(e => !S.att.some(a => a.event_id === e.id)).slice(-3).reverse() : [];
-  v.innerHTML = `<section class="hero"><canvas id="pitch3d" aria-hidden="true"></canvas>
+  const setup = logged && S.admin && !isOGV() && !CLUB.settings?.setup_done ? `<a class="panel setupbar" href="#/clubinstellingen"><span class="bdg">${IC.gear}</span><span><b>Zet je club klaar</b><small>Kies in vijf stappen jullie kleuren, evaluaties, onderdelen en ploegen, en nodig trainers uit.</small></span><span class="btn small">Beginnen</span></a>` : "";
+  v.innerHTML = `${setup}<section class="hero"><canvas id="pitch3d" aria-hidden="true"></canvas>
     <p class="date-l">${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
     <h1>${greet},<span>${esc(logged && mode !== "demo" && first ? first : "trainer")}</span></h1>
     <div class="quick">${next ? `<a href="#/activiteit/${next.id}">${next.type === "wedstrijd" ? IC.ball : IC.check}${next.date === todayIso() ? (next.type === "wedstrijd" ? "Wedstrijd van vandaag" : "Aanwezigheden van vandaag") : (next.type === "wedstrijd" ? "Volgende wedstrijd" : "Volgende training")}</a>` : ""}

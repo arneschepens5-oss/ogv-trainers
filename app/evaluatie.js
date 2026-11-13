@@ -2,15 +2,17 @@
    onderdelen in groepen met uitleg, per speler een volledige fiche met sterktes, werkpunten en doelen,
    ploeganalyse en een afdrukbaar rapport voor het oudergesprek. */
 "use strict";
-const EV_MOMENTS = [
+const EV_MOMENTS_DEFAULT = [
   { m: 1, naam: "Start seizoen", kort: "Start", periode: "augustus – september", from: [0, 7, 1], to: [0, 8, 30] },
   { m: 2, naam: "Herfst", kort: "Herfst", periode: "oktober – november", from: [0, 9, 1], to: [0, 10, 30] },
   { m: 3, naam: "Winterstop", kort: "Winter", periode: "december – januari", from: [0, 11, 1], to: [1, 0, 31], verplicht: true },
   { m: 4, naam: "Maart", kort: "Maart", periode: "half februari – half april", from: [1, 1, 15], to: [1, 3, 15] },
   { m: 5, naam: "Einde seizoen", kort: "Einde", periode: "mei – juni", from: [1, 4, 1], to: [1, 5, 30], verplicht: true }];
-const EV_LAST = EV_MOMENTS.length;
-const EV_LEVELS = { 1: "Nog niet", 1.5: "Nog niet tot soms", 2: "Soms", 2.5: "Soms tot meestal", 3: "Meestal", 3.5: "Meestal tot bijna altijd", 4: "Bijna altijd", 4.5: "Bijna altijd tot uitblinker", 5: "Uitblinker" };
-const EV_TEMPLATE = ["# Techniek",
+/* de club kiest zelf haar momenten, schaal en onderdelen (Beheer > Instellingen); zonder keuze gelden de standaardwaarden */
+const EV_MOMENTS = EV_MOMENTS_DEFAULT.map(x => ({ ...x }));
+let EV_LAST = EV_MOMENTS.length;
+const EV_LEVELS_WORDS = { 1: "Nog niet", 1.5: "Nog niet tot soms", 2: "Soms", 2.5: "Soms tot meestal", 3: "Meestal", 3.5: "Meestal tot bijna altijd", 4: "Bijna altijd", 4.5: "Bijna altijd tot uitblinker", 5: "Uitblinker" };
+const EV_TEMPLATE_DEFAULT = ["# Techniek",
   "Techniek (controle over de bal) | Houdt de bal dicht bij de voet, met beide voeten, ook onder druk",
   "Passing | Zuiver en op het juiste moment passen, ook met de zwakke voet",
   "Balaanname | Eerste aanname weg van de druk en in de looprichting",
@@ -34,6 +36,33 @@ const EV_TEMPLATE = ["# Techniek",
   "Leerbereidheid | Luistert en past tips meteen toe",
   "# Algemeen",
   "Potentieel | Hoe ver kan deze speler nog groeien?"];
+const EV_LEVELS = { ...EV_LEVELS_WORDS };
+const EV_TEMPLATE = EV_TEMPLATE_DEFAULT.slice();
+const EV_MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+/* "MM-DD" naar [jaar na seizoenstart, maand, dag]: het seizoen start in juli */
+const evMd = s => { const [mm, dd] = String(s || "").split("-").map(Number); return mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 ? [mm >= 7 ? 0 : 1, mm - 1, dd] : null; };
+const evMdStr = a => String(a[1] + 1).padStart(2, "0") + "-" + String(a[2]).padStart(2, "0");
+const EV_PRESETS = {
+  vijf: { naam: "5 momenten", moments: EV_MOMENTS_DEFAULT.map(x => ({ naam: x.naam, kort: x.kort, from: evMdStr(x.from), to: evMdStr(x.to), verplicht: !!x.verplicht })) },
+  drie: { naam: "3 momenten", moments: [{ naam: "Start seizoen", kort: "Start", from: "08-15", to: "10-15" }, { naam: "Winterstop", kort: "Winter", from: "12-01", to: "01-31", verplicht: true }, { naam: "Einde seizoen", kort: "Einde", from: "05-01", to: "06-30", verplicht: true }] },
+  twee: { naam: "2 momenten", moments: [{ naam: "Winterstop", kort: "Winter", from: "12-01", to: "01-31", verplicht: true }, { naam: "Einde seizoen", kort: "Einde", from: "05-01", to: "06-30", verplicht: true }] } };
+const EV_TEMPLATE_SHORT = ["# Met de bal", "Balcontrole | Houdt de bal dicht bij de voet", "Passen en trappen | Speelt de bal naar een medespeler", "Dribbelen | Durft een tegenstander uit te spelen", "Scoren | Probeert te scoren als het kan",
+  "# Zonder de bal", "Vrijlopen | Zoekt ruimte om de bal te krijgen", "Terugwinnen | Gaat meteen achter de bal aan bij balverlies",
+  "# Plezier en inzet", "Inzet | Doet goed zijn best", "Samenspel | Speelt samen en helpt anderen", "Luisteren | Luistert en probeert tips uit"];
+/* instellingen van de club toepassen (na het laden van de club en na bewaren) */
+function evApplyClub(st = CLUB.settings || {}) {
+  const ev = st.eval || {}, ms = Array.isArray(ev.moments) && ev.moments.length ? ev.moments : null;
+  EV_MOMENTS.length = 0;
+  if (ms) ms.forEach((x, i) => { const f = evMd(x.from), t = evMd(x.to); if (!f || !t) return;
+      EV_MOMENTS.push({ m: EV_MOMENTS.length + 1, naam: x.naam || "Moment " + (i + 1), kort: x.kort || (x.naam || "").split(" ")[0] || String(i + 1), verplicht: !!x.verplicht, from: f, to: t,
+        periode: EV_MONTHS[f[1]] === EV_MONTHS[t[1]] ? EV_MONTHS[f[1]] : EV_MONTHS[f[1]] + " – " + EV_MONTHS[t[1]] }); });
+  if (!EV_MOMENTS.length) EV_MOMENTS_DEFAULT.forEach(x => EV_MOMENTS.push({ ...x }));
+  EV_LAST = EV_MOMENTS.length;
+  Object.keys(EV_LEVELS).forEach(k => delete EV_LEVELS[k]);
+  Object.assign(EV_LEVELS, ev.scale === "cijfers" ? { 1: "1", 1.5: "1,5", 2: "2", 2.5: "2,5", 3: "3", 3.5: "3,5", 4: "4", 4.5: "4,5", 5: "5" } : EV_LEVELS_WORDS);
+  EV_TEMPLATE.length = 0; (Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT).forEach(l => EV_TEMPLATE.push(l));
+}
+evApplyClub();
 const EV_ADVICE = ["Blijft in deze ploeg", "Klaar voor een hoger niveau", "Beter op zijn plaats in een andere ploeg", "Bespreken met de jeugdcoördinator"];
 const EV_LEVEL_TEAM = ["Boven het niveau van de ploeg", "Op het niveau van de ploeg", "Onder het niveau van de ploeg"];
 
@@ -85,7 +114,7 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
   const ps = active(), groups = evGroups(), names = evItems(), mo = EV_MOMENTS[evMoment - 1], w = evWindow(mo);
   const done = ps.filter(p => evDone(evOf(p.id, evMoment), names)).length, started = ps.filter(p => evStarted(evOf(p.id, evMoment))).length;
   const now = new Date(), open = now >= w.from && now <= w.to, late = now > w.to && done < ps.length, dfmt = d => d.toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
-  v.innerHTML = head("Evaluaties", `${esc(S.team.name)} · vijf momenten per seizoen. De winterstop en het einde van het seizoen zijn verplicht.`,
+  v.innerHTML = head("Evaluaties", `${esc(S.team.name)} · ${EV_MOMENTS.length === 1 ? "één moment" : EV_MOMENTS.length + " momenten"} per seizoen.${(n => n.length ? " Verplicht: " + n.join(" en ").toLowerCase() + "." : "")(EV_MOMENTS.filter(m => m.verplicht).map(m => m.naam))}`,
     `<button class="btn ghost" type="button" id="evPrintAll">${IC.print}Alle rapporten</button>`) +
   (evLegacy(S.team) ? `<div class="panel hl row" style="margin-bottom:14px"><span style="flex:1;min-width:220px"><b>Uitgebreide evaluatie beschikbaar</b><br><span class="hint">${groups[0].items.length} onderdelen nu, straks ${EV_TEMPLATE.filter(l => !l.startsWith("#")).length} in vijf groepen met uitleg per onderdeel. Je huidige scores blijven staan.</span></span><button class="btn small" type="button" id="evUpgrade">Overschakelen</button></div>` : "") +
   `<div class="evmoments" role="tablist">${EV_MOMENTS.map(x => { const ww = evWindow(x), dn = ps.filter(p => evDone(evOf(p.id, x.m), names)).length, st = ps.filter(p => evStarted(evOf(p.id, x.m))).length;
@@ -154,7 +183,7 @@ function evForm(v, pid, m) {
   <div class="evnav"><select id="evM" aria-label="Moment">${EV_MOMENTS.map(x => `<option value="${x.m}"${x.m === m ? " selected" : ""}>${x.m}. ${x.naam}</option>`).join("")}</select>
     <span class="spacer"></span>${idx > 0 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx - 1].id}/${m}">‹ ${esc(ps[idx - 1].first_name)}</a>` : ""}<span class="hint">${idx + 1} / ${ps.length}</span>${idx < ps.length - 1 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx + 1].id}/${m}">${esc(ps[idx + 1].first_name)} ›</a>` : ""}</div>
   <div class="evlayout"><div class="evmain">
-    <div class="evlegend">${[1, 2, 3, 4, 5].map(n => `<span><i style="background:${evColor(n)}"></i>${n} ${EV_LEVELS[n].toLowerCase()}</span>`).join("")}<span><i class="prevmark"></i>vorige keer</span></div>
+    <div class="evlegend">${[1, 2, 3, 4, 5].map(n => `<span><i style="background:${evColor(n)}"></i>${n}${EV_LEVELS[n] !== String(n) ? " " + EV_LEVELS[n].toLowerCase() : ""}</span>`).join("")}<span><i class="prevmark"></i>vorige keer</span></div>
     ${groups.map((g, gi) => `<section class="panel evgroup" data-g="${gi}"><div class="gh"><h2>${esc(g.name)}</h2><span class="gavg" style="--c:${evColor(evAvgOf(e, g.items.map(i => i.name)))}">${f1(evAvgOf(e, g.items.map(i => i.name)))}</span></div>
       ${g.items.map(i => { const cur = evScore(e, i.name), prv = pr ? evScore(pr, i.name) : null;
         return `<div class="crit" data-c="${esc(i.name)}"><div class="cl"><b>${esc(i.name)}</b>${i.hint ? `<small>${esc(i.hint)}</small>` : ""}</div>
