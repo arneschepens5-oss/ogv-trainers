@@ -2,47 +2,50 @@
 "use strict";
 
 /* ============ start ============ */
-route("start", { title: "Start", render: async v => {
-  const logged = !!db && (mode === "demo" || !!user), t = S.team, now = new Date();
+route("start", { title: "Vandaag", render: async v => {
+  const logged = !!db && (mode === "demo" || !!user), t = S.team, now = new Date(), today = todayIso();
   const greet = (h => h < 12 ? "Goeiemorgen" : h < 18 ? "Goeiemiddag" : "Goeieavond")(now.getHours());
-  const next = t ? S.events.find(e => e.date >= todayIso()) : null;
-  /* uitslagen van de club worden achteraf ingeladen, zodat de startpagina meteen verschijnt */
-  const recentOf = c => (c || []).filter(e => e.date <= todayIso() && e.score_for != null).slice(0, 6);
-  const recentHtml = rs => rs.length ? `<div class="sec"><div class="row" style="margin-bottom:12px"><h2 style="margin:0;margin-right:auto">Laatste uitslagen van de club</h2><a class="link" href="#/uitslagen">Alle uitslagen</a></div><div class="list">${rs.map(clubItem).join("")}</div></div>` : "";
-  const recent = recentOf(S.club);
   const first = (myName() || "").trim().split(/\s+/)[0];
-  const todo = t ? past().filter(e => !S.att.some(a => a.event_id === e.id)).slice(-3).reverse() : [];
+  const upcoming = t ? S.events.filter(e => e.date >= today && !e.cancelled) : [], next = upcoming[0] || null;
+  const week = upcoming.slice(1).filter(e => (parse(e.date) - parse(today)) / 864e5 <= 7).slice(0, 4);
+  const recentOf = c => (c || []).filter(e => e.date <= today && e.score_for != null).slice(0, 4);
+  const recentHtml = rs => rs.length ? `<section class="tsec"><div class="tsh"><h2>Uitslagen van de club</h2><a class="link" href="#/uitslagen">Alles</a></div><div class="list">${rs.map(clubItem).join("")}</div></section>` : "";
+  const todo = t ? past().filter(e => !e.cancelled && !S.att.some(a => a.event_id === e.id)).slice(-3).reverse() : [];
   const setup = logged && S.admin && !isOGV() && !CLUB.settings?.setup_done ? `<a class="panel setupbar" href="#/clubinstellingen"><span class="bdg">${IC.gear}</span><span><b>Zet je club klaar</b><small>Kies in vijf stappen jullie kleuren, evaluaties, onderdelen en ploegen, en nodig trainers uit.</small></span><span class="btn small">Beginnen</span></a>` : "";
-  v.innerHTML = `${setup}<section class="hero"><canvas id="pitch3d" aria-hidden="true"></canvas>
-    <p class="date-l">${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
-    <h1>${greet},<span>${esc(logged && mode !== "demo" && first ? first : "trainer")}</span></h1>
-    <div class="quick">${next ? `<a href="#/activiteit/${next.id}">${next.type === "wedstrijd" ? IC.ball : IC.check}${next.date === todayIso() ? (next.type === "wedstrijd" ? "Wedstrijd van vandaag" : "Aanwezigheden van vandaag") : (next.type === "wedstrijd" ? "Volgende wedstrijd" : "Volgende training")}</a>` : ""}
-      ${next && next.type === "wedstrijd" ? `<a href="#/live/${next.id}">${IC.mic}Live coachen</a>` : `<a href="#/bibliotheek">${IC.book}Trainingsbibliotheek</a>`}
-      <a href="#/uitslagen">${IC.trophy}Uitslagen club</a>${logged ? "" : `<a href="#/aanmelden">Aanmelden</a>`}</div></section>
-  ${t ? evReminder() : ""}
-  ${todo.length ? `<div class="sec"><h2>Nog in te vullen</h2><div class="list">${todo.map(e => evItem(e)).join("")}</div></div>` : ""}
-  <div id="msgBox"></div>
-  <div id="recentBox">${recentHtml(recent)}</div>
-  <div class="sec"><h2>Alles op één plek</h2><div class="tiles">${[
-    ["kalender", "cal", "Kalender", "Wedstrijden komen vanzelf van RBFA. Aanwezigheden met één tik, ouders bevestigen zelf."],
-    ["trainingen", "plan", "Trainingen maken", "Eén oefening of een hele training, met veldtekening en tijd per oefening."],
-    ["bibliotheek", "book", "Bibliotheek", "Clubtrainingen en honderden oefeningen, per leeftijd, thema en soort."],
-    ["evaluaties", "star", "Evaluaties", "Per speler, met winterstop en einde seizoen als vaste momenten."],
-    ["cijfers", "chart", "Cijfers", "Resultaten, speeltijd per speler, doelpunten en werkpunten."],
-    ["matchday", "sheet", "Wedstrijdblad", "Selectie, opstelling en wissels per periode, klaar voor de kleedkamer."],
-    ["live", "mic", "Live coachen", "Klok, goals en wissels tijdens de match. Speeltijd wordt vanzelf berekend."],
-    ["uitslagen", "trophy", "Uitslagen club", "Alle wedstrijden van de club met het verslag erbij."],
-    ["animatiebord", "board", "Animatiebord", "Teken en animeer tactieken en exporteer ze als video."],
-    ["videoanalyse", "cam", "Videoanalyse", "Pijlen, zones en spotlights op je eigen beelden."],
-    ["berichten", "mail", "Berichten", "Nieuws van de club en je ploeg, ook zichtbaar voor de ouders."],
-    ["terreinen", "cal", "Terreinen", "Wie wanneer op welk veld staat, met overlappingen in het rood."],
-    ["contacten", "phone", "Wie contacteer ik?", "Bij wie je terechtkunt voor attesten, blessures, ICT en meer."]
-  ].map(([h, i, b, s]) => `<a class="tile" href="#/${h}"><span class="ic">${IC[i]}</span><span><b>${b}</b><small>${s}</small></span></a>`).join("")}</div></div>`;
+  const when = e => { const d = Math.round((parse(e.date) - parse(today)) / 864e5); return d === 0 ? "Vandaag" : d === 1 ? "Morgen" : cap(parse(e.date).toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" })); };
+  const initials = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
+  const crestOpp = name => `<span class="crest opp" aria-hidden="true">${esc(initials(name))}</span>`;
+  /* de volgende activiteit, groot bovenaan */
+  const nextCard = e => { if (!e) return "";
+    const match = e.type === "wedstrijd", rs = rsvpSummary(e), home = e.home !== false, tname = teamLbl(t) || t.name;
+    const meta = [e.start_time ? tm(e.start_time) + (e.end_time ? "–" + tm(e.end_time) : "") : "", e.location || (match ? (home ? "Thuis" : "Uit") : ""), e.convo?.meet ? "verzamelen " + esc(e.convo.meet) : ""].filter(Boolean);
+    const rsHtml = rs ? `<div class="nrs"><span><b>${rs.ja}</b> komen</span><span><b>${rs.nee}</b> niet</span><span><b>${rs.open}</b> geen antwoord</span></div>` : "";
+    if (match) { const us = `<span class="crest us">${LOGO("crest")}</span>`, them = crestOpp(e.opponent);
+      return `<section class="nextcard match"><p class="nk">${when(e)} · ${home ? "thuis" : "uit"}</p>
+        <div class="nvs"><div class="nt">${home ? us : them}<b>${esc(home ? tname : e.opponent || "Tegenstander")}</b></div><div class="nmid"><b>${tm(e.start_time) || "–"}</b><small>${esc(dShort(e.date))}</small></div><div class="nt">${home ? them : us}<b>${esc(home ? e.opponent || "Tegenstander" : tname)}</b></div></div>
+        ${e.location ? `<p class="nloc">${IC.pin || ""}${esc(e.location)}</p>` : ""}${rsHtml}
+        <div class="nact"><a class="btn" href="#/activiteit/${e.id}">${IC.ppl}Selectie</a>${clubOff("live") ? "" : `<a class="btn ghost" href="#/live/${e.id}">${IC.mic}Live coachen</a>`}${clubOff("matchday") ? "" : `<a class="btn ghost" href="#/matchday">${IC.sheet}Wedstrijdblad</a>`}</div></section>`; }
+    return `<section class="nextcard"><p class="nk">${when(e)} · training</p><h2 class="ntitle">${esc(e.theme || "Training")}</h2>
+      <p class="nmeta">${meta.map(esc).join(" · ")}</p>${rsHtml}
+      <div class="nact"><a class="btn" href="#/activiteit/${e.id}">${IC.check}Aanwezigheden</a><a class="btn ghost" href="#/trainingen">${IC.plan}Training voorbereiden</a></div></section>`; };
+  const todoRows = [
+    ...todo.map(e => `<a class="trow" href="#/activiteit/${e.id}"><span class="ti warn">${IC.check}</span><span><b>Aanwezigheden invullen</b><small>${e.type === "wedstrijd" ? "Wedstrijd" : "Training"} van ${esc(dShort(e.date))}</small></span>${IC.chev || "›"}</a>`)];
+  const evr = t && !clubOff("evaluaties") ? evReminder() : "";
+  const noTeam = `<section class="nextcard empty"><p class="nk">${logged ? "Nog geen ploeg gekozen" : "Welkom"}</p><h2 class="ntitle">${logged ? "Kies je ploeg om te beginnen" : "Meld je aan om te beginnen"}</h2>
+    <p class="nmeta">Daarna zie je hier je volgende training of wedstrijd, wat je nog moet invullen en de uitslagen van de club.</p><div class="nact">${logged ? `<button class="btn" type="button" data-pick>${IC.ppl}Ploeg kiezen</button>` : `<a class="btn" href="#/aanmelden">Aanmelden</a>`}</div></section>`;
+  v.innerHTML = `${setup}<header class="today-h"><p>${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
+      <h1>${greet}${logged && mode !== "demo" && first ? ", " + esc(first) : ""}</h1></header>
+    <div class="vdgrid">
+      <div class="vdcol">${t ? (next ? nextCard(next) : `<section class="nextcard empty"><p class="nk">Niets gepland</p><h2 class="ntitle">Geen trainingen of wedstrijden in de kalender</h2><div class="nact"><a class="btn" href="#/kalender">${IC.plus}Activiteit toevoegen</a></div></section>`) : noTeam}
+        ${todoRows.length || evr ? `<section class="tsec"><div class="tsh"><h2>Te doen</h2></div><div class="tlist">${evr}${todoRows.join("")}</div></section>` : ""}
+        <div id="msgBox"></div>
+        ${week.length ? `<section class="tsec"><div class="tsh"><h2>Deze week</h2><a class="link" href="#/kalender">Kalender</a></div><div class="list">${week.map(e => evItem(e)).join("")}</div></section>` : ""}</div>
+      <div class="vdcol"><div id="recentBox">${recentHtml(recentOf(S.club))}</div></div></div>`;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
+  $$("[data-pick]", v).forEach(b => b.onclick = pickTeam);
   $$("[data-em]", v).forEach(a => a.onclick = () => { evMoment = +a.dataset.em; });
   if (logged && typeof startMessages === "function") startMessages($("#msgBox", v));
   if (logged) loadClub().then(c => { const box = $("#recentBox", v); if (!box || !v.isConnected) return; box.innerHTML = recentHtml(recentOf(c)); $$("[data-go]", box).forEach(x => x.onclick = () => go(x.dataset.go)); }).catch(() => {});
-  return window.mountPitch ? window.mountPitch($("#pitch3d")) : null;
 } });
 
 function evItem(e) {

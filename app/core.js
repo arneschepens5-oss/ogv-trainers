@@ -161,7 +161,9 @@ const fmtSize = b => b == null ? "" : b < 1024 * 1024 ? Math.max(1, Math.round(b
 
 /* ============ thema: licht, donker of volgens het toestel ============ */
 const THEME_KEY = "ogv-theme";
-function getTheme() { try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; } }
+/* standaard: licht op de gsm (leesbaar buiten langs de lijn), donker op de computer; wie zelf kiest, houdt die keuze */
+const THEME_DEF = () => { try { return matchMedia("(max-width: 860px)").matches ? "light" : "dark"; } catch (e) { return "dark"; } };
+function getTheme() { try { return localStorage.getItem(THEME_KEY) || THEME_DEF(); } catch (e) { return THEME_DEF(); } }
 function applyTheme(t) { t = t || getTheme(); const eff = t === "system" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : t;
   document.documentElement.dataset.theme = eff; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = eff === "light" ? "#F4F4EF" : "#000000"; if (typeof applyClubTheme === "function") applyClubTheme(); }
 function setTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(t); }
@@ -263,6 +265,7 @@ const IC = {
   back:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`,
   plus:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 5v14M5 12h14"/></svg>`,
   x:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M6 6l12 12M18 6 6 18"/></svg>`,
+  pin:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`,
   chev:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="m9 6 6 6-6 6"/></svg>`,
   print:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7"/></svg>`,
   play:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M7 4v16l13-8z"/></svg>`,
@@ -385,13 +388,18 @@ function playerStats(p) {
 const ROUTES = {};
 function route(name, def) { ROUTES[name] = def; }
 const NAV = [
-  { g: null, items: [["start", "Start", "home"]] },
+  { g: null, items: [["start", "Vandaag", "home"]] },
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["dossier", "Spelersdossier", "book"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
+/* op de gsm: onderdelen die bij één tab onderaan horen, met een rij knoppen bovenaan de pagina */
+const SUBNAV = { ploeg: [["spelers", "Spelers"], ["evaluaties", "Evaluaties"], ["dossier", "Dossier"], ["cijfers", "Cijfers"], ["ploeg", "Overzicht"]],
+  kal: [["kalender", "Kalender"], ["matchday", "Wedstrijdblad"], ["live", "Live coachen"], ["uitslagen", "Uitslagen"]],
+  train: [["trainingen", "Trainingen"], ["bibliotheek", "Bibliotheek"], ["animatiebord", "Animatiebord"]] };
+const SUBNAV_OF = Object.fromEntries(Object.entries(SUBNAV).flatMap(([g, l]) => l.map(([k]) => [k, g])));
 const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
@@ -414,7 +422,7 @@ function shell(fresh) {
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? (CLUB.id === "platform" ? "Beheerder van het platform" : esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName())) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span>${mode === "demo" ? "" : `<button class="ib" type="button" data-account title="Mijn account" aria-label="Mijn account">${IC.gear}</button>`}<button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
-  const teamBtn = logged && !platOnly ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
+  const teamBtn = logged && !platOnly ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + (myTeams().length === 1 ? " ploeg" : " ploegen") : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
@@ -425,10 +433,11 @@ function shell(fresh) {
   </aside>
   <main>
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
+    ${logged && !platOnly && SUBNAV_OF[active] ? `<nav class="subnav" aria-label="Onderdelen">${SUBNAV[SUBNAV_OF[active]].filter(([k]) => !clubOff(k) && (k !== "scouting" || mag("scouting"))).map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${l}</a>`).join("")}</nav>` : ""}
     <div class="page" id="view"></div>
   </main>
   <nav class="tabbar${platOnly ? " t3" : ""}" aria-label="Snelmenu">
-    ${(platOnly ? [["platform","Overzicht","chart"],["platform/meldingen","Meldingen","mail"]] : [["start","Start","home"],["kalender","Kalender","cal"],["trainingen","Training","plan"],["matchday","Wedstrijdblad","sheet"]]).map(([k,l,i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
+    ${(platOnly ? [["platform","Overzicht","chart"],["platform/meldingen","Meldingen","mail"]] : [["start","Vandaag","home"],["kalender","Kalender","cal"],["spelers","Ploeg","ppl"],["trainingen","Training","plan"]]).map(([k,l,i]) => `<a href="#/${k}"${(SUBNAV_OF[active] ? SUBNAV[SUBNAV_OF[active]][0][0] : active) === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
