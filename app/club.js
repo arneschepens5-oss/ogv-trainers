@@ -285,8 +285,16 @@ function editClubDialog(c, done) {
     <label class="f" style="max-width:220px"><span class="sr">Clubnummer bij RBFA</span><input name="rbfa" inputmode="numeric" value="${esc(st.rbfa || (fixed ? "1126" : ""))}" placeholder="bv. 1126"></label>
     <h3 style="margin:18px 0 4px">Clubcode</h3><div class="row" style="align-items:center"><b style="font-size:18px;letter-spacing:.06em" id="pcode">${esc(c.code || "–")}</b><span class="spacer"></span><button class="btn ghost small" type="button" id="pcodenew">Nieuwe code maken</button></div>
     <p class="hint">Een nieuwe code is nodig als de oude bij mensen buiten de club terechtkwam. Wie al lid is, blijft lid.</p>
+    ${fixed ? "" : `<details class="pdanger"><summary>Club verwijderen</summary><p>Alles van ${esc(c.name)} wordt <b>definitief</b> gewist: ${c.teams ?? 0} ploegen, ${c.players ?? 0} spelers met hun aanwezigheden, verslagen en evaluaties, scouting, berichten en instellingen. De ${c.members ?? 0} accounts blijven bestaan, maar horen daarna bij geen club meer. Dit kan niet ongedaan gemaakt worden.</p>
+      <label class="f">Typ <b>${esc(c.name)}</b> om te bevestigen<input name="delname" autocomplete="off" spellcheck="false"></label><div class="row" style="justify-content:flex-end"><button class="btn danger" type="button" id="pdel" disabled>Club definitief verwijderen</button></div></details>`}
     <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" type="button" data-close>Sluiten</button><button class="btn">Bewaren</button></div></form>`, "xl");
   const f = $("#pef", d), mock = $("#pmock", d);
+  const del = $("#pdel", d); if (del) { f.delname.oninput = () => { del.disabled = f.delname.value.trim() !== c.name; };
+    del.onclick = async () => { if (f.delname.value.trim() !== c.name) return; if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+      del.disabled = true; del.textContent = "Verwijderen…";
+      const r = await sb.rpc("platform_delete_club", { c: c.id, confirm_name: f.delname.value.trim() });
+      if (r.error) { del.disabled = false; del.textContent = "Club definitief verwijderen"; toast(/platform_delete_club|function/i.test(r.error.message) ? "Voer eerst het databasescript v37 uit." : r.error.message); return; }
+      d.close(); toast(`${r.data.name} is verwijderd (${r.data.teams} ploegen, ${r.data.players} spelers).`); done?.(); }; }
   const paint = s => { if (!mock) return; const a = s.color || "#FFD100", b = s.color2, on = lumRgb(hexRgb(a)) > .38 ? "#111" : "#fff";
     mock.style.setProperty("--ma", a); mock.style.setProperty("--mon", on); mock.style.setProperty("--mb", b ? rgbHex(mixRgb([13, 14, 12], hexRgb(b), .2)) : "#121311"); mock.style.setProperty("--mg", b ? rgbHex(mixRgb([13, 14, 12], hexRgb(b), .1)) : "#0D0E0C"); };
   const cur = bindClubFields(f, c, st, paint); paint(cur());

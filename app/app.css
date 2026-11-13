@@ -1435,3 +1435,5 @@ dialog .ogvlogo.big{height:96px;margin:0}
 .pat:hover{border-color:var(--ink)}.pat .hint{flex:1 1 260px}
 .pdet summary{cursor:pointer;list-style:none;margin-bottom:12px}.pdet summary::-webkit-details-marker{display:none}.pdet summary h2:after{content:" ›";color:var(--muted)}
 .pgrid>.panel{margin:0}
+.pdanger{margin-top:22px;padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--bad) 45%,transparent)}
+.pdanger summary{cursor:pointer;font-weight:700;color:var(--bad)}.pdanger p{font-size:14px;color:var(--muted)}
