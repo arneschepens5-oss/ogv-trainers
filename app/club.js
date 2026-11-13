@@ -228,6 +228,8 @@ function editClubDialog(c, done) {
     ${fixed ? "" : `<div class="pmock" id="pmock"><span class="ms"><i></i><i></i><i></i></span><span class="mm"><b>Goeiemiddag, trainer</b><span class="mb">Volgende training</span><span class="mc"><i></i>Aanwezigheden</span></span></div>`}
     <h3 style="margin:18px 0 4px">Beheerder van de club</h3><p class="hint" style="margin-top:0">Huidig: ${(c.admins || []).length ? (c.admins || []).map(esc).join(", ") : c.pending_admin ? esc(c.pending_admin) + " (wacht op account)" : "nog geen"}. Een extra beheerder aanduiden kan hier; trainers voegt de club zelf toe.</p>
     <div class="row"><label class="f" style="flex:1;margin:0"><span class="sr">E-mail van de beheerder</span><input name="amail" type="email" placeholder="tvjo@club.be"></label><button class="btn ghost" type="button" id="pset">Aanduiden</button></div>
+    <h3 style="margin:18px 0 4px">Koppeling met RBFA</h3><p class="hint" style="margin-top:0">Het nummer van de club in de link van haar clubpagina op rbfa.be. Daarmee halen trainers hun wedstrijden automatisch op.</p>
+    <label class="f" style="max-width:220px"><span class="sr">Clubnummer bij RBFA</span><input name="rbfa" inputmode="numeric" value="${esc(st.rbfa || (fixed ? "1126" : ""))}" placeholder="bv. 1126"></label>
     <h3 style="margin:18px 0 4px">Clubcode</h3><div class="row" style="align-items:center"><b style="font-size:18px;letter-spacing:.06em" id="pcode">${esc(c.code || "–")}</b><span class="spacer"></span><button class="btn ghost small" type="button" id="pcodenew">Nieuwe code maken</button></div>
     <p class="hint">Een nieuwe code is nodig als de oude bij mensen buiten de club terechtkwam. Wie al lid is, blijft lid.</p>
     <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" type="button" data-close>Sluiten</button><button class="btn">Bewaren</button></div></form>`, "xl");
@@ -242,6 +244,7 @@ function editClubDialog(c, done) {
     const r = await sb.rpc("platform_new_code", { c: c.id }); if (r.error) { toast(r.error.message); return; } $("#pcode", f).textContent = r.data; c.code = r.data; b.textContent = "Nieuwe code maken"; delete b.dataset.sure; toast("Nieuwe clubcode gemaakt."); done?.(); };
   f.onsubmit = async e => { e.preventDefault(); if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
     const s = cur(); if (fixed) { delete s.color; delete s.color2; }
+    const rb = f.rbfa.value.replace(/\D/g, ""); if (rb) s.rbfa = rb; else delete s.rbfa;
     const r = await sb.rpc("platform_update_club", { c: c.id, nm: f.nm.value, sh: f.sh.value, s }); if (r.error) { toast(/platform_update_club|function/i.test(r.error.message) ? "Voer eerst het databasescript v33 uit." : r.error.message); return; }
     if (c.id === CLUB.id) { Object.assign(CLUB, { name: f.nm.value.trim(), short: f.sh.value.trim() || CLUB.short, settings: s }); rememberClub(); applyClubTheme(); shell(); }
     d.close(); toast("Bewaard."); done?.(); };
@@ -601,4 +604,25 @@ function planForm(done) {
       else for (let i = 0; i < rows.length; i += 200) { const r = await sb.from("events").insert(rows.slice(i, i + 200)); if (r.error) throw r.error; }
       d.close(); toast(`${rows.length} trainingen ingepland.`); await planRefresh(tIds); done && done();
     } catch (e) { btn.disabled = false; btn.textContent = "Inplannen"; toast(/series|column|policy|row-level/i.test(e.message || "") ? "Voer eerst ogv-database.sql (versie 13) uit." : "Inplannen lukte niet: " + (e.message || e)); } };
+}
+
+/* ============ mijn account: naam, wachtwoord, account verwijderen ============ */
+function accountDialog() {
+  const d = dialog(`<div class="dlg"><h2>Mijn account</h2><p class="muted" style="margin-top:0">${esc(user?.email || "")} · ${esc(clubName())}</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn ghost" type="button" id="acname">Naam wijzigen</button><button class="btn ghost" type="button" id="acpw">Wachtwoord wijzigen</button></div>
+    <form id="acpwf" hidden style="margin-top:14px"><label class="f">Nieuw wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" minlength="8" required autocomplete="new-password"></label><div class="row" style="justify-content:flex-end"><button class="btn">Wachtwoord bewaren</button></div></form>
+    <h3 style="margin:24px 0 4px">Account verwijderen</h3><p class="hint" style="margin-top:0">Je account, je eigen oefeningen, trainingen en borden worden definitief gewist. Gegevens van de club (spelers, verslagen, evaluaties) blijven van de club. Dit kan je niet ongedaan maken.</p>
+    <form id="acdel"><label class="f">Typ VERWIJDER om te bevestigen<input name="ok" autocomplete="off" spellcheck="false"></label><div class="row" style="justify-content:space-between;align-items:center"><a class="link" href="${esc(PRIVACY_URL)}" target="_blank" rel="noopener">Privacyverklaring</a><button class="btn danger" disabled>Account verwijderen</button></div></form>
+    <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`);
+  $("#acname", d).onclick = () => { d.close(); nameForm(); };
+  $("#acpw", d).onclick = () => { const f = $("#acpwf", d); f.hidden = !f.hidden; if (!f.hidden) f.pw.focus(); };
+  $("#acpwf", d).onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.updateUser({ password: e.target.pw.value });
+    if (error) { toast(error.message); return; } e.target.reset(); e.target.hidden = true; toast("Nieuw wachtwoord bewaard."); };
+  const del = $("#acdel", d), go = $("button", del);
+  del.ok.oninput = () => { go.disabled = del.ok.value.trim().toUpperCase() !== "VERWIJDER"; };
+  del.onsubmit = async e => { e.preventDefault(); if (go.disabled) return; go.disabled = true; go.textContent = "Verwijderen…";
+    const r = await sb.rpc("delete_my_account");
+    if (r.error) { go.disabled = false; go.textContent = "Account verwijderen"; toast(/delete_my_account|function/i.test(r.error.message) ? "Dit kan nog niet: de beheerder moet eerst een update uitvoeren." : r.error.message); return; }
+    try { localStorage.removeItem("ogv-club"); localStorage.removeItem(TEAM_KEY); } catch (err) {}
+    await sb.auth.signOut().catch(() => {}); d.close(); toast("Je account is verwijderd."); location.hash = "#/start"; location.reload(); };
 }

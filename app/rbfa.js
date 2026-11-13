@@ -2,14 +2,16 @@
    Gebruikt de publieke GraphQL-achterkant van het RBFA-matchcenter. Die is niet officieel gedocumenteerd:
    als RBFA hem wijzigt, valt de synchronisatie stil maar blijven alle wedstrijden in de app gewoon staan. */
 "use strict";
-const RBFA_API = "https://datalake-prod2018.rbfa.be/graphql", RBFA_CLUB = "1126"; /* K.V.V. O.G. Vorselaar, stamnummer 00402 */
+const RBFA_API = "https://datalake-prod2018.rbfa.be/graphql";
+/* nummer van de club bij RBFA (te zien in de link van de clubpagina op rbfa.be); OG Vorselaar = 1126 (stamnummer 00402). Andere clubs: in te stellen via Platform. */
+const rbfaClub = () => String(CLUB.settings?.rbfa || (isOGV() ? "1126" : ""));
 const RBFA_SYNC_MS = 6 * 3600e3;
 async function rbfaQ(query, variables) {
   const r = await fetch(RBFA_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, variables }) });
   if (!r.ok) throw new Error("RBFA antwoordde met foutcode " + r.status);
   const j = await r.json(); if (j.errors?.length) throw new Error("RBFA: " + j.errors[0].message); return j.data;
 }
-const rbfaTeams = () => rbfaQ(`query($clubId: ID!, $language: Language!) { clubTeams(clubId: $clubId, language: $language) { id name } }`, { clubId: RBFA_CLUB, language: "nl" }).then(d => d.clubTeams || []);
+const rbfaTeams = () => rbfaQ(`query($clubId: ID!, $language: Language!) { clubTeams(clubId: $clubId, language: $language) { id name } }`, { clubId: rbfaClub(), language: "nl" }).then(d => d.clubTeams || []);
 const rbfaCalendar = teamId => rbfaQ(`query($teamId: ID!, $language: Language!, $sortByDate: SortDirection) { teamCalendar(teamId: $teamId, language: $language, sortByDate: $sortByDate) {
   id startTime title state showScore homeTeam { id name clubId } awayTeam { id name clubId } outcome { status homeTeamGoals awayTeamGoals } location { name address postalCode city } } }`,
   { teamId: String(teamId), language: "nl", sortByDate: "asc" }).then(d => d.teamCalendar || []);
@@ -24,12 +26,12 @@ const normOpp = s => String(s || "").toLowerCase().replace(/\b(k?v?v|k?fc|sk|vc|
 
 /* Haalt de kalender op en zet nieuwe of gewijzigde wedstrijden in de app. Eigen gegevens (verslag, score, opstelling) blijven onaangeroerd. */
 async function rbfaSync(team) {
-  if (!team?.rbfa_team_id) return { added: 0, changed: 0 };
+  if (!team?.rbfa_team_id || !rbfaClub()) return { added: 0, changed: 0 };
   const cal = await rbfaCalendar(team.rbfa_team_id), events = mode === "demo" || S.team?.id === team.id ? S.events : await db.list("events", { team_id: team.id });
   let added = 0, changed = 0;
   for (const m of cal) {
     if (!m?.id || !m.startTime) continue;
-    const ourHome = String(m.homeTeam?.clubId) === RBFA_CLUB, ourAway = String(m.awayTeam?.clubId) === RBFA_CLUB;
+    const ourHome = String(m.homeTeam?.clubId) === rbfaClub(), ourAway = String(m.awayTeam?.clubId) === rbfaClub();
     const home = ourHome || !ourAway, opp = rbfaName((home ? m.awayTeam : m.homeTeam)?.name);
     const [date, time] = String(m.startTime).split("T"), L = m.location || {};
     const loc = [rbfaName(L.name), [L.address, [L.postalCode, L.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || null;
@@ -67,6 +69,7 @@ function rbfaAuto() {
 /* paneel in "Ploeg en trainers" */
 async function rbfaPanel(host) {
   const t = S.team;
+  if (!rbfaClub()) { host.innerHTML = `<h2>Wedstrijden van RBFA</h2><p class="hint" style="margin-top:0">De koppeling met RBFA wordt voor je club ingesteld bij de opstart. Vraag het aan je clubbeheerder of mail naar ${esc(CONTACT_MAIL)}.</p>`; return; }
   host.innerHTML = `<h2>Wedstrijden van RBFA</h2><p class="hint" style="margin-top:0">Koppel je ploeg aan haar ploeg op de RBFA-website. De wedstrijden komen dan vanzelf in je kalender, met uur en adres, en wijzigingen (verplaatst, afgelast) worden overgenomen. Je verslag en opstelling blijven altijd van jou.</p>
     <div class="fields"><label class="f full">Ploeg bij RBFA<select id="rbt"><option value="">Laden…</option></select></label>
     <label class="f full">Link om wedstrijdbladen in te vullen <span class="hint">leeg = wedstrijdbladen.be</span><input id="rbs" type="url" value="${esc(t.sheet_url || "")}" placeholder="${RBFA_SHEET_DEFAULT}"></label></div>

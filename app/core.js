@@ -11,7 +11,8 @@ const ogvBrand = () => isOGV() && (CLUB_KNOWN || mode === "demo" || !!user);
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
 const clubShort = () => CLUB.short || clubName();
 const PRODUCT = "FootballCoachHub";
-const CONTACT_MAIL = "footballcoachhub@gmail.com";   /* naam van het platform voor andere clubs dan OG Vorselaar */
+const CONTACT_MAIL = "footballcoachhub@gmail.com";
+const PRIVACY_URL = "https://footballcoachhub.app/privacy";   /* naam van het platform voor andere clubs dan OG Vorselaar */
 const APPNAME = () => CLUB.settings?.app || (ogvBrand() ? "OGV Trainers" : PRODUCT);
 const APPTITLE = () => ogvBrand() && !CLUB.settings?.app ? "OGV<span>Trainers</span>" : esc(APPNAME()).replace(/(hub)$/i, "<span>$1</span>");
 /* laatst gekende club van dit toestel: zo staan naam, logo en kleuren meteen goed, ook op het aanmeldscherm */
@@ -402,7 +403,7 @@ function shell(fresh) {
   const navHtml = secs.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
     `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("")).join("");
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
-  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName()) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span><button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
+  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName()) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span>${mode === "demo" ? "" : `<button class="ib" type="button" data-account title="Mijn account" aria-label="Mijn account">${IC.gear}</button>`}<button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
   const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
@@ -432,6 +433,7 @@ function shell(fresh) {
   bindThemeSwitch();
   $$("[data-logout]").forEach(b => b.onclick = logout); $$("[data-clubsw]").forEach(b => b.onclick = clubSwitch);
   $$("[data-setname], .acct .who b").forEach(b => b.onclick = () => mode !== "demo" && nameForm());
+  $$("[data-account]").forEach(b => b.onclick = accountDialog);
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
   $$("[data-report]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); reportProblem(); });
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
