@@ -401,7 +401,8 @@ function shell(fresh) {
     .map(g => ({ ...g, items: g.items.filter(([k]) => !clubOff(k)) })).filter(g => g.items.length);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
-  const secs = (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"]] : []), ...(S.platform ? [["platform", "Platform", "chart"]] : [])] }] : nav)
+  const platOnly = mode === "cloud" && S.platform && S.member === false;
+  const secs = platOnly ? [{ g: null, items: [["platform", "Platform", "chart"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"]] : []), ...(S.platform ? [["platform", "Platform", "chart"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
     .map(sec => ({ ...sec, items: sec.items.filter(([k]) => k !== "scouting" || mag("scouting")) })).filter(sec => sec.items.length);
   const navHtml = secs.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
@@ -409,7 +410,7 @@ function shell(fresh) {
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName()) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span>${mode === "demo" ? "" : `<button class="ib" type="button" data-account title="Mijn account" aria-label="Mijn account">${IC.gear}</button>`}<button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
-  const teamBtn = logged ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
+  const teamBtn = logged && !(mode === "cloud" && S.platform && S.member === false) ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
@@ -457,7 +458,9 @@ async function renderPage(seq) {
   const logged = !!db && (mode === "demo" || !!user);
   /* alles achter aanmelden en de clubcode, behalve het aanmeldscherm zelf */
   if (r.page !== "aanmelden" && !logged) { viewLogin(v); return; }
-  if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
+  /* account van het platform zonder club: enkel het platformbeheer, nooit gegevens van een club */
+  if (mode === "cloud" && S.member === false && S.platform) { if (!["platform", "platformclub", "aanmelden"].includes(r.page)) { location.replace("#/platform"); return; } }
+  else if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
   if (clubOff(r.page)) { v.innerHTML = `<div class="empty"><b>Dit onderdeel staat uit voor ${esc(clubName())}</b>${S.admin ? `Zet het aan in <a class="link" href="#/clubinstellingen/onderdelen">Beheer › Instellingen</a>.` : "Vraag je clubbeheerder als je het wil gebruiken."}</div>`; return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   /* nooit meer een leeg scherm: na een halve seconde "Laden…", na 12 seconden een knop om opnieuw te laden */

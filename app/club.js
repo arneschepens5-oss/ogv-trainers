@@ -38,7 +38,9 @@ function viewJoin(v) {
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; return; }
   try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
-    Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); } S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
+    Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); }
+    else if (data.platform) { Object.assign(CLUB, { id: "platform", name: PRODUCT, short: "FCH", settings: {} }); applyClubTheme(); } /* account van het platform zonder club */
+    S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
     if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
@@ -191,8 +193,9 @@ const appLink = () => location.origin + location.pathname;
 const inviteText = (name, code, mail) => `Welkom bij ${PRODUCT}!\n\nJe club ${name} staat klaar.\n\n1. Open ${appLink()}\n2. Tik op Account aanmaken${mail ? " met " + mail : ""}\n3. Clubcode: ${code}\n\nAls beheerder deel je daarna de clubcode met je trainers.\n\nVragen? Mail naar ${CONTACT_MAIL}.`;
 const PLATFORM_DEMO = () => [{ id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {}, code: "OGV-DEMO42", admins: ["demo@ogvorselaar.be"], members: 14, teams: 12, players: 160, feedback_open: 2 },
   { id: "demo-b", name: "KFC Voorbeeld", short: "KFCV", settings: { color: "#2F6FED", color2: "#0B1E46" }, code: "7F3A9C21", admins: [], pending_admin: "tvjo@kfcvoorbeeld.be", members: 0, teams: 0, players: 0, feedback_open: 0 }];
-route("platform", { title: "Platform", auth: true, render: async v => {
+route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
   if (!S.platform && mode !== "demo") { v.innerHTML = `<div class="empty"><b>Alleen voor de beheerder van het platform</b></div>`; return; }
+  if (sub === "meldingen") { v.innerHTML = head("Meldingen van alle clubs", "Problemen en vragen die trainers doorstuurden met de knop Probleem melden.", `<a class="btn ghost" href="#/platform">Terug</a>`) + `<div id="pfb"></div>`; return adminFeedback($("#pfb")); }
   v.innerHTML = head("Platform", "Laden…");
   let data; if (mode === "demo") data = PLATFORM_DEMO(); else { const r = await sb.rpc("platform_clubs");
     if (r.error) { v.innerHTML = head("Platform", "") + `<div class="empty"><b>Nog niet klaar</b>${/platform_clubs|function/i.test(r.error.message) ? "Voer eerst het databasescript v33 uit in Supabase." : esc(r.error.message)}</div>`; return; } data = r.data || []; }
@@ -200,11 +203,11 @@ route("platform", { title: "Platform", auth: true, render: async v => {
   const badge = c => { const keep = { id: CLUB.id, short: CLUB.short, name: CLUB.name, settings: CLUB.settings }; Object.assign(CLUB, { id: c.id, short: c.short, name: c.name, settings: c.settings || {} }); const h = LOGO("plat"); Object.assign(CLUB, keep); return h; };
   v.innerHTML = head(`${esc(PRODUCT)} beheren`, "Clubs aanmaken en hun naam, kleuren, logo, beheerder en clubcode aanpassen. Spelers, ploegen en verslagen van een club zie je hier niet: die blijven van de club.", `<button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
     `<div class="sec kpis"><div class="kpi"><small>Clubs</small><b>${data.length}</b><span>op het platform</span></div><div class="kpi"><small>Ploegen</small><b>${sum("teams")}</b><span>samen</span></div>
-      <div class="kpi"><small>Spelers</small><b>${sum("players")}</b><span>samen</span></div><div class="kpi"><small>Open meldingen</small><b>${sum("feedback_open")}</b><span><a class="link" href="#/clubbeheer/meldingen">bekijken</a></span></div></div>
+      <div class="kpi"><small>Spelers</small><b>${sum("players")}</b><span>samen</span></div><div class="kpi"><small>Open meldingen</small><b>${sum("feedback_open")}</b><span><a class="link" href="#/platform/meldingen">bekijken</a></span></div></div>
     <div class="sec"><h2>Clubs</h2><div class="plist">${data.map(c => `<div class="pclub"><div class="ph1">${badge(c)}<span><b>${esc(c.name)}</b><small>${c.teams} ploegen · ${c.players} spelers · ${c.members} leden</small></span></div>
       <dl><div><dt>Beheerder</dt><dd>${(c.admins || []).length ? (c.admins || []).map(esc).join(", ") : c.pending_admin ? `<span class="pill">wacht op account</span> ${esc(c.pending_admin)}` : `<span class="pill loss">nog geen</span>`}</dd></div>
         <div><dt>Clubcode</dt><dd><b>${esc(c.code || "–")}</b></dd></div></dl>
-      <div class="row"><button class="btn small" type="button" data-edit="${esc(c.id)}">${IC.gear}Aanpassen</button><button class="btn ghost small" type="button" data-inv="${esc(c.id)}">Uitnodiging kopiëren</button></div></div>`).join("")}</div></div>`;
+      <div class="row"><a class="btn small" href="#/platformclub/${esc(c.id)}/club">${IC.gear}Instellingen</a><button class="btn ghost small" type="button" data-edit="${esc(c.id)}">Beheerder, code en RBFA</button><button class="btn ghost small" type="button" data-inv="${esc(c.id)}">Uitnodiging kopiëren</button></div></div>`).join("")}</div></div>`;
   $("#pnew").onclick = () => newClubDialog(() => render());
   $$("[data-inv]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.inv); navigator.clipboard?.writeText(inviteText(c.name, c.code, c.pending_admin || (c.admins || [])[0])).then(() => toast("Uitnodiging gekopieerd. Plak ze in een mail aan de beheerder.")); });
   $$("[data-edit]", v).forEach(b => b.onclick = () => editClubDialog(data.find(x => x.id === b.dataset.edit), () => render()));
@@ -638,27 +641,37 @@ const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste mom
   ["berichten", "Berichten", "Mededelingen aan trainers"], ["terreinen", "Terreinen", "Veldindeling en plattegrond"], ["contacten", "Wie contacteer ik?", "Contactlijst van de club"],
   ["scouting", "Scoutingsdatabase", "Spelers van andere clubs volgen"], ["clubdashboard", "Clubdashboard", "Overzicht voor de jeugdcoördinator"]];
 const CS_CATS = [["U6", "2v2"], ["U7", "3v3"], ["U8", "5v5"], ["U9", "5v5"], ["U10", "8v8"], ["U11", "8v8"], ["U12", "8v8"], ["U13", "8v8"], ["U14", "11v11"], ["U15", "11v11"], ["U16", "11v11"], ["U17", "11v11"], ["U19", "11v11"], ["U21", "11v11"]];
-async function csSave(patch, msg) {
-  const settings = { ...(CLUB.settings || {}), ...patch };
-  if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm: CLUB.name, sh: CLUB.short, s: settings }); if (error) { toast(error.message); return false; } }
-  CLUB.settings = settings; rememberClub(); applyClubTheme(); if (msg) toast(msg + (mode === "demo" ? " (in de demo enkel op dit toestel)" : "")); return true;
-}
+/* opslaan: de eigen club via club_save_settings, een andere club (platformbeheer) via platform_update_club */
+function csCtxOwn() { return { club: CLUB, base: "#/clubinstellingen", steps: CS_STEPS, platform: false, done: "#/start",
+  async saveAll(nm, sh, s, msg) { if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm, sh, s }); if (error) { toast(error.message); return false; } }
+    Object.assign(CLUB, { name: (nm || "").trim() || CLUB.name, short: (sh || "").trim() || CLUB.short, settings: s }); rememberClub(); applyClubTheme(); shell(); if (msg) toast(msg + (mode === "demo" ? " (in de demo enkel op dit toestel)" : "")); return true; } }; }
+function csCtxPlatform(c) { return { club: c, base: "#/platformclub/" + c.id, steps: CS_STEPS.filter(x => x[0] !== "ploegen"), platform: true, done: "#/platform",
+  async saveAll(nm, sh, s, msg) { if (mode !== "demo") { const { error } = await sb.rpc("platform_update_club", { c: c.id, nm, sh, s }); if (error) { toast(/platform_update_club|function/i.test(error.message) ? "Voer eerst het databasescript v33 uit." : error.message); return false; } }
+    Object.assign(c, { name: (nm || "").trim() || c.name, short: (sh || "").trim() || c.short, settings: s }); if (msg) toast(msg); return true; } }; }
 route("clubinstellingen", { title: "Instellingen van de club", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
-  const st = CLUB.settings || {}, step = CS_STEPS.some(x => x[0] === id) ? id : "club", i = CS_STEPS.findIndex(x => x[0] === step), first = !st.setup_done;
-  const nextHref = i < CS_STEPS.length - 1 ? "#/clubinstellingen/" + CS_STEPS[i + 1][0] : "#/start";
-  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} ${first ? "Je club instellen" : "Instellingen"} · ${esc(clubName())}</small><h1 class="pg">${first ? "Zet je club klaar" : "Instellingen van de club"}</h1>
-      <p class="sub" style="margin:4px 0 0">${first ? "Vijf korte stappen. Je kan alles later nog aanpassen via Beheer › Instellingen." : "Kies zelf hoe jullie club werkt. Wijzigingen gelden meteen voor alle trainers."}</p></div></div>
-    <ol class="csteps">${CS_STEPS.map(([k, l], n) => `<li><a href="#/clubinstellingen/${k}"${k === step ? ' aria-current="step"' : ""}${n < i ? ' class="done"' : ""}><span>${n + 1}</span>${l}</a></li>`).join("")}</ol><div id="csv"></div>`;
-  const host = $("#csv"), foot = (label = "Bewaren en verder") => `<div class="row csfoot"><a class="btn ghost" href="${i ? "#/clubinstellingen/" + CS_STEPS[i - 1][0] : "#/start"}">${i ? "Vorige" : "Later"}</a><span class="spacer"></span><button class="btn">${label}</button></div>`;
+  return csPage(v, id, csCtxOwn()); } });
+/* platformbeheer: dezelfde instellingen voor elke club, zonder toegang tot spelers of verslagen */
+route("platformclub", { title: "Club instellen", auth: true, render: async (v, cid, step) => {
+  if (!S.platform && mode !== "demo") { v.innerHTML = `<div class="empty"><b>Alleen voor de beheerder van het platform</b></div>`; return; }
+  let list; if (mode === "demo") list = PLATFORM_DEMO(); else { const r = await sb.rpc("platform_clubs"); if (r.error) { v.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(r.error.message)}</div>`; return; } list = r.data || []; }
+  const c = list.find(x => x.id === cid); if (!c) { v.innerHTML = `<div class="empty"><b>Club niet gevonden</b><a class="link" href="#/platform">Terug naar Platform</a></div>`; return; }
+  c.settings = c.settings || {}; return csPage(v, step, csCtxPlatform(c)); } });
+async function csPage(v, id, ctx) {
+  const C = ctx.club, STEPS = ctx.steps, st = C.settings || {}, step = STEPS.some(x => x[0] === id) ? id : "club", i = STEPS.findIndex(x => x[0] === step), first = !st.setup_done && !ctx.platform;
+  const csSave = (patch, msg) => ctx.saveAll(C.name, C.short, { ...(C.settings || {}), ...patch }, msg);
+  const nextHref = i < STEPS.length - 1 ? ctx.base + "/" + STEPS[i + 1][0] : ctx.done;
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} ${ctx.platform ? `<a class="link" href="#/platform">Platform</a> › ` : ""}${first ? "Je club instellen" : "Instellingen"} · ${esc(ctx.platform ? C.name : clubName())}</small><h1 class="pg">${first ? "Zet je club klaar" : ctx.platform ? esc(C.name) : "Instellingen van de club"}</h1>
+      <p class="sub" style="margin:4px 0 0">${ctx.platform ? "Je past de instellingen van deze club aan. Spelers, ploegen en verslagen van de club zie je niet." : first ? "Vijf korte stappen. Je kan alles later nog aanpassen via Beheer › Instellingen." : "Kies zelf hoe jullie club werkt. Wijzigingen gelden meteen voor alle trainers."}</p></div></div>
+    <ol class="csteps">${STEPS.map(([k, l], n) => `<li><a href="${ctx.base}/${k}"${k === step ? ' aria-current="step"' : ""}${n < i ? ' class="done"' : ""}><span>${n + 1}</span>${l}</a></li>`).join("")}</ol><div id="csv"></div>`;
+  const host = $("#csv"), foot = (label = "Bewaren en verder") => `<div class="row csfoot"><a class="btn ghost" href="${i ? ctx.base + "/" + STEPS[i - 1][0] : ctx.done}">${i ? "Vorige" : ctx.platform ? "Terug" : "Later"}</a><span class="spacer"></span><button class="btn">${label}</button></div>`;
   const go = () => { location.hash = nextHref; };
 
   if (step === "club") {
-    host.innerHTML = `<form class="panel" id="csf" style="max-width:700px">${clubFieldsHtml(CLUB, st, { fixed: isOGV() })}${foot()}</form>`;
-    const f = $("#csf"), cur = bindClubFields(f, CLUB, st, s => { CLUB.settings = s; applyClubTheme(); });
-    f.onsubmit = async e => { e.preventDefault(); const s = cur();
-      if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm: f.nm.value, sh: f.sh.value, s }); if (error) { toast(error.message); return; } }
-      Object.assign(CLUB, { name: f.nm.value.trim() || CLUB.name, short: f.sh.value.trim() || CLUB.short, settings: s }); rememberClub(); applyClubTheme(); shell(); go(); };
+    host.innerHTML = `<form class="panel" id="csf" style="max-width:700px">${clubFieldsHtml(C, st, { fixed: C.id === OGV_ID, hint: ctx.platform ? "De kleuren gelden voor iedereen van deze club." : undefined })}${foot()}</form>`;
+    const f = $("#csf"), orig = CLUB.settings, cur = bindClubFields(f, C, st, s => { if (!ctx.platform) { CLUB.settings = s; applyClubTheme(); } });
+    f.onsubmit = async e => { e.preventDefault(); const s = cur(); if (C.id === OGV_ID) { delete s.color; delete s.color2; }
+      if (!(await ctx.saveAll(f.nm.value, f.sh.value, s, "Bewaard."))) { if (!ctx.platform) { CLUB.settings = orig; applyClubTheme(); } return; } go(); };
     return; }
 
   if (step === "evaluaties") {
@@ -677,7 +690,7 @@ route("clubinstellingen", { title: "Instellingen van de club", auth: true, rende
       <h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Eén onderdeel per regel. Een regel die begint met # is een groep. Na een | volgt de uitleg voor de trainer. Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button></div>
       <textarea name="tpl" rows="14" spellcheck="false" style="width:100%;font-family:inherit">${esc((Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT).join("\n"))}</textarea>
-      ${S.teams?.length ? `<label class="chkl" style="margin-top:8px"><input type="checkbox" name="all"> Ook toepassen op de ${S.teams.length} bestaande ploegen <span class="hint">(evaluaties die al ingevuld zijn blijven bewaard)</span></label>` : ""}
+      ${!ctx.platform && S.teams?.length ? `<label class="chkl" style="margin-top:8px"><input type="checkbox" name="all"> Ook toepassen op de ${S.teams.length} bestaande ploegen <span class="hint">(evaluaties die al ingevuld zijn blijven bewaard)</span></label>` : ""}
       ${foot()}</form>`;
     const f = $("#cse"), list = $("#csms", f);
     const wire = () => $$("[data-del]", list).forEach(b => b.onclick = () => { if ($$(".csm", list).length > 1) b.closest(".csm").remove(); else toast("Hou minstens één moment."); });
@@ -701,7 +714,7 @@ route("clubinstellingen", { title: "Instellingen van de club", auth: true, rende
       <div class="csmods">${CS_MODULES.map(([k, l, d]) => `<label class="csmod"><span><b>${esc(l)}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" name="${k}"${off.has(k) ? "" : " checked"}><span></span></span></label>`).join("")}</div>${foot()}</form>`;
     const f = $("#cso");
     f.onsubmit = async e => { e.preventDefault(); const hidden = CS_MODULES.map(m => m[0]).filter(k => !f[k].checked);
-      if (await csSave({ hidden }, "Onderdelen bewaard.")) { shell(); go(); } };
+      if (await csSave({ hidden }, "Onderdelen bewaard.")) { if (!ctx.platform) shell(); go(); } };
     return; }
 
   if (step === "ploegen") {
@@ -722,13 +735,13 @@ route("clubinstellingen", { title: "Instellingen van de club", auth: true, rende
     return; }
 
   if (step === "trainers") {
-    let code = "–"; try { code = mode === "demo" ? "DEMO-1234" : (await sb.rpc("club_admin_info")).data?.code || "–"; } catch (x) {}
+    let code = ctx.platform ? C.code || "–" : "–"; if (!ctx.platform) try { code = mode === "demo" ? "DEMO-1234" : (await sb.rpc("club_admin_info")).data?.code || "–"; } catch (x) {}
     const link = location.origin + location.pathname + "#/aanmelden";
-    const txt = `Je bent uitgenodigd voor ${APPNAME()}, het trainersplatform van ${clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${code}\n\nDeel deze code niet buiten de club.`;
+    const txt = `Je bent uitgenodigd voor ${ctx.platform ? PRODUCT : APPNAME()}, het trainersplatform van ${ctx.platform ? (C.settings?.full || C.name) : clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${code}\n\nDeel deze code niet buiten de club.`;
     host.innerHTML = `<form class="panel" id="cst" style="max-width:820px"><h2 style="margin-top:0">Trainers uitnodigen</h2><p class="hint" style="margin-top:0">Trainers maken zelf een account met de clubcode en komen meteen in jullie club. Daarna koppel je ze aan hun ploeg in Beheer › Ploegen, en geef je in Beheer › Toegang extra rechten (bv. scouting).</p>
       <div class="codebox"><b translate="no">${esc(code)}</b><button class="btn ghost small" type="button" id="cscp">${IC.copy}Uitnodiging kopiëren</button><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">${IC.wa}Via WhatsApp</a></div>
-      ${foot(first ? "Klaar" : "Bewaren")}</form>`;
+      ${foot(first ? "Klaar" : ctx.platform ? "Klaar" : "Bewaren")}</form>`;
     $("#cscp").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Uitnodiging gekopieerd."));
-    $("#cst").onsubmit = async e => { e.preventDefault(); if (await csSave({ setup_done: true }, first ? "Je club staat klaar." : "Bewaard.")) { shell(); location.hash = "#/start"; } };
+    $("#cst").onsubmit = async e => { e.preventDefault(); if (ctx.platform) { location.hash = ctx.done; return; } if (await csSave({ setup_done: true }, first ? "Je club staat klaar." : "Bewaard.")) { shell(); location.hash = "#/start"; } };
   }
-} });
+}
