@@ -7,9 +7,9 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="OGV Ouders">
+<meta name="apple-mobile-web-app-title" content="Ouders">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>OGV Ouders</title>
+<title>Ouders en spelers</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../icons/favicon.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
@@ -41,7 +41,7 @@ h1 span{color:var(--yellow)}
 .top p{margin:0;color:#B8BAB2;font-size:15px}
 .kids{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 .kids button{border:1px solid #3A3C35;background:transparent;color:#F2F2EE;border-radius:999px;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.kids button[aria-pressed="true"]{background:var(--yellow);color:#111;border-color:var(--yellow)}
+.kids button[aria-pressed="true"]{background:var(--yellow);color:var(--onY,#111);border-color:var(--yellow)}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--c,#999);flex:none}
 .wrap{padding:16px 16px 24px;display:flex;flex-direction:column;gap:12px}
 h2{font-size:19px;margin:10px 0 0;font-weight:900;font-stretch:110%;display:flex;align-items:center;gap:8px}
@@ -56,7 +56,7 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .hero .act{margin-top:6px}.hero .act button{border-color:#3A3C35;color:#F2F2EE}
 .hero .convo{background:#123A20;color:#DCF5E3}.hero .convo.off{background:#1C1E19;color:#B8BAB2}
 .hero .state{color:#B8BAB2}
-.meta-f{font-size:14px;color:#C8CAC0}.meta-f i{font-style:normal;font-weight:800;color:#111;background:var(--yellow);border-radius:6px;padding:1px 7px;margin-right:4px}.meta-f a{color:#fff}
+.meta-f{font-size:14px;color:#C8CAC0}.meta-f i{font-style:normal;font-weight:800;color:var(--onY,#111);background:var(--yellow);border-radius:6px;padding:1px 7px;margin-right:4px}.meta-f a{color:#fff}
 .todo{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--blue);border-radius:14px;padding:12px 14px}
 .todo span{flex:1;font-size:15px}.todo b{font-weight:800}
 /* activiteiten */
@@ -65,7 +65,7 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .ev.cancel{opacity:.65}
 .date{grid-row:span 2;width:54px;height:58px;border-radius:12px;background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
 .date b{font-size:22px;font-weight:800}.date small{font-size:12px;color:var(--muted);text-transform:capitalize}
-.ev.match .date{background:var(--yellow);color:#111}.ev.match .date small{color:#3d3a1f}
+.ev.match .date{background:var(--yellow);color:var(--onY,#111)}.ev.match .date small{color:#3d3a1f}
 .ev .t{font-weight:800;font-size:17px;line-height:1.2}
 .ev .m{font-size:14px;color:var(--muted)}
 .tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted);margin-right:4px;vertical-align:1px}
@@ -119,7 +119,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:70
 .ct>b{display:block;font-size:14px;margin-bottom:6px}
 .chk{display:flex;gap:10px;align-items:flex-start;margin-top:10px;font-size:15px;cursor:pointer}
 .chk input{width:22px;height:22px;flex:none;accent-color:var(--yellow);margin:0}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:14px;border:0;background:var(--yellow);color:#111;font-weight:800;font-size:16px;cursor:pointer;text-decoration:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:14px;border:0;background:var(--yellow);color:var(--onY,#111);font-weight:800;font-size:16px;cursor:pointer;text-decoration:none}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
 .btn.sm{min-height:38px;font-size:14px;padding:0 14px}
 .btn:disabled{opacity:.5}
@@ -139,7 +139,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:70
 .tabs button{flex:1;border:0;background:none;padding:10px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;position:relative}
 .tabs button svg{width:24px;height:24px}
 .tabs button[aria-current="page"]{color:var(--ink)}
-.tabs button[aria-current="page"] svg{background:var(--yellow);color:#111;border-radius:999px;padding:2px 12px;width:48px;box-sizing:border-box}
+.tabs button[aria-current="page"] svg{background:var(--yellow);color:var(--onY,#111);border-radius:999px;padding:2px 12px;width:48px;box-sizing:border-box}
 .tabs .bd{position:absolute;top:6px;left:calc(50% + 10px);min-width:18px;height:18px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;display:grid;place-items:center;padding:0 5px}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14.5px;font-weight:700;z-index:9;max-width:90vw;text-align:center}
 .off-line{background:#7c5b00;color:#fff;text-align:center;font-size:13px;padding:6px}
@@ -148,9 +148,9 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:70
 </head>
 <body>
 <div class="off-line" id="offl" hidden>Geen internet. Je ziet de laatst bekende gegevens.</div>
-<header class="top"><div class="in"><div class="brand"><img src="../icons/logo-dark.png" alt="OG Vorselaar"><span>OG Vorselaar · voor ouders</span>
+<header class="top"><div class="in"><div class="brand"><img src="../icons/icon-192.png" alt=""><span>Voor ouders</span>
   <button class="rf" type="button" id="rf" aria-label="Vernieuwen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>
-  <h1 id="h">OGV <span>Ouders</span></h1><p id="sub">Even laden…</p><div class="kids" id="kids"></div></div></header>
+  <h1 id="h">Voor <span>ouders</span></h1><p id="sub">Even laden…</p><div class="kids" id="kids"></div></div></header>
 <main class="wrap" id="list"><div class="sk"></div><div class="sk"></div></main>
 <nav class="tabs" id="tabs" hidden><div class="in">
   <button type="button" data-v="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Agenda<span class="bd" id="bda" hidden></span></button>
@@ -161,14 +161,18 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:70
 <script src="../tactiekbord/vendor/supabase-2.118.0.js"></script>
 <script>
 "use strict";
-/* OGV Ouders — de app voor ouders van OG Vorselaar. Geen account nodig: elke speler heeft een persoonlijke link van de trainer.
+/* Ouderpagina van FootballCoachHub (bij OG Vorselaar: OGV Ouders), in naam, logo en kleur van de club van het kind. Geen account nodig: elke speler heeft een persoonlijke link van de trainer.
    Open je de link van een tweede kind, dan komt dat kind erbij. Wat je ziet, blijft op dit toestel bewaard (ook zonder internet). */
 const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
 const demo = /[?&]demo\b/.test(location.search), KK = demo ? "ogv-ouders-kids-demo" : "ogv-ouders-kids", CK = KK + "-cache", SEEN = KK + "-seen";
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const WHY = ["Ziek", "Geblesseerd", "Andere activiteit", "Op reis"], COL = ["#FFD100", "#38BDF8", "#F472B6", "#4ADE80", "#A78BFA"];
-const CLUB = "OG Vorselaar, Riemenstraat 89, 2290 Vorselaar";
+const OGV_ADDR = "OG Vorselaar, Riemenstraat 89, 2290 Vorselaar";
+/* club van de kinderen op dit toestel (uit de gegevens); zonder gegevens: algemene tekst */
+const isOGVc = c => !!c && (c.short === "OGV" || /vorselaar/i.test(c.name || ""));
+const cname = () => { const c = clubOf(); return c ? c.full || c.name : "de club"; };
+const cshort = () => { const c = clubOf(); return c ? c.short || c.name : ""; };
 const FLD = { A: ["Terrein A", "A1–A3 (bij de kantine)"], B: ["Terrein B", "B1–B4"], C: ["Terrein C", "B1–B4"], D: ["Kunstgrasveld (KGV)", "B1–B4"], E: ["Terrein E", "E4–E8"], "1": ["Terrein 1", "B1–B4"], "2": ["Terrein 2", "B1–B4"] };
 const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 let sb = null, kids = store.get(KK, []), data = {}, view = "agenda", only = null, busy = false;
@@ -242,7 +246,7 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 function placeHtml(e, cls) {
   const f = fieldOf(e.location), ext = e.location && e.home === false;
   const maps = ext ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location.split(" · ").pop())}" target="_blank" rel="noopener">${esc(e.location.split(" · ").pop())}</a>`
-    : `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(CLUB)}" target="_blank" rel="noopener">OG Vorselaar</a>`;
+    : `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(isOGVc(clubOf()) ? OGV_ADDR : cname())}" target="_blank" rel="noopener">${esc(cname())}</a>`;
   const pt = f && e.part ? { h1: "ABCD".includes(f) ? "bovenste helft" : "linkerhelft", h2: "ABCD".includes(f) ? "onderste helft" : "rechterhelft", q1: "vak linksboven", q2: "vak rechtsboven", q3: "vak linksonder", q4: "vak rechtsonder" }[e.part] : "";
   return `<div class="${cls || "fld"}">${f ? `<i>${esc(FLD[f][0])}${pt ? " · " + pt : ""}</i><span>${e.kk ? "kleedkamer <b>" + esc(e.kk) + "</b>" : "kleedkamers " + esc(FLD[f][1])}</span> · ` : ""}${maps}</div>`; }
 function weekKey(s) { const d = dayFmt(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); }
@@ -250,23 +254,22 @@ function weekLabel(k) { const t = weekKey(todayIso()), diff = Math.round((dayFmt
 function allEvents() { const rows = []; for (const k of sel()) for (const e of (data[k.tok]?.events || [])) rows.push({ e, k }); return rows.sort((a, b) => (a.e.date + (a.e.start || "")).localeCompare(b.e.date + (b.e.start || ""))); }
 
 /* ---------- kop en tabbladen ---------- */
-/* andere club dan OG Vorselaar: naam en logo uit de gegevens */
+/* naam, logo en kleur van de club uit de gegevens */
 function clubOf() { for (const k of okKids()) { const c = data[k.tok]?.club; if (c) return c; } return null; }
-function brandClub() { const c = clubOf(); if (!c || c.short === "OGV") return;
-  const nm = c.full || c.name; $(".brand span").textContent = $(".brand span").textContent.replace("OG Vorselaar", nm);
-  const im = $(".brand img"); if (im) { if (c.logo) im.src = c.logo; else im.remove(); }
-  $("#h").innerHTML = $("#h").innerHTML.replace("OGV <span>", esc(c.short || nm) + " <span>"); $("#sub").textContent = $("#sub").textContent.replace("OG Vorselaar", nm);
-  document.title = (c.short || nm) + " Ouders";
-  if (c.color) document.documentElement.style.setProperty("--yellow", c.color); }
+function brandClub() { const c = clubOf(); if (!c) return;
+  const im = $(".brand img"); if (im) { im.src = c.logo || (isOGVc(c) ? "../icons/logo-dark.png" : "../icons/icon-192.png"); im.alt = cname(); }
+  document.title = (cshort() || cname()) + " · ouders en spelers";
+  if (c.color && !isOGVc(c)) { document.documentElement.style.setProperty("--yellow", c.color);
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(c.color.slice(i, i + 2), 16) / 255), L = 0.2126 * r + 0.7152 * g + 0.0722 * b; document.documentElement.style.setProperty("--onY", L > .5 ? "#111" : "#fff"); } }
 function header() {
   const ok = okKids();
-  $("#h").innerHTML = ok.length === 1 ? (isKid(ok[0].tok) ? `Hey ${esc(ok[0].name)}<span>!</span>` : `Komt ${esc(ok[0].name)}<span>?</span>`) : `OGV <span>Ouders</span>`;
-  $(".brand span").textContent = ok.length && ok.every(k => isKid(k.tok)) ? "OG Vorselaar · voor spelers" : "OG Vorselaar · voor ouders";
+  $("#h").innerHTML = ok.length === 1 ? (isKid(ok[0].tok) ? `Hey ${esc(ok[0].name)}<span>!</span>` : `Komt ${esc(ok[0].name)}<span>?</span>`) : `${esc(cshort() || "Voor")} <span>${cshort() ? "Ouders" : "ouders"}</span>`;
+  $(".brand span").textContent = `${clubOf() ? cname() + " · " : ""}${ok.length && ok.every(k => isKid(k.tok)) ? "voor spelers" : "voor ouders"}`;
   $("[data-v=gegevens]").hidden = !parentKids().length; if (view === "gegevens" && !parentKids().length) view = "agenda";
   $("[data-v=berichten] .lb").textContent = parentKids().length ? "Berichten" : "Nieuws";
   const one = ok.length === 1 ? data[ok[0].tok] : null;
   setTimeout(brandClub, 0);
-  $("#sub").textContent = one ? [one.team, one.number ? "nummer " + one.number : "", (one.trainers || []).length ? "trainer: " + one.trainers.join(", ") : ""].filter(Boolean).join(" · ") : ok.length ? `${ok.length} kinderen bij OG Vorselaar` : "";
+  $("#sub").textContent = one ? [one.team, one.number ? "nummer " + one.number : "", (one.trainers || []).length ? "trainer: " + one.trainers.join(", ") : ""].filter(Boolean).join(" · ") : ok.length ? `${ok.length} kinderen bij ${cname()}` : "";
   $("#kids").innerHTML = ok.length > 1 ? `<button type="button" data-k="" aria-pressed="${!only}">Iedereen</button>` + ok.map(k => `<button type="button" data-k="${k.tok}" aria-pressed="${only === k.tok}"><span class="dot" style="--c:${kidCol(k.tok)}"></span>${esc(k.name)}</button>`).join("") : "";
   $$("[data-k]").forEach(b => b.onclick = () => { only = b.dataset.k || null; draw(); });
   const unseen = msgsAll().filter(m => !store.get(SEEN, []).includes(m.key)).length, bd = $("#bdm"); bd.hidden = !unseen || view === "berichten"; bd.textContent = unseen;
@@ -291,7 +294,7 @@ function answerHtml(e, k, hero) {
     <div class="why"${e.rsvp === "nee" ? "" : " hidden"}>${WHY.map(w => `<button type="button" data-w="${w}" aria-pressed="${e.note === w}">${w}</button>`).join("")}<input placeholder="Of schrijf een korte reden" maxlength="200" value="${esc(WHY.includes(e.note) ? "" : e.note || "")}"></div>`; }
 function convoHtml(e, k) { const cv = e.convo; if (!cv || isOff(e)) return "";
   const me = isKid(k.tok);
-  return cv.selected ? `<div class="convo"><b>${me ? "✅ Je bent geselecteerd. Komoan OG!" : "✅ " + esc(k.name) + " is geselecteerd"}</b>${cv.meet ? `<span>Verzamelen om <b>${esc(cv.meet)}</b>${cv.place ? " · " + esc(cv.place) : ""}</span>` : ""}${cv.bring ? `<span>Meebrengen: ${esc(cv.bring)}</span>` : ""}${cv.note ? `<span>${esc(cv.note)}</span>` : ""}</div>`
+  return cv.selected ? `<div class="convo"><b>${me ? "✅ Je bent geselecteerd. " + (isOGVc(clubOf()) ? "Komoan OG!" : "Veel succes!") : "✅ " + esc(k.name) + " is geselecteerd"}</b>${cv.meet ? `<span>Verzamelen om <b>${esc(cv.meet)}</b>${cv.place ? " · " + esc(cv.place) : ""}</span>` : ""}${cv.bring ? `<span>Meebrengen: ${esc(cv.bring)}</span>` : ""}${cv.note ? `<span>${esc(cv.note)}</span>` : ""}</div>`
     : `<div class="convo off"><b>${me ? "Je bent deze keer niet geselecteerd." : esc(k.name) + " is deze keer niet geselecteerd."}</b><span>${me ? "Volgende keer weer! Blijf goed trainen 💪" : "Volgende keer weer! Vragen? Stuur de trainer een bericht."}</span></div>`; }
 function evCard(e, k) {
   const d = dayFmt(e.date), multi = okKids().length > 1;
@@ -368,7 +371,7 @@ function drawSeason() {
       <div class="stats"><div class="stat"><small>Op training</small><b>${pct == null ? "–" : pct + "%"}</b><span>${s.present} van ${s.trainings} trainingen</span>${pct == null ? "" : `<div class="bar"><i style="width:${pct}%"></i></div>`}</div>
         <div class="stat"><small>Wedstrijden</small><b>${s.matches}</b><span>meegespeeld dit seizoen</span></div>
         <div class="stat"><small>Doelpunten</small><b>${s.goals}</b><span>dit seizoen</span></div><div class="stat"><small>Assists</small><b>${s.assists}</b><span>dit seizoen</span></div></div>
-      <div class="card"><h3>Laatste uitslagen</h3>${rs.length ? rs.map(r => { const res = r.for > r.against ? "w" : r.for < r.against ? "l" : "d", us = x.team || "OGV";
+      <div class="card"><h3>Laatste uitslagen</h3>${rs.length ? rs.map(r => { const res = r.for > r.against ? "w" : r.for < r.against ? "l" : "d", us = x.team || cshort() || "Wij";
         return `<div class="res"><span class="rp ${res}">${{ w: "W", l: "V", d: "G" }[res]}</span><span class="rm"><b>${r.home === false ? esc(r.opponent || "") + " – " + esc(us) : esc(us) + " – " + esc(r.opponent || "")}</b><small>${dayFmt(r.date).toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })} · ${r.played ? (me ? "je speelde mee" : esc(k.name) + " speelde mee") + (r.goals ? ` · ⚽ ${r.goals}` : "") + (r.assists ? ` · ${r.assists} assist` : "") : (me ? "je speelde niet mee" : "niet meegespeeld")}</small></span><span class="sc">${r.home === false ? r.against + " – " + r.for : r.for + " – " + r.against}</span></div>`; }).join("")
         : `<p class="h" style="margin:0">Nog geen uitslagen de laatste weken.</p>`}</div>${evalHtml(x.ev, me)}`; }).join("") || `<div class="msg"><b>Nog niets</b></div>`;
 }
@@ -407,7 +410,7 @@ function drawProfile() {
         <label class="f" style="margin-top:10px">Naam van de ouder die dit invult<input name="cn" value="${esc(c.name || store.get("ogv-ouders-name", ""))}"></label></div>
       <div class="row"><button class="btn" type="submit">Bewaren</button><span class="ok" data-ok>${x.updated ? "Laatst bijgewerkt " + new Date(x.updated).toLocaleDateString("nl-BE", { day: "numeric", month: "short" }) : ""}</span></div>
       <p style="margin:14px 0 0;font-size:13px;color:var(--muted)">Je kan dit altijd aanpassen of laten wissen. Meer uitleg in de privacyverklaring van de club.</p></form>`; }).join("") +
-    `<div class="card"><h3>Nog een kind bij OG Vorselaar?</h3><p class="h" style="margin:0">Open de persoonlijke link die je van de trainer van dat kind kreeg. Het komt er dan vanzelf bij in deze app.</p>
+    `<div class="card"><h3>Nog een kind bij ${esc(cname())}?</h3><p class="h" style="margin:0">Open de persoonlijke link die je van de trainer van dat kind kreeg. Het komt er dan vanzelf bij in deze app.</p>
       <div class="row">${kids.map(k => `<button class="btn ghost sm" type="button" data-rm="${k.tok}">${esc(k.name || "Kind")} van dit toestel halen</button>`).join("")}</div></div>`;
   $$("[data-pf]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const tok = f.dataset.pf, F = f.elements, ok = f.querySelector("[data-ok]");
     const c = [0, 1].map(i => ({ name: F["n" + i].value.trim(), rel: F["r" + i].value, phone: F["p" + i].value.trim(), email: F["e" + i].value.trim() })).filter(x => x.name || x.phone || x.email);
@@ -428,7 +431,7 @@ function icsDownload(rows, name) {
     const loc = e.home === false && e.location ? e.location.split(" · ").pop() : CLUB;
     return ["BEGIN:VEVENT", "UID:" + e.id + "-" + k.tok.slice(0, 8) + "@ogv", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
       e.start ? "DTSTART:" + d + "T" + t(e.start) : "DTSTART;VALUE=DATE:" + d, e.start ? "DTEND:" + d + "T" + t(end) : "", "SUMMARY:" + title.replace(/[,;]/g, " "), "LOCATION:" + loc.replace(/[,;]/g, " "), desc ? "DESCRIPTION:" + desc.replace(/[,;]/g, " ") : "", "END:VEVENT"].filter(Boolean).join("\r\n"); });
-  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OG Vorselaar//OGV Ouders//NL", ...ev, "END:VCALENDAR"].join("\r\n");
+  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//FootballCoachHub//Ouders//NL", ...ev, "END:VCALENDAR"].join("\r\n");
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([L], { type: "text/calendar" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
@@ -439,7 +442,7 @@ function bindInstall() { const x = $("#instx"); if (x) x.onclick = () => { store
   const b = $("#instb"); if (b) b.onclick = async () => { deferred.prompt(); await deferred.userChoice; deferred = null; $("#inst")?.remove(); }; }
 
 /* ---------- opstarten ---------- */
-function fail(title, text) { $("#h").innerHTML = `OGV <span>Ouders</span>`; $("#sub").textContent = "De app voor ouders van OG Vorselaar"; $("#tabs").hidden = true; $("#list").innerHTML = `<div class="msg"><b>${title}</b>${text}</div>`; }
+function fail(title, text) { $("#h").innerHTML = `Voor <span>ouders</span>`; $("#sub").textContent = "De app voor ouders en spelers van je club"; $("#tabs").hidden = true; $("#list").innerHTML = `<div class="msg"><b>${title}</b>${text}</div>`; }
 async function start() {
   if (!kids.length) { fail("Open de link van de trainer", "Je kreeg van de trainer een persoonlijke link voor je kind. Open die link één keer: daarna vind je hier de trainingen, wedstrijden, convocaties en berichten terug."); return; }
   await load();

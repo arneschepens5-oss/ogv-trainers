@@ -1,7 +1,7 @@
 {
-  "name": "OGV Ouders & spelers",
-  "short_name": "OGV",
-  "description": "Trainingen, wedstrijden, convocaties en nieuws van OG Vorselaar voor ouders en spelers.",
+  "name": "Ouders en spelers",
+  "short_name": "Ouders",
+  "description": "Trainingen, wedstrijden, convocaties en nieuws van je club, voor ouders en spelers.",
   "lang": "nl",
   "id": "./",
   "start_url": "./",
@@ -10,8 +10,21 @@
   "background_color": "#111111",
   "theme_color": "#111111",
   "icons": [
-    { "src": "../icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "../icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "../icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "../icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "../icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "../icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

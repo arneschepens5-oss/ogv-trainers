@@ -1404,3 +1404,16 @@ dialog .ogvlogo.big{height:96px;margin:0}
 .setupbar>span:nth-child(2){flex:1}.setupbar b{display:block}.setupbar small{color:var(--muted)}
 .chkl input[type=radio],.chkl input[type=checkbox]{width:18px;height:18px;flex:none;margin:0;accent-color:var(--yellow)}
 #cse h2,#csp h2{margin:24px 0 6px}#cse h2:first-child{margin-top:0}
+/* hulp bij een pagina */
+.hlp{display:inline-grid;place-items:center;width:26px;height:26px;margin-left:10px;border-radius:50%;border:1px solid var(--line2);color:var(--muted);font:700 15px/1 var(--font, inherit);text-decoration:none;vertical-align:middle;transform:translateY(-4px)}
+.hlp:hover,.hlp:focus-visible{color:var(--ink);border-color:var(--ink)}
+.brand b{overflow-wrap:anywhere}
+.plist{grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}
+.pclub .ph1 .pn{flex:1;min-width:0}.pclub .ph1 .pill{flex:none}
+.pact{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pact .ib{margin-left:auto}
+.kpil{text-decoration:none;color:inherit}.kpil:hover{border-color:var(--ink)}
+.psteps{list-style:none;counter-reset:ps;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.psteps li{counter-increment:ps;display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.psteps li:before{content:counter(ps);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--yellow);color:var(--onY);font-weight:800;margin-bottom:6px}
+.psteps span{color:var(--muted);font-size:14px}
+@media (max-width:420px){.plist{grid-template-columns:1fr}}
