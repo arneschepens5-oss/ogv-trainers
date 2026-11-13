@@ -42,7 +42,7 @@ async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; return; }
   try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
     Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); }
-    else if (data.platform) { Object.assign(CLUB, { id: "platform", name: PRODUCT, short: "FCH", settings: {} }); applyClubTheme(); } /* account van het platform zonder club */
+    else if (data.platform) { Object.assign(CLUB, { id: "platform", name: PRODUCT, short: "FCH", settings: { color: "#F5C542", color2: "#0F4A33" } }); /* huisstijl van het platform */ applyClubTheme(); } /* account van het platform zonder club */
     S.rechten = Array.isArray(data.rechten) ? data.rechten : [];
     if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
@@ -196,28 +196,66 @@ const appLink = () => location.origin + location.pathname;
 const inviteText = (name, code, mail) => `Welkom bij ${PRODUCT}!\n\nJe club ${name} staat klaar.\n\n1. Open ${appLink()}\n2. Tik op Account aanmaken${mail ? " met " + mail : ""}\n3. Clubcode: ${code}\n\nAls beheerder deel je daarna de clubcode met je trainers.\n\nVragen? Mail naar ${CONTACT_MAIL}.`;
 const PLATFORM_DEMO = () => [{ id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {}, code: "OGV-DEMO42", admins: ["demo@ogvorselaar.be"], members: 14, teams: 12, players: 160, feedback_open: 2 },
   { id: "demo-b", name: "KFC Voorbeeld", short: "KFCV", settings: { color: "#2F6FED", color2: "#0B1E46" }, code: "7F3A9C21", admins: [], pending_admin: "tvjo@kfcvoorbeeld.be", members: 0, teams: 0, players: 0, feedback_open: 0 }];
+/* demo-cijfers voor het platformoverzicht (verzonnen) */
+const PLATFORM_STATS_DEMO = () => { const wk = new Date(); wk.setDate(wk.getDate() - ((wk.getDay() + 6) % 7));
+  return { generated_at: new Date().toISOString(), users: 31, active_7: 17, active_30: 26, new_30: 6, waiting: 1, feedback_open: 2, db_bytes: 61e6,
+    weeks: Array.from({ length: 12 }, (_, i) => { const d = new Date(wk); d.setDate(d.getDate() - 7 * (11 - i)); return { week: d.toISOString().slice(0, 10), accounts: [0, 1, 0, 2, 3, 1, 0, 4, 2, 1, 3, 2][i], events: [18, 22, 25, 31, 28, 35, 40, 38, 44, 41, 47, 52][i] }; }),
+    clubs: [{ id: OGV_ID, members: 14, active_7: 11, last_login: new Date(Date.now() - 36e5).toISOString(), trainings_30: 64, matches_30: 38, reports_30: 31, evals_season: 120, setup_done: true },
+      { id: "demo-b", members: 0, active_7: 0, last_login: null, trainings_30: 0, matches_30: 0, reports_30: 0, evals_season: 0, setup_done: false }] }; };
+const agoTxt = iso => { if (!iso) return "nog nooit"; const h = (Date.now() - new Date(iso)) / 36e5; return h < 1 ? "net nog" : h < 24 ? Math.round(h) + " uur geleden" : Math.round(h / 24) === 1 ? "gisteren" : Math.round(h / 24) + " dagen geleden"; };
+/* kleine staafgrafiek: één reeks, waarde-labels enkel bij de laatste week, hover toont de week */
+function pbars(rows, key, unit) {
+  const max = Math.max(1, ...rows.map(r => +r[key] || 0)), W = 100 / rows.length;
+  return `<div class="pbars" role="img" aria-label="${esc(unit)} per week, laatste 12 weken">${rows.map((r, i) => { const v = +r[key] || 0, d = new Date(r.week);
+    return `<span class="pb" style="left:${i * W}%;width:${W}%" title="Week van ${d.toLocaleDateString("nl-BE", { day: "numeric", month: "short" })}: ${v} ${esc(unit)}"><i style="height:${Math.max(v ? 4 : 0, v / max * 100)}%"></i>${i === rows.length - 1 ? `<em>${v}</em>` : ""}</span>`; }).join("")}</div>
+    <div class="pbx"><span>${new Date(rows[0].week).toLocaleDateString("nl-BE", { day: "numeric", month: "short" })}</span><span>deze week</span></div>`;
+}
 route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
   if (!S.platform && mode !== "demo") { v.innerHTML = `<div class="empty"><b>Alleen voor de beheerder van het platform</b></div>`; return; }
   if (sub === "meldingen") { v.innerHTML = head("Meldingen van alle clubs", "Problemen en vragen die trainers doorstuurden met de knop Probleem melden.", `<a class="btn ghost" href="#/platform">Terug</a>`) + `<div id="pfb"></div>`; return adminFeedback($("#pfb")); }
   v.innerHTML = head("Platform", "Laden…");
-  let data; if (mode === "demo") data = PLATFORM_DEMO(); else { const r = await sb.rpc("platform_clubs");
-    if (r.error) { v.innerHTML = head("Platform", "") + `<div class="empty"><b>Nog niet klaar</b>${/platform_clubs|function/i.test(r.error.message) ? "Voer eerst het databasescript v33 uit in Supabase." : esc(r.error.message)}</div>`; return; } data = r.data || []; }
+  let data, st = null;
+  if (mode === "demo") { data = PLATFORM_DEMO(); st = PLATFORM_STATS_DEMO(); }
+  else { const [r, s] = await Promise.all([sb.rpc("platform_clubs"), sb.rpc("platform_stats")]);
+    if (r.error) { v.innerHTML = head("Platform", "") + `<div class="empty"><b>Nog niet klaar</b>${/platform_clubs|function/i.test(r.error.message) ? "Voer eerst het databasescript v33 uit in Supabase." : esc(r.error.message)}</div>`; return; }
+    data = r.data || []; if (!s.error) st = s.data; }
+  const sc = id => st?.clubs?.find(x => x.id === id) || {};
+  data.forEach(c => Object.assign(c, { ...sc(c.id), name: c.name, settings: c.settings }));
   const sum = k => data.reduce((a, c) => a + (+c[k] || 0), 0);
   const badge = c => { const keep = { id: CLUB.id, short: CLUB.short, name: CLUB.name, settings: CLUB.settings }; Object.assign(CLUB, { id: c.id, short: c.short, name: c.name, settings: c.settings || {} }); const h = LOGO("plat"); Object.assign(CLUB, keep); return h; };
-  const status = c => (c.admins || []).length ? (c.members > 1 ? ["win", "In gebruik"] : ["w", "Beheerder actief"]) : c.pending_admin ? ["w", "Wacht op beheerder"] : ["loss", "Geen beheerder"];
-  v.innerHTML = head("Platform", "Clubs aanmaken en instellen. Spelers, ploegen en verslagen van een club zie je hier niet: die blijven van de club.", `<button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
-    `<div class="sec kpis"><div class="kpi"><small>Clubs</small><b>${data.length}</b><span>op het platform</span></div><div class="kpi"><small>Ploegen</small><b>${sum("teams")}</b><span>samen</span></div>
-      <div class="kpi"><small>Spelers</small><b>${sum("players")}</b><span>samen</span></div><a class="kpi kpil" href="#/platform/meldingen"><small>Open meldingen</small><b>${sum("feedback_open")}</b><span>bekijken ›</span></a></div>
-    <div class="sec"><h2>Clubs</h2><div class="plist">${data.map(c => { const [sc, sl] = status(c); return `<article class="pclub">
-      <div class="ph1">${badge(c)}<span class="pn"><b>${esc(c.name)}</b><small>${c.teams} ploegen · ${c.players} spelers · ${c.members} leden</small></span><span class="pill ${sc}">${sl}</span></div>
+  const days = iso => iso ? (Date.now() - new Date(iso)) / 864e5 : Infinity;
+  const status = c => !(c.admins || []).length ? (c.pending_admin ? ["w", "Wacht op beheerder"] : ["loss", "Geen beheerder"])
+    : c.setup_done === false && !(c.settings || {}).setup_done && c.id !== OGV_ID ? ["w", "Opstart bezig"]
+    : st && days(c.last_login) > 14 ? ["loss", "Stil sinds " + Math.round(days(c.last_login)) + " dagen"] : ["win", "Actief"];
+  const mb = st ? st.db_bytes / 1e6 : 0, mbMax = 500, attention = data.filter(c => status(c)[0] !== "win");
+  v.innerHTML = head("Platform", st ? `Overzicht van ${PRODUCT}, bijgewerkt om ${new Date(st.generated_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}. Enkel tellingen: spelers, ploegen en verslagen van een club zie je hier niet.` : "Clubs aanmaken en instellen.",
+      `<button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
+    (st ? "" : `<div class="share sec">${IC.eye}<div>Voer het databasescript <b>v36</b> uit in Supabase om hier ook het gebruik per club en per week te zien.</div></div>`) +
+    `<div class="sec kpis">
+      <div class="kpi"><small>Clubs</small><b>${data.length}</b><span>${data.filter(c => status(c)[0] === "win").length} actief</span></div>
+      <div class="kpi"><small>Actief deze week</small><b>${st ? st.active_7 : "–"}</b><span>${st ? `van ${st.users} accounts · ${st.active_30} deze maand` : "voer v36 uit"}</span></div>
+      <div class="kpi"><small>Spelers in de app</small><b>${sum("players")}</b><span>in ${sum("teams")} ploegen</span></div>
+      <a class="kpi kpil" href="#/platform/meldingen"><small>Open meldingen</small><b>${st ? st.feedback_open : sum("feedback_open")}</b><span>bekijken ›</span></a></div>
+    ${attention.length ? `<div class="sec pattn"><h2>Aandacht nodig</h2>${attention.map(c => { const [k, l] = status(c); return `<a class="pat" href="#/platformclub/${esc(c.id)}/club"><span class="pill ${k}">${esc(l)}</span><b>${esc(c.name)}</b><span class="hint">${
+      l === "Geen beheerder" ? "Duid een beheerder aan en stuur de uitnodiging." : l === "Wacht op beheerder" ? "De beheerder heeft nog geen account. Stuur de uitnodiging opnieuw." : l === "Opstart bezig" ? "De club heeft de vijf opstartstappen nog niet afgerond." : "Niemand van de club logde de laatste twee weken in. Even bellen?"}</span></a>`; }).join("")}</div>` : ""}
+    ${st ? `<div class="sec pgrid">
+      <div class="panel"><h2>Activiteiten gepland</h2><p class="hint" style="margin-top:0">Trainingen en wedstrijden die trainers per week aanmaakten.</p>${pbars(st.weeks, "events", "activiteiten")}</div>
+      <div class="panel"><h2>Nieuwe accounts</h2><p class="hint" style="margin-top:0">Trainers en beheerders die per week een account maakten.</p>${pbars(st.weeks, "accounts", "accounts")}</div>
+      <div class="panel"><h2>Database</h2><p class="hint" style="margin-top:0">Gebruikte ruimte van het gratis plan (${mbMax} MB). Ruim voor 80% overstappen naar Pro.</p>
+        <div class="pmeter"><i style="width:${Math.min(100, mb / mbMax * 100)}%"></i></div><p class="pmv"><b>${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB</b> van ${mbMax} MB · ${Math.round(mb / mbMax * 100)}%</p>
+        <p class="hint" style="margin-bottom:0">${st.waiting ? `${st.waiting} account${st.waiting > 1 ? "s" : ""} zonder club: wie zich aanmeldde zonder clubcode.` : "Geen accounts zonder club."}</p></div></div>` : ""}
+    <div class="sec"><h2>Clubs</h2><div class="plist">${data.map(c => { const [k, l] = status(c); return `<article class="pclub">
+      <div class="ph1">${badge(c)}<span class="pn"><b>${esc(c.name)}</b><small>${c.teams} ploegen · ${c.players} spelers · ${c.members} leden</small></span><span class="pill ${k}">${esc(l)}</span></div>
+      ${st ? `<div class="pmet"><div><b>${c.active_7 ?? 0}</b><small>actief deze week</small></div><div><b>${c.trainings_30 ?? 0}</b><small>trainingen</small></div><div><b>${c.matches_30 ?? 0}</b><small>wedstrijden</small></div><div><b>${c.evals_season ?? 0}</b><small>evaluaties</small></div></div>
+        <p class="hint" style="margin:0">Trainingen en wedstrijden van de laatste 30 dagen, evaluaties van dit seizoen. Laatst iemand ingelogd: ${agoTxt(c.last_login)}${c.matches_30 ? ` · ${Math.round((c.reports_30 || 0) / c.matches_30 * 100)}% wedstrijden met uitslag` : ""}</p>` : ""}
       <dl><div><dt>Beheerder</dt><dd>${(c.admins || []).length ? (c.admins || []).map(esc).join(", ") : c.pending_admin ? esc(c.pending_admin) + ` <span class="hint">(nog geen account)</span>` : `<button class="link" type="button" data-edit="${esc(c.id)}">Aanduiden</button>`}</dd></div>
         <div><dt>Clubcode</dt><dd><b translate="no">${esc(c.code || "–")}</b></dd></div></dl>
       <div class="pact"><a class="btn small" href="#/platformclub/${esc(c.id)}/club">${IC.gear}Instellingen</a><button class="btn ghost small" type="button" data-edit="${esc(c.id)}">Beheerder en code</button><button class="ib" type="button" data-inv="${esc(c.id)}" title="Uitnodiging voor de beheerder kopiëren" aria-label="Uitnodiging kopiëren">${IC.copy}</button></div></article>`; }).join("")}</div></div>
-    <div class="sec"><h2>Zo start een nieuwe club</h2><ol class="psteps">
+    <details class="sec pdet"><summary><h2 style="display:inline">Zo start een nieuwe club</h2></summary><ol class="psteps">
       <li><b>Club aanmaken</b><span>Met de naam en het e-mailadres van de beheerder (bv. de TVJO). Jij wordt geen lid.</span></li>
       <li><b>Uitnodiging sturen</b><span>Kopieer de uitnodiging en mail ze naar de beheerder. Daarin staan de link en de clubcode.</span></li>
       <li><b>De club zet zichzelf klaar</b><span>Na het aanmelden leidt de app de beheerder door vijf stappen: kleuren, evaluaties, onderdelen, ploegen en trainers uitnodigen.</span></li>
-      <li><b>Trainers aan de slag</b><span>Trainers maken een account met de clubcode. Bij elke pagina staat een vraagteken dat naar de uitleg in de handleiding gaat.</span></li></ol></div>`;
+      <li><b>Trainers aan de slag</b><span>Trainers maken een account met de clubcode. Bij elke pagina staat een vraagteken dat naar de uitleg in de handleiding gaat.</span></li></ol></details>`;
   $("#pnew").onclick = () => newClubDialog(() => render());
   $$("[data-inv]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.inv); navigator.clipboard?.writeText(inviteText(c.name, c.code, c.pending_admin || (c.admins || [])[0])).then(() => toast("Uitnodiging gekopieerd. Plak ze in een mail aan de beheerder.")); });
   $$("[data-edit]", v).forEach(b => b.onclick = () => editClubDialog(data.find(x => x.id === b.dataset.edit), () => render()));
