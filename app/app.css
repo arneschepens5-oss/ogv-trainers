@@ -1453,3 +1453,4 @@ body.authpage .main{background:radial-gradient(120% 60% at 50% -10%,var(--ybg),t
 @media (max-width:860px){body.authpage .topbar .teampick{display:none}}
 body.authpage .side,body.authpage .topbar{display:none!important}
 body.authpage .shell{display:block}
+@media (max-width:860px){.tabbar.t3{grid-template-columns:repeat(3,1fr)}}

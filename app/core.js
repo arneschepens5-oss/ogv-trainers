@@ -19,7 +19,9 @@ const APPNAME = () => CLUB.settings?.app || (ogvBrand() ? "OGV Trainers" : PRODU
 const APPTITLE = () => ogvBrand() && !CLUB.settings?.app ? "OGV<span>Trainers</span>" : esc(APPNAME()).replace(/(hub)$/i, "<span>$1</span>");
 /* laatst gekende club van dit toestel: zo staan naam, logo en kleuren meteen goed, ook op het aanmeldscherm */
 let CLUB_KNOWN = false; /* weten we al bij welke club dit toestel hoort? Zo niet, dan tonen we het platform en niet OG Vorselaar */
-try { const c = JSON.parse(localStorage.getItem("ogv-club") || "null"); if (c && c.id) { Object.assign(CLUB, c); CLUB_KNOWN = true; } } catch (e) {}
+/* beheer-app: apart geïnstalleerd (?app=beheer), eigen aanmelding, enkel het platform */
+const ADMIN_APP = !!window.FCH_ADMIN;
+if (!ADMIN_APP) try { const c = JSON.parse(localStorage.getItem("ogv-club") || "null"); if (c && c.id) { Object.assign(CLUB, c); CLUB_KNOWN = true; } } catch (e) {}
 function rememberClub() { CLUB_KNOWN = true; try { localStorage.setItem("ogv-club", JSON.stringify({ id: CLUB.id, name: CLUB.name, short: CLUB.short, settings: CLUB.settings || {} })); } catch (e) {} }
 /* ---------- kleuren van de club over de hele app ---------- */
 const hexRgb = h => { h = String(h || "").replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); const n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -30,7 +32,7 @@ const CLUB_VARS = ["--yellow", "--yellow2", "--onY", "--ytext", "--ybg", "--bg",
 function applyClubTheme() {
   if (typeof evApplyClub === "function") evApplyClub();
   /* nog geen club bekend op dit toestel (aanmelden): de huisstijl van het platform */
-  const product = !CLUB_KNOWN && !user && mode !== "demo";
+  const product = ADMIN_APP || (!CLUB_KNOWN && !user && mode !== "demo");
   const st = product ? { color: "#F5C542", color2: "#0F4A33" } : CLUB.settings || {}, root = document.documentElement, el = root.style; CLUB_VARS.forEach(k => el.removeProperty(k));
   if ((!product && isOGV()) || (!st.color && !st.color2)) return;   /* OG Vorselaar houdt altijd de originele geel-zwarte kleuren */
   const light = root.dataset.theme === "light", W = [255, 255, 255], K = [0, 0, 0], set = (k, v) => el.setProperty(k, Array.isArray(v) ? rgbHex(v) : v);
@@ -398,13 +400,13 @@ let teardown = null;
 /* shell(true) = nieuwe lege pagina (enkel bij het openen van een pagina); shell() = enkel menu en zijbalk vernieuwen, de getoonde pagina blijft staan */
 function shell(fresh) {
   const oldView = fresh ? null : $("#view");
-  const r = cur(), active = ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
+  const r = cur(), active = r.page === "platform" && r.id === "meldingen" ? "platform/meldingen" : ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g)
     .map(g => ({ ...g, items: g.items.filter(([k]) => !clubOff(k)) })).filter(g => g.items.length);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
-  const platOnly = mode === "cloud" && S.platform && S.member === false;
-  const secs = platOnly ? [{ g: null, items: [["platform", "Platform", "chart"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"]] : []), ...(S.platform ? [["platform", "Platform", "chart"]] : [])] }] : nav)
+  const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
+  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
     .map(sec => ({ ...sec, items: sec.items.filter(([k]) => k !== "scouting" || mag("scouting")) })).filter(sec => sec.items.length);
   const navHtml = secs.map(sec => (sec.g ? `<div class="navgrp">${sec.g}</div>` : "") + sec.items.map(([k, l, i]) =>
@@ -412,25 +414,25 @@ function shell(fresh) {
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? (CLUB.id === "platform" ? "Beheerder van het platform" : esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName())) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span>${mode === "demo" ? "" : `<button class="ib" type="button" data-account title="Mijn account" aria-label="Mijn account">${IC.gear}</button>`}<button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
-  const teamBtn = logged && !(mode === "cloud" && S.platform && S.member === false) ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
+  const teamBtn = logged && !platOnly ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + " ploegen" : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
     <a class="brand" href="#/start">${ogvBrand() ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? LOGO("mini") + "Jeugdwerking " + esc(clubName()) : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
-    <nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="foot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
+    <nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+    <div class="foot">${logged ? `${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
     <div class="page" id="view"></div>
   </main>
-  <nav class="tabbar" aria-label="Snelmenu">
-    ${[["start","Start","home"],["kalender","Kalender","cal"],["trainingen","Training","plan"],["matchday","Wedstrijdblad","sheet"]].map(([k,l,i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
+  <nav class="tabbar${platOnly ? " t3" : ""}" aria-label="Snelmenu">
+    ${(platOnly ? [["platform","Overzicht","chart"],["platform/meldingen","Meldingen","mail"]] : [["start","Start","home"],["kalender","Kalender","cal"],["trainingen","Training","plan"],["matchday","Wedstrijdblad","sheet"]]).map(([k,l,i]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
-  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="sheetfoot">${logged ? `<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
+  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+    <div class="sheetfoot">${logged ? `${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
@@ -461,6 +463,10 @@ async function renderPage(seq) {
   const logged = !!db && (mode === "demo" || !!user);
   /* alles achter aanmelden en de clubcode, behalve het aanmeldscherm zelf */
   if (r.page !== "aanmelden" && !logged) { viewLogin(v); return; }
+  /* beheer-app: enkel platformpagina's, en enkel voor de beheerder van het platform */
+  if (ADMIN_APP && logged && r.page !== "aanmelden") {
+    if (mode === "cloud" && !S.platform) { document.body.classList.add("authpage"); v.innerHTML = `<div class="authbox">${AUTHHEAD()}<div class="authcard"><b>Geen toegang</b><p class="hint" style="margin:0">Deze app is enkel voor de beheerder van FootballCoachHub. Je bent aangemeld als ${esc(user?.email || "")}.</p><a class="btn ghost" href="./">Naar de trainersapp</a><button class="btn" type="button" data-logout>Afmelden</button></div></div>`; $$("[data-logout]", v).forEach(b => b.onclick = logout); return; }
+    if (!["platform", "platformclub"].includes(r.page)) { location.replace("#/platform"); return; } }
   /* account van het platform zonder club: enkel het platformbeheer, nooit gegevens van een club */
   if (mode === "cloud" && S.member === false && S.platform) { if (!["platform", "platformclub", "aanmelden"].includes(r.page)) { location.replace("#/platform"); return; } }
   else if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
@@ -584,7 +590,7 @@ function viewLogin(v, msg) {
   <form id="lf" class="authcard"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a>${LOCAL ? `<button class="link" type="button" id="demo">Bekijk de demo</button>` : ""}</div>
-  <div class="authnew"><b>Nog geen account?</b><p class="hint" style="margin:4px 0 10px">Maak er zelf een aan met de clubcode die je van de jeugdcoördinator kreeg.</p><button class="btn ghost small" type="button" id="reg">Account aanmaken</button></div></div>`;
+  <div class="authnew"${ADMIN_APP ? " hidden" : ""}><b>Nog geen account?</b><p class="hint" style="margin:4px 0 10px">Maak er zelf een aan met de clubcode die je van de jeugdcoördinator kreeg.</p><button class="btn ghost small" type="button" id="reg">Account aanmaken</button></div></div>`;
   $("#lf").onsubmit = async e => { e.preventDefault(); if (!sb) { $("#lerr").textContent = "Geen verbinding met de database."; return; }
     const btn = $("button", e.target); btn.disabled = true; btn.textContent = "Bezig met aanmelden…"; $("#lerr").textContent = "";
     try { const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
@@ -610,7 +616,7 @@ async function logout() { if (mode === "demo") { try { sessionStorage.removeItem
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
 /* aanmeldschermen: logo en naam van de club als we die kennen, anders van het platform */
-const AUTHHEAD = () => CLUB_KNOWN && isOGV() ? `${LOGO("big")}<h1>${APPTITLE()}</h1>` : CLUB_KNOWN ? `${PMARK("big")}<h1>${APPTITLE()}</h1><p class="authclub">${LOGO("mini")}${esc(clubName())}</p>` : `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Het platform voor jeugdvoetbalclubs</p>`;
+const AUTHHEAD = () => ADMIN_APP ? `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Beheer van het platform</p>` : CLUB_KNOWN && isOGV() ? `${LOGO("big")}<h1>${APPTITLE()}</h1>` : CLUB_KNOWN ? `${PMARK("big")}<h1>${APPTITLE()}</h1><p class="authclub">${LOGO("mini")}${esc(clubName())}</p>` : `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Het platform voor jeugdvoetbalclubs</p>`;
 /* logo van het platform (zelfde voor alle clubs) */
 const PMARK = cls => `<span class="ogvlogo pmark ${cls || ""}"><svg viewBox="0 0 512 512" role="img" aria-label="FootballCoachHub"><rect width="512" height="512" rx="112" fill="#0F4A33"/><path d="M36 256H476" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><circle cx="256" cy="256" r="138" fill="none" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><path d="M208.8 126.3L385.7 303.2L150.3 344.7Z" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linejoin="round"/><circle cx="256" cy="256" r="13" fill="#FFFFFF" fill-opacity=".5"/><circle cx="208.8" cy="126.3" r="46" fill="#F5C542" stroke="#0F4A33" stroke-width="14"/><circle cx="385.7" cy="303.2" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/><circle cx="150.3" cy="344.7" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/></svg></span>`;
 /* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */
@@ -687,7 +693,7 @@ function boot() {
   if (new URLSearchParams(location.search).has("demo")) demo = true;
   if (!LOCAL) { demo = false; try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } /* demo alleen om lokaal te testen */
   if (window.supabase && window.supabase.createClient) {
-    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: "tb_auth",
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: ADMIN_APP ? "fch_beheer_auth" : "tb_auth",
       /* geen browserslot rond het vernieuwen van de aanmelding: dat slot bleef soms hangen na slaapstand, waardoor elke opvraging bleef wachten (leeg scherm) */
       lock: async (_name, _timeout, fn) => await fn() } });
     let started = false;

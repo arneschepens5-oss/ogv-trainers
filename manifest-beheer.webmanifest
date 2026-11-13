@@ -1,0 +1,17 @@
+{
+  "name": "FootballCoachHub Beheer",
+  "short_name": "FCH Beheer",
+  "description": "Beheer van het FootballCoachHub-platform: clubs aanmaken, instellen en opvolgen.",
+  "lang": "nl",
+  "id": "./?app=beheer",
+  "start_url": "./?app=beheer#/platform",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F4A33",
+  "theme_color": "#0F4A33",
+  "icons": [
+    { "src": "icons/beheer-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/beheer-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/beheer-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
