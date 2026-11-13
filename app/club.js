@@ -8,14 +8,17 @@ function viewRegister(v) {
   <form id="rf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" placeholder="bv. Jelle Lauwers"></label>
    <label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" required minlength="8" autocomplete="new-password"></label>
-   <label class="f">Clubcode<input name="code" required autocomplete="off" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label>
+   <label class="f">Clubcode<input name="code" autocomplete="off" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label>
    <div class="err" id="rerr"></div><button class="btn">Account aanmaken</button></form>
   <div class="row"><button class="link" type="button" id="toLogin">Ik heb al een account</button></div></div>`;
   $("#toLogin").onclick = () => viewLogin(v);
   $("#rf").onsubmit = async e => { e.preventDefault(); const f = e.target, btn = $("button.btn", f), err = $("#rerr"); err.textContent = "";
     if (!sb) { err.textContent = "Geen verbinding met de database."; return; }
     btn.disabled = true; btn.textContent = "Bezig…";
-    const code = f.code.value.trim().toUpperCase(); try { localStorage.setItem("ogv-invite", code); } catch (x) {}
+    const code = f.code.value.trim().toUpperCase();
+    /* het beheeraccount van het platform hoort bij geen enkele club en heeft dus geen clubcode nodig */
+    if (!code && f.email.value.trim().toLowerCase() !== CONTACT_MAIL) { err.textContent = "Vul de clubcode in die je van de jeugdcoördinator kreeg."; btn.disabled = false; btn.textContent = "Account aanmaken"; f.code.focus(); return; }
+    try { if (code) localStorage.setItem("ogv-invite", code); else localStorage.removeItem("ogv-invite"); } catch (x) {}
     try { const { data, error } = await sb.auth.signUp({ email: f.email.value.trim(), password: f.pw.value, options: { data: { invite: code, full_name: f.nm.value.trim().replace(/\s+/g, " ") }, emailRedirectTo: location.origin + location.pathname } });
       if (error) err.textContent = /not allowed|disabled/i.test(error.message) ? "Registreren staat nog uit. Vraag de beheerder om het aan te zetten in Supabase." : /already registered|exists/i.test(error.message) ? "Er bestaat al een account met dit e-mailadres. Meld je aan." : /password/i.test(error.message) ? "Kies een sterker wachtwoord (minstens 8 tekens)." : error.message;
       else if (!data.session) v.innerHTML = `<div class="authbox">${AUTHHEAD()}<div class="panel"><h2 style="margin-top:0">Bevestig je e-mailadres</h2><p class="muted" style="margin:0">We stuurden een mail naar <b style="color:var(--ink)">${esc(f.email.value.trim())}</b>. Klik op de link in die mail en meld je daarna aan.</p></div><button class="btn ghost" type="button" onclick="viewLogin($('#view'))">Naar aanmelden</button></div>`; }
