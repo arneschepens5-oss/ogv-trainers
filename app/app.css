@@ -1437,3 +1437,19 @@ dialog .ogvlogo.big{height:96px;margin:0}
 .pgrid>.panel{margin:0}
 .pdanger{margin-top:22px;padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--bad) 45%,transparent)}
 .pdanger summary{cursor:pointer;font-weight:700;color:var(--bad)}.pdanger p{font-size:14px;color:var(--muted)}
+/* aanmeldschermen */
+body.authpage .tabbar{display:none!important}
+body.authpage .main{background:radial-gradient(120% 60% at 50% -10%,var(--ybg),transparent 60%)}
+.authbox{max-width:440px;margin:clamp(20px,7vh,72px) auto 40px;padding:0 2px;gap:12px}
+.authbox .ogvlogo.big.pmark{height:64px;margin:0 0 6px}
+.authbox .pmark + h1{text-transform:none;font-stretch:100%;letter-spacing:-.025em;font-size:clamp(32px,9.5vw,46px);line-height:1;overflow-wrap:anywhere}
+.authbox .pmark + h1 span{display:inline}
+.authbox h1{overflow-wrap:anywhere}
+.authtag{margin:-4px 0 6px;color:var(--muted);font-size:16px}
+.authcard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:20px;background:var(--card);border:1px solid var(--line)}
+.authcard .btn{min-height:48px}
+.authnew{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px 18px;border-radius:20px;border:1px dashed var(--line2)}
+.authnew .hint{margin:0 0 8px}
+@media (max-width:860px){body.authpage .topbar .teampick{display:none}}
+body.authpage .side,body.authpage .topbar{display:none!important}
+body.authpage .shell{display:block}

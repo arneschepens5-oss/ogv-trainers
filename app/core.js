@@ -29,8 +29,10 @@ const lumRgb = a => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 
 const CLUB_VARS = ["--yellow", "--yellow2", "--onY", "--ytext", "--ybg", "--bg", "--sidebg", "--card", "--card2", "--card3", "--navact", "--line", "--input"];
 function applyClubTheme() {
   if (typeof evApplyClub === "function") evApplyClub();
-  const st = CLUB.settings || {}, root = document.documentElement, el = root.style; CLUB_VARS.forEach(k => el.removeProperty(k));
-  if (isOGV() || (!st.color && !st.color2)) return;   /* OG Vorselaar houdt altijd de originele geel-zwarte kleuren */
+  /* nog geen club bekend op dit toestel (aanmelden): de huisstijl van het platform */
+  const product = !CLUB_KNOWN && !user && mode !== "demo";
+  const st = product ? { color: "#F5C542", color2: "#0F4A33" } : CLUB.settings || {}, root = document.documentElement, el = root.style; CLUB_VARS.forEach(k => el.removeProperty(k));
+  if ((!product && isOGV()) || (!st.color && !st.color2)) return;   /* OG Vorselaar houdt altijd de originele geel-zwarte kleuren */
   const light = root.dataset.theme === "light", W = [255, 255, 255], K = [0, 0, 0], set = (k, v) => el.setProperty(k, Array.isArray(v) ? rgbHex(v) : v);
   if (st.color) { const a = hexRgb(st.color), L = lumRgb(a), bg = light ? [243, 243, 238] : [13, 14, 12];
     set("--yellow", a); set("--yellow2", mixRgb(a, W, .22)); set("--onY", L > .38 ? "#111111" : "#FFFFFF");
@@ -451,6 +453,7 @@ async function render() {
 /* vangnet: staat er ooit toch een lege pagina (zonder dat er iets aan het laden is), dan wordt ze opnieuw opgebouwd */
 setInterval(() => { const v = $("#view"); if (v && !rendering && !v.children.length && !v.textContent.trim() && !document.hidden) { console.warn("Lege pagina hersteld"); render(); } }, 1500);
 async function renderPage(seq) {
+  document.body.classList.remove("authpage");
   if (teardown) { try { teardown(); } catch (e) {} teardown = null; }
   const r = cur(), def = ROUTES[r.page] || ROUTES.start;
   shell(true); const v = $("#view");
@@ -576,11 +579,12 @@ function teamForm(t) {
 /* ============ aanmelden ============ */
 route("aanmelden", { title: "Aanmelden", render: v => viewLogin(v) });
 function viewLogin(v, msg) {
-  v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">${esc(msg || "Meld je aan met je trainersaccount. Het is hetzelfde account als voor het Animatiebord.")}</p>
-  <form id="lf" style="display:flex;flex-direction:column;gap:12px"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
+  document.body.classList.add("authpage");
+  v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">${esc(msg || "Meld je aan met je account.")}</p>
+  <form id="lf" class="authcard"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
   <div class="row"><button class="link" type="button" id="forgot">Wachtwoord vergeten</button><span class="spacer"></span><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a>${LOCAL ? `<button class="link" type="button" id="demo">Bekijk de demo</button>` : ""}</div>
-  <div class="panel" style="padding:14px 16px"><b>Nog geen account?</b><p class="hint" style="margin:4px 0 10px">Maak er zelf een aan met de clubcode die je van de jeugdcoördinator kreeg.</p><button class="btn ghost small" type="button" id="reg">Account aanmaken</button></div></div>`;
+  <div class="authnew"><b>Nog geen account?</b><p class="hint" style="margin:4px 0 10px">Maak er zelf een aan met de clubcode die je van de jeugdcoördinator kreeg.</p><button class="btn ghost small" type="button" id="reg">Account aanmaken</button></div></div>`;
   $("#lf").onsubmit = async e => { e.preventDefault(); if (!sb) { $("#lerr").textContent = "Geen verbinding met de database."; return; }
     const btn = $("button", e.target); btn.disabled = true; btn.textContent = "Bezig met aanmelden…"; $("#lerr").textContent = "";
     try { const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
@@ -606,7 +610,7 @@ async function logout() { if (mode === "demo") { try { sessionStorage.removeItem
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
 /* aanmeldschermen: logo en naam van de club als we die kennen, anders van het platform */
-const AUTHHEAD = () => CLUB_KNOWN && isOGV() ? `${LOGO("big")}<h1>${APPTITLE()}</h1>` : CLUB_KNOWN ? `${PMARK("big")}<h1>${APPTITLE()}</h1><p class="authclub">${LOGO("mini")}${esc(clubName())}</p>` : `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1>`;
+const AUTHHEAD = () => CLUB_KNOWN && isOGV() ? `${LOGO("big")}<h1>${APPTITLE()}</h1>` : CLUB_KNOWN ? `${PMARK("big")}<h1>${APPTITLE()}</h1><p class="authclub">${LOGO("mini")}${esc(clubName())}</p>` : `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Het platform voor jeugdvoetbalclubs</p>`;
 /* logo van het platform (zelfde voor alle clubs) */
 const PMARK = cls => `<span class="ogvlogo pmark ${cls || ""}"><svg viewBox="0 0 512 512" role="img" aria-label="FootballCoachHub"><rect width="512" height="512" rx="112" fill="#0F4A33"/><path d="M36 256H476" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><circle cx="256" cy="256" r="138" fill="none" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><path d="M208.8 126.3L385.7 303.2L150.3 344.7Z" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linejoin="round"/><circle cx="256" cy="256" r="13" fill="#FFFFFF" fill-opacity=".5"/><circle cx="208.8" cy="126.3" r="46" fill="#F5C542" stroke="#0F4A33" stroke-width="14"/><circle cx="385.7" cy="303.2" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/><circle cx="150.3" cy="344.7" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/></svg></span>`;
 /* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */

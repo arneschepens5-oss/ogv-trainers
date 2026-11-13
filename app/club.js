@@ -4,8 +4,9 @@
 
 /* ============ registreren met de clubcode ============ */
 function viewRegister(v) {
+  document.body.classList.add("authpage");
   v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">Maak je trainersaccount aan. Je hebt de clubcode nodig die je van de jeugdcoördinator kreeg.</p>
-  <form id="rf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" placeholder="bv. Jelle Lauwers"></label>
+  <form id="rf" class="authcard"><label class="f">Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name" placeholder="bv. Jelle Lauwers"></label>
    <label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" required minlength="8" autocomplete="new-password"></label>
    <label class="f">Clubcode<input name="code" autocomplete="off" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label>
@@ -27,9 +28,10 @@ function viewRegister(v) {
 }
 /* account bestaat maar is nog geen lid van de club */
 function viewJoin(v) {
+  document.body.classList.add("authpage");
   let saved = ""; try { saved = localStorage.getItem("ogv-invite") || ""; } catch (x) {}
   v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
-  <form id="jf" style="display:flex;flex-direction:column;gap:12px"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
+  <form id="jf" class="authcard"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
   <div class="row"><button class="link" type="button" data-logout>Afmelden</button></div></div>`;
   $("[data-logout]", v).onclick = logout;
   $("#jf").onsubmit = async e => { e.preventDefault(); const btn = $("button.btn", e.target); btn.disabled = true;
