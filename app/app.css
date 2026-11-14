@@ -1687,3 +1687,9 @@ body.authpage .shell{display:block}
 .isc-tags em.soft{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.isc-pot span{white-space:nowrap}
 .isc-score.none{background:none;border:1.5px dashed var(--line2);width:40px;height:40px;margin:4px;font-size:13px}
 .footlinks{display:flex;flex-wrap:wrap;gap:0 2px}.footlinks .navbtn{width:auto;white-space:nowrap;padding:6px 8px}.footlinks .navbtn.wide{width:100%}
+.isf-head{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.isf-tags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.isf-bars{display:grid;gap:7px}.isf-bars>div{display:grid;grid-template-columns:minmax(120px,190px) 1fr 34px;gap:10px;align-items:center;font-size:13.5px}
+.isf-bars b{height:8px;border-radius:4px;background:var(--card3);overflow:hidden}.isf-bars b i{display:block;height:100%;background:var(--yellow);border-radius:4px}
+.isf-bars em{font-style:normal;font-weight:800;text-align:right}
+.isf p{margin:4px 0 0}
