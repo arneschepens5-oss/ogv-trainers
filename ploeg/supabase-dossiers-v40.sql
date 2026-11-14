@@ -47,7 +47,11 @@ create policy "trainersfoto wijzigen" on storage.objects for update to authentic
 create policy "trainersfoto verwijderen" on storage.objects for delete to authenticated
   using (bucket_id = 'player-photos' and public.foto_trainer_club(name) = public.my_club() and (split_part(name, '/', 3) like auth.uid()::text || '-%' or public.is_admin()));
 
-/* 2. interne scouting per speler van de eigen club: enkel de trainers van de ploeg, nooit zichtbaar voor ouders of spelers */
+/* 2a. scoutingprofiel van een eigen speler (posities, 5 scores, potentieel, sterktes, ...): gewoon een extra veld op de speler,
+   dus ook enkel zichtbaar voor de trainers van de ploeg */
+alter table public.players add column if not exists scout jsonb;
+
+/* 2b. interne scouting per speler van de eigen club: enkel de trainers van de ploeg, nooit zichtbaar voor ouders of spelers */
 create table if not exists public.player_scout (
   id         uuid primary key default gen_random_uuid(),
   team_id    uuid not null references public.teams(id) on delete cascade,
