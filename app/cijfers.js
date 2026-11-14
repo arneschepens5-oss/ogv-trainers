@@ -3,7 +3,7 @@
 "use strict";
 let CF = { per: "seizoen", squad: "", tab: "overzicht", sortK: "minutes", sortD: -1 };
 const CF_PER = [["seizoen", "Heel seizoen"], ["najaar", "Najaar"], ["voorjaar", "Voorjaar"], ["laatste5", "Laatste 5 wedstrijden"], ["30d", "Laatste 30 dagen"]];
-const CF_TABS = [["overzicht", "Overzicht"], ["spelers", "Spelers"], ["speeltijd", "Speeltijd"], ["goals", "Doelpunten"], ["werkpunten", "Werkpunten"]];
+const CF_TABS = [["overzicht", "Overzicht"], ["spelers", "Spelers"], ["speeltijd", "Speeltijd"], ["goals", "Doelpunten"], ["werkpunten", "Werkpunten"], ["samenstelling", "Samenstelling"]];
 const COL_FOR = "var(--yellow)", COL_AG = "#8A8F98";
 
 /* zwevende uitleg bij grafieken */
@@ -45,6 +45,26 @@ function cfBars(rows, opts = {}) {
   const mx = Math.max(...rows.map(r => r.v), opts.ref || 0, 1);
   return `<div class="cfbars">${rows.map(r => `<div class="cfbar${r.warn ? " warn" : ""}"${r.tip ? ` data-tip="${esc(r.tip)}"` : ""}${r.href ? ` data-go="${r.href}"` : ""}><span class="l">${esc(r.l)}</span>
     <span class="t"><i style="width:${Math.max(1.5, 100 * r.v / mx)}%;${r.c ? "background:" + r.c : ""}"></i>${opts.ref ? `<b class="ref" style="left:${100 * opts.ref / mx}%"></b>` : ""}</span><span class="v">${r.vl ?? r.v}</span></div>`).join("")}</div>`;
+}
+
+
+/* samenstelling: geboortekwartaal, jaarhelft en biologische rijpheid. Werkt op een telling (ook voor de hele club, zonder namen). */
+const MAT = [["vroeg", "Vroeg rijp", "#F59E0B"], ["normaal", "Normaal rijp", "#10B981"], ["laat", "Laat rijp", "#3B82F6"]];
+function spCount(ps) { const c = { players: ps.length, nobirth: 0, q1: 0, q2: 0, q3: 0, q4: 0, vroeg: 0, normaal: 0, laat: 0 };
+  ps.forEach(p => { if (!p.birthdate) c.nobirth++; else c["q" + (Math.floor(parse(p.birthdate).getMonth() / 3) + 1)]++; if (p.maturity && c[p.maturity] != null) c[p.maturity]++; }); return c; }
+function spSum(cs) { const t = { players: 0, nobirth: 0, q1: 0, q2: 0, q3: 0, q4: 0, vroeg: 0, normaal: 0, laat: 0 }; cs.forEach(c => Object.keys(t).forEach(k => t[k] += +c[k] || 0)); return t; }
+function spHtml(c, who) {
+  const withB = c.players - c.nobirth, h1 = c.q1 + c.q2, h2 = c.q3 + c.q4, mk = c.vroeg + c.normaal + c.laat, pc = (n, d) => d ? Math.round(100 * n / d) + "%" : "";
+  const bars = (rows, tot) => cfBars(rows.map(([l, n, col]) => ({ l, v: n, vl: `${n}${tot ? " · " + pc(n, tot) : ""}`, c: col })), { empty: "Nog geen gegevens." });
+  const Q = [["Q1 · jan–mrt", c.q1], ["Q2 · apr–jun", c.q2], ["Q3 · jul–sep", c.q3], ["Q4 · okt–dec", c.q4]];
+  return `<div class="kpis"><div class="kpi"><small>Spelers</small><b>${c.players}</b><span>${who}</span></div>
+      <div class="kpi"><small>Eerste jaarhelft</small><b>${h1}</b><span>${pc(h1, withB) || "–"} · jan-jun</span></div>
+      <div class="kpi"><small>Tweede jaarhelft</small><b>${h2}</b><span>${pc(h2, withB) || "–"} · jul-dec</span></div>
+      <div class="kpi"><small>Rijpheid ingevuld</small><b>${mk}<span class="u"> / ${c.players}</span></b><span>${c.players - mk ? c.players - mk + " nog niet ingeschat" : "iedereen ingeschat"}</span></div></div>
+    <div class="grid2 sec"><div class="panel"><h2>Geboortekwartaal</h2>${bars(Q.map(([l, n]) => [l, n]), withB)}
+        <p class="hint" style="margin-bottom:0">${c.nobirth ? c.nobirth + " speler(s) zonder geboortedatum tellen niet mee. " : ""}Veel spelers in Q1 en weinig in Q4 wijst op het <i>relatieve leeftijdseffect</i>: oudere kinderen binnen een jaargang worden vaker gekozen.</p></div>
+      <div class="panel"><h2>Biologische rijpheid</h2>${bars(MAT.map(([k, l, col]) => [l, c[k], col]), mk)}
+        <p class="hint" style="margin-bottom:0">Inschatting van de trainer ten opzichte van leeftijdsgenoten, ingevuld op de fiche van de speler. Het is geen meting: gebruik het om te begrijpen waarom een speler fysiek voor of achter loopt, niet om spelers in te delen.</p></div></div>`;
 }
 
 route("cijfers", { title: "Cijfers", auth: true, team: true, render: v => {
@@ -140,6 +160,11 @@ route("cijfers", { title: "Cijfers", auth: true, team: true, render: v => {
         <div class="panel"><h2>Per ${mf.periods === 2 ? "helft" : "periode"}</h2>${hasMin ? `<div class="cfper">${per.map(k => { const a = gFor.filter(g => perOf(g) === k).length, b = gAg.filter(g => perOf(g) === k).length, m = Math.max(1, ...per.map(j => Math.max(gFor.filter(g => perOf(g) === j).length, gAg.filter(g => perOf(g) === j).length)));
           return `<div class="cfpc" data-tip="${esc(`<b>${k + 1}e ${mf.periods === 2 ? "helft" : "periode"}</b><br>${a} gescoord · ${b} tegen`)}"><div class="cfpb"><i style="height:${100 * a / m}%;background:${COL_FOR}"></i><i style="height:${100 * b / m}%;background:${COL_AG}"></i></div><small>${k + 1}e</small><span>${a} – ${b}</span></div>`; }).join("")}</div>
           <div class="cflegend"><span><i style="background:${COL_FOR}"></i>Gescoord</span><span><i style="background:${COL_AG}"></i>Tegen</span></div>` : `<p class="muted">Vul de minuut in bij de doelpunten om te zien wanneer ze vallen.</p>`}</div></div>`;
+  }
+  if (CF.tab === "samenstelling") {
+    const ps = S.players.filter(p => p.active !== false);
+    host.innerHTML = `<p class="hint" style="margin-top:0">Altijd van alle actieve spelers van deze ploeg, los van de gekozen periode.</p>` + spHtml(spCount(ps), "in deze ploeg") + `<div class="sec panel"><h2>Wie is wie?</h2><div class="list">${ps.slice().sort((a, b) => (a.birthdate || "9").localeCompare(b.birthdate || "9")).map(p => { const m = MAT.find(x => x[0] === p.maturity);
+      return `<div class="item" data-go="#/speler/${p.id}">${pAv(p)}<span class="main"><b>${esc(pname(p))}</b><small>${p.birthdate ? "Q" + (Math.floor(parse(p.birthdate).getMonth() / 3) + 1) + " · " + (parse(p.birthdate).getMonth() < 6 ? "1e" : "2e") + " jaarhelft" : "geen geboortedatum"}</small></span>${m ? `<span class="pill" style="border-color:${m[2]}">${m[1]}</span>` : `<span class="hint">niet ingeschat</span>`}</div>`; }).join("")}</div></div>`;
   }
   if (CF.tab === "werkpunten") {
     const cnt = k => { const o = {}; rows.forEach(r => Object.entries(r[k]).forEach(([t, n]) => { o[t] = o[t] || { n: 0, who: [] }; o[t].n += n; o[t].who.push(r.name + (n > 1 ? ` (${n}×)` : "")); })); return Object.entries(o).sort((a, b) => b[1].n - a[1].n); };

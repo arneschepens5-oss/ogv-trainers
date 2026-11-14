@@ -113,6 +113,7 @@ function playerForm(p) {
   <label class="f">Voornaam<input name="first_name" required value="${esc(p.first_name)}"></label><label class="f">Achternaam<input name="last_name" value="${esc(p.last_name)}"></label>
   <label class="f">Rugnummer<input name="number" type="number" min="0" inputmode="numeric" value="${p.number ?? ""}"></label><label class="f">Geboortedatum<input name="birthdate" type="date" value="${esc(p.birthdate || "")}"></label>
   <label class="f">Positie<select name="position"><option value="">–</option>${p.position && !POSNUM.some(q => posLabel(q[0]) === p.position) ? `<option selected>${esc(p.position)}</option>` : ""}${POSNUM.map(q => `<option value="${posLabel(q[0])}"${posLabel(q[0]) === p.position ? " selected" : ""}>${q[0]} · ${q[1]}</option>`).join("")}</select></label>
+  <label class="f">Biologische rijpheid<select name="maturity"><option value="">Niet ingeschat</option>${[["vroeg", "Vroeg rijp"], ["normaal", "Normaal rijp"], ["laat", "Laat rijp"]].map(([k, l]) => `<option value="${k}"${p.maturity === k ? " selected" : ""}>${l}</option>`).join("")}</select><small class="hint">Inschatting t.o.v. leeftijdsgenoten, enkel voor de trainers.</small></label>
   <label class="f">Voorkeursvoet<select name="foot">${["","Rechts","Links","Beide"].map(x => `<option${x === (p.foot || "") ? " selected" : ""}>${x}</option>`).join("")}</select></label>
   ${V14() ? contactFields(p) : `<label class="f full">Contact ouders<input name="parent_contact" value="${esc(p.parent_contact || "")}" placeholder="Naam en gsm-nummer"></label>`}
   <label class="f full">Notities<textarea name="notes">${esc(p.notes || "")}</textarea></label>
@@ -128,7 +129,7 @@ function playerForm(p) {
   $("form", d).onsubmit = async e => { e.preventDefault(); const fd = new FormData(e.target), f = Object.fromEntries(fd);
     if (ph.blob && !$("#pfOk", d).checked) { toast("Vink eerst aan dat de ouders toestemming gaven voor de foto."); return; }
     const row = { ...(n ? { id: uid(), team_id: S.team.id } : p), first_name: f.first_name.trim(), last_name: (f.last_name || "").trim(), number: f.number === "" ? null : +f.number, birthdate: f.birthdate || null,
-      position: f.position || null, foot: f.foot || null, parent_contact: f.parent_contact || null, notes: f.notes || null, active: n ? true : fd.has("active"), ...(V14() ? readContacts(f) : {}) };
+      position: f.position || null, foot: f.foot || null, ...(f.maturity || "maturity" in p ? { maturity: f.maturity || null } : {}), parent_contact: f.parent_contact || null, notes: f.notes || null, active: n ? true : fd.has("active"), ...(V14() ? readContacts(f) : {}) };
     await safe(async () => { const oldPhoto = p.photo || null;
       if (ph.blob) { row.photo = await photos.save(row.team_id, row.id, ph.blob); row.photo_ok = true; }
       else if (ph.remove) { row.photo = null; row.photo_ok = null; }

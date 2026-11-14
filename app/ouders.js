@@ -218,6 +218,10 @@ const BOUW = [["", "Alle ploegen"], ["onder", "Onderbouw U6–U9"], ["midden", "
 const ageOfTeam = t => { const m = String(t.category || t.name || "").match(/U\s?(\d{1,2})/i); return m ? +m[1] : null; };
 const bouwOf = t => { const a = ageOfTeam(t); return a == null ? "" : a <= 9 ? "onder" : a <= 13 ? "midden" : "boven"; };
 let DB_F = { since: 28, bouw: "" };
+async function spClubData() {
+  if (mode !== "demo") { const r = await sb.rpc("club_spelersprofiel"); if (r.error) throw r.error; return r.data || []; }
+  const T = await db.list("teams"), P = await db.list("players"); return T.map(t => ({ id: t.id, name: t.name, category: t.category, ...spCount(P.filter(p => p.team_id === t.id && p.active !== false)) }));
+}
 async function dashData(since) {
   if (mode !== "demo") { const r = await sb.rpc("club_dashboard", { since }); if (r.error) throw r.error; return r.data || []; }
   const T = await db.list("teams"), P = await db.list("players"), E = await db.list("events"), A = await db.list("attendance"), EV = await db.list("evaluations"), TT = await db.list("team_trainers"), today = todayIso();
@@ -256,6 +260,12 @@ route("clubdashboard", { title: "Clubdashboard", auth: true, render: async v => 
         ${cell(r.trainings ? r.trainings_att + "/" + r.trainings : null, pct(r.trainings_att, r.trainings) >= 80)}<td>${r.trainings ? r.trainings_plan + "/" + r.trainings : "–"}</td>${cell(r.matches ? r.matches_report + "/" + r.matches : null, r.matches_report >= r.matches)}
         <td>${r.players ? ev + "/" + r.players : "–"}</td><td>${r.next ? dShort(r.next) : "–"}</td></tr>`; }).join("")}</table></div>
       <p class="hint" style="margin-bottom:0">Bijgehouden: trainingen waarbij de aanwezigheden ingevuld zijn. Uitslagen: gespeelde wedstrijden met een score. Groen is in orde, rood vraagt aandacht.</p></div>`;
+  const sp = await spClubData().catch(e => ({ err: e.message || String(e) }));
+  if (Array.isArray(sp)) { const rs = sp.filter(r => !DB_F.bouw || bouwOf(r) === DB_F.bouw).sort((a, b) => (ageOfTeam(a) ?? 99) - (ageOfTeam(b) ?? 99) || a.name.localeCompare(b.name, "nl", { numeric: true })), pc = r => (r.players - r.nobirth) || 1;
+    v.insertAdjacentHTML("beforeend", `<div class="sec"><h2 style="margin-bottom:4px">Samenstelling van de club</h2><p class="hint" style="margin-top:0">Alleen aantallen, geen namen. Geboortekwartaal en jaarhelft komen uit de geboortedatum, rijpheid uit de inschatting van de trainers.</p>${spHtml(spSum(rs), "in " + rs.length + " ploegen")}
+      <div class="panel sec"><h2>Per ploeg</h2><div class="tblwrap"><table class="tbl dbt"><tr><th>Ploeg</th><th>Spelers</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Jan-jun</th><th>Jul-dec</th><th>Vroeg</th><th>Normaal</th><th>Laat</th></tr>
+      ${rs.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${r.players}</td><td>${r.q1}</td><td>${r.q2}</td><td>${r.q3}</td><td>${r.q4}</td><td>${r.q1 + r.q2}</td><td>${r.q3 + r.q4}</td><td>${r.vroeg || "–"}</td><td>${r.normaal || "–"}</td><td>${r.laat || "–"}</td></tr>`).join("")}</table></div></div></div>`); }
+  else v.insertAdjacentHTML("beforeend", `<div class="share sec">${IC.eye}<div><b style="color:var(--ink)">Samenstelling nog niet beschikbaar</b><br>Voer <b>supabase-rijpheid-v41.sql</b> uit in Supabase.</div></div>`);
   $$("[data-sn]", v).forEach(b => b.onclick = () => { DB_F.since = +b.dataset.sn; render(); });
   $("#dbbouw").onchange = e => { DB_F.bouw = e.target.value; render(); };
   $("#dbcsv").onclick = () => download("clubdashboard-" + todayIso() + ".csv", "﻿" + [["Ploeg", "Trainers", "Spelers", "Aanwezigheid %", "Trainingen", "Met aanwezigheden", "Met plan", "Wedstrijden", "Met uitslag", "Volgende"].join(";"),
