@@ -98,7 +98,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const totMin = Math.round(mRows.reduce((t, x) => t + (x.a.minutes || 0), 0));
   const matchPane = `<div class="sec" data-t="wedstrijden"><div class="dkpis"><div><small>Wedstrijden</small><b>${mRows.length}</b></div><div><small>Uitslagen</small><b>${W}-${G}-${L}</b><span>gewonnen · gelijk · verloren</span></div><div><small>Speeltijd</small><b>${totMin}</b><span>minuten</span></div><div><small>Goals · assists</small><b>${s.goals} · ${s.assists}</b></div><div><small>Gem. cijfer</small><b>${f1(s.rating)}</b></div></div>
     ${mRows.length ? `<div class="dmlist">${mRows.map(({ e, a }) => { const r = resOf(e), tg = a.tags || [], st = (a.strengths || []).filter(t => t !== "Kapitein");
-      return `<details class="dmatch"><summary><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
+      return `<details class="dmatch"><summary><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>${matchCrests(e)}
         <span class="main"><b>${esc(e.opponent || "Wedstrijd")}</b><small>${esc([e.home === false ? "Uit" : "Thuis", groupOf(e), a.minutes != null ? Math.round(a.minutes) + " min" : "", a.goals ? a.goals + (a.goals === 1 ? " goal" : " goals") : "", a.assists ? a.assists + (a.assists === 1 ? " assist" : " assists") : ""].filter(Boolean).join(" · "))}</small></span>
         ${e.report?.motm === p.id ? '<span class="pill w dmx">Man v/d match</span>' : ""}${r ? `<span class="dmres ${r}">${e.score_for}–${e.score_against}</span>` : ""}
         <span class="dmrate" style="--rc:${a.rating != null ? rateCol(a.rating) : "var(--card3)"}" title="Cijfer voor ${esc(p.first_name)}">${a.rating ?? "–"}</span></summary>

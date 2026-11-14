@@ -1793,3 +1793,13 @@ body.authpage .shell{display:block}
 .evcard .gb .bar{height:7px;border-radius:4px}
 .evcard .ft{padding-top:10px;border-top:1px solid var(--line)}
 .evcard .gb .bar{width:auto!important;margin:0!important;display:block}
+
+/* v107 logo's bij elke wedstrijd */
+.mcr{display:inline-flex;align-items:center;flex:none;margin-right:2px}.mcr .lcrest+.lcrest{margin-left:-8px}
+.mcr .lcrest{box-shadow:0 0 0 2px var(--card)}
+.lcrest.xs{width:18px;height:18px;display:inline-grid;vertical-align:-4px;margin-right:5px;box-shadow:none}.lcrest.xs>b{font-size:8px}.lcrest.xs img{inset:2px;width:calc(100% - 4px);height:calc(100% - 4px)}
+.lcrest.md{width:58px;height:58px;margin:0 auto 8px}.lcrest.md>b{font-size:18px}.lcrest.md.us .ogvlogo,.lcrest.md.us .ogvlogo img,.lcrest.md.us .ogvlogo svg{height:42px}
+.score .side-t{display:flex;flex-direction:column;align-items:center}
+.dmatch summary .mcr{margin-left:-2px}
+@media (max-width:560px){.item .mcr .lcrest.sm{width:28px;height:28px}.item .mcr .lcrest.sm.us .ogvlogo,.item .mcr .lcrest.sm.us .ogvlogo img{height:20px}}
+.score .side-t b{max-width:100%}

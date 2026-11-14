@@ -181,6 +181,10 @@ const logoKey = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u
 const oppLogo = name => { const k = logoKey(name); return k ? (S.logos || []).find(x => x.key === k)?.url || null : null; };
 const oppIni = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO|KVC|KSV)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 const crestThem = (name, cls = "") => { const u = oppLogo(name); return `<span class="lcrest ${cls}" data-logo="${esc(name || "")}" title="${esc(name || "Tegenstander")}">${u ? `<img src="${esc(u)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<b>${esc(oppIni(name))}</b></span>`; };
+/* beide logo's van een wedstrijd, thuisploeg eerst */
+const matchCrests = (e, cls = "") => e?.type === "wedstrijd" || e?.opponent ? `<span class="mcr ${cls}">${e.home === false ? crestThem(e.opponent, "sm") + crestUs("sm") : crestUs("sm") + crestThem(e.opponent, "sm")}</span>` : "";
+/* tik op het logo van een tegenstander (overal in de app): logo aanpassen in plaats van de wedstrijd te openen */
+document.addEventListener("click", ev => { const c = ev.target.closest?.("[data-logo]"); if (!c || !document.getElementById("app")?.contains(c)) return; ev.preventDefault(); ev.stopPropagation(); logoForm(c.dataset.logo); }, true);
 const crestUs = (cls = "") => `<span class="lcrest us ${cls}">${LOGO("crest")}</span>`;
 async function logoForm(name, done) {
   if (S.logos === null) { toast("Logo's werken zodra de beheerder supabase-diplomas-v45.sql uitvoert."); return; }

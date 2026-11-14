@@ -52,13 +52,13 @@ function evItem(e) {
   const as = S.att.filter(a => a.event_id === e.id), inn = as.filter(a => a.status === "aanwezig" || a.status === "te laat").length, r = res(e);
   const right = e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast</span>` : e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
     : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : ((rs => rs && e.date >= todayIso() ? `<b style="color:var(--ok)">${rs.ja} komen</b>${rs.nee ? rs.nee + " niet · " : ""}${rs.open} open` : "")(rsvpSummary(e)) || (e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : ""));
-  return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
+  return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>${e.type === "wedstrijd" ? matchCrests(e) : ""}
     <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, clubShort()) : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span>${e.series ? ` <span class="pill" title="Ingepland door de club">Vast</span>` : ""}${e.cancelled ? ` <span class="pill loss">Afgelast</span>` : ""}</b>
     <small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.theme ? " · " + esc(e.theme) : e.location ? " · " + esc(e.location) : ""}</small></span><span class="val">${right}</span></div>`;
 }
 function clubItem(e) {
   const r = res(e), tn = teamName(e.team_id);
-  return `<div class="item" data-go="#/verslag/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
+  return `<div class="item" data-go="#/verslag/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>${matchCrests(e)}
     <span class="main"><b>${matchTitle(e, tn)}</b><small>${esc(teamLbl(S.teams.find(t => t.id === e.team_id)))} · ${dShort(e.date)}${e.report?.goals?.length ? " · " + e.report.goals.filter(g => g.side === "for" && g.name).map(g => esc(g.name.split(" ")[0])).join(", ") : ""}</small></span>
     <span class="val">${r ? `<b>${e.home === false ? e.score_against + " - " + e.score_for : e.score_for + " - " + e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>` : `<b>–</b>`}</span></div>`;
 }
@@ -74,7 +74,7 @@ route("ploeg", { title: "Mijn ploeg", auth: true, team: true, render: v => {
   const best = rows.filter(r => r.rating).sort((a, b) => b.rating - a.rating).slice(0, 3);
   const lastM = [...ms].reverse()[0];
   v.innerHTML = head(esc(S.team.name), `${active().length} spelers · ${esc(S.team.format || "")} · seizoen ${esc(S.team.season || "")}`, `<a class="btn ghost" href="#/ploeg-instellingen">${IC.gear}Ploeg en trainers</a>`) +
-  (next ? `<div class="panel hl"><div class="row nextact"><span class="date"><b>${dDay(next.date)}</b><small>${dMon(next.date)}</small></span>
+  (next ? `<div class="panel hl"><div class="row nextact"><span class="date"><b>${dDay(next.date)}</b><small>${dMon(next.date)}</small></span>${next.type === "wedstrijd" ? matchCrests(next) : ""}
     <span class="nxt"><small class="muted">${next.date === t ? "Vandaag" : "Volgende activiteit"}</small><b style="display:block;font-size:19px">${next.type === "wedstrijd" ? "Wedstrijd: " + matchTitle(next, clubShort()) : "Training" + (next.theme ? ": " + esc(next.theme) : "")}</b>
     <small class="muted">${dLong(next.date)}${next.start_time ? ", " + tm(next.start_time) : ""}${next.location ? " · " + esc(next.location) : ""}</small></span>
     <a class="btn" href="#/activiteit/${next.id}">${next.type === "wedstrijd" ? "Voorbereiden" : "Openen"}</a>${next.type === "wedstrijd" ? `<a class="btn ghost" href="#/live/${next.id}">${IC.mic}Live</a>` : ""}</div></div>`
@@ -167,7 +167,7 @@ route("speler", { title: "Speler", auth: true, team: true, render: (v, id) => {
     ${gs.length ? `<div class="list" style="margin-top:10px">${gs.map(g => `<div class="item static"><span class="main"><b style="white-space:normal">${esc(g.text)}</b><small>${esc([g.area, g.term ? g.term + "e termijn" : ""].filter(Boolean).join(" · "))}</small></span>
       <select data-gs="${g.id}" style="width:auto;padding:6px 8px;font-size:14px">${["bezig","gehaald","gestopt"].map(x => `<option${x === g.status ? " selected" : ""}>${x}</option>`).join("")}</select></div>`).join("")}</div>`
      : `<p class="hint">Zet een of twee concrete doelen per periode, bijvoorbeeld "met links leren passen over 10 meter".</p>`}</div></div>
-  ${ms.length ? `<div class="sec"><h2>Wedstrijden</h2><div class="list">${ms.map(({ e, a }) => `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
+  ${ms.length ? `<div class="sec"><h2>Wedstrijden</h2><div class="list">${ms.map(({ e, a }) => `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>${matchCrests(e)}
     <span class="main"><b>${e.report?.squad ? `<span class="pill g">${esc(e.report.squad)}</span> ` : ""}${esc(e.opponent || "Wedstrijd")}${e.report?.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b><small>${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · "))}</small>${a.note ? `<span class="notefull">${esc(a.note)}</span>` : ""}${a.rated_by ? `<span class="rby">door ${esc(a.rated_by)}</span>` : ""}</span><span class="val"><b>${a.rating ?? "–"}</b>cijfer</span></div>`).join("")}</div></div>` : ""}
   ${contactsPanel(p)}${historyHtml(p)}`;
   $("#editP").onclick = () => playerForm(p); $("#addG").onclick = () => goalForm(p);
