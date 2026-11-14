@@ -1826,3 +1826,11 @@ body.authpage .shell{display:block}
 a.ci-row:hover{background:var(--card3)}
 .ratebtn{border:1px dashed var(--line2);background:transparent;color:var(--ink);font:inherit;font-size:13.5px;font-weight:700;padding:4px 9px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .ratebtn small{color:var(--dim);font-weight:600;margin-left:4px}.ratebtn.own{border-style:solid;border-color:var(--yellow)}.ratebtn:hover{border-color:var(--yellow)}
+
+/* v112 dialogen zonder form: zelfde ruimte als de andere vensters */
+dialog > .gids,dialog > .payd,dialog > div:not(.dlg):not(.dlgv):not(.exf):not([class^="ex"]){padding:22px}
+.payd{display:flex;flex-direction:column;gap:12px}.payd .list{margin:0}
+.gids{display:flex;flex-direction:column}
+.gids .gstep{font-size:12.5px;font-weight:800;color:var(--muted);margin-top:14px}
+@media (max-width:600px){dialog > .gids,dialog > .payd,dialog > div:not(.dlg):not(.dlgv):not(.exf):not([class^="ex"]),dialog form,dialog .dlg{padding:18px}
+  .gids h2{font-size:22px}.gl li{padding:10px 12px}}

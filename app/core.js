@@ -308,15 +308,15 @@ async function safe(fn, ok) { try { const r = await fn(); if (ok) toast(ok); ret
 function debounce(fn, ms = 600) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 /* startgids: drie korte schermen bij de eerste aanmelding, later terug te openen via "Startgids" */
 function gidsSeen(v) { try { if (v) localStorage.setItem("ogv-gids-v1", "1"); return localStorage.getItem("ogv-gids-v1") === "1"; } catch (e) { return true; } }
-const GIDS = [
+const GIDS_F = () => [
   ["Welkom bij " + APPNAME(), "Alles voor je ploeg op één plek: kalender, spelers, wedstrijden en evaluaties.", [["Kies je ploeg", "Bovenaan in het menu. Train je meerdere ploegen, dan wissel je daar."], ["Je spelers staan er al", "Overgezet uit PSD. Kijk bij Spelers of alles klopt."], ["Ouders koppelen", "Bij Spelers deel je per kind een persoonlijke link. Ouders melden daarmee af en vullen hun gegevens in, zonder account."]]],
   ["Elke week", "Dit gebruik je het meest.", [["Kalender", "Trainingen en wedstrijden. Open een activiteit om aanwezigheden aan te duiden."], ["Wedstrijdblad", "Opstelling, wissels, doelpunten en per speler een cijfer en notitie."], ["Trainingen maken", "Bouw je training uit de clubbibliotheek, of start van een sjabloon."]]],
   ["Hulp nodig?", "Je vindt alles in het menu links (op de gsm onder Meer).", [["Mijn map", "Je eigen opslag, spelprincipes en het mixschema."], ["Probleem melden", "Iets werkt niet of mist er iets? Meld het meteen, de beheerder ziet het."], ["Weergave", "Kies licht of donker, onderaan het menu."]]]
 ];
 function startGids(i = 0) {
-  const [h, sub, items] = GIDS[i], last = i === GIDS.length - 1;
+  const GIDS = GIDS_F(), [h, sub, items] = GIDS[i], last = i === GIDS.length - 1;
   const d = dialog(`<div class="gids"><div class="gdots" aria-label="Stap ${i + 1} van ${GIDS.length}">${GIDS.map((_, j) => `<i${j === i ? ' class="on"' : ""}></i>`).join("")}</div>
-    <h2>${h}</h2><p class="sub">${sub}</p><ul class="gl">${items.map(([b, t]) => `<li><b>${b}</b><span>${t}</span></li>`).join("")}</ul>
+    <span class="gstep">Stap ${i + 1} van ${GIDS.length}</span><h2>${h}</h2><p class="sub">${sub}</p><ul class="gl">${items.map(([b, t]) => `<li><b>${b}</b><span>${t}</span></li>`).join("")}</ul>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:18px">${i ? `<button class="btn ghost" type="button" data-prev>Vorige</button>` : `<button class="btn ghost" type="button" data-skip>Overslaan</button>`}<button class="btn" type="button" data-next>${last ? "Aan de slag" : "Volgende"}</button></div></div>`, "gidsdlg");
   const done = () => { gidsSeen(true); d.close(); };
   d.onclose = () => gidsSeen(true);
