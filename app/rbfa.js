@@ -74,6 +74,7 @@ let rbfaBusy = false;
 async function rbfaLogos(cal) {
   if (typeof logoKey !== "function") return 0; let n = 0;
   for (const m of cal || []) for (const t0 of [m.homeTeam, m.awayTeam]) { const u = t0?.logo, nm = rbfaName(t0?.name), k = logoKey(nm);
+    if (k && t0?.clubId && String(t0.clubId) !== rbfaClub() && CLUBID_CACHE[k] !== String(t0.clubId)) { CLUBID_CACHE[k] = String(t0.clubId); clubIdSave(); }
     if (!u || !k || String(t0.clubId) === rbfaClub() || !/^https:\/\//.test(u)) continue;
     if (LOGO_CACHE[k] !== u) { LOGO_CACHE[k] = u; n++; }
     if (S.logos && !S.logos.some(x => x.key === k)) { const row = { club_id: CLUB.id, key: k, name: nm, url: u }; S.logos.push(row); try { await db.save("club_logos", row); } catch (e) {} } }
@@ -83,7 +84,7 @@ async function rbfaLogos(cal) {
 let logoBusy = false;
 async function rbfaLogoRefresh(force) {
   if (logoBusy || mode === "demo" || !rbfaClub()) return; let last = 0; try { last = +localStorage.getItem("ogv-logos-at") || 0; } catch (e) {}
-  if (!force && Date.now() - last < 864e5 && Object.keys(LOGO_CACHE).length) return;
+  if (!force && Date.now() - last < 864e5 && Object.keys(LOGO_CACHE).length && Object.keys(CLUBID_CACHE).length) return;
   const ids = [...new Set((S.teams || []).flatMap(t => rbfaLinks(t).map(l => l.id)))]; if (!ids.length) return; logoBusy = true; let n = 0;
   try { for (let i = 0; i < ids.length; i += 4) { const cals = await Promise.all(ids.slice(i, i + 4).map(id => rbfaCalendar(id).catch(() => []))); for (const c of cals) n += await rbfaLogos(c); }
     try { localStorage.setItem("ogv-logos-at", String(Date.now())); } catch (e) {}
@@ -134,3 +135,7 @@ function matchLinks(e) {
     ${e.rbfa_id ? `<a class="btn ghost small" href="${rbfaMatchUrl(e.rbfa_id)}" target="_blank" rel="noopener">${IC.out}Bekijk op RBFA</a>` : ""}
     ${e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast volgens RBFA</span>` : ""}</div>`;
 }
+
+/* algemene info van een club bij RBFA (adres, terrein, website, clubkleuren) */
+const rbfaClubInfo = id => rbfaQ(`query($clubId: ID!, $language: Language!) { clubInfo(clubId: $clubId) { id name address { streetName postalCode localityName } website registrationNumber
+  venue { name streetName streetNumber postalCode localityName } kits(clubId: $clubId, language: $language) { kitNumber garments { type primaryColour(language: $language) secondaryColour(language: $language) } } } }`, { clubId: String(id), language: "nl" }).then(d => d.clubInfo);

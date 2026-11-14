@@ -1819,3 +1819,8 @@ body.authpage .shell{display:block}
 @media (max-width:600px){.prvr>div{grid-template-columns:1fr;gap:2px}}
 .mned{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}.mned fieldset{border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:0}.mned legend{font-weight:800;font-size:13px;color:var(--muted);padding:0 4px}.mned .check{margin:4px 0}
 .prvt td,.prvt th{text-align:left!important}
+.ci-head{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.ci-rows{display:grid;gap:6px;margin-bottom:6px}
+.ci-row{display:grid;grid-template-columns:100px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--card2);color:var(--ink);text-decoration:none}
+.ci-row span{font-size:13px;color:var(--muted);font-weight:700}.ci-row b{font-weight:600;overflow-wrap:anywhere}.ci-row em{font-style:normal;font-size:13px;font-weight:800;color:var(--ytext)}
+a.ci-row:hover{background:var(--card3)}

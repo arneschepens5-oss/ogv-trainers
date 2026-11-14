@@ -180,6 +180,8 @@ const pLines = ps => { const L = [["Doelmannen", []], ["Verdedigers", []], ["Mid
 const logoKey = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\b(k|r|fc|vc|kfc|kvv|sk|vv|ksk|kv|sv|fco|kvc|ksv|kac|ac|vk|og|rc|fcv|kv|sc)\b\.?/g, " ").replace(/\b[a-z]\b/g, " ").replace(/\b\d+\b/g, " ").replace(/[^a-z0-9]+/g, "");
 /* logo's die RBFA meegeeft worden ook op dit toestel bewaard, zodat ze meteen verschijnen (ook als de databasetabel nog ontbreekt) */
 const LOGO_LS = "ogv-logos-v1"; let LOGO_CACHE = (() => { try { return JSON.parse(localStorage.getItem(LOGO_LS)) || {}; } catch (e) { return {}; } })();
+let CLUBID_CACHE = (() => { try { return JSON.parse(localStorage.getItem("ogv-clubids-v1")) || {}; } catch (e) { return {}; } })();
+const clubIdSave = () => { try { localStorage.setItem("ogv-clubids-v1", JSON.stringify(CLUBID_CACHE)); } catch (e) {} };
 const logoCacheSave = () => { try { localStorage.setItem(LOGO_LS, JSON.stringify(LOGO_CACHE)); } catch (e) {} };
 const oppLogo = name => { const k = logoKey(name); return k ? (S.logos || []).find(x => x.key === k)?.url || LOGO_CACHE[k] || null : null; };
 const oppIni = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO|KVC|KSV)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
@@ -187,7 +189,30 @@ const crestThem = (name, cls = "") => { const u = oppLogo(name); return `<span c
 /* beide logo's van een wedstrijd, thuisploeg eerst */
 const matchCrests = (e, cls = "") => e?.type === "wedstrijd" || e?.opponent ? `<span class="mcr ${cls}">${e.home === false ? crestThem(e.opponent, "sm") + crestUs("sm") : crestUs("sm") + crestThem(e.opponent, "sm")}</span>` : "";
 /* tik op het logo van een tegenstander (overal in de app): logo aanpassen in plaats van de wedstrijd te openen */
-document.addEventListener("click", ev => { const c = ev.target.closest?.("[data-logo]"); if (!c || !document.getElementById("app")?.contains(c)) return; ev.preventDefault(); ev.stopPropagation(); logoForm(c.dataset.logo); }, true);
+document.addEventListener("click", ev => { const c = ev.target.closest?.("[data-logo]"); if (!c || !document.getElementById("app")?.contains(c)) return; ev.preventDefault(); ev.stopPropagation(); clubInfo(c.dataset.logo); }, true);
+/* tik op een clublogo: algemene info van die club (van RBFA), met een link naar de clubpagina */
+async function clubInfo(name) {
+  const k = logoKey(name), id = CLUBID_CACHE[k], u = oppLogo(name), rb = id ? `https://www.rbfa.be/nl/club/${encodeURIComponent(id)}/info` : `https://www.rbfa.be/nl/zoeken?q=${encodeURIComponent(name || "")}`;
+  const maps = a => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
+  const d = dialog(`<form class="cinfo" onsubmit="return false"><div class="ci-head"><span class="lcrest xl">${u ? `<img src="${esc(u)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<b>${esc(oppIni(name))}</b></span>
+      <div><h2 style="margin:0">${esc(name || "Tegenstander")}</h2><p class="muted" style="margin:2px 0 0" id="ciSub">${id ? "Gegevens laden…" : "Nog niet gekoppeld aan RBFA"}</p></div></div>
+    <div id="ciBody"></div>
+    <div class="row"><button class="link" type="button" id="ciLogo">Logo aanpassen</button><span class="spacer"></span><a class="btn ghost" href="${rb}" target="_blank" rel="noopener">${IC.out}${id ? "Clubpagina op RBFA" : "Zoeken op RBFA"}</a><button class="btn" type="button" data-close>Sluiten</button></div></form>`);
+  $("#ciLogo", d).onclick = () => { d.close(); logoForm(name); };
+  if (!id || typeof rbfaClubInfo !== "function") { $("#ciBody", d).innerHTML = `<p class="hint">De app kent deze club nog niet bij RBFA. Zoek ze op via de knop hieronder.</p>`; return; }
+  try { const c = await rbfaClubInfo(id); if (!c) throw new Error("niet gevonden");
+    const ad = c.address ? [c.address.streetName, [c.address.postalCode, c.address.localityName].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "";
+    const V = c.venue, va = V ? [[V.streetName, V.streetNumber].filter(Boolean).join(" "), [V.postalCode, V.localityName].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "";
+    const kit = (c.kits || []).find(x => x.kitNumber === 1) || (c.kits || [])[0], kc = kit ? [...new Set(kit.garments.flatMap(g => [g.primaryColour, g.secondaryColour]).filter(Boolean))].slice(0, 3) : [];
+    const web = c.website ? (/^https?:/i.test(c.website) ? c.website : "https://" + c.website) : "";
+    $("#ciSub", d).textContent = [c.name !== name ? c.name : "", c.registrationNumber ? "stamnummer " + c.registrationNumber : ""].filter(Boolean).join(" · ") || "RBFA";
+    $("#ciBody", d).innerHTML = `<div class="ci-rows">
+      ${V?.name || va ? `<a class="ci-row" href="${maps((V?.name ? V.name + ", " : "") + va)}" target="_blank" rel="noopener"><span>Terrein</span><b>${esc([V?.name, va].filter(Boolean).join(" · "))}</b><em>Route</em></a>` : ""}
+      ${ad && ad !== va ? `<div class="ci-row"><span>Adres</span><b>${esc(ad)}</b></div>` : ""}
+      ${kc.length ? `<div class="ci-row"><span>Clubkleuren</span><b>${esc(kc.join(", "))}</b></div>` : ""}
+      ${web && /^https?:\/\//i.test(web) ? `<a class="ci-row" href="${esc(web)}" target="_blank" rel="noopener"><span>Website</span><b>${esc(c.website.replace(/^https?:\/\//, ""))}</b><em>Openen</em></a>` : ""}</div>`;
+  } catch (e) { $("#ciSub", d).textContent = "RBFA is nu niet bereikbaar"; $("#ciBody", d).innerHTML = `<p class="hint">Open de clubpagina op RBFA voor adres, terrein en contactpersonen.</p>`; }
+}
 const crestUs = (cls = "") => `<span class="lcrest us ${cls}">${LOGO("crest")}</span>`;
 async function logoForm(name, done) {
   if (S.logos === null) { toast("Logo's werken zodra de beheerder supabase-diplomas-v45.sql uitvoert."); return; }

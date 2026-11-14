@@ -338,7 +338,7 @@ route("live", { title: "Live coachen", auth: true, team: true, render: (v, id) =
           <div class="lvc-mid">${has ? `<span class="lvc-sc ${res}">${home ? sf : sa}<i>–</i>${home ? sa : sf}</span>` : `<span class="lvc-time">${e.start_time ? tm(e.start_time) : "vs"}</span>`}</div>
           <div class="lvc-t">${home ? crestThem(e.opponent) : crestUs()}<b>${home ? opp : tn}</b></div></div>
         <div class="lvc-go">${played ? "Bekijken" : `${IC.mic}Live coachen`}</div></div>`; };
-    v.innerHTML = head("Live coachen", "Kies de wedstrijd. Tijdens de match houd je klok, doelpunten en wissels bij, met de knoppen of met je stem. Tik op een logo om het aan te passen.") +
+    v.innerHTML = head("Live coachen", "Kies de wedstrijd. Tijdens de match houd je klok, doelpunten en wissels bij, met de knoppen of met je stem. Tik op een logo voor info over de club.") +
       (up.length ? `<div class="lvgrid">${up.map(e => card(e, false)).join("")}</div>`
        : `<div class="empty"><b>Geen wedstrijd gepland</b>Zet je wedstrijd eerst in de kalender.<br><a class="btn" href="#/kalender">Naar de kalender</a></div>`) +
       (pastM.length ? `<div class="sec"><h2>Gespeeld</h2><div class="lvgrid">${pastM.map(e => card(e, true)).join("")}</div></div>` : "");
