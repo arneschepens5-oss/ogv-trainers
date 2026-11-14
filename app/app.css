@@ -1547,7 +1547,7 @@ body.authpage .shell{display:block}
 .dtabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--yellow)}
 .dtabs button:hover{color:var(--ink)}
 @media screen{
-.dos:not([data-tab="overzicht"]) [data-t="overzicht"],.dos:not([data-tab="persoonlijk"]) [data-t="persoonlijk"],.dos:not([data-tab="trainingen"]) [data-t="trainingen"],
+.dos:not([data-tab="overzicht"]) [data-t="overzicht"],.dos:not([data-tab="persoonlijk"]) [data-t="persoonlijk"],.dos:not([data-tab="groei"]) [data-t="groei"],.dos:not([data-tab="trainingen"]) [data-t="trainingen"],
 .dos:not([data-tab="wedstrijden"]) [data-t="wedstrijden"],.dos:not([data-tab="evaluaties"]) [data-t="evaluaties"],.dos:not([data-tab="scouting"]) [data-t="scouting"]{display:none}}
 .dospers{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
 .dosphoto{width:160px;height:160px;border-radius:18px;object-fit:cover;background:var(--card2)}

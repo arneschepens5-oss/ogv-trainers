@@ -17,7 +17,7 @@ function dosChart(rows) {
       ${n <= 16 ? `<text x="${xs(i)}" y="${H - 6}" text-anchor="middle" font-size="9.5" style="fill:var(--dim)">${dDay(x.e.date)}/${parse(x.e.date).getMonth() + 1}</text>` : ""}`).join("")}</svg>`;
 }
 
-const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
+const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["groei", "Groei"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
 let dosTab = "overzicht";
 /* scoutingprofiel van een eigen speler: dezelfde 5 onderdelen en posities als de scoutingdatabase, zodat eigen en externe spelers vergelijkbaar zijn */
 const SC_POT = ["Beperkt", "Gemiddeld", "Groot", "Zeer groot"];
@@ -190,12 +190,14 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     <div class="doslines print-only-lines"><b>Afspraken uit het gesprek</b><i></i><i></i><i></i><i></i></div></div>
 
   ${matchPane}
-  ${persoonlijkPane}${trainingPane}${scoutPane}
+  ${persoonlijkPane}${groeiPane(p)}${trainingPane}${scoutPane}
   </div>`;
   $("#dosG").onclick = () => goalForm(p);
   $$(".dtabs [data-tab]", v).forEach(b => b.onclick = () => { dosTab = b.dataset.tab; $(".dos", v).dataset.tab = dosTab; $$(".dtabs [data-tab]", v).forEach(x => x.setAttribute("aria-selected", x === b)); });
   if ($("#dosEdit")) $("#dosEdit").onclick = () => playerForm(p);
   $("#spEdit").onclick = () => scProfForm(p);
+  if ($("#gAdd")) $("#gAdd").onclick = () => groeiForm(p);
+  $$("[data-gE]", v).forEach(b => b.onclick = () => groeiForm(p, S.pmeas.find(x => x.id === b.dataset.gE)));
   if ($("#scAdd")) $("#scAdd").onclick = () => pScoutForm(p);
   $$("[data-scE]", v).forEach(b => b.onclick = () => pScoutForm(p, S.pscout.find(x => x.id === b.dataset.scE)));
 } });
