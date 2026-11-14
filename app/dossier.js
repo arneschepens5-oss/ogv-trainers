@@ -110,14 +110,18 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
       : `<p class="hint">Nog geen rapporten. Voeg er een toe na een training of wedstrijd.</p>`}</div>`;
 
   /* startblad: positie, leeftijd, potentieel en wat de trainers verder over de speler weten */
-  const sp = scProf(p), spPos = [sp.p1, sp.p2, sp.p3].filter(Boolean), spAvg = scAvg(sp), has = spPos.length || spAvg != null || sp.pot || sp.sterk || sp.werk || sp.ctx || sp.len;
-  const fact = (k, val) => val ? `<div class="dosid"><span>${k}</span><b>${esc(val)}</b></div>` : "";
-  const startblad = `<div class="sec panel" data-t="overzicht"><div class="row" style="margin-bottom:10px"><h2 style="margin:0;margin-right:auto">Scoutingprofiel</h2><button class="btn small noprint${has ? " ghost" : ""}" type="button" id="spEdit">${has ? "Profiel aanpassen" : "Profiel invullen"}</button></div>
-    <div class="spgrid"><div class="pitchpick sm" aria-label="Positie op het veld">${Object.entries(SC_POS).map(([n, [ab, x, y]]) => { const i = spPos.indexOf(n); return `<span class="pp ${i >= 0 ? "s" + (i + 1) : ""}" style="left:${x}%;top:${y}%" title="${esc(n)}">${ab}</span>`; }).join("")}</div>
-     <div class="spmain"><div class="dosfacts">${fact("Hoofdpositie", sp.p1 || p.position)}${fact("Alternatieven", spPos.slice(1).join(", "))}${fact("Leeftijd", age != null ? age + " jaar" : "")}${fact("Voorkeursvoet", p.foot)}${fact("Lengte", sp.len ? sp.len + " cm" : "")}${fact("Potentieel", sp.pot)}${fact("Algemeen cijfer", spAvg != null ? f1(spAvg) + " op 10" : "")}</div>
+  const sp = scProf(p), has = [sp.p1, sp.p2, sp.p3, sp.pot, sp.sterk, sp.werk, sp.ctx, sp.len].some(Boolean) || scAvg(sp) != null;
+  const fichePos = Object.keys(SC_POS).find(k => String(p.position || "").toLowerCase().includes(k.toLowerCase()));
+  const spPos = [sp.p1, sp.p2, sp.p3].filter(Boolean), pitchPos = spPos.length ? spPos : fichePos ? [fichePos] : [], spAvg = scAvg(sp);
+  const big = (k, val, sub) => `<div class="spk"><small>${k}</small><b>${val ? esc(val) : "–"}</b>${sub ? `<span>${esc(sub)}</span>` : ""}</div>`;
+  const note = (cls, t, txt) => txt ? `<div class="spn ${cls}"><h3>${t}</h3><p>${esc(txt)}</p></div>` : "";
+  const startblad = `<div class="sec panel startblad" data-t="overzicht"><div class="row" style="margin-bottom:14px"><h2 style="margin:0;margin-right:auto">Scoutingprofiel</h2><button class="btn small noprint${has ? " ghost" : ""}" type="button" id="spEdit">${has ? "Profiel aanpassen" : "Profiel invullen"}</button></div>
+    <div class="spgrid"><div class="pitchpick sm" role="img" aria-label="Positie op het veld: ${esc(pitchPos.join(", ") || "nog niet ingevuld")}">${Object.entries(SC_POS).map(([n, [ab, x, y]]) => { const i = pitchPos.indexOf(n); return `<span class="pp ${i >= 0 ? "s" + (i + 1) : ""}" style="left:${x}%;top:${y}%" title="${esc(n)}">${ab}</span>`; }).join("")}</div>
+     <div class="spmain">
+      <div class="spks">${big("Hoofdpositie", sp.p1 || fichePos || String(p.position || "").replace(/^\d+\s*·\s*/, ""), spPos.length > 1 ? "ook " + spPos.slice(1).join(", ").toLowerCase() : "")}${big("Leeftijd", age != null ? age + " jaar" : "", p.foot ? p.foot + "voetig" : "")}${big("Potentieel", sp.pot, sp.len ? sp.len + " cm" : "")}${big("Algemeen", spAvg != null ? f1(spAvg) : "", spAvg != null ? "op 10" : "")}</div>
       ${SC_COMP.some((c, i) => scNum(sp["k" + i])) ? `<div class="spbars">${SC_COMP.map((c, i) => { const val = sp["k" + i]; return `<div class="mbar"><span>${SC_SH[i]}</span><span class="b"><i style="width:${scNum(val) ? val * 10 : 0}%;background:${scNum(val) ? scCol(val) : "transparent"}"></i></span><b style="color:var(--ink);text-align:right">${scNum(val) ? f1(val) : "–"}</b></div>`; }).join("")}</div>` : ""}</div></div>
-    ${sp.sterk ? `<h3 class="dosh">Sterktes</h3><p style="margin:0;white-space:pre-line">${esc(sp.sterk)}</p>` : ""}${sp.werk ? `<h3 class="dosh">Werkpunten</h3><p style="margin:0;white-space:pre-line">${esc(sp.werk)}</p>` : ""}${sp.ctx ? `<h3 class="dosh">Extra info</h3><p style="margin:0;white-space:pre-line">${esc(sp.ctx)}</p>` : ""}
-    ${has ? `<p class="hint" style="margin:10px 0 0">Enkel zichtbaar voor de trainers van deze ploeg${sp.upd ? " · bijgewerkt op " + esc(dShort(sp.upd)) : ""}${sp.by ? " door " + esc(sp.by) : ""}.</p>` : `<p class="hint" style="margin:0">Nog niet ingevuld. Noteer positie, potentieel, sterktes en wat je verder over de speler weet.</p>`}</div>`;
+    ${sp.sterk || sp.werk || sp.ctx ? `<div class="spnotes">${note("good", "Sterktes", sp.sterk)}${note("work", "Werkpunten", sp.werk)}${note("", "Extra info", sp.ctx)}</div>` : ""}
+    <p class="hint" style="margin:14px 0 0">${has ? `Enkel zichtbaar voor de trainers van deze ploeg${sp.upd ? " · bijgewerkt op " + esc(dShort(sp.upd)) : ""}${sp.by ? " door " + esc(sp.by) : ""}.` : "Nog niet ingevuld. Noteer positie, potentieel, sterktes en wat je verder over de speler weet."}</p></div>`;
 
   v.innerHTML = `<div class="row noprint" style="margin-bottom:10px;gap:8px">${backLink("#/dossier", "Alle dossiers")}<span class="spacer"></span>
       ${prevP ? `<a class="btn ghost small" href="#/dossier/${prevP.id}" title="${esc(pname(prevP))}">‹ Vorige</a>` : ""}${nextP ? `<a class="btn ghost small" href="#/dossier/${nextP.id}" title="${esc(pname(nextP))}">Volgende ›</a>` : ""}
@@ -133,7 +137,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
 
   <div class="dtabs noprint" role="tablist" aria-label="Onderdelen van het dossier">${DOS_TABS.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === dosTab}">${l}</button>`).join("")}</div>
   ${startblad}
-  <div class="grid2 sec" data-t="overzicht">
+  <details class="sec dmore" data-t="overzicht"><summary>Meer statistieken: groepjes, werkpunten en cijfers</summary><div class="grid2 sec">
     <div class="panel"><h2>Per groepje en per trainer</h2>
       ${bySquad.some(([k]) => k !== "Zonder groepje") ? `<div class="dosrow">${bySquad.map(([k, c]) => `<span class="pill g">${esc(k)}: ${c}×</span>`).join(" ")}</div>` : rows.length ? "" : `<p class="hint">Nog geen wedstrijden.</p>`}
       ${byRater.length ? `<div class="list" style="margin-top:10px">${byRater.map(x => `<div class="item static"><span class="main"><b>${esc(x.r)}</b><small>${x.n} ${x.n === 1 ? "wedstrijd" : "wedstrijden"} beoordeeld</small></span><span class="val"><b>${f1(x.avg)}</b>gem. cijfer</span></div>`).join("")}</div>` : ""}
@@ -143,7 +147,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
       <h3 class="dosh">Werkpunten uit wedstrijden</h3>${work.length ? `<div class="chips">${work.slice(0, 8).map(([k, c]) => `<span class="tag" aria-pressed="true">${esc(k)} · ${c}×</span>`).join("")}</div>` : `<p class="hint">Nog geen werkpunten aangeduid bij wedstrijden.</p>`}
       <h3 class="dosh">Sterke punten uit wedstrijden</h3>${str.length ? `<div class="chips">${str.slice(0, 8).map(([k, c]) => `<span class="tag good" aria-pressed="true">${esc(k)} · ${c}×</span>`).join("")}</div>` : `<p class="hint">Nog geen sterke punten aangeduid bij wedstrijden.</p>`}</div></div>
 
-  ${dosChart(rows) ? `<div class="sec panel" data-t="overzicht"><h2>Verloop wedstrijdcijfer</h2>${dosChart(rows)}<p class="hint" style="margin:6px 0 0">Eén punt per speeldag. Ga met de muis over een punt voor de tegenstander en wie quoteerde.</p></div>` : ""}
+  ${dosChart(rows) ? `<div class="sec panel"><h2>Verloop wedstrijdcijfer</h2>${dosChart(rows)}<p class="hint" style="margin:6px 0 0">Eén punt per speeldag. Ga met de muis over een punt voor de tegenstander en wie quoteerde.</p></div>` : ""}</details>
 
   <div class="sec panel" data-t="evaluaties"><h2>Evaluaties</h2>
     ${evMs.length ? `<div class="tblwrap"><table class="dostbl"><thead><tr><th>Onderdeel</th>${evMs.map(m => `<th>${esc(m.kort)}</th>`).join("")}</tr></thead><tbody>
@@ -177,3 +181,6 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   if ($("#scAdd")) $("#scAdd").onclick = () => pScoutForm(p);
   $$("[data-scE]", v).forEach(b => b.onclick = () => pScoutForm(p, S.pscout.find(x => x.id === b.dataset.scE)));
 } });
+
+/* bij afdrukken staan ook de uitklapbare statistieken open */
+window.addEventListener("beforeprint", () => document.querySelectorAll("details.dmore").forEach(d => d.open = true));
