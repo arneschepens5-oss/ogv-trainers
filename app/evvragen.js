@@ -27,8 +27,9 @@ function csEvalEditorsHtml(ev) {
     <h2>Zelfevaluatie door de spelers</h2>
     <label class="csmod" style="max-width:640px"><span><b>Spelers evalueren zichzelf</b><small>Per moment zet de trainer dit open voor zijn ploeg. Spelers of ouders vullen de vragen in via hun persoonlijke link in de app. Zo zie je naast jouw score wat de speler zelf vindt.</small></span><span class="tgl"><input type="checkbox" name="selfon"${sf.on === true ? " checked" : ""}><span></span></span></label>
     <div id="csself"${sf.on === true ? "" : " hidden"}>
+      <p class="hint"><b>Deze vragen staan los van de scores van de trainer.</b> Schrijf ze helemaal zelf, in kindertaal, en kies per vraag een schaal of een open antwoord. Koppelen aan een onderdeel van de trainer is optioneel en dient enkel om beide scores naast elkaar te tonen.</p>
       <p class="hint">Voor kinderen tot 9 jaar raden we de korte lijst met smileys aan: ouders vullen die samen met hun kind in. Vanaf 10 jaar kan een speler dit zelf met cijfers.</p>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">${Object.entries(EV_SELF_PRESETS).map(([k, p]) => `<button class="btn ghost small" type="button" data-sp="${k}">${esc(p.naam)}</button>`).join("")}</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">${Object.entries(EV_SELF_PRESETS).map(([k, p]) => `<button class="btn ghost small" type="button" data-sp="${k}">${esc(p.naam)}</button>`).join("")}<button class="btn ghost small" type="button" id="csclrq">Leeg beginnen</button></div>
       <div class="row" style="gap:18px;flex-wrap:wrap;margin-bottom:8px">
         <label class="chkl"><input type="radio" name="sscale" value="smiley"${sf.scale === "cijfers" ? "" : " checked"}><span>Smileys <span class="hint">${[1, 2, 3, 4, 5].map(n => EV_FACES[n]).join(" ")}</span></span></label>
         <label class="chkl"><input type="radio" name="sscale" value="cijfers"${sf.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label></div>
@@ -55,6 +56,7 @@ function csEvalEditorsBind(f) {
   $("#csaddq", f).onclick = () => add(sl, csSelfRow({ type: "schaal" }, names()));
   f.selfon.onchange = () => { self.hidden = !f.selfon.checked; };
   $$("[data-tpl]", f).forEach(b => b.onclick = () => { crit.innerHTML = (b.dataset.tpl === "kort" ? EV_TEMPLATE_SHORT : EV_TEMPLATE_DEFAULT).map(csCritRow).join(""); refresh(); });
+  $("#csclrq", f).onclick = () => { if ($$(".csr", sl).length && !confirm("Alle vragen van de zelfevaluatie worden gewist. Doorgaan?")) return; sl.innerHTML = ""; add(sl, csSelfRow({ type: "schaal" }, names())); };
   $$("[data-sp]", f).forEach(b => b.onclick = () => { const p = EV_SELF_PRESETS[b.dataset.sp];
     if ($$(".csr", sl).length && !confirm("De vragen van de zelfevaluatie worden vervangen door deze lijst. Doorgaan?")) return;
     f.sscale.value = p.scale; f.selfintro.value = p.intro; sl.innerHTML = p.questions.map(q => csSelfRow({ ...q, link: names().includes(q.link) ? q.link : "" }, names())).join(""); });
