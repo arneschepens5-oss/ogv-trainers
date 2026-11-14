@@ -46,7 +46,7 @@ function applyClubTheme() {
   const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
 }
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], trainer_profiles:["user_id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -154,6 +154,13 @@ const photos = {
     const path = `${teamId}/${playerId}-${uid().slice(0, 8)}.jpg`;
     const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: false });
     if (error) throw new Error(/bucket not found/i.test(error.message) ? "De opslag voor foto's is nog niet klaargezet: voer supabase-spelersfoto-v39.sql uit." : /row-level|policy/i.test(error.message) ? "Je mag voor deze ploeg geen foto's toevoegen." : error.message);
+    return path;
+  },
+  async saveTrainer(clubId, userId, blob) {
+    if (mode === "demo") return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+    const path = `trainers/${clubId}/${userId}-${uid().slice(0, 8)}.jpg`;
+    const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (error) throw new Error(/bucket not found/i.test(error.message) ? "De opslag voor foto's is nog niet klaargezet: voer supabase-spelersfoto-v39.sql en supabase-dossiers-v40.sql uit." : /row-level|policy/i.test(error.message) ? "Je mag deze foto niet wijzigen." : error.message);
     return path;
   },
   async remove(path) { if (!path || /^data:/.test(path) || mode === "demo" || !sb) return; await sb.storage.from(PHOTO_BUCKET).remove([path]).catch(() => {}); }
@@ -369,6 +376,9 @@ async function loadTeam(id) {
   try { S.rsvp = await db.list("rsvp", m); } catch (e) { S.rsvp = []; } /* tabel bestaat pas vanaf databaseversie 5 */
   /* zelfevaluatie van spelers (databaseversie 38): ontbreekt de tabel nog, dan werkt de rest gewoon verder */
   try { [S.zelf, S.zelfOpen] = await Promise.all(["eval_zelf", "eval_zelf_open"].map(t => db.list(t, m))); S.zelfOk = true; } catch (e) { S.zelf = []; S.zelfOpen = []; S.zelfOk = false; }
+  /* interne scouting per speler (databaseversie 40) */
+  try { S.pscout = await db.list("player_scout", m); S.pscoutOk = true; } catch (e) { S.pscout = []; S.pscoutOk = false; }
+  if (typeof tpLoad === "function") await tpLoad(); /* trainersprofielen (databaseversie 40) */
   sortPlayers(); sortEvents();
   if (typeof rbfaAuto === "function") setTimeout(rbfaAuto, 800);
 }
@@ -427,7 +437,7 @@ const NAV = [
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
-  { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
+  { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
 /* op de gsm: onderdelen die bij één tab onderaan horen, met een rij knoppen bovenaan de pagina */
 const SUBNAV = { ploeg: [["spelers", "Spelers"], ["evaluaties", "Evaluaties"], ["dossier", "Dossier"], ["cijfers", "Cijfers"], ["ploeg", "Overzicht"]],
