@@ -177,8 +177,11 @@ const pLines = ps => { const L = [["Doelmannen", []], ["Verdedigers", []], ["Mid
   ps.forEach(p => { const n = +(String(p.position || "").match(/^(\d+)/) || [])[1]; L[n === 1 ? 0 : n >= 2 && n <= 5 ? 1 : [6, 8, 10].includes(n) ? 2 : [7, 9, 11].includes(n) ? 3 : 4][1].push(p); });
   const out = L.filter(([, xs]) => xs.length); return out.length === 1 ? [["", out[0][1]]] : out; };
 /* logo's van tegenstanders: per naam (zonder KFC, VV, ...) één logo voor de hele club; anders de beginletters */
-const logoKey = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\b(k|r|fc|vc|kfc|kvv|sk|vv|ksk|kv|sv|fco|kvc|ksv|kac|ac|vk|og|rc|fcv|kv|sc)\b\.?/g, " ").replace(/\b[a-z]\b/g, " ").replace(/[^a-z0-9]+/g, "");
-const oppLogo = name => { const k = logoKey(name); return k ? (S.logos || []).find(x => x.key === k)?.url || null : null; };
+const logoKey = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\b(k|r|fc|vc|kfc|kvv|sk|vv|ksk|kv|sv|fco|kvc|ksv|kac|ac|vk|og|rc|fcv|kv|sc)\b\.?/g, " ").replace(/\b[a-z]\b/g, " ").replace(/\b\d+\b/g, " ").replace(/[^a-z0-9]+/g, "");
+/* logo's die RBFA meegeeft worden ook op dit toestel bewaard, zodat ze meteen verschijnen (ook als de databasetabel nog ontbreekt) */
+const LOGO_LS = "ogv-logos-v1"; let LOGO_CACHE = (() => { try { return JSON.parse(localStorage.getItem(LOGO_LS)) || {}; } catch (e) { return {}; } })();
+const logoCacheSave = () => { try { localStorage.setItem(LOGO_LS, JSON.stringify(LOGO_CACHE)); } catch (e) {} };
+const oppLogo = name => { const k = logoKey(name); return k ? (S.logos || []).find(x => x.key === k)?.url || LOGO_CACHE[k] || null : null; };
 const oppIni = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO|KVC|KSV)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 const crestThem = (name, cls = "") => { const u = oppLogo(name); return `<span class="lcrest ${cls}" data-logo="${esc(name || "")}" title="${esc(name || "Tegenstander")}">${u ? `<img src="${esc(u)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<b>${esc(oppIni(name))}</b></span>`; };
 /* beide logo's van een wedstrijd, thuisploeg eerst */

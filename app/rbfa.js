@@ -33,9 +33,7 @@ async function rbfaSync(team) {
   if (!team?.rbfa_team_id || !rbfaClub()) return { added: 0, changed: 0 };
   const cal = await rbfaCalendar(team.rbfa_team_id), events = mode === "demo" || S.team?.id === team.id ? S.events : await db.list("events", { team_id: team.id });
   let added = 0, changed = 0;
-  if (S.logos && typeof logoKey === "function") for (const m of cal) for (const tm0 of [m.homeTeam, m.awayTeam]) { const u = tm0?.logo, nm = rbfaName(tm0?.name), k = logoKey(nm);
-    if (!u || !k || String(tm0.clubId) === rbfaClub() || !/^https:\/\//.test(u) || S.logos.some(x => x.key === k)) continue;
-    const row = { club_id: CLUB.id, key: k, name: nm, url: u }; try { await db.save("club_logos", row); S.logos.push(row); } catch (e) {} }
+  await rbfaLogos(cal);
   for (const m of cal) {
     if (!m?.id || !m.startTime) continue;
     const ourHome = String(m.homeTeam?.clubId) === rbfaClub(), ourAway = String(m.awayTeam?.clubId) === rbfaClub();
@@ -66,7 +64,27 @@ async function rbfaSync(team) {
 async function rbfaPut(e) { try { await putEvent(e); } catch (err) { throw /rbfa_|sheet_url|column/i.test(err.message || "") ? new Error("Voer eerst het databasescript ogv-update-v5.sql uit in Supabase.") : err; } }
 /* stil op de achtergrond bijwerken als de laatste synchronisatie meer dan 6 uur oud is */
 let rbfaBusy = false;
+/* logo's van de tegenstanders uit een RBFA-kalender: op dit toestel bewaren en (eenmalig) in de clubtabel zetten voor iedereen */
+async function rbfaLogos(cal) {
+  if (typeof logoKey !== "function") return 0; let n = 0;
+  for (const m of cal || []) for (const t0 of [m.homeTeam, m.awayTeam]) { const u = t0?.logo, nm = rbfaName(t0?.name), k = logoKey(nm);
+    if (!u || !k || String(t0.clubId) === rbfaClub() || !/^https:\/\//.test(u)) continue;
+    if (LOGO_CACHE[k] !== u) { LOGO_CACHE[k] = u; n++; }
+    if (S.logos && !S.logos.some(x => x.key === k)) { const row = { club_id: CLUB.id, key: k, name: nm, url: u }; S.logos.push(row); try { await db.save("club_logos", row); } catch (e) {} } }
+  if (n) logoCacheSave(); return n;
+}
+/* één keer per dag: de RBFA-kalenders van alle ploegen van de club overlopen voor de logo's van alle tegenstanders */
+let logoBusy = false;
+async function rbfaLogoRefresh(force) {
+  if (logoBusy || mode === "demo" || !rbfaClub()) return; let last = 0; try { last = +localStorage.getItem("ogv-logos-at") || 0; } catch (e) {}
+  if (!force && Date.now() - last < 864e5 && Object.keys(LOGO_CACHE).length) return;
+  const teams = (S.teams || []).filter(t => t.rbfa_team_id); if (!teams.length) return; logoBusy = true; let n = 0;
+  try { for (let i = 0; i < teams.length; i += 4) { const cals = await Promise.all(teams.slice(i, i + 4).map(t => rbfaCalendar(t.rbfa_team_id).catch(() => []))); for (const c of cals) n += await rbfaLogos(c); }
+    try { localStorage.setItem("ogv-logos-at", String(Date.now())); } catch (e) {}
+    if (n && !document.querySelector("dialog[open]") && ["start", "kalender", "ploeg", "uitslagen", "live", "dossier", "spelers"].includes(cur().page) && !cur().id) render(); } finally { logoBusy = false; }
+}
 function rbfaAuto() {
+  setTimeout(() => rbfaLogoRefresh().catch(e => console.warn("RBFA-logo's", e)), 1500);
   const t = S.team; if (!t?.rbfa_team_id || rbfaBusy) return;
   if (t.rbfa_synced_at && Date.now() - new Date(t.rbfa_synced_at).getTime() < RBFA_SYNC_MS) return;
   rbfaBusy = true;
