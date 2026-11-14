@@ -184,15 +184,14 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
       <span class="pr"><span style="width:${ps.length ? dn / ps.length * 100 : 0}%"></span></span><small class="ct">${dn ? dn + "/" + ps.length + " klaar" : st ? st + " bezig" : now > ww.to ? "niet gedaan" : "nog niet"}</small></button>`; }).join("")}</div>
   <div class="evhead"><div><h2 style="margin:0">${mo.naam}</h2><p class="hint" style="margin:2px 0 0">${open ? `Nu bezig · invullen tot ${dfmt(w.to)}` : now < w.from ? `Start op ${dfmt(w.from)}` : `Periode voorbij (${dfmt(w.from)} – ${dfmt(w.to)})`}${late && mo.verplicht ? ' · <b style="color:var(--bad)">nog niet afgerond</b>' : ""}</p></div>
     <div class="kpi mini"><small>Klaar</small><b>${done}<span>/${ps.length}</span></b></div><div class="kpi mini"><small>Gemiddelde ploeg</small><b>${evF(avg(ps.map(p => evAvgOf(evOf(p.id, evMoment), names)).filter(x => x != null)))}</b></div></div>
-  ${evPubHtml(evMoment)}
-  ${evZelfHtml(evMoment, ps)}
+  <div class="evopts">${evPubHtml(evMoment)}${evZelfHtml(evMoment, ps)}</div>
   <div class="ptabs" role="tablist">${[["spelers", "Per speler"], ["tabel", "Snel invullen"], ["ploeg", "Ploeganalyse"]].map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-selected="${evView === k}">${l}</button>`).join("")}</div><div id="evv"></div>`;
   const vv = $("#evv");
   if (!ps.length) vv.innerHTML = `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`;
   else if (evView === "spelers") vv.innerHTML = `<div class="evcards">${ps.map(p => { const e = evOf(p.id, evMoment), pr = evPrev(p.id, evMoment), a = evAvgOf(e, names), b = pr ? evAvgOf(pr, names) : null;
       const dn = names.filter(c => evScore(e, c) != null).length;
-      return `<a class="evcard" href="#/evaluaties/${p.id}/${evMoment}"><div class="top">${pAv(p)}<span class="nm"><b>${esc(pname(p))}</b><small>${evDone(e, names) ? "Klaar" : dn ? `${dn} van ${names.length} ingevuld` : "Nog niet ingevuld"}${e?.details?.talk ? " · gesprek gevoerd" : ""}</small></span>
-        <span class="big" style="--c:${evColor(a)}">${a == null ? "–" : evF(a)}</span></div>
+      return `<a class="evcard" href="#/evaluaties/${p.id}/${evMoment}"><div class="top">${pAv(p)}<span class="nm"><b>${esc(pname(p))}</b><small><span class="evst ${evDone(e, names) ? "ok" : dn ? "bz" : "no"}">${evDone(e, names) ? "Klaar" : dn ? `${dn}/${names.length} ingevuld` : "Nog niet ingevuld"}</span>${e?.details?.talk ? " · gesprek gevoerd" : ""}</small></span>
+        <span class="big${a == null ? " none" : ""}" style="--c:${evColor(a)};--p:${a == null ? 0 : Math.round(a / 5 * 100)}">${a == null ? "–" : evF(a)}</span></div>
         <div class="gbars">${groups.map(g => { const ga = evAvgOf(e, g.items.map(i => i.name)), gb = pr ? evAvgOf(pr, g.items.map(i => i.name)) : null;
           return `<div class="gb"><span>${esc(g.name)}</span><span class="bar"><i style="width:${ga == null ? 0 : (ga / 5) * 100}%;background:${evColor(ga)}"></i>${gb != null ? `<em style="left:${(gb / 5) * 100}%"></em>` : ""}</span><b>${evF(ga)}</b></div>`; }).join("")}</div>
         <div class="ft">${evZelf(p.id, evMoment) ? '<span class="pill g" title="De speler vulde de zelfevaluatie in">zelf ingevuld</span> ' : ""}${b != null && a != null ? evDelta(a - b) + ` <span class="hint">t.o.v. ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}</span>` : `<span class="hint">${pr ? "" : "eerste evaluatie"}</span>`}<span class="spacer"></span><span class="go">${evStarted(e) ? "Openen" : "Evalueren"} ›</span></div></a>`; }).join("")}</div>`;

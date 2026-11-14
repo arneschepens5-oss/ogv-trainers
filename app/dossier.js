@@ -60,8 +60,9 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const ps = active();
   if (!id) {
     v.innerHTML = head("Spelersdossier", "Alles wat jullie over een speler noteerden op één pagina: speeltijd en cijfers over alle groepjes, aanwezigheid, evaluaties en elke opmerking met de naam van de trainer. Om samen een oudergesprek voor te bereiden.") +
-      (ps.length ? `<div class="list">${ps.map(p => { const s = playerStats(p), g = dosCount(matchRows(p.id).map(x => groupOf(x.e)).filter(Boolean));
-        return `<a class="item" href="#/dossier/${p.id}">${pAv(p)}<span class="main"><b>${esc(pname(p))}</b><small>${s.matches} wedstrijden · ${s.minutes} min · cijfer ${f1(s.rating)}${g.length ? " · " + g.map(([k, c]) => `${esc(k)} ${c}×`).join(", ") : ""}</small></span>${IC.chev}</a>`; }).join("")}</div>`
+      (ps.length ? `<div class="pgrid">${ps.map(p => { const s = playerStats(p), g = dosCount(matchRows(p.id).map(x => groupOf(x.e)).filter(Boolean)), sp = scProf(p);
+        return pCard(p, { href: "#/dossier/" + p.id, sub: [pPos(p), p.birthdate ? pAge(p) + " jaar · " + qOf(p.birthdate) : "", g.length ? g.map(([k, c]) => `${k} ${c}×`).join(", ") : ""].filter(Boolean).join(" · ") || "Dossier openen",
+          extra: sp.pot ? `<span class="pc-tag">Potentieel ${esc(sp.pot.toLowerCase())}</span>` : "", stats: [[s.matches, "matchen"], [s.minutes, "minuten"], [f1(s.rating), "cijfer"]] }); }).join("")}</div>`
        : `<div class="empty"><b>Nog geen spelers</b></div>`);
     return;
   }

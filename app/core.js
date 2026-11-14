@@ -46,7 +46,7 @@ function applyClubTheme() {
   const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
 }
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], trainer_profiles:["user_id"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], trainer_profiles:["user_id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -165,6 +165,42 @@ const photos = {
   },
   async remove(path) { if (!path || /^data:/.test(path) || mode === "demo" || !sb) return; await sb.storage.from(PHOTO_BUCKET).remove([path]).catch(() => {}); }
 };
+/* spelerskaart (spelerslijst, dossiers, ...): foto of rugnummer, naam, één regel uitleg en tot 3 kleine cijfers */
+const pPos = p => String(p.position || "").replace(/^\d+\s*·\s*/, "");
+const pAge = p => p.birthdate ? Math.floor((Date.now() - parse(p.birthdate)) / 3.15576e10) : null;
+const pCard = (p, o = {}) => `<a class="pcard" href="${o.href || "#/speler/" + p.id}" data-go="${o.href || "#/speler/" + p.id}">
+  <span class="pc-av">${p.photo ? `<img data-pp="${esc(p.photo)}" alt="" draggable="false">` : `<b>${p.number ?? esc((p.first_name || "?").slice(0, 1))}</b>`}${p.photo && p.number != null ? `<i>${p.number}</i>` : ""}</span>
+  <span class="pc-main"><b>${esc(pname(p))}</b><small>${esc(o.sub || "")}</small>${o.extra || ""}</span>
+  ${o.stats ? `<span class="pc-stats">${o.stats.map(([a, b]) => `<span><b>${a}</b><small>${esc(b)}</small></span>`).join("")}</span>` : ""}${o.side || ""}</a>`;
+/* spelers per linie, volgens het rugnummer van hun positie (1 = doelman, 2-5 verdediging, 6/8/10 middenveld, 7/9/11 aanval) */
+const pLines = ps => { const L = [["Doelmannen", []], ["Verdedigers", []], ["Middenvelders", []], ["Aanvallers", []], ["Nog geen positie", []]];
+  ps.forEach(p => { const n = +(String(p.position || "").match(/^(\d+)/) || [])[1]; L[n === 1 ? 0 : n >= 2 && n <= 5 ? 1 : [6, 8, 10].includes(n) ? 2 : [7, 9, 11].includes(n) ? 3 : 4][1].push(p); });
+  const out = L.filter(([, xs]) => xs.length); return out.length === 1 ? [["", out[0][1]]] : out; };
+/* logo's van tegenstanders: per naam (zonder KFC, VV, ...) één logo voor de hele club; anders de beginletters */
+const logoKey = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\b(k|r|fc|vc|kfc|kvv|sk|vv|ksk|kv|sv|fco|kvc|ksv|kac|ac|vk|og|rc|fcv|kv|sc)\b\.?/g, " ").replace(/\b[a-z]\b/g, " ").replace(/[^a-z0-9]+/g, "");
+const oppLogo = name => { const k = logoKey(name); return k ? (S.logos || []).find(x => x.key === k)?.url || null : null; };
+const oppIni = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO|KVC|KSV)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
+const crestThem = (name, cls = "") => { const u = oppLogo(name); return `<span class="lcrest ${cls}" data-logo="${esc(name || "")}" title="${esc(name || "Tegenstander")}">${u ? `<img src="${esc(u)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<b>${esc(oppIni(name))}</b></span>`; };
+const crestUs = (cls = "") => `<span class="lcrest us ${cls}">${LOGO("crest")}</span>`;
+async function logoForm(name, done) {
+  if (S.logos === null) { toast("Logo's werken zodra de beheerder supabase-diplomas-v45.sql uitvoert."); return; }
+  const k = logoKey(name), cur = oppLogo(name); let data = null;
+  const d = dialog(`<form><h2>Logo van ${esc(name || "de tegenstander")}</h2><p class="hint" style="margin:0">Het logo geldt voor alle ploegen van de club. Plak een link naar het logo of kies een afbeelding.</p>
+    <div class="row" style="gap:14px;margin:14px 0"><span class="lcrest xl" id="lgPrev">${cur ? `<img src="${esc(cur)}" alt="">` : ""}<b>${esc(oppIni(name))}</b></span><span class="hint">Tip: zoek de club op rbfa.be of op hun eigen website, klik met de rechtermuisknop op het logo en kies "Afbeeldingsadres kopiëren".</span></div>
+    <label class="f full">Link naar het logo<input id="lgUrl" type="url" placeholder="https://…" value="${cur && !/^data:/.test(cur) ? esc(cur) : ""}"></label>
+    <label class="btn ghost small" style="cursor:pointer;margin-top:10px">Afbeelding kiezen<input type="file" id="lgFile" accept="image/*" hidden></label>
+    <div class="row">${cur ? `<button class="link danger" type="button" id="lgDel">Logo verwijderen</button>` : ""}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
+  const prev = u => $("#lgPrev", d).innerHTML = (u ? `<img src="${esc(u)}" alt="">` : "") + `<b>${esc(oppIni(name))}</b>`;
+  $("#lgUrl", d).oninput = e => { data = null; prev(e.target.value.trim()); };
+  $("#lgFile", d).onchange = async e => { const f = e.target.files[0]; if (!f) return;
+    try { const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(f); });
+      const sc = Math.min(1, 160 / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); data = c.toDataURL("image/png"); prev(data); } catch (x) { toast("Die afbeelding kon niet geladen worden."); } };
+  if ($("#lgDel", d)) $("#lgDel", d).onclick = async () => { await safe(async () => { await db.del("club_logos", { club_id: CLUB.id, key: k }); S.logos = S.logos.filter(x => x.key !== k); d.close(); done ? done() : render(); }, "Logo verwijderd."); };
+  $("form", d).onsubmit = async e => { e.preventDefault(); const url = data || $("#lgUrl", d).value.trim();
+    if (!url) { toast("Plak een link of kies een afbeelding."); return; } if (!/^https:\/\//.test(url) && !/^data:image\//.test(url)) { toast("De link moet met https:// beginnen."); return; }
+    await safe(async () => { const row = { club_id: CLUB.id, key: k, name: name || "", url }; await db.save("club_logos", row); S.logos = (S.logos || []).filter(x => x.key !== k).concat(row); d.close(); done ? done() : render(); }, "Logo opgeslagen."); };
+}
 /* avatar van een speler: de foto als ze er is (met het rugnummer in een hoekje), anders het rugnummer */
 const pAv = (p, style = "") => p?.photo ? `<span class="num hasimg" style="${style}"><img data-pp="${esc(p.photo)}" alt="" draggable="false"><i>${p.number ?? ""}</i></span>` : `<span class="num" style="${style}">${p?.number ?? ""}</span>`;
 const ppCache = new Map();
@@ -367,6 +403,7 @@ async function loadTeams() {
   S.teams = (await db.list("teams")).sort((a, b) => teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true }));
   const tt = mode === "demo" ? (await db.list("team_trainers", { user_id: "demo" })) : (await db.list("team_trainers", { user_id: user.id }));
   S.myTeamIds = tt.map(r => r.team_id);
+  try { S.logos = await db.list("club_logos"); } catch (e) { S.logos = null; } /* logo's van tegenstanders (databaseversie 45) */
 }
 async function loadTeam(id) {
   S.team = myTeams().find(t => t.id === id) || (S.admin ? S.teams.find(t => t.id === id) : null) || null; if (!S.team) return;

@@ -1,5 +1,6 @@
 -- v44: uitgebreid clubdashboard (voer eerst v40, v42 en v43 uit). Veilig om opnieuw uit te voeren.
 -- Per ploeg alleen aantallen, nooit namen van kinderen. Enkel voor beheerders en coördinatoren.
+alter table public.trainer_profiles add column if not exists dipl jsonb not null default '{}'::jsonb;
 create or replace function public.club_dashboard2(since date) returns json language plpgsql stable security definer set search_path to 'public' as $$
 declare me public.club_members%rowtype;
 begin
@@ -8,7 +9,7 @@ begin
   return coalesce((select json_agg(x) from (
     select json_build_object('id', t.id, 'name', t.name, 'category', t.category, 'format', t.format,
       'trainers', (select count(*) from public.team_trainers tt where tt.team_id = t.id),
-      'trainers_dipl', (select count(*) from public.team_trainers tt join public.trainer_profiles tp on tp.user_id = tt.user_id where tt.team_id = t.id and coalesce(trim(tp.diplomas), '') <> ''),
+      'trainers_dipl', (select count(*) from public.team_trainers tt join public.trainer_profiles tp on tp.user_id = tt.user_id where tt.team_id = t.id and (coalesce(trim(tp.diplomas), '') <> '' or tp.dipl <> '{}'::jsonb)),
       'players', (select count(*) from public.players p where p.team_id = t.id and p.active),
       'nobirth', (select count(*) from public.players p where p.team_id = t.id and p.active and p.birthdate is null),
       'q1', (select count(*) from public.players p where p.team_id = t.id and p.active and extract(month from p.birthdate) between 1 and 3),

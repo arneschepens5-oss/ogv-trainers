@@ -12,9 +12,13 @@ async function rbfaQ(query, variables) {
   const j = await r.json(); if (j.errors?.length) throw new Error("RBFA: " + j.errors[0].message); return j.data;
 }
 const rbfaTeams = () => rbfaQ(`query($clubId: ID!, $language: Language!) { clubTeams(clubId: $clubId, language: $language) { id name } }`, { clubId: rbfaClub(), language: "nl" }).then(d => d.clubTeams || []);
-const rbfaCalendar = teamId => rbfaQ(`query($teamId: ID!, $language: Language!, $sortByDate: SortDirection) { teamCalendar(teamId: $teamId, language: $language, sortByDate: $sortByDate) {
-  id startTime title state showScore homeTeam { id name clubId } awayTeam { id name clubId } outcome { status homeTeamGoals awayTeamGoals } location { name address postalCode city } } }`,
-  { teamId: String(teamId), language: "nl", sortByDate: "asc" }).then(d => d.teamCalendar || []);
+/* eerst met clublogo's proberen; kent RBFA dat veld niet, dan zonder (en dat onthouden we) */
+let RBFA_LOGO = true;
+const rbfaCalQ = logo => `query($teamId: ID!, $language: Language!, $sortByDate: SortDirection) { teamCalendar(teamId: $teamId, language: $language, sortByDate: $sortByDate) {
+  id startTime title state showScore homeTeam { id name clubId${logo ? " logo" : ""} } awayTeam { id name clubId${logo ? " logo" : ""} } outcome { status homeTeamGoals awayTeamGoals } location { name address postalCode city } } }`;
+const rbfaCalendar = async teamId => { const vars = { teamId: String(teamId), language: "nl", sortByDate: "asc" };
+  if (RBFA_LOGO) { try { return (await rbfaQ(rbfaCalQ(true), vars)).teamCalendar || []; } catch (e) { if (!/logo|field|Cannot query/i.test(e.message || "")) throw e; RBFA_LOGO = false; } }
+  return (await rbfaQ(rbfaCalQ(false), vars)).teamCalendar || []; };
 const rbfaMatchUrl = id => "https://www.rbfa.be/nl/wedstrijd/" + encodeURIComponent(id);
 const RBFA_SHEET_DEFAULT = "https://www.wedstrijdbladen.be/astm/faces/login.jspx";
 /* "KFC ZWARTE LEEUW" → "KFC Zwarte Leeuw"; afkortingen zoals KFC, VV, OG blijven in hoofdletters */
@@ -29,6 +33,9 @@ async function rbfaSync(team) {
   if (!team?.rbfa_team_id || !rbfaClub()) return { added: 0, changed: 0 };
   const cal = await rbfaCalendar(team.rbfa_team_id), events = mode === "demo" || S.team?.id === team.id ? S.events : await db.list("events", { team_id: team.id });
   let added = 0, changed = 0;
+  if (S.logos && typeof logoKey === "function") for (const m of cal) for (const tm0 of [m.homeTeam, m.awayTeam]) { const u = tm0?.logo, nm = rbfaName(tm0?.name), k = logoKey(nm);
+    if (!u || !k || String(tm0.clubId) === rbfaClub() || !/^https:\/\//.test(u) || S.logos.some(x => x.key === k)) continue;
+    const row = { club_id: CLUB.id, key: k, name: nm, url: u }; try { await db.save("club_logos", row); S.logos.push(row); } catch (e) {} }
   for (const m of cal) {
     if (!m?.id || !m.startTime) continue;
     const ourHome = String(m.homeTeam?.clubId) === rbfaClub(), ourAway = String(m.awayTeam?.clubId) === rbfaClub();

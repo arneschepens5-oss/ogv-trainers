@@ -14,7 +14,7 @@ route("start", { title: "Vandaag", render: async v => {
   const setup = logged && S.admin && !isOGV() && !CLUB.settings?.setup_done ? `<a class="panel setupbar" href="#/clubinstellingen"><span class="bdg">${IC.gear}</span><span><b>Zet je club klaar</b><small>Kies in vijf stappen jullie kleuren, evaluaties, onderdelen en ploegen, en nodig trainers uit.</small></span><span class="btn small">Beginnen</span></a>` : "";
   const when = e => { const d = Math.round((parse(e.date) - parse(today)) / 864e5); return d === 0 ? "Vandaag" : d === 1 ? "Morgen" : cap(parse(e.date).toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" })); };
   const initials = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
-  const crestOpp = name => `<span class="crest opp" aria-hidden="true">${esc(initials(name))}</span>`;
+  const crestOpp = name => crestThem(name, "big");
   /* de volgende activiteit, groot bovenaan */
   const nextCard = e => { if (!e) return "";
     const match = e.type === "wedstrijd", rs = rsvpSummary(e), home = e.home !== false, tname = teamLbl(t) || t.name;
@@ -94,11 +94,12 @@ route("ploeg", { title: "Mijn ploeg", auth: true, team: true, render: v => {
 /* ============ spelers ============ */
 route("spelers", { title: "Spelers", auth: true, team: true, render: v => {
   const ps = active(), old = S.players.filter(p => p.active === false);
-  const it = p => { const s = playerStats(p); return `<div class="item" data-go="#/speler/${p.id}">${pAv(p)}<span class="main"><b>${esc(pname(p))}</b><small>${esc([p.position, p.foot ? p.foot + "voetig" : ""].filter(Boolean).join(" · ") || "Geen positie")}</small></span>
-    <span class="val hide-m"><b>${s.trTot ? s.trPct + "%" : "–"}</b>aanwezig</span><span class="val hide-m"><b>${s.minutes}</b>minuten</span><span class="val"><b>${f1(s.rating)}</b>gem. cijfer</span></div>`; };
+  const card = p => { const s = playerStats(p); return pCard(p, { href: "#/speler/" + p.id, sub: [pPos(p), p.foot ? p.foot.toLowerCase() + "voetig" : "", p.birthdate ? pAge(p) + " jaar" : ""].filter(Boolean).join(" · ") || "Geen positie",
+    stats: [[s.trTot ? s.trPct + "%" : "–", "aanwezig"], [s.minutes, "minuten"], [f1(s.rating), "cijfer"]] }); };
+  const lines = pLines(ps);
   v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="pcont">${IC.phone}Contacten</button><button class="btn ghost" type="button" id="plinks">${IC.link}Ouderlinks</button><button class="btn ghost" type="button" id="imp">${IC.out}Importeren</button><button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
-    (ps.length ? `<div class="list">${ps.map(it).join("")}</div>` : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
-    (old.length ? `<div class="sec"><h2>Niet meer actief</h2><div class="list">${old.map(it).join("")}</div></div>` : "");
+    (ps.length ? lines.map(([l, xs]) => `<section class="pgrp">${lines.length > 1 ? `<h2>${esc(l)}<small>${xs.length}</small></h2>` : ""}<div class="pgrid">${xs.map(card).join("")}</div></section>`).join("") : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
+    (old.length ? `<section class="pgrp"><h2>Niet meer actief<small>${old.length}</small></h2><div class="pgrid dim">${old.map(card).join("")}</div></section>` : "");
   $("#addP").onclick = () => playerForm(); $("#bulk").onclick = bulkForm; $("#plinks").onclick = parentLinks; $("#pcont").onclick = teamContacts; $("#imp").onclick = () => importPlayers(false);
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });

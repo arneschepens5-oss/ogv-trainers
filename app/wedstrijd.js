@@ -328,11 +328,21 @@ function lineupTab(tv, e) {
 
 /* ============ live coachen (vervangt Coach Mic) ============ */
 route("live", { title: "Live coachen", auth: true, team: true, render: (v, id) => {
-  if (!id) { const t = todayIso(), up = S.events.filter(e => e.type === "wedstrijd" && e.date >= addDaysIso(-1)).slice(0, 6), pastM = [...past("wedstrijd")].reverse().slice(0, 4);
-    v.innerHTML = head("Live coachen", "Kies de wedstrijd. Tijdens de match houd je klok, doelpunten en wissels bij, met de knoppen of met je stem. Speeltijd per speler wordt vanzelf berekend.") +
-      (up.length ? `<div class="list">${up.map(e => `<div class="item" data-go="#/live/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${matchTitle(e, clubShort())}</b><small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.live?.log?.length ? " · bezig of gespeeld" : ""}</small></span>${IC.mic}</div>`).join("")}</div>`
+  if (!id) { const t = todayIso(), up = S.events.filter(e => e.type === "wedstrijd" && e.date >= addDaysIso(-1)).slice(0, 6), pastM = [...past("wedstrijd")].reverse().slice(0, 6);
+    const tn = esc(teamLbl(S.team) || S.team.name), card = (e, played) => { const home = e.home !== false, opp = esc(e.opponent || "Tegenstander"), sf = e.score_for, sa = e.score_against, has = sf != null && sa != null;
+      const res = has ? (sf > sa ? "w" : sf < sa ? "l" : "d") : "";
+      return `<div class="lvc${played ? " done" : ""}" data-go="#/live/${e.id}" tabindex="0" role="link">
+        <div class="lvc-meta"><span>${esc(cap(parse(e.date).toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })))}${e.start_time ? " · " + tm(e.start_time) : ""}</span><span>${home ? "Thuis" : "Uit"}${e.live?.log?.length && !played ? " · bezig" : ""}</span></div>
+        <div class="lvc-vs"><div class="lvc-t">${home ? crestUs() : crestThem(e.opponent)}<b>${home ? tn : opp}</b></div>
+          <div class="lvc-mid">${has ? `<span class="lvc-sc ${res}">${home ? sf : sa}<i>–</i>${home ? sa : sf}</span>` : `<span class="lvc-time">${e.start_time ? tm(e.start_time) : "vs"}</span>`}</div>
+          <div class="lvc-t">${home ? crestThem(e.opponent) : crestUs()}<b>${home ? opp : tn}</b></div></div>
+        <div class="lvc-go">${played ? "Bekijken" : `${IC.mic}Live coachen`}</div></div>`; };
+    v.innerHTML = head("Live coachen", "Kies de wedstrijd. Tijdens de match houd je klok, doelpunten en wissels bij, met de knoppen of met je stem. Tik op een logo om het aan te passen.") +
+      (up.length ? `<div class="lvgrid">${up.map(e => card(e, false)).join("")}</div>`
        : `<div class="empty"><b>Geen wedstrijd gepland</b>Zet je wedstrijd eerst in de kalender.<br><a class="btn" href="#/kalender">Naar de kalender</a></div>`) +
-      (pastM.length ? `<div class="sec"><h2>Gespeeld</h2><div class="list">${pastM.map(e => `<div class="item" data-go="#/live/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${matchTitle(e, clubShort())}</b><small>${e.score_for != null ? e.score_for + " - " + e.score_against : ""}</small></span>${IC.chev}</div>`).join("")}</div></div>` : "");
+      (pastM.length ? `<div class="sec"><h2>Gespeeld</h2><div class="lvgrid">${pastM.map(e => card(e, true)).join("")}</div></div>` : "");
+    $$("[data-logo]", v).forEach(x => x.onclick = ev => { ev.stopPropagation(); logoForm(x.dataset.logo); });
+    $$("[data-go]", v).forEach(x => x.onkeydown = ev => { if (ev.key === "Enter") go(x.dataset.go); });
     $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go)); return; }
   const e = S.events.find(x => x.id === id); if (!e) { v.innerHTML = `<div class="empty"><b>Wedstrijd niet gevonden</b><a class="btn" href="#/live">Terug</a></div>`; return; }
   return liveView(v, e);
@@ -409,7 +419,7 @@ function liveView(v, e) {
     v.innerHTML = `<div class="live">${backLink("#/activiteit/" + e.id, "Wedstrijdverslag")}
     <div class="clock"><span class="per">${R.ended ? "Wedstrijd afgelopen" : R.inPeriod ? perLabel + (R.running ? "" : " · gepauzeerd") : "Rust · " + (R.period ? "na " + perLabel.toLowerCase() : "")}</span>
       <span class="time${R.running ? " run" : ""}" id="clk">${mmss(R.perS)}</span><span class="per">${over ? '<span style="color:var(--warn)">Tijd is om</span>' : `van ${L.minutes}:00 · minuut ${minute}`}</span>
-      <span class="sc">${esc(team.name.split(" ")[0])} ${R.gf.length} – ${R.ga.length} ${esc(e.opponent || "")}</span>${R.inPeriod ? `<button class="clkadj" type="button" data-a="adjust">${IC.clock || IC.cal}Klok aanpassen</button>` : ""}</div>
+      <span class="sc lvsb">${crestUs("sm")}<b class="nm">${esc(teamLbl(team) || team.name)}</b><b class="g">${R.gf.length}<i>–</i>${R.ga.length}</b><b class="nm">${esc(e.opponent || "Tegenstander")}</b>${crestThem(e.opponent, "sm")}</span>${R.inPeriod ? `<button class="clkadj" type="button" data-a="adjust">${IC.clock || IC.cal}Klok aanpassen</button>` : ""}</div>
     ${pickMode ? pickPanel(R, bench) : `<div class="lbtns">
       <button type="button" class="y" data-a="goal">${IC.ball}Goal ${esc(clubShort())}</button><button type="button" class="r" data-a="against">${IC.ball}Tegengoal</button>
       <button type="button" data-a="sub">${IC.swap}Wissel</button><button type="button" data-a="note">${IC.note}Notitie</button>
