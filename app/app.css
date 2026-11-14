@@ -1824,3 +1824,5 @@ body.authpage .shell{display:block}
 .ci-row{display:grid;grid-template-columns:100px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--card2);color:var(--ink);text-decoration:none}
 .ci-row span{font-size:13px;color:var(--muted);font-weight:700}.ci-row b{font-weight:600;overflow-wrap:anywhere}.ci-row em{font-style:normal;font-size:13px;font-weight:800;color:var(--ytext)}
 a.ci-row:hover{background:var(--card3)}
+.ratebtn{border:1px dashed var(--line2);background:transparent;color:var(--ink);font:inherit;font-size:13.5px;font-weight:700;padding:4px 9px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.ratebtn small{color:var(--dim);font-weight:600;margin-left:4px}.ratebtn.own{border-style:solid;border-color:var(--yellow)}.ratebtn:hover{border-color:var(--yellow)}

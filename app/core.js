@@ -46,7 +46,7 @@ function applyClubTheme() {
   const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
 }
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], trainer_att:["event_id","tkey"], trainer_profiles:["user_id"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], trainer_att:["event_id","tkey"], trainer_rates:["club_id","tkey"], trainer_profiles:["user_id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
