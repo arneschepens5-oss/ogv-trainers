@@ -64,7 +64,7 @@ begin
                       from public.eval_zelf z where z.player_id = p.id), '[]'::json));
 end $$;
 
-/* 5. antwoorden bewaren: enkel als de club het aanzette en de trainer dit moment opende; cijfers 1 tot 5 en korte teksten */
+/* 5. antwoorden bewaren: enkel als de club het aanzette en de trainer dit moment opende; cijfers 1 tot 5 of 1 tot 10 (de club kiest) en korte teksten */
 create or replace function public.parent_zelf_save(tok uuid, m integer, answers jsonb) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare p public.players%rowtype; s jsonb; k text; v jsonb; n integer := 0; clean jsonb := '{}'::jsonb; txt text;
@@ -81,7 +81,7 @@ begin
     n := n + 1; if n > 60 then raise exception 'Te veel antwoorden.'; end if;
     if k !~ '^[a-z0-9_-]{1,40}$' then continue; end if;
     if jsonb_typeof(v) = 'number' then
-      if (v #>> '{}')::numeric between 1 and 5 then clean := clean || jsonb_build_object(k, round((v #>> '{}')::numeric)); end if;
+      if (v #>> '{}')::numeric between 1 and 10 then clean := clean || jsonb_build_object(k, round((v #>> '{}')::numeric)); end if;
     elsif jsonb_typeof(v) = 'string' then
       txt := left(trim(v #>> '{}'), 600); if txt <> '' then clean := clean || jsonb_build_object(k, txt); end if;
     end if;
@@ -107,6 +107,7 @@ begin
   return json_build_object(
     'criteria', (select t.criteria from public.teams t where t.id = p.team_id),
     'moments', (select json_agg(m->>'naam') from jsonb_array_elements(coalesce(s->'eval'->'moments', '[]'::jsonb)) m),
+    'scale', coalesce(s->'eval'->>'scale', 'woorden'),
     'evals', coalesce((select json_agg(json_build_object('moment', ev.moment, 'date', ev.date, 'scores', ev.scores,
                 'strengths', ev.details->>'strengths', 'workpoints', ev.details->>'workpoints', 'goals', ev.details->>'goals')
               order by ev.moment)

@@ -105,7 +105,7 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .evr{display:grid;grid-template-columns:minmax(0,1fr) 72px 44px;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .evn{min-width:0;font-weight:700;font-size:15px}.evn small{display:block;font-weight:500;font-size:12.5px;color:var(--muted)}
 .zq{display:block;margin:0 0 16px}.zq>b{display:block;margin-bottom:6px;font-size:15px}.zq textarea{width:100%;min-height:64px;resize:vertical;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:16px;color:var(--ink)}
-.zs{display:flex;gap:8px}.zs button{flex:1;min-height:54px;border-radius:14px;border:2px solid var(--line);background:var(--card2);font-size:26px;font-weight:800;cursor:pointer;color:var(--ink)}
+.zs{display:flex;gap:8px;flex-wrap:wrap}.zs.t10 button{flex:1 0 15%;min-height:46px;font-size:20px}.zs button{flex:1;min-height:54px;border-radius:14px;border:2px solid var(--line);background:var(--card2);font-size:26px;font-weight:800;cursor:pointer;color:var(--ink)}
 .zs button[aria-checked="true"]{border-color:var(--yellow);background:var(--yellow);color:var(--onY,#111)}.zq small.h{display:block;margin-top:4px;min-height:1em}
 .evb{height:8px;border-radius:99px;background:var(--card2);border:1px solid var(--line);overflow:hidden}.evb i{display:block;height:100%;border-radius:99px}
 .evr b{text-align:right;font-size:17px}.evr b span{font-size:12px;color:var(--muted);font-weight:600}
@@ -374,11 +374,11 @@ function zelfHtml(k) {
   const x = data[k.tok], z = x?.zelf, me = isKid(k.tok); if (!z?.on || !zOpen(x).length) return "";
   return zOpen(x).map(m => { const mine = zMine(x, m), key = k.tok + "|" + m, head = `<h3>Zelfevaluatie · ${esc(momName(x, m))}</h3>`;
     if (mine && !zedit[key]) return `<div class="card zelf">${head}<p class="h" style="margin:0 0 8px">${me ? "Bedankt, je hebt je zelfevaluatie ingevuld." : "Bedankt, de zelfevaluatie van " + esc(k.name) + " is ingevuld."} De trainer bekijkt dit en bespreekt het met jullie.</p><button class="btn ghost sm" type="button" data-zedit="${esc(key)}">Antwoorden aanpassen</button></div>`;
-    const d = zdraft[key] || (zdraft[key] = { ...(mine?.answers || {}) }), sc = z.self?.scale === "cijfers";
+    const d = zdraft[key] || (zdraft[key] = { ...(mine?.answers || {}) }), mx = z.self?.scale === "cijfers10" ? 10 : 5, sc = mx === 10 || z.self?.scale === "cijfers";
     return `<div class="card zelf" data-zk="${esc(key)}">${head}<p class="h" style="margin:0 0 12px">${esc(z.self?.intro || (me ? "Hoe vind je zelf dat het gaat? Er zijn geen foute antwoorden." : "Vul dit samen met " + k.name + " in. Er zijn geen foute antwoorden."))}</p>
       ${(z.self?.questions || []).map(q => q.type === "tekst"
         ? `<label class="zq"><b>${esc(q.text)}</b><textarea data-zq="${esc(q.id)}" maxlength="600" rows="2">${esc(d[q.id] ?? "")}</textarea></label>`
-        : `<div class="zq"><b>${esc(q.text)}</b><div class="zs" role="radiogroup" aria-label="${esc(q.text)}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" data-zq="${esc(q.id)}" data-n="${n}" aria-checked="${d[q.id] === n}" aria-label="${ZW[n]}" title="${ZW[n]}">${sc ? n : ZF[n]}</button>`).join("")}</div>${sc ? "" : `<small class="h">${d[q.id] ? ZW[d[q.id]] : ""}</small>`}</div>`).join("")}
+        : `<div class="zq"><b>${esc(q.text)}</b><div class="zs${mx === 10 ? " t10" : ""}" role="radiogroup" aria-label="${esc(q.text)}">${Array.from({ length: mx }, (_, i) => i + 1).map(n => `<button type="button" role="radio" data-zq="${esc(q.id)}" data-n="${n}" aria-checked="${d[q.id] === n}" aria-label="${sc ? n : ZW[n]}" title="${sc ? n : ZW[n]}">${sc ? n : ZF[n]}</button>`).join("")}</div>${sc ? "" : `<small class="h">${d[q.id] ? ZW[d[q.id]] : ""}</small>`}</div>`).join("")}
       <div class="row"><button class="btn" type="button" data-zsave="${esc(key)}">Bewaren</button><span class="ok" data-zok></span></div></div>`; }).join("");
 }
 function bindZelf() {
@@ -408,7 +408,7 @@ function evalHtml(ev, me) { const list = ev?.evals || []; if (!list.length) retu
   return list.slice().reverse().map(e => { const gs = evGroupsOf(ev.criteria, e.scores || {});
     const txt = (t, s) => lines(s).length ? `<div class="evtx"><small>${t}</small>${lines(s).map(x => `<p>${esc(x)}</p>`).join("")}</div>` : "";
     return `<div class="card evc"><h3>Evaluatie ${esc((ev.moments && ev.moments[e.moment - 1]) || EVM[e.moment] || "")}</h3><p class="h" style="margin:0 0 6px">${me ? "Zo zien je trainers jou nu" : "Van de trainers"}${e.date ? " · " + dayFmt(e.date).toLocaleDateString("nl-BE", { day: "numeric", month: "long" }) : ""}</p>
-      ${gs.map(g => `${g.name ? `<div class="evg">${esc(g.name)}</div>` : ""}${g.items.map(([n, s]) => `<div class="evr"><span class="evn">${esc(n.replace(/ \(.*\)/, ""))}<small>${EVL[s] || ""}</small></span><span class="evb"><i style="width:${s / 5 * 100}%;background:${evCol(s)}"></i></span><b>${nl1(s)}<span>/5</span></b></div>`).join("")}`).join("")}
+      ${gs.map(g => `${g.name ? `<div class="evg">${esc(g.name)}</div>` : ""}${g.items.map(([n, s]) => `<div class="evr"><span class="evn">${esc(n.replace(/ \(.*\)/, ""))}<small>${ev.scale === "cijfers" || ev.scale === "cijfers10" ? "" : EVL[s] || ""}</small></span><span class="evb"><i style="width:${s / 5 * 100}%;background:${evCol(s)}"></i></span><b>${nl1(ev.scale === "cijfers10" ? s * 2 : s)}<span>/${ev.scale === "cijfers10" ? 10 : 5}</span></b></div>`).join("")}`).join("")}
       ${txt("Sterke punten", e.strengths)}${txt("Werkpunten", e.workpoints)}${txt("Doelen tot de volgende evaluatie", e.goals)}</div>`; }).join(""); }
 function drawSeason() {
   $("#list").innerHTML = sel().map(k => { const x = data[k.tok], s = x.season, rs = x.results || [];

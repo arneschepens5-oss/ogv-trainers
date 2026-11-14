@@ -31,8 +31,9 @@ function csEvalEditorsHtml(ev) {
       <p class="hint">Voor kinderen tot 9 jaar raden we de korte lijst met smileys aan: ouders vullen die samen met hun kind in. Vanaf 10 jaar kan een speler dit zelf met cijfers.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">${Object.entries(EV_SELF_PRESETS).map(([k, p]) => `<button class="btn ghost small" type="button" data-sp="${k}">${esc(p.naam)}</button>`).join("")}<button class="btn ghost small" type="button" id="csclrq">Leeg beginnen</button></div>
       <div class="row" style="gap:18px;flex-wrap:wrap;margin-bottom:8px">
-        <label class="chkl"><input type="radio" name="sscale" value="smiley"${sf.scale === "cijfers" ? "" : " checked"}><span>Smileys <span class="hint">${[1, 2, 3, 4, 5].map(n => EV_FACES[n]).join(" ")}</span></span></label>
-        <label class="chkl"><input type="radio" name="sscale" value="cijfers"${sf.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label></div>
+        <label class="chkl"><input type="radio" name="sscale" value="smiley"${sf.scale === "cijfers" || sf.scale === "cijfers10" ? "" : " checked"}><span>Smileys <span class="hint">${[1, 2, 3, 4, 5].map(n => EV_FACES[n]).join(" ")}</span></span></label>
+        <label class="chkl"><input type="radio" name="sscale" value="cijfers"${sf.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label>
+        <label class="chkl"><input type="radio" name="sscale" value="cijfers10"${sf.scale === "cijfers10" ? " checked" : ""}><span>Cijfers 1 tot 10</span></label></div>
       <label class="f full" style="display:block;margin-bottom:10px">Korte uitleg bovenaan de lijst<input name="selfintro" maxlength="200" value="${esc(sf.intro || "")}" placeholder="bv. Vul dit samen met je mama of papa in. Er zijn geen foute antwoorden."></label>
       <div id="csslist" class="cslist">${qs.map(q => csSelfRow(q, crits)).join("")}</div><button class="link" type="button" id="csaddq" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button>
     </div></div>`;
@@ -67,7 +68,7 @@ function csEvalEditorsBind(f) {
     const oq = $$(".csr", open).map(r => ({ id: r.dataset.id, text: $("[name=t]", r).value.trim() })).filter(q => q.text).map(evCleanQ).map(q => ({ id: q.id, text: q.text }));
     const sq = $$(".csr", sl).map(r => { const ty = $("[name=ty]", r).value, l = $("[name=l]", r).value; return { id: r.dataset.id, type: ty, text: $("[name=t]", r).value.trim(), ...(ty === "schaal" && items.includes(l) ? { link: l } : {}) }; }).filter(q => q.text).map(evCleanQ);
     const on = f.selfon.checked; if (on && !sq.length) return { err: "Zet minstens één vraag in de zelfevaluatie, of zet ze uit." };
-    return { template: lines, open: oq, self: { on, scale: f.sscale.value === "cijfers" ? "cijfers" : "smiley", intro: f.selfintro.value.trim().slice(0, 200), questions: sq } }; };
+    return { template: lines, open: oq, self: { on, scale: ["cijfers", "cijfers10"].includes(f.sscale.value) ? f.sscale.value : "smiley", intro: f.selfintro.value.trim().slice(0, 200), questions: sq } }; };
 }
 /* de lijst met onderdelen terug naar tekstregels: "# Groep" en "Naam | uitleg" */
 function csCritLines(host) { return $$(".csr", host).map(r => { const n = $("[name=n]", r).value.trim().replace(/\|/g, "/").replace(/^#+\s*/, ""); if (!n) return null;

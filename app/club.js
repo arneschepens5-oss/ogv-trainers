@@ -742,9 +742,11 @@ async function csPage(v, id, ctx) {
       <h2 style="margin-top:0">Wanneer evalueren jullie?</h2><p class="hint" style="margin-top:0">Trainers zien per moment wanneer de evaluaties klaar moeten zijn. Data als maand-dag, bv. 12-01 voor 1 december. Het seizoen start in juli.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">${Object.entries(EV_PRESETS).map(([k, p]) => `<button class="btn ghost small" type="button" data-pre="${k}">${p.naam}</button>`).join("")}</div>
       <div id="csms">${ms.map(rowHtml).join("")}</div><button class="link" type="button" id="csadd" style="margin:4px 0 8px">${IC.plus}Moment toevoegen</button>
-      <h2>Schaal</h2><div class="row" style="gap:18px;flex-wrap:wrap">
-        <label class="chkl"><input type="radio" name="scale" value="woorden"${ev.scale !== "cijfers" ? " checked" : ""}><span>Woorden <span class="hint">(nog niet, soms, meestal, bijna altijd, uitblinker)</span></span></label>
-        <label class="chkl"><input type="radio" name="scale" value="cijfers"${ev.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label></div>
+      <h2>Schaal voor de trainer</h2><div class="row" style="gap:18px;flex-wrap:wrap">
+        <label class="chkl"><input type="radio" name="scale" value="woorden"${ev.scale !== "cijfers" && ev.scale !== "cijfers10" ? " checked" : ""}><span>Woorden <span class="hint">(nog niet, soms, meestal, bijna altijd, uitblinker)</span></span></label>
+        <label class="chkl"><input type="radio" name="scale" value="cijfers"${ev.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label>
+        <label class="chkl"><input type="radio" name="scale" value="cijfers10"${ev.scale === "cijfers10" ? " checked" : ""}><span>Cijfers 1 tot 10</span></label></div>
+      <p class="hint" style="margin-top:4px">Wissel je later van schaal, dan blijven ingevulde evaluaties bewaard en worden ze omgerekend (3 op 5 wordt 6 op 10). De zelfevaluatie van de spelers heeft een eigen schaal, hieronder.</p>
       ${csEvalEditorsHtml(ev)}
       ${!ctx.platform && S.teams?.length ? `<label class="chkl" style="margin-top:8px"><input type="checkbox" name="all"> Ook toepassen op de ${S.teams.length} bestaande ploegen <span class="hint">(evaluaties die al ingevuld zijn blijven bewaard)</span></label>` : ""}
       ${foot()}</form>`;
