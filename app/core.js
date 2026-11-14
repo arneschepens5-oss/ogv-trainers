@@ -170,8 +170,8 @@ const pPos = p => String(p.position || "").replace(/^\d+\s*·\s*/, "");
 const pAge = p => p.birthdate ? Math.floor((Date.now() - parse(p.birthdate)) / 3.15576e10) : null;
 const pCard = (p, o = {}) => `<a class="pcard" href="${o.href || "#/speler/" + p.id}" data-go="${o.href || "#/speler/" + p.id}">
   <span class="pc-av">${p.photo ? `<img data-pp="${esc(p.photo)}" alt="" draggable="false">` : `<b>${p.number ?? esc((p.first_name || "?").slice(0, 1))}</b>`}${p.photo && p.number != null ? `<i>${p.number}</i>` : ""}</span>
-  <span class="pc-main"><b>${esc(pname(p))}</b><small>${esc(o.sub || "")}</small>${o.extra || ""}</span>
-  ${o.stats ? `<span class="pc-stats">${o.stats.map(([a, b]) => `<span><b>${a}</b><small>${esc(b)}</small></span>`).join("")}</span>` : ""}${o.side || ""}</a>`;
+  <span class="pc-main"><b>${esc(pname(p))}</b><small>${esc(o.sub || "")}</small>${o.extra || ""}</span>${o.side || ""}
+  ${o.stats ? `<span class="pc-stats">${o.stats.map(([a, b]) => `<span><b>${a}</b><small>${esc(b)}</small></span>`).join("")}</span>` : ""}</a>`;
 /* spelers per linie, volgens het rugnummer van hun positie (1 = doelman, 2-5 verdediging, 6/8/10 middenveld, 7/9/11 aanval) */
 const pLines = ps => { const L = [["Doelmannen", []], ["Verdedigers", []], ["Middenvelders", []], ["Aanvallers", []], ["Nog geen positie", []]];
   ps.forEach(p => { const n = +(String(p.position || "").match(/^(\d+)/) || [])[1]; L[n === 1 ? 0 : n >= 2 && n <= 5 ? 1 : [6, 8, 10].includes(n) ? 2 : [7, 9, 11].includes(n) ? 3 : 4][1].push(p); });

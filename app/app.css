@@ -1834,3 +1834,52 @@ dialog > .gids,dialog > .payd,dialog > div:not(.dlg):not(.dlgv):not(.exf):not([c
 .gids .gstep{font-size:12.5px;font-weight:800;color:var(--muted);margin-top:14px}
 @media (max-width:600px){dialog > .gids,dialog > .payd,dialog > div:not(.dlg):not(.dlgv):not(.exf):not([class^="ex"]),dialog form,dialog .dlg{padding:18px}
   .gids h2{font-size:22px}.gl li{padding:10px 12px}}
+
+/* v113 afwerking: kaarten, lijsten en labels */
+.pcard{display:grid;grid-template-columns:auto 1fr;column-gap:14px;row-gap:12px;align-items:center}
+.pcard .pc-stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding-top:10px;border-top:1px solid var(--line)}
+.pcard .pc-stats>span{min-width:0;align-items:center}.pcard .pc-stats>span+span{border-left:1px solid var(--line)}
+.pc-main>b{white-space:normal;overflow:visible;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+.pc-main>small{white-space:normal;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pc-tag{white-space:nowrap;margin-top:6px}
+.pgrid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+/* lijsten: titel en uitleg mogen op twee regels in plaats van afgekapt te worden */
+.item .main b,.item .main small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .main b{line-height:1.3}.item .main small{line-height:1.4;margin-top:1px}
+.item .main b .pill{vertical-align:1px}
+/* balken: langere labels passen */
+.cfbar{grid-template-columns:minmax(110px,38%) 1fr auto}
+.cfbar .l{white-space:normal;line-height:1.25}
+/* scorebord: lange ploegnamen op twee regels in plaats van afgekapt */
+.score .side-t b{white-space:normal;overflow-wrap:anywhere;line-height:1.15}
+@media (max-width:560px){.score{gap:10px;padding:14px}.score .side-t b{font-size:15px}.score .nums{font-size:40px}}
+/* tags in het dossier: altijd op één regel */
+.tag{white-space:nowrap}
+/* smalle lijsten (bv. uitslagen naast de volgende match): de logo's blijven, het datumvakje wijkt (de datum staat al in de tekst) */
+.list{container-type:inline-size}
+@container (max-width:460px){.item:has(.mcr) .date{display:none}.item .val .pill{font-size:11px;padding:1px 7px}}
+.score .side-t b{overflow-wrap:normal;word-break:normal;hyphens:auto}
+@media (max-width:560px){.score .side-t b{font-size:13.5px}.score .side-t small{font-size:12px}.score .nums{gap:6px}.score .nums input{width:56px!important}}
+/* evaluatieformulier: in een smalle kolom staat de schaal onder de uitleg in plaats van ernaast */
+:has(> .crit){container-type:inline-size}
+@container (max-width:560px){.crit{grid-template-columns:minmax(0,1fr)}.crit .scale9{flex-wrap:wrap}}
+/* kerncijfers: tot 5 tegels op één rij */
+.kpis{grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}
+/* logo's: dun randje zodat een wit logo ook op een witte kaart zichtbaar is */
+.lcrest{box-shadow:0 0 0 1px var(--line2)}.mcr .lcrest{box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--line2)}
+@media (max-width:600px){.dos .kpis.dos3{grid-template-columns:repeat(3,1fr);gap:8px}}
+/* kerncijfers in smalle tegels: kleiner getal in plaats van over twee regels */
+.kpi{min-width:0}.kpis>.kpi,.dkpis>.kpi{container-type:inline-size}.kpis .kpi b,.dkpis .kpi b{white-space:nowrap}
+@container (max-width:150px){.kpi b{font-size:24px}.kpi small{font-size:12px}}
+@container (max-width:124px){.kpi b{font-size:20px}}
+/* kalender: woorden netjes afbreken met een koppelteken in plaats van midden in een woord */
+.wev b{overflow-wrap:normal;word-break:normal;hyphens:auto;-webkit-hyphens:auto}
+.wev b .lcrest.xs{display:grid;margin:0 0 4px}
+@media (min-width:901px) and (max-width:1200px){.wev b{font-size:12.5px}.wev small{font-size:11.5px}}
+@media (max-width:600px){.kpis.dos3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}.kpis.dos3 .kpi{padding:10px 12px}.kpis.dos3 .kpi span{display:none}.kpis.dos3 .kpi small{font-size:11.5px}}
+.kpis.dos3>:last-child{grid-column:auto!important}
+html,body{overflow-x:clip}
+/* evaluatiemomenten: in een smallere kolom compacter, zonder het nummervakje */
+:has(> .evmoments){container-type:inline-size}
+@container (max-width:780px){.evmoments button{grid-template-columns:1fr;padding:10px 11px}.evmoments .n{display:none}.evmoments .tx b{font-size:14px}.evmoments .tx small{font-size:12px}}
+@media (max-width:600px){.evhead>div:first-child{flex-basis:100%}.evhead .kpi.mini{flex:1}}
