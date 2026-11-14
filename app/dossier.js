@@ -89,13 +89,38 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
 
   /* extra onderdelen van het dossier: zelfevaluatie, wedstrijden, persoonlijk en contact, trainingen, interne scouting */
   const zelfHtml = (typeof evZelf === "function" ? EV_MOMENTS.filter(m => evZelf(p.id, m.m)).map(m => `<div class="sec" data-t="evaluaties"><h3 class="dosh">Zelfevaluatie · ${esc(m.naam)}</h3>${evSelfPanel(evZelf(p.id, m.m), evOf(p.id, m.m), m.m)}</div>`).join("") : "");
-  const matchTable = rows.length ? `<div class="sec panel" data-t="wedstrijden"><h2>Gespeelde wedstrijden</h2><div class="tblwrap"><table class="dostbl"><thead><tr><th>Datum</th><th>Wedstrijd</th><th>Min.</th><th>Goals</th><th>Assists</th><th>Cijfer</th></tr></thead><tbody>
-    ${rows.slice().reverse().map(({ e, a }) => `<tr><td>${esc(dShort(e.date))}</td><td>${esc(e.opponent || "Wedstrijd")}${e.score_for != null ? ` <span class="muted">${e.score_for}–${e.score_against}</span>` : ""}</td><td>${a.minutes != null ? Math.round(a.minutes) : "–"}</td><td>${a.goals || 0}</td><td>${a.assists || 0}</td><td>${a.rating ?? "–"}</td></tr>`).join("")}</tbody></table></div></div>` : "";
+  const isPres = st => st === "aanwezig" || st === "te laat";
+  const evMatchesPlayed = rows.filter(({ a }) => isPres(a.status));
+  /* wedstrijden: één kaart per wedstrijd met uitslag en cijfer; klik voor meer */
+  const resOf = e => e.score_for == null ? null : e.score_for > e.score_against ? "w" : e.score_for < e.score_against ? "l" : "g";
+  const mRows = rows.slice().reverse(), W = mRows.filter(x => resOf(x.e) === "w").length, G = mRows.filter(x => resOf(x.e) === "g").length, L = mRows.filter(x => resOf(x.e) === "l").length;
+  const totMin = Math.round(mRows.reduce((t, x) => t + (x.a.minutes || 0), 0));
+  const matchPane = `<div class="sec" data-t="wedstrijden"><div class="dkpis"><div><small>Wedstrijden</small><b>${mRows.length}</b></div><div><small>Uitslagen</small><b>${W}-${G}-${L}</b><span>gewonnen · gelijk · verloren</span></div><div><small>Speeltijd</small><b>${totMin}</b><span>minuten</span></div><div><small>Goals · assists</small><b>${s.goals} · ${s.assists}</b></div><div><small>Gem. cijfer</small><b>${f1(s.rating)}</b></div></div>
+    ${mRows.length ? `<div class="dmlist">${mRows.map(({ e, a }) => { const r = resOf(e), tg = a.tags || [], st = (a.strengths || []).filter(t => t !== "Kapitein");
+      return `<details class="dmatch"><summary><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>
+        <span class="main"><b>${esc(e.opponent || "Wedstrijd")}</b><small>${esc([e.home === false ? "Uit" : "Thuis", groupOf(e), a.minutes != null ? Math.round(a.minutes) + " min" : "", a.goals ? a.goals + (a.goals === 1 ? " goal" : " goals") : "", a.assists ? a.assists + (a.assists === 1 ? " assist" : " assists") : ""].filter(Boolean).join(" · "))}</small></span>
+        ${e.report?.motm === p.id ? '<span class="pill w dmx">Man v/d match</span>' : ""}${r ? `<span class="dmres ${r}">${e.score_for}–${e.score_against}</span>` : ""}
+        <span class="dmrate" style="--rc:${a.rating != null ? rateCol(a.rating) : "var(--card3)"}" title="Cijfer voor ${esc(p.first_name)}">${a.rating ?? "–"}</span></summary>
+        <div class="dmbody">
+          <div class="dmfacts">${a.role ? `<span><small>Rol</small><b>${esc(a.role)}</b></span>` : ""}${a.minutes != null ? `<span><small>Speeltijd</small><b>${Math.round(a.minutes)} min</b></span>` : ""}<span><small>Doelpunten</small><b>${a.goals || 0}</b></span><span><small>Assists</small><b>${a.assists || 0}</b></span>${isCaptain(e, p, a) ? '<span><small>Kapitein</small><b>Ja</b></span>' : ""}</div>
+          ${a.note ? `<p class="dmnote">${esc(a.note).replace(/\n/g, "<br>")}</p>` : `<p class="hint" style="margin:0">Geen opmerking bij deze wedstrijd.</p>`}
+          ${st.length || tg.length ? `<div class="chips">${st.map(t => `<span class="tag good" aria-pressed="true">${esc(t)}</span>`).join("")}${tg.map(t => `<span class="tag" aria-pressed="true">${esc(t)}</span>`).join("")}</div>` : ""}
+          <div class="row dmfoot"><small class="muted">${a.rated_by ? "Beoordeeld door " + esc(a.rated_by) : "Trainer niet gekend"}</small><span class="spacer"></span><a class="btn ghost small noprint" href="#/activiteit/${e.id}">Open wedstrijd</a></div></div></details>`; }).join("")}</div>`
+      : `<div class="empty"><b>Nog geen wedstrijden</b></div>`}</div>`;
+  /* trainingen: eerst het beeld (maand per maand), daarna enkel wat gemist werd */
   const todayS = new Date().toISOString().slice(0, 10);
-  const trs = S.events.filter(e => e.type === "training" && !e.cancelled && e.date <= todayS && S.att.some(a => a.event_id === e.id)).sort((a, b) => b.date.localeCompare(a.date));
-  const trainingPane = `<div class="sec panel" data-t="trainingen"><h2>Trainingen <span class="muted" style="font-weight:600;font-size:14px">(${s.trTot ? s.trPct + "% aanwezig, " + s.trIn + " van " + s.trTot : "nog geen"})</span></h2>
-    ${trs.length ? `<div class="list">${trs.map(e => { const a = S.att.find(x => x.event_id === e.id && x.player_id === p.id), st = a?.status || "niet genoteerd";
-      return `<div class="item static"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span><span class="main"><b>${esc(e.title || "Training")}</b><small>${esc([e.location, a?.note].filter(Boolean).join(" · "))}</small></span><span class="pill ${st === "aanwezig" ? "g" : st === "te laat" ? "w" : ""}">${esc(st)}</span></div>`; }).join("")}</div>` : `<p class="hint">Nog geen trainingen met aanwezigheden.</p>`}</div>`;
+  const trs = S.events.filter(e => e.type === "training" && !e.cancelled && e.date <= todayS && S.att.some(a => a.event_id === e.id)).sort((a, b) => a.date.localeCompare(b.date));
+  const tr = trs.map(e => { const a = S.att.find(x => x.event_id === e.id && x.player_id === p.id); return { e, a, st: a?.status || "niet genoteerd" }; });
+  const nPres = tr.filter(x => x.st === "aanwezig").length, nLate = tr.filter(x => x.st === "te laat").length, nMiss = tr.filter(x => !isPres(x.st)).length;
+  let streak = 0; for (let i = tr.length - 1; i >= 0 && isPres(tr[i].st); i--) streak++;
+  const byMonth = [...tr.reduce((m, x) => m.set(x.e.date.slice(0, 7), [...(m.get(x.e.date.slice(0, 7)) || []), x]), new Map())].reverse();
+  const monName = k => { const d = new Date(k + "-01T12:00"); return d.toLocaleDateString("nl-BE", { month: "long" }) + (d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : ""); };
+  const missed = tr.filter(x => !isPres(x.st)).reverse();
+  const trainingPane = `<div class="sec" data-t="trainingen"><div class="dkpis"><div><small>Aanwezig</small><b>${s.trTot ? s.trPct + "%" : "–"}</b><span>${s.trIn} van ${s.trTot}</span></div><div><small>Op tijd</small><b>${nPres}</b></div><div><small>Te laat</small><b>${nLate}</b></div><div><small>Gemist</small><b>${nMiss}</b></div><div><small>Reeks</small><b>${streak}</b><span>keer na elkaar</span></div></div>
+    ${tr.length ? `<div class="panel sec"><div class="row" style="margin-bottom:10px"><h2 style="margin:0;margin-right:auto">Per maand</h2><span class="tleg"><i class="tdot ok"></i>aanwezig <i class="tdot late"></i>te laat <i class="tdot no"></i>gemist</span></div>
+      ${byMonth.map(([k, xs]) => `<div class="tmonth"><div class="tm"><b>${esc(monName(k))}</b><small>${xs.filter(x => isPres(x.st)).length} van ${xs.length}</small></div><div class="tdots">${xs.map(x => `<span class="tdot ${x.st === "aanwezig" ? "ok" : x.st === "te laat" ? "late" : "no"}" title="${esc(dShort(x.e.date) + " · " + x.st + (x.a?.note ? " · " + x.a.note : ""))}">${dDay(x.e.date)}</span>`).join("")}</div></div>`).join("")}</div>
+      ${missed.length ? `<div class="panel sec"><h2>Gemist</h2><div class="list">${missed.slice(0, 12).map(x => `<div class="item static"><span class="date"><b>${dDay(x.e.date)}</b><small>${dMon(x.e.date)}</small></span><span class="main"><b>${esc(x.e.title || "Training")}</b><small>${esc([x.e.location, x.a?.note].filter(Boolean).join(" · "))}</small></span><span class="pill">${esc(x.st)}</span></div>`).join("")}</div>${missed.length > 12 ? `<p class="hint" style="margin:8px 0 0">En nog ${missed.length - 12} oudere.</p>` : ""}</div>` : `<p class="hint">Nog geen training gemist.</p>`}`
+      : `<div class="empty"><b>Nog geen trainingen met aanwezigheden</b></div>`}</div>`;
   const idRow = (k, val) => val ? `<div class="dosid"><span>${k}</span><b>${esc(val)}</b></div>` : "";
   const persoonlijkPane = `<div class="sec panel" data-t="persoonlijk"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Persoonlijk</h2><button class="btn ghost small noprint" type="button" id="dosEdit">Fiche bewerken</button></div>
     <div class="dospers">${p.photo ? `<img class="dosphoto" data-pp="${esc(p.photo)}" alt="">` : ""}<div class="dosfacts">${idRow("Ploeg", S.team.name)}${idRow("Rugnummer", p.number)}${idRow("Positie", p.position)}${idRow("Voorkeursvoet", p.foot)}${idRow("Geboortedatum", p.birthdate ? parse(p.birthdate).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }) : "")}${idRow("Leeftijd", age != null ? age + " jaar" : "")}${idRow("Status", p.active === false ? "Niet meer actief" : "Actief")}</div></div></div>
@@ -164,14 +189,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     ${gs.length ? `<div class="list">${gs.map(g => `<div class="item static"><span class="main"><b style="white-space:normal">${esc(g.text)}</b><small>${esc([g.area, g.status].filter(Boolean).join(" · "))}</small></span></div>`).join("")}</div>` : `<p class="hint">Nog geen doelen. Spreek er tijdens het gesprek één of twee af die je op het veld kunt zien.</p>`}
     <div class="doslines print-only-lines"><b>Afspraken uit het gesprek</b><i></i><i></i><i></i><i></i></div></div>
 
-  ${matchTable}
-  <div class="sec panel" data-t="wedstrijden"><h2>Alle opmerkingen bij wedstrijden <span class="muted" style="font-weight:600;font-size:14px">(${notes.length}, nieuwste eerst)</span></h2>
-    ${notes.length ? `<div class="dosnotes">${notes.slice(0, DOS_MAX_NOTES).map(({ e, a }) => `<div class="dosnote"><span class="rate on" style="--rc:${a.rating != null ? rateCol(a.rating) : "var(--card3)"}">${a.rating ?? "–"}</span>
-      <div><div class="dosmeta"><b>${esc(dShort(e.date))}</b> · ${esc(e.opponent || "Wedstrijd")}${groupOf(e) ? ` <span class="pill g">${esc(groupOf(e))}</span>` : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}${e.report?.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}
-        <small class="muted">${esc([a.role, a.minutes != null ? Math.round(a.minutes) + " min" : ""].filter(Boolean).join(" · "))}</small></div>
-        ${a.note ? `<p>${esc(a.note).replace(/\n/g, "<br>")}</p>` : ""}${(a.tags || []).length ? `<div class="chips">${a.tags.map(t => `<span class="tag" aria-pressed="true">${esc(t)}</span>`).join("")}</div>` : ""}
-        <span class="rby">${a.rated_by ? "Beoordeeld door " + esc(a.rated_by) : "Trainer niet gekend"}</span></div></div>`).join("")}</div>`
-     : `<p class="hint">Nog geen opmerkingen bij wedstrijden.</p>`}</div>
+  ${matchPane}
   ${persoonlijkPane}${trainingPane}${scoutPane}
   </div>`;
   $("#dosG").onclick = () => goalForm(p);
@@ -183,4 +201,4 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
 } });
 
 /* bij afdrukken staan ook de uitklapbare statistieken open */
-window.addEventListener("beforeprint", () => document.querySelectorAll("details.dmore").forEach(d => d.open = true));
+window.addEventListener("beforeprint", () => document.querySelectorAll("details.dmore, details.dmatch").forEach(d => d.open = true));

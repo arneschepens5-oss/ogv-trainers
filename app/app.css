@@ -1602,3 +1602,35 @@ body.authpage .shell{display:block}
   .dos .dos3 .kpi{padding:10px 12px}.dos .dos3 .kpi b{font-size:22px}.dos .dos3 .kpi span{display:none}.dos .dos3 .kpi small{font-size:11.5px}
   .startblad .pitchpick.sm{width:100%;max-width:220px;margin:0 auto}
 }
+
+/* dossier: trainingen en wedstrijden overzichtelijk */
+.dkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.dkpis>div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.dkpis small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.dkpis b{display:block;font-size:22px;font-weight:800;margin-top:2px}
+.dkpis span{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.tmonth{display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.tmonth:first-of-type{border-top:0}
+.tm{width:120px;flex:none}.tm b{display:block;text-transform:capitalize}.tm small{color:var(--muted)}
+.tdots{display:flex;flex-wrap:wrap;gap:6px}
+.tdot{display:inline-grid;place-items:center;min-width:34px;height:34px;border-radius:10px;font:700 13px/1 inherit;background:var(--card3);color:var(--muted)}
+.tdot.ok{background:#34D17A;color:#0b2a17}.tdot.late{background:#FFD100;color:#3a2f00}.tdot.no{background:#F2615A;color:#fff}
+.tleg{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.tleg .tdot{min-width:12px;width:12px;height:12px;border-radius:4px;display:inline-block;margin-left:8px}
+.dmlist{display:grid;gap:8px;margin-top:12px}
+.dmatch{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.dmatch>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer}
+.dmatch>summary::-webkit-details-marker{display:none}
+.dmatch>summary:hover{background:var(--card2)}
+.dmatch .date{width:46px;height:46px;border-radius:11px;background:var(--card2);display:grid;place-content:center;text-align:center;flex:none}
+.dmatch .date b{font-size:17px;line-height:1}.dmatch .date small{font-size:11px;color:var(--muted)}
+.dmatch .main{flex:1;min-width:0}.dmatch .main b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dmatch .main small{color:var(--muted);font-size:12.5px}
+.dmres{font-weight:800;padding:5px 10px;border-radius:9px;background:var(--card3);flex:none}
+.dmres.w{background:#1f6b3f;color:#fff}.dmres.l{background:#8d2f2a;color:#fff}.dmres.g{background:#5b5d54;color:#fff}
+.dmrate{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--rc);color:#111;flex:none}
+.dmatch[open]>summary{border-bottom:1px solid var(--line)}
+.dmbody{padding:12px 14px 14px;display:grid;gap:10px}
+.dmfacts{display:flex;gap:18px;flex-wrap:wrap}.dmfacts small{display:block;color:var(--muted);font-size:12px}.dmfacts b{font-size:15px}
+.dmnote{margin:0;line-height:1.45}
+.dmfoot{align-items:center}
+@media (max-width:700px){.tmonth{flex-direction:column;gap:6px}.tm{width:auto;display:flex;gap:8px;align-items:baseline}.dmatch .dmx{display:none}.dmatch>summary{padding:10px}}
