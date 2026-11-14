@@ -369,7 +369,7 @@ async function loadTeams() {
   S.myTeamIds = tt.map(r => r.team_id);
 }
 async function loadTeam(id) {
-  S.team = myTeams().find(t => t.id === id) || null; if (!S.team) return;
+  S.team = myTeams().find(t => t.id === id) || (S.admin ? S.teams.find(t => t.id === id) : null) || null; if (!S.team) return;
   try { localStorage.setItem(TEAM_KEY, id); } catch (e) {}
   const m = { team_id: id };
   [S.players, S.events, S.att, S.evals, S.goals, S.trainers] = await Promise.all(["players","events","attendance","evaluations","goals","team_trainers"].map(t => db.list(t, m)));
@@ -478,7 +478,7 @@ function shell(fresh) {
     <a class="brand" href="#/start">${ogvBrand() ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? LOGO("mini") + "Jeugdwerking " + esc(clubName()) : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="foot">${logged ? `${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
+    <div class="foot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a></div>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -490,7 +490,7 @@ function shell(fresh) {
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="sheetfoot">${logged ? `${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
+    <div class="sheetfoot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a></div>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;

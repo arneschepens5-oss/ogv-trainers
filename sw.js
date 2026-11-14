@@ -1,6 +1,6 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v102";
-const SHELL = ["./", "index.html", "app/app.css?v=102", "app/core.js?v=102", "app/ploeg.js?v=102", "app/cijfers.js?v=102", "app/wedstrijd.js?v=102", "app/leerplan.js?v=102", "app/teken.js?v=102", "app/training.js?v=102", "app/video.js?v=102", "app/map.js?v=102", "app/rbfa.js?v=102", "app/club.js?v=102", "app/evaluatie.js?v=102", "app/evvragen.js?v=102", "app/dossier.js?v=102", "app/trainers.js?v=102", "app/groei.js?v=102", "app/scoutint.js?v=102", "app/kennis.js?v=102", "app/ouders.js?v=102", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=102",
+const CACHE = "ogv-platform-v103";
+const SHELL = ["./", "index.html", "app/app.css?v=103", "app/core.js?v=103", "app/ploeg.js?v=103", "app/cijfers.js?v=103", "app/wedstrijd.js?v=103", "app/leerplan.js?v=103", "app/teken.js?v=103", "app/training.js?v=103", "app/video.js?v=103", "app/map.js?v=103", "app/rbfa.js?v=103", "app/club.js?v=103", "app/evaluatie.js?v=103", "app/evvragen.js?v=103", "app/dossier.js?v=103", "app/trainers.js?v=103", "app/groei.js?v=103", "app/scoutint.js?v=103", "app/kennis.js?v=103", "app/ouders.js?v=103", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=103",
   "manifest.webmanifest", "manifest-beheer.webmanifest", "icons/beheer-192.png", "icons/beheer-apple-touch-icon.png", "icons/icon-192.png", "icons/logo.png", "icons/logo-dark.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
   "trainingen/trainingen.json", "matchday/", "tactiekbord/"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
