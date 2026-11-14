@@ -191,7 +191,7 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
   if (!ps.length) vv.innerHTML = `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`;
   else if (evView === "spelers") vv.innerHTML = `<div class="evcards">${ps.map(p => { const e = evOf(p.id, evMoment), pr = evPrev(p.id, evMoment), a = evAvgOf(e, names), b = pr ? evAvgOf(pr, names) : null;
       const dn = names.filter(c => evScore(e, c) != null).length;
-      return `<a class="evcard" href="#/evaluaties/${p.id}/${evMoment}"><div class="top"><span class="num">${p.number ?? ""}</span><span class="nm"><b>${esc(pname(p))}</b><small>${evDone(e, names) ? "Klaar" : dn ? `${dn} van ${names.length} ingevuld` : "Nog niet ingevuld"}${e?.details?.talk ? " · gesprek gevoerd" : ""}</small></span>
+      return `<a class="evcard" href="#/evaluaties/${p.id}/${evMoment}"><div class="top">${pAv(p)}<span class="nm"><b>${esc(pname(p))}</b><small>${evDone(e, names) ? "Klaar" : dn ? `${dn} van ${names.length} ingevuld` : "Nog niet ingevuld"}${e?.details?.talk ? " · gesprek gevoerd" : ""}</small></span>
         <span class="big" style="--c:${evColor(a)}">${a == null ? "–" : evF(a)}</span></div>
         <div class="gbars">${groups.map(g => { const ga = evAvgOf(e, g.items.map(i => i.name)), gb = pr ? evAvgOf(pr, g.items.map(i => i.name)) : null;
           return `<div class="gb"><span>${esc(g.name)}</span><span class="bar"><i style="width:${ga == null ? 0 : (ga / 5) * 100}%;background:${evColor(ga)}"></i>${gb != null ? `<em style="left:${(gb / 5) * 100}%"></em>` : ""}</span><b>${evF(ga)}</b></div>`; }).join("")}</div>
@@ -246,7 +246,7 @@ function evForm(v, pid, m) {
   const saveLater = debounce(() => safe(async () => { await evPut(e); $("#evsaved").textContent = "Bewaard"; }), 600);
   const touch = () => { $("#evsaved").textContent = "Bewaren…"; saveLater(); };
   const s = playerStats(p);
-  v.innerHTML = backLink("#/evaluaties", "Evaluaties") + `<div class="ph"><span class="num" style="width:56px;height:56px;border-radius:16px;background:var(--yellow);color:#000;font-size:24px;border:0">${p.number ?? ""}</span>
+  v.innerHTML = backLink("#/evaluaties", "Evaluaties") + `<div class="ph">${pAv(p, "width:56px;height:56px;border-radius:16px;background:var(--yellow);color:#000;font-size:24px;border:0")}
     <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">${mo.naam}${mo.verplicht ? " (verplicht)" : ""} · ${esc(S.team.name)}${pr ? ` · vergeleken met ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}` : ""}</p></div>
     <span class="hint" id="evsaved"></span><button class="btn ghost" type="button" id="evRep">${IC.print}Rapport</button></div>
   <div class="evnav"><select id="evM" aria-label="Moment">${EV_MOMENTS.map(x => `<option value="${x.m}"${x.m === m ? " selected" : ""}>${x.m}. ${x.naam}</option>`).join("")}</select>

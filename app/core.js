@@ -137,7 +137,39 @@ async function hydrateImgs(root = document) {
   }
   els.forEach(e => { const c = fpCache.get(e.dataset.fp); if (c?.u) e.src = c.u; });
 }
-let hyT; new MutationObserver(() => { clearTimeout(hyT); hyT = setTimeout(() => hydrateImgs().catch(() => {}), 40); }).observe(document.documentElement, { childList: true, subtree: true });
+/* spelersfoto's: eigen privé-opslag per ploeg; in de demo staat de foto (klein) als data-adres in de speler zelf */
+const PHOTO_BUCKET = "player-photos", PHOTO_PX = 480;
+const photos = {
+  /* vierkant uitsnijden (iets boven het midden, zodat gezichten er goed op staan) en verkleinen tot 480 x 480 */
+  async shrink(file) {
+    if (!/^image\//.test(file.type)) throw new Error("Kies een afbeelding (jpg, png of webp).");
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => null); if (!bmp) throw new Error("Deze foto kan niet gelezen worden. Probeer een jpg of png.");
+    const side = Math.min(bmp.width, bmp.height), sx = (bmp.width - side) / 2, sy = Math.max(0, Math.min(bmp.height - side, (bmp.height - side) * 0.3));
+    const c = document.createElement("canvas"); c.width = c.height = Math.min(PHOTO_PX, side); c.getContext("2d").drawImage(bmp, sx, sy, side, side, 0, 0, c.width, c.height); bmp.close?.();
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.82)); if (!blob) throw new Error("Foto verkleinen is niet gelukt.");
+    return blob;
+  },
+  async save(teamId, playerId, blob) {
+    if (mode === "demo") return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+    const path = `${teamId}/${playerId}-${uid().slice(0, 8)}.jpg`;
+    const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (error) throw new Error(/bucket not found/i.test(error.message) ? "De opslag voor foto's is nog niet klaargezet: voer supabase-spelersfoto-v39.sql uit." : /row-level|policy/i.test(error.message) ? "Je mag voor deze ploeg geen foto's toevoegen." : error.message);
+    return path;
+  },
+  async remove(path) { if (!path || /^data:/.test(path) || mode === "demo" || !sb) return; await sb.storage.from(PHOTO_BUCKET).remove([path]).catch(() => {}); }
+};
+/* avatar van een speler: de foto als ze er is (met het rugnummer in een hoekje), anders het rugnummer */
+const pAv = (p, style = "") => p?.photo ? `<span class="num hasimg" style="${style}"><img data-pp="${esc(p.photo)}" alt="" draggable="false"><i>${p.number ?? ""}</i></span>` : `<span class="num" style="${style}">${p?.number ?? ""}</span>`;
+const ppCache = new Map();
+async function hydratePhotos(root = document) {
+  const els = [...root.querySelectorAll("img[data-pp]:not([src])")]; if (!els.length) return;
+  const fresh = p => { const c = ppCache.get(p); return c && Date.now() - c.t < 50 * 60e3; };
+  const need = [...new Set(els.map(e => e.dataset.pp))].filter(p => !/^data:/.test(p) && !fresh(p));
+  if (need.length && mode !== "demo" && sb) for (let i = 0; i < need.length; i += 100) { const { data } = await sb.storage.from(PHOTO_BUCKET).createSignedUrls(need.slice(i, i + 100), 3600);
+    (data || []).forEach(d => d.signedUrl && ppCache.set(d.path, { u: d.signedUrl, t: Date.now() })); }
+  els.forEach(e => { const p = e.dataset.pp; if (/^data:/.test(p)) e.src = p; else { const c = ppCache.get(p); if (c?.u) e.src = c.u; } });
+}
+let hyT; new MutationObserver(() => { clearTimeout(hyT); hyT = setTimeout(() => { hydrateImgs().catch(() => {}); hydratePhotos().catch(() => {}); }, 40); }).observe(document.documentElement, { childList: true, subtree: true });
 const CLUB_ITEMS = ["mixschema"];
 const items = {
   _c: {}, bust(kind) { if (kind) delete this._c[kind]; else this._c = {}; },

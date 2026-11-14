@@ -22,7 +22,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   if (!id) {
     v.innerHTML = head("Spelersdossier", "Alles wat jullie over een speler noteerden op één pagina: speeltijd en cijfers over alle groepjes, aanwezigheid, evaluaties en elke opmerking met de naam van de trainer. Om samen een oudergesprek voor te bereiden.") +
       (ps.length ? `<div class="list">${ps.map(p => { const s = playerStats(p), g = dosCount(matchRows(p.id).map(x => groupOf(x.e)).filter(Boolean));
-        return `<a class="item" href="#/dossier/${p.id}"><span class="num">${p.number ?? ""}</span><span class="main"><b>${esc(pname(p))}</b><small>${s.matches} wedstrijden · ${s.minutes} min · cijfer ${f1(s.rating)}${g.length ? " · " + g.map(([k, c]) => `${esc(k)} ${c}×`).join(", ") : ""}</small></span>${IC.chev}</a>`; }).join("")}</div>`
+        return `<a class="item" href="#/dossier/${p.id}">${pAv(p)}<span class="main"><b>${esc(pname(p))}</b><small>${s.matches} wedstrijden · ${s.minutes} min · cijfer ${f1(s.rating)}${g.length ? " · " + g.map(([k, c]) => `${esc(k)} ${c}×`).join(", ") : ""}</small></span>${IC.chev}</a>`; }).join("")}</div>`
        : `<div class="empty"><b>Nog geen spelers</b></div>`);
     return;
   }
@@ -52,7 +52,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
       ${prevP ? `<a class="btn ghost small" href="#/dossier/${prevP.id}" title="${esc(pname(prevP))}">‹ Vorige</a>` : ""}${nextP ? `<a class="btn ghost small" href="#/dossier/${nextP.id}" title="${esc(pname(nextP))}">Volgende ›</a>` : ""}
       <a class="btn ghost small" href="#/speler/${p.id}">Spelerskaart</a><button class="btn small" type="button" onclick="print()">${IC.print}Afdrukken</button></div>
   <div class="dos">
-  <div class="ph"><span class="num" style="width:60px;height:60px;border-radius:16px;background:var(--yellow);color:#000;font-size:26px;border:0">${p.number ?? ""}</span>
+  <div class="ph">${pAv(p, "width:60px;height:60px;border-radius:16px;background:var(--yellow);color:#000;font-size:26px;border:0")}
     <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">${esc([S.team.name, p.position, age != null ? age + " jaar" : "", p.birthdate ? "geboren " + parse(p.birthdate).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }) + " (" + qOf(p.birthdate) + ")" : ""].filter(Boolean).join(" · "))}</p>
     <p class="hint" style="margin:2px 0 0">Spelersdossier voor intern gebruik door de trainers · ${new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" })}</p></div></div>
   <div class="kpis dos3">

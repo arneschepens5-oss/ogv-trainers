@@ -1530,3 +1530,13 @@ body.authpage .shell{display:block}
 .selfrow b{white-space:nowrap;font-size:18px}.selfrow b small{font-size:12px;font-weight:600;color:var(--muted)}
 .selftx{padding:8px 0;border-top:1px solid var(--line)}.selftx small{color:var(--muted);font-weight:700}.selftx p{margin:3px 0 0}
 .selfgap{background:var(--ybg);border-radius:12px;padding:10px 12px;margin-bottom:8px}.selfgap p{margin:4px 0 0}
+
+/* v39: spelersfoto */
+.num.hasimg{position:relative;overflow:hidden;padding:0;background:var(--card3)}
+.num.hasimg img{width:100%;height:100%;object-fit:cover;display:block}
+.num.hasimg i{position:absolute;right:0;bottom:0;font:800 11px/1 inherit;font-style:normal;background:var(--yellow);color:#000;padding:2px 5px;border-radius:7px 0 0 0}
+.pfoto{display:flex;gap:14px;align-items:flex-start}
+.pfimg{width:84px;height:84px;border-radius:18px;overflow:hidden;background:var(--card2);border:1px solid var(--line);display:grid;place-items:center;flex:none;font-size:30px;font-weight:800;color:var(--muted)}
+.pfimg img{width:100%;height:100%;object-fit:cover;display:block}
+.pfc{flex:1;min-width:0}
+.pfc .hint{display:block;margin-top:6px}

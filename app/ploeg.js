@@ -85,8 +85,8 @@ route("ploeg", { title: "Mijn ploeg", auth: true, team: true, render: v => {
     <div class="kpi"><small>Doelsaldo</small><b>${ms.reduce((s, e) => s + e.score_for, 0)}-${ms.reduce((s, e) => s + e.score_against, 0)}</b><span>${ms.length} wedstrijden</span></div>
     <div class="kpi"><small>Lopende doelen</small><b>${S.goals.filter(g => g.status === "bezig").length}</b><span>persoonlijke doelen</span></div></div>
   <div class="grid2 sec">
-    <div class="panel"><h2>Topschutters</h2>${scorers.length ? `<div class="list">${scorers.map(r => `<div class="item" data-go="#/speler/${r.p.id}"><span class="num">${r.p.number ?? ""}</span><span class="main"><b>${esc(pname(r.p))}</b><small>${r.assists} assists · ${r.matches} wedstrijden</small></span><span class="val"><b>${r.goals}</b>goals</span></div>`).join("")}</div>` : '<p class="muted">Nog geen doelpunten geregistreerd.</p>'}</div>
-    <div class="panel"><h2>Beste gemiddelde cijfers</h2>${best.length ? `<div class="list">${best.map(r => `<div class="item" data-go="#/speler/${r.p.id}"><span class="num">${r.p.number ?? ""}</span><span class="main"><b>${esc(pname(r.p))}</b><small>${r.motm ? r.motm + "× man van de match" : r.matches + " wedstrijden"}</small></span><span class="val"><b>${f1(r.rating)}</b>op 10</span></div>`).join("")}</div>` : '<p class="muted">Nog geen beoordelingen.</p>'}</div></div>
+    <div class="panel"><h2>Topschutters</h2>${scorers.length ? `<div class="list">${scorers.map(r => `<div class="item" data-go="#/speler/${r.p.id}">${pAv(r.p)}<span class="main"><b>${esc(pname(r.p))}</b><small>${r.assists} assists · ${r.matches} wedstrijden</small></span><span class="val"><b>${r.goals}</b>goals</span></div>`).join("")}</div>` : '<p class="muted">Nog geen doelpunten geregistreerd.</p>'}</div>
+    <div class="panel"><h2>Beste gemiddelde cijfers</h2>${best.length ? `<div class="list">${best.map(r => `<div class="item" data-go="#/speler/${r.p.id}">${pAv(r.p)}<span class="main"><b>${esc(pname(r.p))}</b><small>${r.motm ? r.motm + "× man van de match" : r.matches + " wedstrijden"}</small></span><span class="val"><b>${f1(r.rating)}</b>op 10</span></div>`).join("")}</div>` : '<p class="muted">Nog geen beoordelingen.</p>'}</div></div>
   ${lastM ? `<div class="sec"><h2>Laatste wedstrijd</h2><div class="list">${evItem(lastM)}</div></div>` : ""}`;
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
@@ -94,7 +94,7 @@ route("ploeg", { title: "Mijn ploeg", auth: true, team: true, render: v => {
 /* ============ spelers ============ */
 route("spelers", { title: "Spelers", auth: true, team: true, render: v => {
   const ps = active(), old = S.players.filter(p => p.active === false);
-  const it = p => { const s = playerStats(p); return `<div class="item" data-go="#/speler/${p.id}"><span class="num">${p.number ?? ""}</span><span class="main"><b>${esc(pname(p))}</b><small>${esc([p.position, p.foot ? p.foot + "voetig" : ""].filter(Boolean).join(" · ") || "Geen positie")}</small></span>
+  const it = p => { const s = playerStats(p); return `<div class="item" data-go="#/speler/${p.id}">${pAv(p)}<span class="main"><b>${esc(pname(p))}</b><small>${esc([p.position, p.foot ? p.foot + "voetig" : ""].filter(Boolean).join(" · ") || "Geen positie")}</small></span>
     <span class="val hide-m"><b>${s.trTot ? s.trPct + "%" : "–"}</b>aanwezig</span><span class="val hide-m"><b>${s.minutes}</b>minuten</span><span class="val"><b>${f1(s.rating)}</b>gem. cijfer</span></div>`; };
   v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="pcont">${IC.phone}Contacten</button><button class="btn ghost" type="button" id="plinks">${IC.link}Ouderlinks</button><button class="btn ghost" type="button" id="imp">${IC.out}Importeren</button><button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
     (ps.length ? `<div class="list">${ps.map(it).join("")}</div>` : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
@@ -104,7 +104,12 @@ route("spelers", { title: "Spelers", auth: true, team: true, render: v => {
 } });
 function playerForm(p) {
   const n = !p; p = p || { first_name: "", last_name: "", active: true };
+  const ph = { blob: null, url: null, remove: false };
   const d = dialog(`<form><h2>${n ? "Speler toevoegen" : "Fiche bewerken"}</h2><div class="fields">
+  <div class="f full pfoto"><span class="pfimg" id="pfImg">${p.photo ? `<img data-pp="${esc(p.photo)}" alt="">` : `<b>${esc((p.first_name || "?").slice(0, 1).toUpperCase())}</b>`}</span>
+    <div class="pfc"><div class="row" style="gap:8px;flex-wrap:wrap"><label class="btn ghost small" style="cursor:pointer">${p.photo ? "Andere foto" : "Foto toevoegen"}<input type="file" id="pfFile" accept="image/*" hidden></label>${p.photo ? `<button class="btn ghost small" type="button" id="pfDel">Foto verwijderen</button>` : ""}</div>
+    <label class="check" id="pfOkL" style="margin-top:8px;font-size:13.5px" hidden><input type="checkbox" id="pfOk"${p.photo_ok ? " checked" : ""}> <span>De ouders gaven toestemming voor een foto van hun kind in de app.</span></label>
+    <small class="hint" id="pfHint">De foto wordt verkleind en privé bewaard. Enkel de trainers van de ploeg zien ze.</small></div></div>
   <label class="f">Voornaam<input name="first_name" required value="${esc(p.first_name)}"></label><label class="f">Achternaam<input name="last_name" value="${esc(p.last_name)}"></label>
   <label class="f">Rugnummer<input name="number" type="number" min="0" inputmode="numeric" value="${p.number ?? ""}"></label><label class="f">Geboortedatum<input name="birthdate" type="date" value="${esc(p.birthdate || "")}"></label>
   <label class="f">Positie<select name="position"><option value="">–</option>${p.position && !POSNUM.some(q => posLabel(q[0]) === p.position) ? `<option selected>${esc(p.position)}</option>` : ""}${POSNUM.map(q => `<option value="${posLabel(q[0])}"${posLabel(q[0]) === p.position ? " selected" : ""}>${q[0]} · ${q[1]}</option>`).join("")}</select></label>
@@ -113,12 +118,22 @@ function playerForm(p) {
   <label class="f full">Notities<textarea name="notes">${esc(p.notes || "")}</textarea></label>
   ${n ? "" : `<label class="f full check"><input type="checkbox" name="active"${p.active !== false ? " checked" : ""}> Speelt nog in deze ploeg</label>`}</div>
   <div class="row">${n ? "" : `<button class="btn danger" type="button" id="del">Verwijderen</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
+  $("#pfFile", d).onchange = async e => { const f = e.target.files[0]; if (!f) return;
+    try { ph.blob = await photos.shrink(f); ph.remove = false; if (ph.url) URL.revokeObjectURL(ph.url); ph.url = URL.createObjectURL(ph.blob);
+      $("#pfImg", d).innerHTML = `<img src="${ph.url}" alt="">`; $("#pfOkL", d).hidden = false; $("#pfHint", d).textContent = "Controleer de uitsnede en vink de toestemming aan."; }
+    catch (err) { toast(err.message || "Foto kiezen is niet gelukt."); e.target.value = ""; } };
+  if ($("#pfDel", d)) $("#pfDel", d).onclick = () => { ph.blob = null; ph.remove = true; $("#pfImg", d).innerHTML = `<b>${esc((p.first_name || "?").slice(0, 1).toUpperCase())}</b>`; $("#pfOkL", d).hidden = true; $("#pfHint", d).textContent = "De foto wordt verwijderd als je opslaat."; $("#pfDel", d).hidden = true; };
   if (!n) $("#del", d).onclick = async () => { if (!confirm(`${pname(p)} en al zijn gegevens definitief verwijderen? Zet hem liever op niet actief als hij de ploeg verlaat.`)) return;
-    await safe(async () => { await db.del("players", { id: p.id }); S.players = S.players.filter(x => x.id !== p.id); S.att = S.att.filter(a => a.player_id !== p.id); S.evals = S.evals.filter(a => a.player_id !== p.id); S.goals = S.goals.filter(a => a.player_id !== p.id); d.close(); go("#/spelers"); }, "Speler verwijderd."); };
+    await safe(async () => { await db.del("players", { id: p.id }); photos.remove(p.photo); S.players = S.players.filter(x => x.id !== p.id); S.att = S.att.filter(a => a.player_id !== p.id); S.evals = S.evals.filter(a => a.player_id !== p.id); S.goals = S.goals.filter(a => a.player_id !== p.id); d.close(); go("#/spelers"); }, "Speler verwijderd."); };
   $("form", d).onsubmit = async e => { e.preventDefault(); const fd = new FormData(e.target), f = Object.fromEntries(fd);
+    if (ph.blob && !$("#pfOk", d).checked) { toast("Vink eerst aan dat de ouders toestemming gaven voor de foto."); return; }
     const row = { ...(n ? { id: uid(), team_id: S.team.id } : p), first_name: f.first_name.trim(), last_name: (f.last_name || "").trim(), number: f.number === "" ? null : +f.number, birthdate: f.birthdate || null,
       position: f.position || null, foot: f.foot || null, parent_contact: f.parent_contact || null, notes: f.notes || null, active: n ? true : fd.has("active"), ...(V14() ? readContacts(f) : {}) };
-    await safe(async () => { await db.save("players", row); const i = S.players.findIndex(x => x.id === row.id); if (i >= 0) S.players[i] = row; else S.players.push(row); sortPlayers(); d.close(); render(); }, "Speler opgeslagen."); };
+    await safe(async () => { const oldPhoto = p.photo || null;
+      if (ph.blob) { row.photo = await photos.save(row.team_id, row.id, ph.blob); row.photo_ok = true; }
+      else if (ph.remove) { row.photo = null; row.photo_ok = null; }
+      await db.save("players", row); if ((ph.blob || ph.remove) && oldPhoto) photos.remove(oldPhoto);
+      const i = S.players.findIndex(x => x.id === row.id); if (i >= 0) S.players[i] = row; else S.players.push(row); sortPlayers(); d.close(); render(); }, "Speler opgeslagen."); };
 }
 function bulkForm() {
   const d = dialog(`<form><h2>Lijst met spelers plakken</h2><p class="hint" style="margin:0">Eén speler per regel. Een rugnummer vooraan mag, bijvoorbeeld "7 Lio Peeters". Kopieer de lijst uit PSD of Excel.</p>
@@ -135,7 +150,7 @@ route("speler", { title: "Speler", auth: true, team: true, render: (v, id) => {
   const ms = matchRows(p.id).reverse();
   const age = p.birthdate ? Math.floor((Date.now() - parse(p.birthdate)) / 3.15576e10) : null;
   const pil = PILLARS.map(k => [k, avg(ms.map(x => +x.a.scores?.[k]).filter(Boolean))]);
-  v.innerHTML = backLink("#/spelers", "Spelers") + `<div class="ph"><span class="num" style="width:60px;height:60px;border-radius:16px;background:var(--yellow);color:#000;font-size:26px;border:0">${p.number ?? ""}</span>
+  v.innerHTML = backLink("#/spelers", "Spelers") + `<div class="ph">${pAv(p, "width:60px;height:60px;border-radius:16px;background:var(--yellow);color:#000;font-size:26px;border:0")}
    <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">${esc([p.position, p.foot ? p.foot + "voetig" : "", age != null ? age + " jaar" : ""].filter(Boolean).join(" · "))}</p></div>
    <a class="btn" href="#/dossier/${p.id}">${IC.book}Dossier</a><button class="btn ghost" type="button" id="editP">Fiche bewerken</button></div>
   <div class="kpis">
