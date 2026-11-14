@@ -109,8 +109,8 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
 } });
 
 /* lid bewerken: functie, beheerder en toegang tot alle ploegen */
-const FUNCTIES = ["Trainer", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
-const RECHTEN = [["scouting", "Scoutingsdatabase", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
+const FUNCTIES = ["Trainer", "Penningmeester", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
+const RECHTEN = [["scouting", "Scoutingsdatabase", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
 function memberForm(m, rpc) {
   const me = m.user_id === user?.id;
   const d = dialog(`<form><h2>${esc(m.name || m.email)}</h2><p class="muted" style="margin:0">${esc(m.email || "")}${m.teams ? " · trainer van " + esc(m.teams) : ""}</p>
@@ -136,7 +136,7 @@ function memberForm(m, rpc) {
     if (V14()) { const r3 = await sb.rpc("club_set_team_access", { uid: m.user_id, teams: f.all.checked ? [] : [...ta] }); if (r3.error) { toast(r3.error.message); return; } }
     const rr = [...RECHTEN.map(([k]) => k).filter(k => f["r_" + k].checked), ...(f.r_is.checked ? [] : ["intscout_uit"])], had = (m.rechten || []).slice().sort().join();
     if (rr.slice().sort().join() !== had || rr.length) { const r4 = await sb.rpc("club_set_rechten", { uid: m.user_id, r: rr });
-      if (r4.error) { toast(/club_set_rechten|function/i.test(r4.error.message) ? (rr.includes("intscout_uit") ? "Voer eerst supabase-interne-scouting-v43.sql uit in Supabase." : "Voer eerst supabase-rechten-v24.sql uit in Supabase.") : /rechten_chk|check/i.test(r4.error.message) ? "Voer eerst supabase-interne-scouting-v43.sql uit in Supabase." : r4.error.message); return; } }
+      if (r4.error) { toast(/club_set_rechten|function/i.test(r4.error.message) ? (rr.includes("intscout_uit") ? "Voer eerst supabase-interne-scouting-v43.sql uit in Supabase." : rr.includes("betalingen") ? "Voer eerst supabase-trainers-v46.sql uit in Supabase." : "Voer eerst supabase-rechten-v24.sql uit in Supabase.") : /rechten_chk|check/i.test(r4.error.message) ? "Voer eerst supabase-interne-scouting-v43.sql uit in Supabase." : r4.error.message); return; } }
     d.close(); toast("Opgeslagen."); render(); };
 }
 
@@ -379,7 +379,7 @@ async function rbfaCreateTeams(done) {
   const d = dialog(`<div class="dlg"><h2>Ploegen van RBFA</h2><p class="muted" style="margin:0">Laden…</p></div>`, "wide");
   let list; try { list = await rbfaTeams(); } catch (e) { d.querySelector(".dlg").innerHTML = `<h2>Ploegen van RBFA</h2><p class="err">RBFA is niet bereikbaar: ${esc(e.message)}</p><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div>`; $$("[data-close]", d).forEach(b => b.onclick = () => d.close()); return; }
   const teams = S.teams || [], season = seasonNow();
-  const rows = list.map(r => { const linked = teams.find(t => String(t.rbfa_team_id || "") === String(r.id)), cat = ageOf(r.name) ? "U" + ageOf(r.name) : "",
+  const rows = list.map(r => { const linked = teams.find(t => String(t.rbfa_team_id || "") === String(r.id) || (Array.isArray(t.rbfa_links) && t.rbfa_links.some(l => String(l.id) === String(r.id)))), cat = ageOf(r.name) ? "U" + ageOf(r.name) : "",
       same = !linked && cat && teams.find(t => (t.category || "").toUpperCase().replace(/^P/, "") === cat.toUpperCase() || ageOf(t.name) === ageOf(r.name));
     return { r, linked, same, cat, name: clubShort() + " " + rbfaName(r.name), format: formatFor(r.name) }; })
     .sort((a, b) => (ageOf(a.r.name) ?? 99) - (ageOf(b.r.name) ?? 99) || a.r.name.localeCompare(b.r.name, "nl"));

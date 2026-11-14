@@ -1803,3 +1803,19 @@ body.authpage .shell{display:block}
 .dmatch summary .mcr{margin-left:-2px}
 @media (max-width:560px){.item .mcr .lcrest.sm{width:28px;height:28px}.item .mcr .lcrest.sm.us .ogvlogo,.item .mcr .lcrest.sm.us .ogvlogo img{height:20px}}
 .score .side-t b{max-width:100%}
+.rbrow{display:flex;gap:10px;align-items:flex-end;margin-bottom:8px}.rbrow .f:first-child{flex:1;min-width:0}.rbrow .rbsq{width:110px;flex:none}
+
+/* v108 trainersaanwezigheid en betalingen */
+.tarow{display:grid;gap:8px}
+.tachip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border-radius:12px;background:var(--card2)}
+.tc-n{flex:1;min-width:140px;font-weight:700}.tc-n small{color:var(--dim);font-weight:600}
+.seg.sm button{padding:6px 12px;font-size:13px}
+.payamt{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted);flex-wrap:wrap}.payamt input{width:74px!important;min-height:34px!important;padding:4px 8px!important}
+.paytbl td,.paytbl th{white-space:nowrap}.paytbl tr.go{cursor:pointer}.paytbl tr.go:hover td{background:var(--card2)}
+.payd .list{max-height:60vh;overflow:auto}
+.prvt td.no{color:var(--dim)}.prvt td.yes{color:var(--ok);font-weight:800}.prvt td,.prvt th{font-size:13.5px}
+.prvr{display:grid;gap:6px}.prvr>div{display:grid;grid-template-columns:200px 1fr;gap:10px;padding:6px 0;border-top:1px solid var(--line)}.prvr span{color:var(--muted)}
+.prvg{cursor:pointer}.prvg input{width:20px;height:20px;flex:none}
+@media (max-width:600px){.prvr>div{grid-template-columns:1fr;gap:2px}}
+.mned{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}.mned fieldset{border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:0}.mned legend{font-weight:800;font-size:13px;color:var(--muted);padding:0 4px}.mned .check{margin:4px 0}
+.prvt td,.prvt th{text-align:left!important}

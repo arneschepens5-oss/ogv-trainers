@@ -46,7 +46,7 @@ function applyClubTheme() {
   const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
 }
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], trainer_profiles:["user_id"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], trainer_att:["event_id","tkey"], trainer_profiles:["user_id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -422,6 +422,7 @@ async function loadTeam(id) {
   try { [S.zelf, S.zelfOpen] = await Promise.all(["eval_zelf", "eval_zelf_open"].map(t => db.list(t, m))); S.zelfOk = true; } catch (e) { S.zelf = []; S.zelfOpen = []; S.zelfOk = false; }
   /* interne scouting per speler (databaseversie 40) */
   try { S.pscout = await db.list("player_scout", m); S.pscoutOk = true; } catch (e) { S.pscout = []; S.pscoutOk = false; }
+  try { S.tatt = await db.list("trainer_att", m); S.tattOk = true; } catch (e) { S.tatt = []; S.tattOk = false; } /* aanwezigheid trainers (databaseversie 46) */
   try { S.pmeas = await db.list("player_measures", m); S.pmeasOk = true; } catch (e) { S.pmeas = []; S.pmeasOk = false; } /* meten en wegen (databaseversie 42) */
   if (typeof tpLoad === "function") await tpLoad(); /* trainersprofielen (databaseversie 40) */
   sortPlayers(); sortEvents();
@@ -476,13 +477,24 @@ function playerStats(p) {
 /* ============ navigatie ============ */
 const ROUTES = {};
 function route(name, def) { ROUTES[name] = def; }
+/* onderdelen die enkel zin hebben met een ploeg, en wat iemand zelf uit zijn menu haalde */
+const NAV_TEAM = ["live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
+const navHidden = () => { try { const x = JSON.parse(localStorage.getItem("ogv-nav-hidden")); return Array.isArray(x) ? x : []; } catch (e) { return []; } };
+function menuEdit() {
+  const hid = new Set(navHidden()), groups = NAV.filter(g => g.g).map(g => [g.g, g.items.filter(([k]) => !["scouting", "betalingen"].includes(k) || mag(k))]).filter(([, xs]) => xs.length);
+  const d = dialog(`<form><h2>Menu aanpassen</h2><p class="hint" style="margin-top:0">Haal weg wat je nooit gebruikt. Dit geldt enkel voor jou, op dit toestel. Je kan alles altijd terugzetten.</p>
+    <div class="mned">${groups.map(([g, xs]) => `<fieldset><legend>${esc(g)}</legend>${xs.map(([k, l]) => `<label class="check"><input type="checkbox" data-mk="${k}"${hid.has(k) ? "" : " checked"}> <span>${l}</span></label>`).join("")}</fieldset>`).join("")}</div>
+    <div class="row"><button class="link" type="button" id="mnAll">Alles tonen</button><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Bewaren</button></div></form>`);
+  $("#mnAll", d).onclick = () => $$("[data-mk]", d).forEach(c => c.checked = true);
+  $("form", d).onsubmit = e => { e.preventDefault(); const h = $$("[data-mk]", d).filter(c => !c.checked).map(c => c.dataset.mk); try { localStorage.setItem("ogv-nav-hidden", JSON.stringify(h)); } catch (x) {} d.close(); shell(); toast("Menu aangepast."); };
+}
 const NAV = [
   { g: null, items: [["start", "Vandaag", "home"]] },
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["dossier", "Spelersdossier", "book"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
   { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
-  { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"]]  },
+  { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
   { g: "Scouting", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];
 /* op de gsm: onderdelen die bij één tab onderaan horen, met een rij knoppen bovenaan de pagina */
@@ -504,9 +516,9 @@ function shell(fresh) {
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
-  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"]] : [])] }] : nav)
+  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
-    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => k !== "scouting" || mag("scouting")) })).filter(sec => sec.items.length);
+    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>
@@ -522,7 +534,7 @@ function shell(fresh) {
     <a class="brand" href="#/start">${ogvBrand() ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? LOGO("mini") + "Jeugdwerking " + esc(clubName()) : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
     <nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="foot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a></div>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
+    <div class="foot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<button class="navbtn" type="button" data-menued>${IC.gear}<span>Menu aanpassen</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>${isOGV() ? `<a class="navbtn" href="privacy.html" target="_blank" rel="noopener">${IC.eye}<span>Privacy</span></a>` : ""}</div>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -534,12 +546,13 @@ function shell(fresh) {
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
-    <div class="sheetfoot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a></div>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
+    <div class="sheetfoot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<button class="navbtn" type="button" data-menued>${IC.gear}<span>Menu aanpassen</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>${isOGV() ? `<a class="navbtn" href="privacy.html" target="_blank" rel="noopener">${IC.eye}<span>Privacy</span></a>` : ""}</div>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   $$("[data-gids]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); startGids(); });
+  $$("[data-menued]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); menuEdit(); });
   if (logged && !gidsSeen()) setTimeout(() => { if (!$("#dlg")?.open) startGids(); }, 600);
   bindThemeSwitch();
   $$("[data-logout]").forEach(b => b.onclick = logout); $$("[data-clubsw]").forEach(b => b.onclick = clubSwitch);

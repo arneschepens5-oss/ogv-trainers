@@ -104,13 +104,14 @@ function attendanceView(tv, e) {
     ${ps.length ? `<div class="list">${ps.map(p => { const a = attOf(e.id, p.id);
       return `<div class="item static" data-p="${p.id}" style="flex-wrap:wrap"><span class="num">${p.number ?? ""}</span><span class="main" style="min-width:140px"><b>${esc(pname(p))}</b>${rsvpSummary(e) ? rsvpBadge(e, p) : ""}</span>
       <div class="seg">${STATUS.map(s => `<button type="button" data-s="${s}" aria-pressed="${a?.status === s}">${STATUS_L[s]}</button>`).join("")}</div></div>`; }).join("")}</div>`
-     : `<div class="empty"><b>${sib.length ? "Iedereen zit in een groepje" : "Nog geen spelers"}</b>${sib.length ? "" : `<a class="link" href="#/spelers">Voeg eerst je spelers toe</a>`}</div>`}`;
+     : `<div class="empty"><b>${sib.length ? "Iedereen zit in een groepje" : "Nog geen spelers"}</b>${sib.length ? "" : `<a class="link" href="#/spelers">Voeg eerst je spelers toe</a>`}</div>`}<div id="tav"></div>`;
   if (grp) groupPanel($("#grpv", tv), e);
+  if (typeof taPanel === "function") taPanel($("#tav", tv), e);
   const recount = () => { $("#cnts").textContent = cntTxt(); };
   $$("[data-p]", tv).forEach(row => $$(".seg button", row).forEach(b => b.onclick = async () => { const pid = row.dataset.p, old = attOf(e.id, pid) || { event_id: e.id, player_id: pid, team_id: S.team.id, tags: [], strengths: [], scores: {} };
-    const a = { ...old, status: b.dataset.s }; await safe(async () => { await putAtt(a); $$(".seg button", row).forEach(x => x.setAttribute("aria-pressed", x === b)); recount(); if (grp && sib.length) groupPanel($("#grpv", tv), e); }); }));
+    const a = { ...old, status: b.dataset.s }; await safe(async () => { await putAtt(a); if (typeof taSelf === "function") taSelf(e); $$(".seg button", row).forEach(x => x.setAttribute("aria-pressed", x === b)); recount(); if (grp && sib.length) groupPanel($("#grpv", tv), e); }); }));
   const ra = $("#rsApply"); if (ra) ra.onclick = async () => { const n = await safe(() => rsvpApply(e)); if (n != null) { toast(n ? n + (n === 1 ? " antwoord" : " antwoorden") + " overgenomen." : "Iedereen met een antwoord is al ingevuld."); render(); } };
-  $("#allIn").onclick = () => safe(async () => { for (const p of ps) { const a = attOf(e.id, p.id); if (!a || a.status !== "aanwezig") await putAtt({ ...(a || { event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {} }), status: "aanwezig" }); } render(); }, "Iedereen staat op aanwezig.");
+  $("#allIn").onclick = () => safe(async () => { if (typeof taSelf === "function") taSelf(e); for (const p of ps) { const a = attOf(e.id, p.id); if (!a || a.status !== "aanwezig") await putAtt({ ...(a || { event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {} }), status: "aanwezig" }); } render(); }, "Iedereen staat op aanwezig.");
 }
 
 /* ---------- groepjes: spelers per speeldag verdelen over de wedstrijden van die dag ---------- */

@@ -457,7 +457,7 @@ function drawProfile() {
         <label class="chk"><input type="checkbox" name="cp"${c.public ? " checked" : ""}><span>De club mag foto's waarop ${esc(k.name)} herkenbaar is gebruiken op de website en sociale media.</span></label>
         <label class="f" style="margin-top:10px">Naam van de ouder die dit invult<input name="cn" value="${esc(c.name || store.get("ogv-ouders-name", ""))}"></label></div>
       <div class="row"><button class="btn" type="submit">Bewaren</button><span class="ok" data-ok>${x.updated ? "Laatst bijgewerkt " + new Date(x.updated).toLocaleDateString("nl-BE", { day: "numeric", month: "short" }) : ""}</span></div>
-      <p style="margin:14px 0 0;font-size:13px;color:var(--muted)">Je kan dit altijd aanpassen of laten wissen. Meer uitleg in de privacyverklaring van de club.</p></form>`; }).join("") +
+      <p style="margin:14px 0 0;font-size:13px;color:var(--muted)">Je kan dit altijd aanpassen of laten wissen. Meer uitleg in de <a href="../privacy.html" target="_blank" rel="noopener">privacyverklaring van de club</a>.</p></form>`; }).join("") +
     `<div class="card"><h3>Nog een kind bij ${esc(cname())}?</h3><p class="h" style="margin:0">Open de persoonlijke link die je van de trainer van dat kind kreeg. Het komt er dan vanzelf bij in deze app.</p>
       <div class="row">${kids.map(k => `<button class="btn ghost sm" type="button" data-rm="${k.tok}">${esc(k.name || "Kind")} van dit toestel halen</button>`).join("")}</div></div>`;
   $$("[data-pf]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const tok = f.dataset.pf, F = f.elements, ok = f.querySelector("[data-ok]");

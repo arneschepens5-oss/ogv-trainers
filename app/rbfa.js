@@ -29,10 +29,14 @@ const rbfaKind = t => !t ? "" : /beker/i.test(t) ? "Beker" : /tornooi|toernooi/i
 const normOpp = s => String(s || "").toLowerCase().replace(/\b(k?v?v|k?fc|sk|vc|ksk|kvc|kfc|sc|fc|vv)\b/g, "").replace(/[^a-z]/g, "");
 
 /* Haalt de kalender op en zet nieuwe of gewijzigde wedstrijden in de app. Eigen gegevens (verslag, score, opstelling) blijven onaangeroerd. */
+/* één ploeg in de app kan meerdere RBFA-ploegen hebben (bv. PU9 A en PU9 B die samen trainen), elk met een vast groepje */
+const rbfaLinks = t => Array.isArray(t?.rbfa_links) && t.rbfa_links.length ? t.rbfa_links.filter(l => l?.id) : t?.rbfa_team_id ? [{ id: t.rbfa_team_id, squad: "" }] : [];
 async function rbfaSync(team) {
-  if (!team?.rbfa_team_id || !rbfaClub()) return { added: 0, changed: 0 };
-  const cal = await rbfaCalendar(team.rbfa_team_id), events = mode === "demo" || S.team?.id === team.id ? S.events : await db.list("events", { team_id: team.id });
-  let added = 0, changed = 0;
+  const links = rbfaLinks(team); if (!links.length || !rbfaClub()) return { added: 0, changed: 0, total: 0 };
+  const events = mode === "demo" || S.team?.id === team.id ? S.events : await db.list("events", { team_id: team.id });
+  let added = 0, changed = 0, total = 0;
+  for (const link of links) { const sq = String(link.squad || "").trim();
+  const cal = await rbfaCalendar(link.id); total += cal.length;
   await rbfaLogos(cal);
   for (const m of cal) {
     if (!m?.id || !m.startTime) continue;
@@ -42,24 +46,26 @@ async function rbfaSync(team) {
     const loc = [rbfaName(L.name), [L.address, [L.postalCode, L.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || null;
     const state = rbfaCancelled(m) ? "afgelast" : null, series = m.title || null;
     let e = events.find(x => x.rbfa_id === String(m.id));
-    if (!e) e = events.find(x => x.type === "wedstrijd" && !x.rbfa_id && x.date === date && (!x.opponent || normOpp(x.opponent) === normOpp(opp) || normOpp(opp).includes(normOpp(x.opponent))));
+    if (!e) e = events.find(x => x.type === "wedstrijd" && !x.rbfa_id && x.date === date && (!sq || !x.report?.squad || x.report.squad === sq) && (!x.opponent || normOpp(x.opponent) === normOpp(opp) || normOpp(opp).includes(normOpp(x.opponent))));
     if (e) {
-      const before = JSON.stringify([e.rbfa_id, e.date, tm(e.start_time), e.home, e.opponent, e.location, e.rbfa_state, e.score_for, e.score_against, e.report?.series, e.report?.kind]);
+      const before = JSON.stringify([e.rbfa_id, e.date, tm(e.start_time), e.home, e.opponent, e.location, e.rbfa_state, e.score_for, e.score_against, e.report?.series, e.report?.kind, e.report?.squad]);
+      if (sq && !e.report?.squad) e.report = { ...(e.report || {}), squad: sq };
       const st0 = tm(e.start_time); e.rbfa_id = String(m.id); e.date = date; e.start_time = (time || "").slice(0, 5) || e.start_time;
       if (e.end_time && st0 && tm(e.start_time) !== st0) { const mm = t => { const [h, n] = String(t).split(":").map(Number); return h * 60 + n; }, d = mm(tm(e.end_time)) + mm(tm(e.start_time)) - mm(st0); if (d > 0 && d < 1440) e.end_time = String(Math.floor(d / 60)).padStart(2, "0") + ":" + String(d % 60).padStart(2, "0"); } /* aftrap verschoven: einduur schuift mee */ e.home = home; e.rbfa_state = state;
       if (!e.opponent) e.opponent = opp; if (!e.location || e.rbfa_loc) { e.location = loc; e.rbfa_loc = true; }
       if (m.showScore && m.outcome?.homeTeamGoals != null && e.score_for == null) { e.score_for = home ? m.outcome.homeTeamGoals : m.outcome.awayTeamGoals; e.score_against = home ? m.outcome.awayTeamGoals : m.outcome.homeTeamGoals; }
       e.report = e.report || {}; if (series && !e.report.series) e.report.series = series; if (series && !e.report.kind) e.report.kind = rbfaKind(series);
-      if (JSON.stringify([e.rbfa_id, e.date, tm(e.start_time), e.home, e.opponent, e.location, e.rbfa_state, e.score_for, e.score_against, e.report?.series, e.report?.kind]) !== before) { await rbfaPut(e); changed++; }
+      if (JSON.stringify([e.rbfa_id, e.date, tm(e.start_time), e.home, e.opponent, e.location, e.rbfa_state, e.score_for, e.score_against, e.report?.series, e.report?.kind, e.report?.squad]) !== before) { await rbfaPut(e); changed++; }
     } else if (!state) {
       const row = { id: uid(), team_id: team.id, type: "wedstrijd", date, start_time: (time || "").slice(0, 5) || null, end_time: null, location: loc, opponent: opp, home,
-        rbfa_id: String(m.id), rbfa_state: null, rbfa_loc: true, report: series ? { series, kind: rbfaKind(series) } : {} };
+        rbfa_id: String(m.id), rbfa_state: null, rbfa_loc: true, report: { ...(series ? { series, kind: rbfaKind(series) } : {}), ...(sq ? { squad: sq } : {}) } };
       if (m.showScore && m.outcome?.homeTeamGoals != null) { row.score_for = home ? m.outcome.homeTeamGoals : m.outcome.awayTeamGoals; row.score_against = home ? m.outcome.awayTeamGoals : m.outcome.homeTeamGoals; }
       await rbfaPut(row); if (events !== S.events) events.push(row); added++;
     }
   }
+  }
   team.rbfa_synced_at = new Date().toISOString(); await db.save("teams", team);
-  return { added, changed, total: cal.length };
+  return { added, changed, total };
 }
 async function rbfaPut(e) { try { await putEvent(e); } catch (err) { throw /rbfa_|sheet_url|column/i.test(err.message || "") ? new Error("Voer eerst het databasescript ogv-update-v5.sql uit in Supabase.") : err; } }
 /* stil op de achtergrond bijwerken als de laatste synchronisatie meer dan 6 uur oud is */
@@ -78,14 +84,14 @@ let logoBusy = false;
 async function rbfaLogoRefresh(force) {
   if (logoBusy || mode === "demo" || !rbfaClub()) return; let last = 0; try { last = +localStorage.getItem("ogv-logos-at") || 0; } catch (e) {}
   if (!force && Date.now() - last < 864e5 && Object.keys(LOGO_CACHE).length) return;
-  const teams = (S.teams || []).filter(t => t.rbfa_team_id); if (!teams.length) return; logoBusy = true; let n = 0;
-  try { for (let i = 0; i < teams.length; i += 4) { const cals = await Promise.all(teams.slice(i, i + 4).map(t => rbfaCalendar(t.rbfa_team_id).catch(() => []))); for (const c of cals) n += await rbfaLogos(c); }
+  const ids = [...new Set((S.teams || []).flatMap(t => rbfaLinks(t).map(l => l.id)))]; if (!ids.length) return; logoBusy = true; let n = 0;
+  try { for (let i = 0; i < ids.length; i += 4) { const cals = await Promise.all(ids.slice(i, i + 4).map(id => rbfaCalendar(id).catch(() => []))); for (const c of cals) n += await rbfaLogos(c); }
     try { localStorage.setItem("ogv-logos-at", String(Date.now())); } catch (e) {}
     if (n && !document.querySelector("dialog[open]") && ["start", "kalender", "ploeg", "uitslagen", "live", "dossier", "spelers"].includes(cur().page) && !cur().id) render(); } finally { logoBusy = false; }
 }
 function rbfaAuto() {
   setTimeout(() => rbfaLogoRefresh().catch(e => console.warn("RBFA-logo's", e)), 1500);
-  const t = S.team; if (!t?.rbfa_team_id || rbfaBusy) return;
+  const t = S.team; if (!rbfaLinks(t).length || rbfaBusy) return;
   if (t.rbfa_synced_at && Date.now() - new Date(t.rbfa_synced_at).getTime() < RBFA_SYNC_MS) return;
   rbfaBusy = true;
   rbfaSync(t).then(r => { if (r.added || r.changed) { toast(r.added ? `${r.added} nieuwe ${r.added === 1 ? "wedstrijd" : "wedstrijden"} overgenomen van RBFA.` : "Wedstrijden bijgewerkt volgens RBFA.");
@@ -96,21 +102,29 @@ async function rbfaPanel(host) {
   const t = S.team;
   if (!rbfaClub()) { host.innerHTML = `<h2>Wedstrijden van RBFA</h2><p class="hint" style="margin-top:0">De koppeling met RBFA wordt voor je club ingesteld bij de opstart. Vraag het aan je clubbeheerder of mail naar ${esc(CONTACT_MAIL)}.</p>`; return; }
   host.innerHTML = `<h2>Wedstrijden van RBFA</h2><p class="hint" style="margin-top:0">Koppel je ploeg aan haar ploeg op de RBFA-website. De wedstrijden komen dan vanzelf in je kalender, met uur en adres, en wijzigingen (verplaatst, afgelast) worden overgenomen. Je verslag en opstelling blijven altijd van jou.</p>
-    <div class="fields"><label class="f full">Ploeg bij RBFA<select id="rbt"><option value="">Laden…</option></select></label>
-    <label class="f full">Link om wedstrijdbladen in te vullen <span class="hint">leeg = wedstrijdbladen.be</span><input id="rbs" type="url" value="${esc(t.sheet_url || "")}" placeholder="${RBFA_SHEET_DEFAULT}"></label></div>
-    <div class="row" style="margin-top:12px"><button class="btn" type="button" id="rbgo">${IC.rotate}${t.rbfa_team_id ? "Nu bijwerken" : "Koppelen en wedstrijden ophalen"}</button>${t.rbfa_team_id ? `<button class="link" type="button" id="rboff">Ontkoppelen</button>` : ""}<span class="spacer"></span><span class="hint" id="rbst">${t.rbfa_synced_at ? "Laatst bijgewerkt " + new Date(t.rbfa_synced_at).toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" }) : ""}</span></div>`;
-  const sel = $("#rbt", host);
-  try { const ts = await rbfaTeams(), guess = !t.rbfa_team_id && ts.find(x => (t.category || t.name || "").toUpperCase().includes(x.name.split(" ")[0].toUpperCase()));
-    sel.innerHTML = `<option value="">Kies je ploeg</option>` + ts.map(x => `<option value="${esc(x.id)}"${(t.rbfa_team_id || guess?.id) === x.id ? " selected" : ""}>${esc(x.name)}</option>`).join(""); }
-  catch (e) { sel.innerHTML = `<option value="">RBFA is niet bereikbaar</option>`; }
+    <div id="rbl"></div><button class="link" type="button" id="rbadd" style="margin:8px 0 4px">+ Nog een RBFA-ploeg koppelen (bv. groepje B)</button>
+    <p class="hint" style="margin:0 0 10px">Trainen twee RBFA-ploegen samen (bv. PU9 A en PU9 B)? Koppel ze allebei en geef elk een groepje. Elke wedstrijd komt dan vanzelf in het juiste groepje.</p>
+    <div class="fields"><label class="f full">Link om wedstrijdbladen in te vullen <span class="hint">leeg = wedstrijdbladen.be</span><input id="rbs" type="url" value="${esc(t.sheet_url || "")}" placeholder="${RBFA_SHEET_DEFAULT}"></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn" type="button" id="rbgo">${IC.rotate}${rbfaLinks(t).length ? "Opslaan en bijwerken" : "Koppelen en wedstrijden ophalen"}</button>${rbfaLinks(t).length ? `<button class="link" type="button" id="rboff">Alles ontkoppelen</button>` : ""}<span class="spacer"></span><span class="hint" id="rbst">${t.rbfa_synced_at ? "Laatst bijgewerkt " + new Date(t.rbfa_synced_at).toLocaleString("nl-BE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</span></div>`;
+  let ts = []; try { ts = await rbfaTeams(); } catch (e) { ts = null; }
+  const guess = !rbfaLinks(t).length && ts && ts.find(x => (t.category || t.name || "").toUpperCase().includes(x.name.split(" ")[0].toUpperCase()));
+  let L = rbfaLinks(t).map(l => ({ id: String(l.id), squad: l.squad || "" })); if (!L.length) L = [{ id: guess?.id || "", squad: "" }];
+  const draw = () => { $("#rbl", host).innerHTML = L.map((l, i) => `<div class="rbrow" data-i="${i}"><label class="f">Ploeg bij RBFA${L.length > 1 ? " " + (i + 1) : ""}<select data-rid>${ts ? `<option value="">Kies je ploeg</option>` + ts.map(x => `<option value="${esc(x.id)}"${String(l.id) === String(x.id) ? " selected" : ""}>${esc(x.name)}</option>`).join("") : `<option value="${esc(l.id)}">RBFA is niet bereikbaar</option>`}</select></label>
+      <label class="f rbsq">Groepje<input data-rsq maxlength="12" value="${esc(l.squad)}" placeholder="${L.length > 1 ? String.fromCharCode(65 + i) : "geen"}"></label>${L.length > 1 ? `<button type="button" class="btn ghost small" data-rdel="${i}" aria-label="Verwijderen">${IC.x}</button>` : ""}</div>`).join("");
+    $$("[data-rid]", host).forEach(s => s.onchange = () => { L[+s.closest(".rbrow").dataset.i].id = s.value; });
+    $$("[data-rsq]", host).forEach(s => s.oninput = () => { L[+s.closest(".rbrow").dataset.i].squad = s.value.trim(); });
+    $$("[data-rdel]", host).forEach(b => b.onclick = () => { L.splice(+b.dataset.rdel, 1); draw(); }); };
+  draw();
+  $("#rbadd", host).onclick = () => { L.push({ id: "", squad: "" }); if (L.length === 2 && !L[0].squad) L[0].squad = "A"; if (!L[L.length - 1].squad) L[L.length - 1].squad = String.fromCharCode(64 + L.length); draw(); };
   $("#rbs", host).onchange = e => { const u = e.target.value.trim(); t.sheet_url = u ? (/^https?:\/\//i.test(u) ? u : "https://" + u) : null; safe(() => db.save("teams", t).catch(err => { throw /column/i.test(err.message) ? new Error("voer eerst ogv-update-v5.sql uit in Supabase") : err; }), "Link bewaard."); };
-  $("#rbgo", host).onclick = async ev => { const id = sel.value; if (!id) { toast("Kies eerst je ploeg bij RBFA."); return; }
+  $("#rbgo", host).onclick = async ev => { const links = L.filter(l => l.id); if (!links.length) { toast("Kies eerst je ploeg bij RBFA."); return; }
+    if (links.length > 1 && links.some(l => !l.squad)) { toast("Geef elke gekoppelde RBFA-ploeg een groepje (bv. A en B)."); return; }
     const b = ev.currentTarget; b.disabled = true; b.innerHTML = `<span class="spin"></span>Ophalen…`;
-    const old = t.rbfa_team_id; t.rbfa_team_id = id;
-    const r = await safe(() => rbfaSync(t)); b.disabled = false;
-    if (!r) { t.rbfa_team_id = old; rbfaPanel(host); return; }
+    const old = [t.rbfa_team_id, t.rbfa_links]; t.rbfa_team_id = links[0].id; t.rbfa_links = links.length > 1 || links[0].squad ? links : null;
+    const r = await safe(() => rbfaSync(t).catch(err => { throw /rbfa_links/.test(err.message || "") ? new Error("Voer eerst supabase-trainers-v46.sql uit om meerdere RBFA-ploegen te koppelen.") : err; })); b.disabled = false;
+    if (!r) { [t.rbfa_team_id, t.rbfa_links] = old; rbfaPanel(host); return; }
     toast(`${r.total} wedstrijden bij RBFA: ${r.added} nieuw, ${r.changed} bijgewerkt.`); rbfaPanel(host); };
-  const off = $("#rboff", host); if (off) off.onclick = async () => { t.rbfa_team_id = null; await safe(() => db.save("teams", t), "Ontkoppeld. De wedstrijden blijven in je kalender staan."); rbfaPanel(host); };
+  const off = $("#rboff", host); if (off) off.onclick = async () => { t.rbfa_team_id = null; t.rbfa_links = null; await safe(() => db.save("teams", t), "Ontkoppeld. De wedstrijden blijven in je kalender staan."); rbfaPanel(host); };
 }
 /* knoppen bovenaan een wedstrijd */
 function matchLinks(e) {
