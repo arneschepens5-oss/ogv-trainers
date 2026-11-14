@@ -1,4 +1,4 @@
--- v42 (bevat ook v41): rijpheid, clubtotalen en lengte/gewicht per speler. Veilig om opnieuw uit te voeren.
+-- v42 (bevat ook v41): maturiteit, clubtotalen en lengte/gewicht per speler. Veilig om opnieuw uit te voeren.
 alter table public.players add column if not exists maturity text;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'players_maturity_chk') then
@@ -6,7 +6,7 @@ do $$ begin
   end if;
 end $$;
 
--- Per ploeg: aantal actieve spelers per geboortekwartaal, jaarhelft en rijpheid. Geen namen.
+-- Per ploeg: aantal actieve spelers per geboortekwartaal, jaarhelft en maturiteit. Geen namen.
 create or replace function public.club_spelersprofiel() returns json language plpgsql stable security definer set search_path to 'public' as $$
 declare me public.club_members%rowtype;
 begin

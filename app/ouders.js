@@ -217,11 +217,6 @@ function importPlayers(clubWide) {
 const BOUW = [["", "Alle ploegen"], ["onder", "Onderbouw U6–U9"], ["midden", "Middenbouw U10–U13"], ["boven", "Bovenbouw U14+"]];
 const ageOfTeam = t => { const m = String(t.category || t.name || "").match(/U\s?(\d{1,2})/i); return m ? +m[1] : null; };
 const bouwOf = t => { const a = ageOfTeam(t); return a == null ? "" : a <= 9 ? "onder" : a <= 13 ? "midden" : "boven"; };
-let DB_F = { since: 28, bouw: "" };
-async function spClubData() {
-  if (mode !== "demo") { const r = await sb.rpc("club_spelersprofiel"); if (r.error) throw r.error; return r.data || []; }
-  const T = await db.list("teams"), P = await db.list("players"); return T.map(t => ({ id: t.id, name: t.name, category: t.category, ...spCount(P.filter(p => p.team_id === t.id && p.active !== false)) }));
-}
 async function dashData(since) {
   if (mode !== "demo") { const r = await sb.rpc("club_dashboard", { since }); if (r.error) throw r.error; return r.data || []; }
   const T = await db.list("teams"), P = await db.list("players"), E = await db.list("events"), A = await db.list("attendance"), EV = await db.list("evaluations"), TT = await db.list("team_trainers"), today = todayIso();
@@ -233,45 +228,6 @@ async function dashData(since) {
       att_pct: at.length ? Math.round(100 * at.filter(a => a.status === "aanwezig" || a.status === "te laat").length / at.length) : null,
       matches: ma.length, matches_report: ma.filter(e => e.score_for != null).length, evals: evs, next: ev.map(e => e.date).filter(x => x >= today).sort()[0] || null }; });
 }
-route("clubdashboard", { title: "Clubdashboard", auth: true, render: async v => {
-  if (!(S.admin || S.allTeams || (S.teamAccess || []).length)) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders en coördinatoren</b>Vraag de beheerder om toegang.</div>`; return; }
-  if (!V14()) { v.innerHTML = head("Clubdashboard", "") + needV14("Het clubdashboard"); return; }
-  v.innerHTML = head("Clubdashboard", "Hoe staan de ploegen ervoor? Zonder namen van kinderen: enkel cijfers per ploeg.") + `<p class="hint">Laden…</p>`;
-  const since = iso(addDays(new Date(), -DB_F.since)); let rows;
-  try { rows = await dashData(since); } catch (e) { v.innerHTML = head("Clubdashboard", "") + `<div class="empty"><b>Laden mislukt</b>${esc(e.message || e)}</div>`; return; }
-  const mom = typeof EV_MOMENTS !== "undefined" ? EV_MOMENTS : [], curM = (() => { const m = new Date().getMonth() + 1; return m >= 8 && m <= 10 ? 2 : m >= 11 || m <= 1 ? 3 : m <= 4 ? 4 : 5; })();
-  rows = rows.filter(r => !DB_F.bouw || bouwOf(r) === DB_F.bouw).sort((a, b) => (ageOfTeam(a) ?? 99) - (ageOfTeam(b) ?? 99) || a.name.localeCompare(b.name, "nl", { numeric: true }));
-  const pct = (a, b) => b ? Math.round(100 * a / b) : null, flag = r => { const f = [];
-    if (!r.trainers) f.push("geen trainer"); if (!r.players) f.push("geen spelers");
-    if (r.trainings && pct(r.trainings_att, r.trainings) < 60) f.push("aanwezigheden niet bijgehouden"); if (r.matches && r.matches_report < r.matches) f.push((r.matches - r.matches_report) + " uitslag(en) ontbreken");
-    if (!r.next) f.push("niets meer gepland"); return f; };
-  const tot = k => rows.reduce((s, r) => s + (r[k] || 0), 0), attAll = rows.filter(r => r.att_pct != null), probs = rows.filter(r => flag(r).length);
-  const cell = (val, good) => `<td class="${val == null ? "" : good ? "okc" : "badc"}">${val ?? "–"}</td>`;
-  v.innerHTML = head("Clubdashboard", "Hoe staan de ploegen ervoor? Zonder namen van kinderen: enkel cijfers per ploeg.", `<button class="btn ghost" type="button" id="dbcsv">${IC.out}Excel</button>`) +
-    `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:14px"><div class="chips">${[[28, "4 weken"], [56, "8 weken"], [120, "Seizoen"]].map(([n, l]) => `<button class="chip" type="button" data-sn="${n}" aria-pressed="${DB_F.since === n}">${l}</button>`).join("")}</div>
-      <select id="dbbouw" style="width:auto">${BOUW.map(([k, l]) => `<option value="${k}"${k === DB_F.bouw ? " selected" : ""}>${l}</option>`).join("")}</select></div>
-    <div class="kpis"><div class="kpi"><small>Ploegen</small><b>${rows.length}</b><span>${tot("players")} spelers · ${tot("trainers")} trainers</span></div>
-      <div class="kpi"><small>Aanwezigheid training</small><b>${attAll.length ? Math.round(attAll.reduce((s, r) => s + r.att_pct, 0) / attAll.length) + "%" : "–"}</b><span>gemiddeld per ploeg</span></div>
-      <div class="kpi"><small>Trainingen bijgehouden</small><b>${pct(tot("trainings_att"), tot("trainings")) ?? "–"}${tot("trainings") ? "%" : ""}</b><span>${tot("trainings_att")} van ${tot("trainings")} met aanwezigheden</span></div>
-      <div class="kpi"><small>Vraagt aandacht</small><b style="color:${probs.length ? "var(--warn)" : "inherit"}">${probs.length}</b><span>ploegen</span></div></div>
-    ${probs.length ? `<div class="sec panel"><h2>Vraagt aandacht</h2><div class="list">${probs.map(r => `<div class="item static"><span class="main"><b>${esc(r.name)}</b><small>${esc(flag(r).join(" · "))}</small></span></div>`).join("")}</div></div>` : ""}
-    <div class="sec panel"><h2>Per ploeg</h2><div class="tblwrap"><table class="tbl dbt"><tr><th>Ploeg</th><th>Trainers</th><th>Spelers</th><th>Aanwezig</th><th>Bijgehouden</th><th>Met plan</th><th>Uitslagen</th><th>Evaluatie ${esc(mom[curM - 1]?.kort || "")}</th><th>Volgende</th></tr>
-      ${rows.map(r => { const ev = (r.evals || {})[curM] || 0; return `<tr><td><b>${esc(r.name)}</b></td>${cell(r.trainers, r.trainers > 0)}<td>${r.players}</td>${cell(r.att_pct == null ? null : r.att_pct + "%", r.att_pct >= 75)}
-        ${cell(r.trainings ? r.trainings_att + "/" + r.trainings : null, pct(r.trainings_att, r.trainings) >= 80)}<td>${r.trainings ? r.trainings_plan + "/" + r.trainings : "–"}</td>${cell(r.matches ? r.matches_report + "/" + r.matches : null, r.matches_report >= r.matches)}
-        <td>${r.players ? ev + "/" + r.players : "–"}</td><td>${r.next ? dShort(r.next) : "–"}</td></tr>`; }).join("")}</table></div>
-      <p class="hint" style="margin-bottom:0">Bijgehouden: trainingen waarbij de aanwezigheden ingevuld zijn. Uitslagen: gespeelde wedstrijden met een score. Groen is in orde, rood vraagt aandacht.</p></div>`;
-  const sp = await spClubData().catch(e => ({ err: e.message || String(e) }));
-  if (Array.isArray(sp)) { const rs = sp.filter(r => !DB_F.bouw || bouwOf(r) === DB_F.bouw).sort((a, b) => (ageOfTeam(a) ?? 99) - (ageOfTeam(b) ?? 99) || a.name.localeCompare(b.name, "nl", { numeric: true })), pc = r => (r.players - r.nobirth) || 1;
-    v.insertAdjacentHTML("beforeend", `<div class="sec"><h2 style="margin-bottom:4px">Samenstelling van de club</h2><p class="hint" style="margin-top:0">Alleen aantallen, geen namen. Geboortekwartaal en jaarhelft komen uit de geboortedatum, rijpheid uit de inschatting van de trainers.</p>${spHtml(spSum(rs), "in " + rs.length + " ploegen")}
-      <div class="panel sec"><h2>Per ploeg</h2><div class="tblwrap"><table class="tbl dbt"><tr><th>Ploeg</th><th>Spelers</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Jan-jun</th><th>Jul-dec</th><th>Vroeg</th><th>Normaal</th><th>Laat</th></tr>
-      ${rs.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${r.players}</td><td>${r.q1}</td><td>${r.q2}</td><td>${r.q3}</td><td>${r.q4}</td><td>${r.q1 + r.q2}</td><td>${r.q3 + r.q4}</td><td>${r.vroeg || "–"}</td><td>${r.normaal || "–"}</td><td>${r.laat || "–"}</td></tr>`).join("")}</table></div></div></div>`); }
-  else v.insertAdjacentHTML("beforeend", `<div class="share sec">${IC.eye}<div><b style="color:var(--ink)">Samenstelling nog niet beschikbaar</b><br>Voer <b>supabase-rijpheid-v41.sql</b> uit in Supabase.</div></div>`);
-  $$("[data-sn]", v).forEach(b => b.onclick = () => { DB_F.since = +b.dataset.sn; render(); });
-  $("#dbbouw").onchange = e => { DB_F.bouw = e.target.value; render(); };
-  $("#dbcsv").onclick = () => download("clubdashboard-" + todayIso() + ".csv", "﻿" + [["Ploeg", "Trainers", "Spelers", "Aanwezigheid %", "Trainingen", "Met aanwezigheden", "Met plan", "Wedstrijden", "Met uitslag", "Volgende"].join(";"),
-    ...rows.map(r => [r.name, r.trainers, r.players, r.att_pct ?? "", r.trainings, r.trainings_att, r.trainings_plan, r.matches, r.matches_report, r.next || ""].map(csvCell).join(";"))].join("\n"));
-} });
-
 /* ============ terreinoverzicht ============ */
 let FLD_W = 0;
 const minOf = t => { if (!t) return null; const [h, m] = String(t).split(":").map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };

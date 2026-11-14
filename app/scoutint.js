@@ -16,8 +16,8 @@ async function isData() {
   const [P, R, M] = await Promise.all([db.list("players"), db.list("player_scout").catch(() => []), db.list("player_measures").catch(() => [])]);
   return { all, T, P, R, M };
 }
-const IS_F = [["team", "Ploeg"], ["pos", "Positie"], ["foot", "Voet"], ["year", "Geboortejaar"], ["quarter", "Kwartaal"], ["half", "Jaarhelft"], ["mat", "Rijpheid"], ["pot", "Potentieel"], ["min", "Score"]];
-const IS_MAT = { vroeg: ["Vroeg rijp", "#F59E0B"], normaal: ["Normaal rijp", "#10B981"], laat: ["Laat rijp", "#3B82F6"] };
+const IS_F = [["team", "Ploeg"], ["pos", "Positie"], ["foot", "Voet"], ["year", "Geboortejaar"], ["quarter", "Kwartaal"], ["half", "Jaarhelft"], ["mat", "Maturiteit"], ["pot", "Potentieel"], ["min", "Score"]];
+const IS_MAT = { vroeg: ["Vroegmatuur", "#F59E0B"], normaal: ["Normaal matuur", "#10B981"], laat: ["Laatmatuur", "#3B82F6"] };
 
 route("intscouting", { title: "Interne scouting", auth: true, render: async v => {
   v.innerHTML = head("Interne scouting", "Laden…");
@@ -33,7 +33,7 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
   const teams = teamsAll.filter(t => all.some(x => x.p.team_id === t.id)).sort((a, b) => ((typeof ageOfTeam === "function" ? ageOfTeam(a) : null) ?? 99) - ((typeof ageOfTeam === "function" ? ageOfTeam(b) : null) ?? 99) || teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true }));
   const OPTS = { team: [["", "Alle ploegen"], ...teams.map(t => [t.id, teamLbl(t)])], pos: [["", "Alle posities"], ...Object.keys(SC_POS).map(k => [k, k])], foot: [["", "Beide voeten"], ["Rechts", "Rechtsvoetig"], ["Links", "Linksvoetig"], ["Beide", "Tweevoetig"]],
     year: [["", "Alle jaren"], ...years.map(y => [y, "Geboren in " + y])], quarter: [["", "Alle kwartalen"], [1, "Q1 · jan–mrt"], [2, "Q2 · apr–jun"], [3, "Q3 · jul–sep"], [4, "Q4 · okt–dec"]], half: [["", "Hele jaar"], [1, "Eerste jaarhelft"], [2, "Tweede jaarhelft"]],
-    mat: [["", "Alle rijpheid"], ["vroeg", "Vroeg rijp"], ["normaal", "Normaal rijp"], ["laat", "Laat rijp"], ["geen", "Rijpheid niet ingeschat"]], pot: [["", "Alle potentieel"], ...SC_POT.map(x => [x, "Potentieel " + x.toLowerCase()])],
+    mat: [["", "Alle maturiteit"], ["vroeg", "Vroegmatuur"], ["normaal", "Normaal matuur"], ["laat", "Laatmatuur"], ["geen", "Maturiteit niet ingeschat"]], pot: [["", "Alle potentieel"], ...SC_POT.map(x => [x, "Potentieel " + x.toLowerCase()])],
     min: [["", "Elke score"], [5, "Score 5+"], [6, "Score 6+"], [7, "Score 7+"], [8, "Score 8+"]] };
   const lbl = (k, val) => (OPTS[k].find(o => String(o[0]) === String(val)) || [, val])[1];
   const nAct = () => IS_F.filter(([k]) => k !== "team" && IS[k]).length;

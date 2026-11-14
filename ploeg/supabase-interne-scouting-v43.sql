@@ -2,7 +2,7 @@
 -- Standaard ziet elke trainer van de club alle spelers in de interne scouting. De beheerder kan dat per persoon uitzetten
 -- (in Beheer › Leden: vinkje "Interne scouting van de hele club"). Dat wordt bewaard als het recht 'intscout_uit'.
 -- Trainers van een andere ploeg krijgen bewust GEEN contactgegevens van ouders, ouderlinks, notities of foto's: enkel naam,
--- ploeg, geboortedatum, positie, voet, rijpheid, het scoutingprofiel, scoutingrapporten en lengte/gewicht.
+-- ploeg, geboortedatum, positie, voet, maturiteit, het scoutingprofiel, scoutingrapporten en lengte/gewicht.
 
 create or replace function public.club_set_rechten(uid uuid, r text[]) returns void language plpgsql security definer set search_path to 'public' as $$
 begin

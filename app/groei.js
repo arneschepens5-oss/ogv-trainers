@@ -35,7 +35,7 @@ function groeiPane(p) {
       <div class="kpi"><small>Gewichtstoename</small><b>${sw != null ? (sw >= 0 ? "+" : "") + gFmt(sw) + "<span class=\"u\"> kg</span>" : "–"}</b><span>per jaar</span></div></div>
     <div class="sec"><div class="panel"><h2>Lengte</h2>${gChart(ms, "height_cm", "cm", "#FFD100")}</div><div class="panel" style="margin-top:12px"><h2>Gewicht</h2>${gChart(ms, "weight_kg", "kg", "#10B981")}</div></div>
     ${ms.length ? `<h3 class="dosh" style="margin-top:16px">Alle metingen</h3><div class="list">${ms.slice().reverse().map(m => `<div class="item"><span class="main"><b>${esc(dShort(m.date))}${parse(m.date).getFullYear() !== new Date().getFullYear() ? " " + parse(m.date).getFullYear() : ""}</b><small>${[m.height_cm != null ? gFmt(m.height_cm) + " cm" : "", m.weight_kg != null ? gFmt(m.weight_kg) + " kg" : "", m.note || ""].filter(Boolean).map(esc).join(" · ")}</small></span><button class="btn ghost small noprint" type="button" data-gE="${m.id}">Bewerken</button></div>`).join("")}</div>` : ""}
-    <p class="hint" style="margin-bottom:0">Een snelle groei (meer dan ongeveer 7 cm per jaar) kan wijzen op een groeispurt. Spelers kunnen dan tijdelijk onhandiger zijn of sneller last krijgen van knieën en hielen. Bekijk het samen met de rijpheid op het startblad.</p>`}</div>`;
+    <p class="hint" style="margin-bottom:0">Een snelle groei (meer dan ongeveer 7 cm per jaar) kan wijzen op een groeispurt. Spelers kunnen dan tijdelijk onhandiger zijn of sneller last krijgen van knieën en hielen. Bekijk het samen met de maturiteit op het startblad.</p>`}</div>`;
 }
 function groeiForm(p, m) {
   const n = !m, d = dialog(`<form><h2>${n ? "Meting toevoegen" : "Meting bewerken"} · ${esc(p.first_name)}</h2><div class="fields">

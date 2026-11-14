@@ -48,8 +48,8 @@ function cfBars(rows, opts = {}) {
 }
 
 
-/* samenstelling: geboortekwartaal, jaarhelft en biologische rijpheid. Werkt op een telling (ook voor de hele club, zonder namen). */
-const MAT = [["vroeg", "Vroeg rijp", "#F59E0B"], ["normaal", "Normaal rijp", "#10B981"], ["laat", "Laat rijp", "#3B82F6"]];
+/* samenstelling: geboortekwartaal, jaarhelft en maturiteit. Werkt op een telling (ook voor de hele club, zonder namen). */
+const MAT = [["vroeg", "Vroegmatuur", "#F59E0B"], ["normaal", "Normaal matuur", "#10B981"], ["laat", "Laatmatuur", "#3B82F6"]];
 function spCount(ps) { const c = { players: ps.length, nobirth: 0, q1: 0, q2: 0, q3: 0, q4: 0, vroeg: 0, normaal: 0, laat: 0 };
   ps.forEach(p => { if (!p.birthdate) c.nobirth++; else c["q" + (Math.floor(parse(p.birthdate).getMonth() / 3) + 1)]++; if (p.maturity && c[p.maturity] != null) c[p.maturity]++; }); return c; }
 function spSum(cs) { const t = { players: 0, nobirth: 0, q1: 0, q2: 0, q3: 0, q4: 0, vroeg: 0, normaal: 0, laat: 0 }; cs.forEach(c => Object.keys(t).forEach(k => t[k] += +c[k] || 0)); return t; }
@@ -60,10 +60,10 @@ function spHtml(c, who) {
   return `<div class="kpis"><div class="kpi"><small>Spelers</small><b>${c.players}</b><span>${who}</span></div>
       <div class="kpi"><small>Eerste jaarhelft</small><b>${h1}</b><span>${pc(h1, withB) || "–"} · jan-jun</span></div>
       <div class="kpi"><small>Tweede jaarhelft</small><b>${h2}</b><span>${pc(h2, withB) || "–"} · jul-dec</span></div>
-      <div class="kpi"><small>Rijpheid ingevuld</small><b>${mk}<span class="u"> / ${c.players}</span></b><span>${c.players - mk ? c.players - mk + " nog niet ingeschat" : "iedereen ingeschat"}</span></div></div>
+      <div class="kpi"><small>Maturiteit ingevuld</small><b>${mk}<span class="u"> / ${c.players}</span></b><span>${c.players - mk ? c.players - mk + " nog niet ingeschat" : "iedereen ingeschat"}</span></div></div>
     <div class="grid2 sec"><div class="panel"><h2>Geboortekwartaal</h2>${bars(Q.map(([l, n]) => [l, n]), withB)}
         <p class="hint" style="margin-bottom:0">${c.nobirth ? c.nobirth + " speler(s) zonder geboortedatum tellen niet mee. " : ""}Veel spelers in Q1 en weinig in Q4 wijst op het <i>relatieve leeftijdseffect</i>: oudere kinderen binnen een jaargang worden vaker gekozen.</p></div>
-      <div class="panel"><h2>Biologische rijpheid</h2>${bars(MAT.map(([k, l, col]) => [l, c[k], col]), mk)}
+      <div class="panel"><h2>Maturiteit</h2>${bars(MAT.map(([k, l, col]) => [l, c[k], col]), mk)}
         <p class="hint" style="margin-bottom:0">Inschatting van de trainer ten opzichte van leeftijdsgenoten, ingevuld op de fiche van de speler. Het is geen meting: gebruik het om te begrijpen waarom een speler fysiek voor of achter loopt, niet om spelers in te delen.</p></div></div>`;
 }
 
