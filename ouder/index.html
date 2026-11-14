@@ -104,6 +104,9 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .evc{margin-top:10px}.evg{font-weight:800;font-size:13.5px;color:var(--muted);margin:12px 0 2px}
 .evr{display:grid;grid-template-columns:minmax(0,1fr) 72px 44px;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .evn{min-width:0;font-weight:700;font-size:15px}.evn small{display:block;font-weight:500;font-size:12.5px;color:var(--muted)}
+.zq{display:block;margin:0 0 16px}.zq>b{display:block;margin-bottom:6px;font-size:15px}.zq textarea{width:100%;min-height:64px;resize:vertical;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:16px;color:var(--ink)}
+.zs{display:flex;gap:8px}.zs button{flex:1;min-height:54px;border-radius:14px;border:2px solid var(--line);background:var(--card2);font-size:26px;font-weight:800;cursor:pointer;color:var(--ink)}
+.zs button[aria-checked="true"]{border-color:var(--yellow);background:var(--yellow);color:var(--onY,#111)}.zq small.h{display:block;margin-top:4px;min-height:1em}
 .evb{height:8px;border-radius:99px;background:var(--card2);border:1px solid var(--line);overflow:hidden}.evb i{display:block;height:100%;border-radius:99px}
 .evr b{text-align:right;font-size:17px}.evr b span{font-size:12px;color:var(--muted);font-weight:600}
 .evtx{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.evtx small{display:block;font-weight:800;font-size:13px;color:var(--muted)}.evtx p{margin:4px 0 0}
@@ -203,9 +206,21 @@ function demoEvals(tok) { const d = dget(), p = d?.players?.find(x => x.parent_t
   const pub = (d.eval_publicaties || []).filter(x => x.team_id === p.team_id).map(x => x.moment);
   return { criteria: d.teams.find(t => t.id === p.team_id)?.criteria || null, evals: (d.evaluations || []).filter(e => e.player_id === p.id && pub.includes(e.moment)).sort((a, b) => a.moment - b.moment)
     .map(e => ({ moment: e.moment, date: e.date, scores: e.scores || {}, strengths: e.details?.strengths || null, workpoints: e.details?.workpoints || null, goals: e.details?.goals || null })) }; }
-async function fetchKid(tok) { if (demo) { const x = demoKid(tok); if (x) x.ev = demoEvals(tok); return x; }
+const DEMO_SELF = { on: true, scale: "smiley", intro: "Vul dit samen met je mama of papa in. Er zijn geen foute antwoorden.", questions: [
+  { id: "z1", type: "schaal", text: "Ik kan de bal goed doorgeven" }, { id: "z2", type: "schaal", text: "Ik durf iemand uit te dribbelen" }, { id: "z3", type: "schaal", text: "Ik doe goed mijn best op training" },
+  { id: "z6", type: "tekst", text: "Waar ben je het meest trots op?" }] };
+function demoZelf(tok) { const d = dget(), p = d?.players?.find(x => x.parent_token === tok || x.player_token === tok); if (!p) return null;
+  const self = d.club_self || DEMO_SELF; if (self.on === false) return { on: false };
+  return { on: true, self, moments: null, open: (d.eval_zelf_open || []).filter(o => o.team_id === p.team_id).map(o => o.moment).sort(),
+    mine: (d.eval_zelf || []).filter(z => z.player_id === p.id).map(z => ({ moment: z.moment, answers: z.answers, by: z.by, updated_at: z.updated_at })) }; }
+async function saveZelf(tok, m, answers) {
+  if (demo) { const d = dget(), p = d.players.find(x => x.parent_token === tok || x.player_token === tok); if (!(d.eval_zelf_open || []).some(o => o.team_id === p.team_id && o.moment === m)) throw new Error("De zelfevaluatie is niet open.");
+    d.eval_zelf = (d.eval_zelf || []).filter(z => !(z.player_id === p.id && z.moment === m)); d.eval_zelf.push({ team_id: p.team_id, player_id: p.id, moment: m, answers, by: p.player_token === tok ? "speler" : "ouder", updated_at: new Date().toISOString() }); dput(d); return true; }
+  const { data: x, error } = await sb.rpc("parent_zelf_save", { tok, m, answers }); if (error) throw error; return x; }
+async function fetchKid(tok) { if (demo) { const x = demoKid(tok); if (x) { x.ev = demoEvals(tok); x.zelf = demoZelf(tok); } return x; }
   const { data: x, error } = await sb.rpc("parent_view", { tok }); if (error) throw error;
-  if (x) { const r = await sb.rpc("parent_evaluaties", { tok }); x.ev = r.error ? null : r.data; } /* bestaat de functie nog niet, dan gewoon geen evaluaties */
+  if (x) { const r = await sb.rpc("parent_evaluaties", { tok }); x.ev = r.error ? null : r.data; /* bestaat de functie nog niet, dan gewoon geen evaluaties */
+    const z = await sb.rpc("parent_zelf", { tok }); x.zelf = z.error ? null : z.data; }  /* idem voor de zelfevaluatie (databaseversie 38) */
   return x; }
 async function answer(tok, ev, st, msg) {
   if (demo) { const d = dget(), p = d.players.find(x => x.parent_token === tok || x.player_token === tok); d.rsvp = (d.rsvp || []).filter(x => !(x.event_id === ev && x.player_id === p.id));
@@ -313,13 +328,14 @@ function drawAgenda() {
   const latest = msgsAll()[0], fresh = latest && !store.get(SEEN, []).includes(latest.key);
   let lastWk = "", body = "";
   for (const r of rest) { const wk = weekKey(r.e.date); if (wk !== lastWk) { body += `<div class="wk">${weekLabel(wk)}</div>`; lastWk = wk; } body += evCard(r.e, r.k); }
-  $("#list").innerHTML = installCard() + (fresh ? `<div class="note" data-go="berichten"><small>Nieuw bericht · tik om te lezen</small><b>${esc(latest.title)}</b></div>` : "") +
+  $("#list").innerHTML = installCard() + (zPending().length ? `<div class="note" data-gz><small>Zelfevaluatie open · tik om in te vullen</small><b>${zPending().map(k => esc(k.name)).join(", ")}</b></div>` : "") + (fresh ? `<div class="note" data-go="berichten"><small>Nieuw bericht · tik om te lezen</small><b>${esc(latest.title)}</b></div>` : "") +
     (next ? heroCard(next) : "") +
     (open.length > 1 ? `<div class="todo"><span>Nog <b>${open.length}</b> ${open.length === 1 ? "activiteit" : "activiteiten"} zonder antwoord.</span><button class="btn sm" type="button" id="allja">${kidMode() ? "Overal: ik kom" : "Overal: komt"}</button></div>` : "") +
     (rows.length ? body : `<div class="msg"><b>Niets gepland</b>De komende zes weken staan er nog geen trainingen of wedstrijden in de kalender.</div>`) +
     (rows.length ? `<div class="row" style="justify-content:center"><button class="btn ghost sm" type="button" id="icsall">Alles in mijn agenda zetten</button></div>` : "") +
     `<p class="foot">${kidMode() ? "Kan je niet komen? Zeg het ook aan je mama of papa. Deze link is alleen voor jou." : "Deze app is persoonlijk. Stuur de link van je kind niet door."}</p>`;
   bindInstall(); const nb = $("[data-go]"); if (nb) nb.onclick = () => { view = "berichten"; draw(); };
+  const gz = $("[data-gz]"); if (gz) gz.onclick = () => { view = "seizoen"; draw(); scrollTo(0, 0); };
   const aj = $("#allja"); if (aj) aj.onclick = async () => { if (!confirm(`Voor ${open.length} activiteiten doorgeven dat je kind komt?`)) return; aj.disabled = true; let n = 0;
     for (const r of open) { try { if (await answer(r.k.tok, r.e.id, "ja", null)) { r.e.rsvp = "ja"; n++; } } catch (x) {} } saveCache(); toast(n + " keer doorgegeven: komt."); draw(); };
   const ia = $("#icsall"); if (ia) ia.onclick = () => icsDownload(rows.filter(r => !isOff(r.e)), "ogv-agenda.ics");
@@ -346,6 +362,38 @@ function saveCache() { const c = store.get(CK, {}); for (const k of kids) if (da
 /* ---------- evaluaties (alleen wat de trainer openzette) ---------- */
 const EVM = { 1: "Start seizoen", 2: "Herfst", 3: "Winterstop", 4: "Maart", 5: "Einde seizoen" };
 const EVL = { 1: "Nog niet", 1.5: "Nog niet tot soms", 2: "Soms", 2.5: "Soms tot meestal", 3: "Meestal", 3.5: "Meestal tot bijna altijd", 4: "Bijna altijd", 4.5: "Bijna altijd tot uitblinker", 5: "Uitblinker" };
+/* de club kiest zelf haar evaluatiemomenten; de vaste namen gelden enkel als de club niets koos */
+const momName = (x, m) => x?.ev?.moments?.[m - 1] || x?.zelf?.moments?.[m - 1] || EVM[m] || "Evaluatie";
+const ZF = { 1: "😟", 2: "🙁", 3: "😐", 4: "🙂", 5: "😄" }, ZW = { 1: "Nog niet zo goed", 2: "Gaat al een beetje", 3: "Gaat wel", 4: "Gaat goed", 5: "Dat kan ik super" };
+const zdraft = {}, zedit = {};
+const zOpen = x => x?.zelf?.on ? (x.zelf.open || []) : [];
+const zMine = (x, m) => (x?.zelf?.mine || []).find(z => z.moment === m) || null;
+const zPending = () => sel().filter(k => zOpen(data[k.tok]).some(m => !zMine(data[k.tok], m)));
+/* zelfevaluatie: enkel zichtbaar als de club ze aanzette en de trainer dit moment openzette */
+function zelfHtml(k) {
+  const x = data[k.tok], z = x?.zelf, me = isKid(k.tok); if (!z?.on || !zOpen(x).length) return "";
+  return zOpen(x).map(m => { const mine = zMine(x, m), key = k.tok + "|" + m, head = `<h3>Zelfevaluatie · ${esc(momName(x, m))}</h3>`;
+    if (mine && !zedit[key]) return `<div class="card zelf">${head}<p class="h" style="margin:0 0 8px">${me ? "Bedankt, je hebt je zelfevaluatie ingevuld." : "Bedankt, de zelfevaluatie van " + esc(k.name) + " is ingevuld."} De trainer bekijkt dit en bespreekt het met jullie.</p><button class="btn ghost sm" type="button" data-zedit="${esc(key)}">Antwoorden aanpassen</button></div>`;
+    const d = zdraft[key] || (zdraft[key] = { ...(mine?.answers || {}) }), sc = z.self?.scale === "cijfers";
+    return `<div class="card zelf" data-zk="${esc(key)}">${head}<p class="h" style="margin:0 0 12px">${esc(z.self?.intro || (me ? "Hoe vind je zelf dat het gaat? Er zijn geen foute antwoorden." : "Vul dit samen met " + k.name + " in. Er zijn geen foute antwoorden."))}</p>
+      ${(z.self?.questions || []).map(q => q.type === "tekst"
+        ? `<label class="zq"><b>${esc(q.text)}</b><textarea data-zq="${esc(q.id)}" maxlength="600" rows="2">${esc(d[q.id] ?? "")}</textarea></label>`
+        : `<div class="zq"><b>${esc(q.text)}</b><div class="zs" role="radiogroup" aria-label="${esc(q.text)}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" data-zq="${esc(q.id)}" data-n="${n}" aria-checked="${d[q.id] === n}" aria-label="${ZW[n]}" title="${ZW[n]}">${sc ? n : ZF[n]}</button>`).join("")}</div>${sc ? "" : `<small class="h">${d[q.id] ? ZW[d[q.id]] : ""}</small>`}</div>`).join("")}
+      <div class="row"><button class="btn" type="button" data-zsave="${esc(key)}">Bewaren</button><span class="ok" data-zok></span></div></div>`; }).join("");
+}
+function bindZelf() {
+  $$("[data-zedit]").forEach(b => b.onclick = () => { zedit[b.dataset.zedit] = true; draw(); });
+  $$("[data-zk]").forEach(card => { const key = card.dataset.zk, d = zdraft[key], qa = q => [...card.querySelectorAll(q)];
+    qa("button[data-n]").forEach(b => b.onclick = () => { const id = b.dataset.zq, n = +b.dataset.n; if (d[id] === n) delete d[id]; else d[id] = n;
+      qa("button[data-n]").filter(x => x.dataset.zq === id).forEach(x => x.setAttribute("aria-checked", d[id] === +x.dataset.n)); const sm = b.closest(".zq").querySelector("small"); if (sm) sm.textContent = d[id] ? ZW[d[id]] : ""; });
+    qa("textarea[data-zq]").forEach(t => t.oninput = () => { d[t.dataset.zq] = t.value; });
+    card.querySelector("[data-zsave]").onclick = async ev => { const btn = ev.currentTarget, ok = card.querySelector("[data-zok]"), [tok, m] = key.split("|"); btn.disabled = true;
+      const ans = {}; for (const [k, v] of Object.entries(d)) if (typeof v === "number" || String(v).trim()) ans[k] = v;
+      if (!Object.keys(ans).length) { ok.textContent = "Beantwoord eerst minstens één vraag."; btn.disabled = false; return; }
+      try { await saveZelf(tok, +m, ans); const x = data[tok]; x.zelf.mine = [...(x.zelf.mine || []).filter(z => z.moment !== +m), { moment: +m, answers: ans, by: isKid(tok) ? "speler" : "ouder", updated_at: new Date().toISOString() }];
+        delete zedit[key]; delete zdraft[key]; saveCache(); draw(); }
+      catch (e) { ok.textContent = /niet open/i.test(e?.message || "") ? "De trainer heeft de zelfevaluatie gesloten." : errMsg(e, "Bewaren"); btn.disabled = false; } }; });
+}
 function evGroupsOf(criteria, scores) { const out = []; let g = null, seen = new Set();
   for (const raw of criteria || []) { const l = String(raw).trim(); if (!l) continue;
     if (l.startsWith("#")) { g = { name: l.replace(/^#+\s*/, ""), items: [] }; out.push(g); continue; }
@@ -359,7 +407,7 @@ function evalHtml(ev, me) { const list = ev?.evals || []; if (!list.length) retu
   const lines = s => String(s || "").split(/\n+/).map(x => x.trim()).filter(Boolean);
   return list.slice().reverse().map(e => { const gs = evGroupsOf(ev.criteria, e.scores || {});
     const txt = (t, s) => lines(s).length ? `<div class="evtx"><small>${t}</small>${lines(s).map(x => `<p>${esc(x)}</p>`).join("")}</div>` : "";
-    return `<div class="card evc"><h3>Evaluatie ${esc(EVM[e.moment] || "")}</h3><p class="h" style="margin:0 0 6px">${me ? "Zo zien je trainers jou nu" : "Van de trainers"}${e.date ? " · " + dayFmt(e.date).toLocaleDateString("nl-BE", { day: "numeric", month: "long" }) : ""}</p>
+    return `<div class="card evc"><h3>Evaluatie ${esc((ev.moments && ev.moments[e.moment - 1]) || EVM[e.moment] || "")}</h3><p class="h" style="margin:0 0 6px">${me ? "Zo zien je trainers jou nu" : "Van de trainers"}${e.date ? " · " + dayFmt(e.date).toLocaleDateString("nl-BE", { day: "numeric", month: "long" }) : ""}</p>
       ${gs.map(g => `${g.name ? `<div class="evg">${esc(g.name)}</div>` : ""}${g.items.map(([n, s]) => `<div class="evr"><span class="evn">${esc(n.replace(/ \(.*\)/, ""))}<small>${EVL[s] || ""}</small></span><span class="evb"><i style="width:${s / 5 * 100}%;background:${evCol(s)}"></i></span><b>${nl1(s)}<span>/5</span></b></div>`).join("")}`).join("")}
       ${txt("Sterke punten", e.strengths)}${txt("Werkpunten", e.workpoints)}${txt("Doelen tot de volgende evaluatie", e.goals)}</div>`; }).join(""); }
 function drawSeason() {
@@ -373,7 +421,7 @@ function drawSeason() {
         <div class="stat"><small>Doelpunten</small><b>${s.goals}</b><span>dit seizoen</span></div><div class="stat"><small>Assists</small><b>${s.assists}</b><span>dit seizoen</span></div></div>
       <div class="card"><h3>Laatste uitslagen</h3>${rs.length ? rs.map(r => { const res = r.for > r.against ? "w" : r.for < r.against ? "l" : "d", us = x.team || cshort() || "Wij";
         return `<div class="res"><span class="rp ${res}">${{ w: "W", l: "V", d: "G" }[res]}</span><span class="rm"><b>${r.home === false ? esc(r.opponent || "") + " – " + esc(us) : esc(us) + " – " + esc(r.opponent || "")}</b><small>${dayFmt(r.date).toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })} · ${r.played ? (me ? "je speelde mee" : esc(k.name) + " speelde mee") + (r.goals ? ` · ⚽ ${r.goals}` : "") + (r.assists ? ` · ${r.assists} assist` : "") : (me ? "je speelde niet mee" : "niet meegespeeld")}</small></span><span class="sc">${r.home === false ? r.against + " – " + r.for : r.for + " – " + r.against}</span></div>`; }).join("")
-        : `<p class="h" style="margin:0">Nog geen uitslagen de laatste weken.</p>`}</div>${evalHtml(x.ev, me)}`; }).join("") || `<div class="msg"><b>Nog niets</b></div>`;
+        : `<p class="h" style="margin:0">Nog geen uitslagen de laatste weken.</p>`}</div>${zelfHtml(k)}${evalHtml(x.ev, me)}`; }).join("") || `<div class="msg"><b>Nog niets</b></div>`; bindZelf();
 }
 
 /* ---------- berichten ---------- */

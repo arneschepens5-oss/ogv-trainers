@@ -46,7 +46,7 @@ function applyClubTheme() {
   const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
 }
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -335,6 +335,8 @@ async function loadTeam(id) {
   const m = { team_id: id };
   [S.players, S.events, S.att, S.evals, S.goals, S.trainers] = await Promise.all(["players","events","attendance","evaluations","goals","team_trainers"].map(t => db.list(t, m)));
   try { S.rsvp = await db.list("rsvp", m); } catch (e) { S.rsvp = []; } /* tabel bestaat pas vanaf databaseversie 5 */
+  /* zelfevaluatie van spelers (databaseversie 38): ontbreekt de tabel nog, dan werkt de rest gewoon verder */
+  try { [S.zelf, S.zelfOpen] = await Promise.all(["eval_zelf", "eval_zelf_open"].map(t => db.list(t, m))); S.zelfOk = true; } catch (e) { S.zelf = []; S.zelfOpen = []; S.zelfOk = false; }
   sortPlayers(); sortEvents();
   if (typeof rbfaAuto === "function") setTimeout(rbfaAuto, 800);
 }

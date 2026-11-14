@@ -49,9 +49,40 @@ const EV_PRESETS = {
 const EV_TEMPLATE_SHORT = ["# Met de bal", "Balcontrole | Houdt de bal dicht bij de voet", "Passen en trappen | Speelt de bal naar een medespeler", "Dribbelen | Durft een tegenstander uit te spelen", "Scoren | Probeert te scoren als het kan",
   "# Zonder de bal", "Vrijlopen | Zoekt ruimte om de bal te krijgen", "Terugwinnen | Gaat meteen achter de bal aan bij balverlies",
   "# Plezier en inzet", "Inzet | Doet goed zijn best", "Samenspel | Speelt samen en helpt anderen", "Luisteren | Luistert en probeert tips uit"];
+/* zelfevaluatie door de speler en extra open vragen voor de trainer: de club kiest zelf welke vragen
+   (Beheer > Instellingen > Evaluaties). Een vraag van type "schaal" met een koppeling aan een onderdeel
+   wordt naast de score van de trainer gezet; "tekst" is een open antwoord. */
+const EV_FACES = { 1: "😟", 2: "🙁", 3: "😐", 4: "🙂", 5: "😄" };
+const EV_FACE_WORDS = { 1: "Nog niet zo goed", 2: "Gaat al een beetje", 3: "Gaat wel", 4: "Gaat goed", 5: "Dat kan ik super" };
+const EV_SELF_PRESETS = {
+  jong: { naam: "Kort, voor de jongsten", scale: "smiley", intro: "Vul dit samen met je mama of papa in. Er zijn geen foute antwoorden.", questions: [
+    { id: "z1", type: "schaal", text: "Ik kan de bal goed doorgeven", link: "Passing" },
+    { id: "z2", type: "schaal", text: "Ik durf iemand uit te dribbelen", link: "Dribbel en 1v1" },
+    { id: "z3", type: "schaal", text: "Ik doe goed mijn best op training", link: "Inzet" },
+    { id: "z4", type: "schaal", text: "Ik speel graag samen met de anderen", link: "Bijdrage aan de ploeg" },
+    { id: "z5", type: "schaal", text: "Ik luister goed naar de trainer", link: "Leerbereidheid" },
+    { id: "z6", type: "tekst", text: "Waar ben je het meest trots op?" },
+    { id: "z7", type: "tekst", text: "Wat wil je nog leren?" }] },
+  oud: { naam: "Uitgebreid, voor oudere spelers", scale: "cijfers", intro: "Geef jezelf eerlijk een cijfer van 1 tot 5. Je trainer bespreekt het daarna met je.", questions: [
+    { id: "z1", type: "schaal", text: "Mijn balcontrole en aanname", link: "Balaanname" },
+    { id: "z2", type: "schaal", text: "Mijn passing, ook met links of rechts", link: "Passing" },
+    { id: "z3", type: "schaal", text: "Mijn dribbel en 1 tegen 1", link: "Dribbel en 1v1" },
+    { id: "z4", type: "schaal", text: "Hoe ik me positioneer zonder bal", link: "Positiespel" },
+    { id: "z5", type: "schaal", text: "Hoe ik verdedig", link: "Verdedigen" },
+    { id: "z6", type: "schaal", text: "Mijn inzet", link: "Inzet" },
+    { id: "z7", type: "schaal", text: "Mijn zelfvertrouwen", link: "Zelfvertrouwen" },
+    { id: "z8", type: "tekst", text: "Wat gaat goed dit seizoen?" },
+    { id: "z9", type: "tekst", text: "Wat wil je het meest verbeteren?" },
+    { id: "z10", type: "tekst", text: "Wat verwacht je van je trainer?" }] } };
+let EV_SELF = { on: false, scale: "smiley", intro: "", questions: [] }, EV_OPEN = [];
+const evQid = () => "q" + Math.random().toString(36).slice(2, 9);
+const evCleanQ = (q, i) => ({ id: /^[a-z0-9_-]{1,40}$/.test(q?.id || "") ? q.id : evQid(), type: q?.type === "tekst" ? "tekst" : "schaal", text: String(q?.text || "").trim().slice(0, 160), ...(q?.link ? { link: String(q.link) } : {}) });
 /* instellingen van de club toepassen (na het laden van de club en na bewaren) */
 function evApplyClub(st = CLUB.settings || {}) {
   const ev = st.eval || {}, ms = Array.isArray(ev.moments) && ev.moments.length ? ev.moments : null;
+  const sf = ev.self || {};
+  EV_SELF = { on: sf.on === true, scale: sf.scale === "cijfers" ? "cijfers" : "smiley", intro: String(sf.intro || ""), questions: (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).filter(q => q.text) };
+  EV_OPEN = (Array.isArray(ev.open) ? ev.open : []).map(evCleanQ).filter(q => q.text).map(q => ({ id: q.id, text: q.text }));
   EV_MOMENTS.length = 0;
   if (ms) ms.forEach((x, i) => { const f = evMd(x.from), t = evMd(x.to); if (!f || !t) return;
       EV_MOMENTS.push({ m: EV_MOMENTS.length + 1, naam: x.naam || "Moment " + (i + 1), kort: x.kort || (x.naam || "").split(" ")[0] || String(i + 1), verplicht: !!x.verplicht, from: f, to: t,
@@ -96,6 +127,31 @@ async function evPut(e) {
   const i = S.evals.findIndex(x => x.player_id === e.player_id && x.moment === e.moment); if (i >= 0) S.evals[i] = e; else S.evals.push(e);
 }
 const evNew = (pid, m) => ({ id: uid(), team_id: S.team.id, player_id: pid, moment: m, date: todayIso(), scores: {}, comment: null });
+/* zelfevaluatie van de speler: antwoorden, of ze nu open staat, en de score voor een onderdeel van de trainer */
+const evZelf = (pid, m) => (S.zelf || []).find(z => z.player_id === pid && z.moment === m) || null;
+const evZelfOpen = m => (S.zelfOpen || []).some(o => o.moment === m);
+const evSelfScore = (z, q) => { const v = z?.answers?.[q.id]; return typeof v === "number" ? v : null; };
+const evSelfOf = (z, crit) => { const l = EV_SELF.questions.filter(q => q.type === "schaal" && q.link === crit).map(q => evSelfScore(z, q)).filter(v => v != null); return l.length ? avg(l) : null; };
+const evSelfLabel = v => v == null ? "–" : EV_SELF.scale === "cijfers" ? String(Math.round(v)) : EV_FACES[Math.round(v)] || "";
+function evZelfHtml(m, ps) {
+  if (!EV_SELF.on) return S.admin ? `<div class="panel row" style="margin:10px 0"><span class="hint" style="flex:1">Laat spelers zichzelf evalueren en vergelijk met jouw scores. Zet dat aan in <a class="link" href="#/clubinstellingen/evaluaties">Instellingen › Evaluaties</a>.</span></div>` : "";
+  if (S.zelfOk === false) return `<div class="panel row" style="margin:10px 0"><span class="hint">Zelfevaluatie van spelers kan pas nadat de beheerder <b>supabase-zelfevaluatie-v38.sql</b> uitvoerde.</span></div>`;
+  const on = evZelfOpen(m), n = ps.filter(p => evZelf(p.id, m)).length;
+  return `<div class="panel row evpub${on ? " hl" : ""}" style="margin:10px 0"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="evZelfT"${on ? " checked" : ""}>
+    <span><b>Spelers vullen hun zelfevaluatie in</b><br><span class="hint">${on ? `Open in de speler- en ouderapp · ${n} van ${ps.length} ingevuld. Ze kunnen hun antwoorden aanpassen tot je dit sluit.` : "Staat uit. Zet aan als spelers (of ouders samen met hun kind) hun eigen vragenlijst mogen invullen via hun persoonlijke link."}</span></span></label></div>`;
+}
+function evSelfPanel(z, e, m) {
+  if (!EV_SELF.on) return "";
+  const qs = EV_SELF.questions, state = z ? `<span class="pill t">${z.by === "ouder" ? "ingevuld met ouder" : "ingevuld door speler"}</span>` : evZelfOpen(m) ? '<span class="pill w">nog niet ingevuld</span>' : '<span class="pill g">gesloten</span>';
+  const head = `<section class="panel evself"><div class="gh"><h2>Zelfevaluatie van de speler</h2>${state}</div>`;
+  if (!z) return head + `<p class="hint" style="margin:0">${evZelfOpen(m) ? "De speler of ouder kan dit invullen in de app." : "Open de zelfevaluatie voor dit moment in het overzicht van de evaluaties."}</p></section>`;
+  const gaps = qs.filter(q => q.type === "schaal" && q.link).map(q => { const s = evSelfScore(z, q), t = evScore(e, q.link); return s != null && t != null ? { q, s, t, d: s - t } : null; })
+    .filter(g => g && Math.abs(g.d) >= 1.5).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3);
+  return head + (gaps.length ? `<div class="selfgap"><b>Om te bespreken</b>${gaps.map(g => `<p>${esc(g.q.link)}: de speler geeft zichzelf ${g.d > 0 ? "meer" : "minder"} (${f1(g.s)}) dan jij (${f1(g.t)}).</p>`).join("")}</div>` : "") +
+    qs.map(q => { const a = z.answers?.[q.id]; if (a == null || a === "") return "";
+      return q.type === "tekst" ? `<div class="selftx"><small>${esc(q.text)}</small><p>${esc(String(a)).replace(/\n/g, "<br>")}</p></div>`
+        : `<div class="selfrow"><span>${esc(q.text)}${q.link ? ` <small class="hint">(${esc(q.link)})</small>` : ""}</span><b>${evSelfLabel(a)}${EV_SELF.scale === "cijfers" ? "" : ` <small>${EV_FACE_WORDS[Math.round(a)] || ""}</small>`}</b></div>`; }).join("") + `</section>`;
+}
 
 /* ============ overzicht ============ */
 let evMoment = null, evView = "spelers", evPub = { team: null, m: [], ok: null };
@@ -123,6 +179,7 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
   <div class="evhead"><div><h2 style="margin:0">${mo.naam}</h2><p class="hint" style="margin:2px 0 0">${open ? `Nu bezig · invullen tot ${dfmt(w.to)}` : now < w.from ? `Start op ${dfmt(w.from)}` : `Periode voorbij (${dfmt(w.from)} – ${dfmt(w.to)})`}${late && mo.verplicht ? ' · <b style="color:var(--bad)">nog niet afgerond</b>' : ""}</p></div>
     <div class="kpi mini"><small>Klaar</small><b>${done}<span>/${ps.length}</span></b></div><div class="kpi mini"><small>Gemiddelde ploeg</small><b>${f1(avg(ps.map(p => evAvgOf(evOf(p.id, evMoment), names)).filter(x => x != null)))}</b></div></div>
   ${evPubHtml(evMoment)}
+  ${evZelfHtml(evMoment, ps)}
   <div class="ptabs" role="tablist">${[["spelers", "Per speler"], ["tabel", "Snel invullen"], ["ploeg", "Ploeganalyse"]].map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-selected="${evView === k}">${l}</button>`).join("")}</div><div id="evv"></div>`;
   const vv = $("#evv");
   if (!ps.length) vv.innerHTML = `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`;
@@ -132,7 +189,7 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
         <span class="big" style="--c:${evColor(a)}">${a == null ? "–" : f1(a)}</span></div>
         <div class="gbars">${groups.map(g => { const ga = evAvgOf(e, g.items.map(i => i.name)), gb = pr ? evAvgOf(pr, g.items.map(i => i.name)) : null;
           return `<div class="gb"><span>${esc(g.name)}</span><span class="bar"><i style="width:${ga == null ? 0 : (ga / 5) * 100}%;background:${evColor(ga)}"></i>${gb != null ? `<em style="left:${(gb / 5) * 100}%"></em>` : ""}</span><b>${f1(ga)}</b></div>`; }).join("")}</div>
-        <div class="ft">${b != null && a != null ? evDelta(a - b) + ` <span class="hint">t.o.v. ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}</span>` : `<span class="hint">${pr ? "" : "eerste evaluatie"}</span>`}<span class="spacer"></span><span class="go">${evStarted(e) ? "Openen" : "Evalueren"} ›</span></div></a>`; }).join("")}</div>`;
+        <div class="ft">${evZelf(p.id, evMoment) ? '<span class="pill g" title="De speler vulde de zelfevaluatie in">zelf ingevuld</span> ' : ""}${b != null && a != null ? evDelta(a - b) + ` <span class="hint">t.o.v. ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}</span>` : `<span class="hint">${pr ? "" : "eerste evaluatie"}</span>`}<span class="spacer"></span><span class="go">${evStarted(e) ? "Openen" : "Evalueren"} ›</span></div></a>`; }).join("")}</div>`;
   else if (evView === "tabel") { const opts = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
     vv.innerHTML = `<p class="hint" style="margin-top:0">Handig op een computer: alle spelers en onderdelen in één tabel. Elke keuze wordt meteen bewaard.</p><div class="panel wrapx evtbl" style="padding:6px 10px"><table class="tbl"><thead><tr><th class="sticky">Speler</th>${groups.map(g => g.items.map((i, k) => `<th class="${k === 0 ? "gstart" : ""}" title="${esc(i.hint)}"><span class="g">${k === 0 ? esc(g.name) : "&nbsp;"}</span>${esc(i.name)}</th>`).join("")).join("")}<th>Gem.</th></tr></thead><tbody>
       ${ps.map(p => { const e = evOf(p.id, evMoment); return `<tr data-p="${p.id}"><td class="sticky"><a href="#/evaluaties/${p.id}/${evMoment}">${esc(pname(p))}</a></td>${groups.map(g => g.items.map((i, k) => `<td class="${k === 0 ? "gstart" : ""}"><select data-c="${esc(i.name)}" aria-label="${esc(i.name)} voor ${esc(pname(p))}" style="--c:${evColor(evScore(e, i.name))}"><option value="">–</option>${opts.map(o => `<option value="${o}"${evScore(e, i.name) === o ? " selected" : ""}>${String(o).replace(".", ",")}</option>`).join("")}</select></td>`).join("")).join("")}<td class="avg"><b>${f1(evAvgOf(e, names))}</b></td></tr>`; }).join("")}</tbody></table></div>`;
@@ -151,6 +208,12 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
       else { const { error } = await sb.rpc("set_eval_publicatie", { t: S.team.id, m, aan: on }); if (error) throw error; }
       return true; }, on ? "Gedeeld met ouders en spelers." : "Niet meer zichtbaar voor ouders en spelers.");
     if (ok) evPub.m = on ? [...new Set([...evPub.m, m])] : evPub.m.filter(x => x !== m); render(); };
+  const zt = $("#evZelfT"); if (zt) zt.onchange = async () => { const m = evMoment, on = zt.checked;
+    const ok = await safe(async () => {
+      if (mode === "demo") { if (on) await db.save("eval_zelf_open", { team_id: S.team.id, moment: m, opened_at: new Date().toISOString() }); else await db.del("eval_zelf_open", { team_id: S.team.id, moment: m }); }
+      else { const { error } = await sb.rpc("set_eval_zelf", { t: S.team.id, m, aan: on }); if (error) throw error; }
+      return true; }, on ? "Spelers kunnen hun zelfevaluatie invullen." : "Zelfevaluatie gesloten.");
+    if (ok) { S.zelfOpen = on ? [...(S.zelfOpen || []).filter(o => o.moment !== m), { team_id: S.team.id, moment: m }] : (S.zelfOpen || []).filter(o => o.moment !== m); render(); } else zt.checked = !on; };
   $("#evPrintAll").onclick = () => evPrint(ps.filter(p => evStarted(evOf(p.id, evMoment))), evMoment);
 } });
 function evTeamAnalysis(ps, groups, names) {
@@ -173,7 +236,7 @@ function evForm(v, pid, m) {
   const p = S.players.find(x => x.id === pid); if (!p) { v.innerHTML = `<div class="empty"><b>Speler niet gevonden</b><a class="link" href="#/evaluaties">Terug</a></div>`; return; }
   const ps = active(), idx = ps.findIndex(x => x.id === pid), groups = evGroups(), names = evItems(), mo = EV_MOMENTS[m - 1];
   let e = evOf(pid, m); e = e ? { ...e, scores: { ...e.scores }, details: { ...(e.details || {}) } } : { ...evNew(pid, m), details: {} };
-  const pr = evPrev(pid, m), D = e.details, steps = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+  const z = evZelf(pid, m), pr = evPrev(pid, m), D = e.details, steps = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
   const saveLater = debounce(() => safe(async () => { await evPut(e); $("#evsaved").textContent = "Bewaard"; }), 600);
   const touch = () => { $("#evsaved").textContent = "Bewaren…"; saveLater(); };
   const s = playerStats(p);
@@ -188,7 +251,9 @@ function evForm(v, pid, m) {
       ${g.items.map(i => { const cur = evScore(e, i.name), prv = pr ? evScore(pr, i.name) : null;
         return `<div class="crit" data-c="${esc(i.name)}"><div class="cl"><b>${esc(i.name)}</b>${i.hint ? `<small>${esc(i.hint)}</small>` : ""}</div>
           <div class="scale9" role="radiogroup" aria-label="${esc(i.name)}">${steps.map(n => `<button type="button" role="radio" data-s="${n}" aria-checked="${cur === n}" title="${EV_LEVELS[n]}" class="${n % 1 ? "half" : ""}${prv === n ? " prev" : ""}" style="--c:${evColor(n)}">${n % 1 ? "½" : n}</button>`).join("")}</div>
-          <div class="cv"><span class="lvl">${cur == null ? "" : EV_LEVELS[cur]}</span>${prv != null ? `<span class="hint">vorige: ${f1(prv)}</span>` : ""}</div></div>`; }).join("")}</section>`).join("")}
+          <div class="cv"><span class="lvl">${cur == null ? "" : EV_LEVELS[cur]}</span>${prv != null ? `<span class="hint">vorige: ${f1(prv)}</span>` : ""}${(zs => zs == null ? "" : `<span class="selfchip${cur != null && Math.abs(zs - cur) >= 1.5 ? " gap" : ""}" title="Zo ziet de speler zichzelf">speler ${evSelfLabel(zs)}</span>`)(z ? evSelfOf(z, i.name) : null)}</div></div>`; }).join("")}</section>`).join("")}
+    ${evSelfPanel(z, e, m)}
+    ${EV_OPEN.length ? `<section class="panel"><h2>Extra vragen van de club</h2><div class="fields">${EV_OPEN.map(q => `<label class="f full">${esc(q.text)}<textarea data-o="${esc(q.id)}" rows="3">${esc(D.open?.[q.id] || "")}</textarea></label>`).join("")}</div></section>` : ""}
     <section class="panel"><h2>Sterktes en werkpunten</h2><div id="evsug"></div>
       <div class="fields"><label class="f full">Sterktes<textarea data-d="strengths" rows="3" placeholder="Waar blinkt deze speler in uit?">${esc(D.strengths || "")}</textarea></label>
       <label class="f full">Werkpunten<textarea data-d="workpoints" rows="3" placeholder="Wat moet beter? Concreet en haalbaar.">${esc(D.workpoints || "")}</textarea></label>
@@ -219,6 +284,7 @@ function evForm(v, pid, m) {
     if (on) e.scores[c] = n; else delete e.scores[c];
     $$("[data-s]", row).forEach(x => x.setAttribute("aria-checked", on && x === b)); $(".lvl", row).textContent = on ? EV_LEVELS[n] : ""; e.date = e.date || todayIso(); recalc(); touch(); }));
   $$("[data-d]", v).forEach(el => el[el.type === "checkbox" || el.tagName === "SELECT" ? "onchange" : "oninput"] = () => { D[el.dataset.d] = el.type === "checkbox" ? el.checked : el.value; if (el.dataset.d === "talk" && el.checked) D.talk_date = todayIso(); touch(); });
+  $$("[data-o]", v).forEach(el => el.oninput = () => { D.open = { ...(D.open || {}), [el.dataset.o]: el.value }; touch(); });
   $("#evNote").oninput = ev => { e.comment = ev.target.value || null; touch(); };
   $("#evM").onchange = ev => { evMoment = +ev.target.value; go("#/evaluaties/" + pid + "/" + evMoment); };
   $("#evRep").onclick = () => { evPrint([p], m); };
@@ -241,7 +307,8 @@ function evPrint(players, m) {
         <dl><dt>Aanwezig op training</dt><dd>${s.trTot ? s.trPct + "%" : "–"}</dd><dt>Wedstrijden</dt><dd>${s.matches}</dd>${D.position ? `<dt>Beste positie</dt><dd>${esc(D.position)}</dd>` : ""}</dl></div>
       <div class="pgroups">${groups.map(g => `<div class="pg"><h2>${esc(g.name)} <span>${f1(evAvgOf(e, g.items.map(i => i.name)))}</span></h2>${g.items.map(i => { const c = evScore(e, i.name), b = pr ? evScore(pr, i.name) : null;
         return `<div class="pr"><span>${esc(i.name)}</span><span class="pb"><i style="width:${c == null ? 0 : c / 5 * 100}%"></i>${b != null ? `<em style="left:${b / 5 * 100}%"></em>` : ""}</span><b>${c == null ? "–" : f1(c)}</b></div>`; }).join("")}</div>`).join("")}</div>
-      <div class="ptexts">${[["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen tot de volgende evaluatie", D.goals], ["Boodschap van de trainer", D.parents], m === EV_LAST && D.advice ? ["Advies volgend seizoen", D.advice] : null].filter(x => x && x[1]).map(([k, t]) => `<div><h3>${k}</h3><p>${esc(t).replace(/\n/g, "<br>")}</p></div>`).join("")}</div>
+      <div class="ptexts">${[["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen tot de volgende evaluatie", D.goals], ["Boodschap van de trainer", D.parents], m === EV_LAST && D.advice ? ["Advies volgend seizoen", D.advice] : null,
+        ...EV_OPEN.map(q => [q.text, D.open?.[q.id]]), ...(EV_SELF.on ? EV_SELF.questions.filter(q => q.type === "tekst").map(q => ["Zelf ingevuld: " + q.text, evZelf(p.id, m)?.answers?.[q.id]]) : [])].filter(x => x && x[1]).map(([k, t]) => `<div><h3>${esc(k)}</h3><p>${esc(t).replace(/\n/g, "<br>")}</p></div>`).join("")}</div>
       <footer>Schaal: 1 nog niet · 2 soms · 3 meestal · 4 bijna altijd · 5 uitblinker. Het streepje is de vorige evaluatie. · ${esc(clubName())} jeugdwerking</footer></div>`; }).join("");
   document.body.appendChild(el); document.documentElement.classList.add("printing");
   const done = () => { el.remove(); document.documentElement.classList.remove("printing"); removeEventListener("afterprint", done); };

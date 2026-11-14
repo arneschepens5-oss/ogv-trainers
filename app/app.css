@@ -1504,3 +1504,29 @@ body.authpage .shell{display:block}
 }
 #msgBox:empty{display:none}
 .crest .ogvlogo,.crest .ogvlogo img,.crest .ogvlogo svg{height:52px!important;width:auto!important;max-width:56px;margin:0!important}
+
+/* v38 · eigen evaluatievragen en zelfevaluatie */
+.cslist{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.csr{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+.csr input,.csr select{min-width:0}
+.csr input{flex:1}
+.csr.csg{background:var(--card3);border-color:var(--line2);margin-top:10px}
+.csr.csg input{font-weight:800}
+.csr.csi{margin-left:14px}
+.csr.csi input[name=n]{flex:0 1 190px}
+.csr.csi input[name=h]{flex:1 1 220px}
+.csr.csq select[name=ty]{flex:none;width:132px}
+.csr.csq select[name=l]{flex:0 1 190px}
+.csr.csq[data-ty=tekst] select[name=l]{visibility:hidden}
+.csctl{display:flex;flex:none}
+.csctl .ib{width:30px;height:30px;font-size:16px;font-weight:700}
+#csself[hidden]{display:none}
+@media (max-width:700px){.csr{flex-wrap:wrap}.csr.csi{margin-left:0}.csr.csi input[name=n],.csr.csi input[name=h],.csr.csq select[name=l]{flex:1 1 100%}.csr.csq select[name=ty]{width:auto}.csr.csq input[name=t]{flex:1 1 60%}}
+.selfchip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--card3);color:var(--ink)}
+.selfchip.gap{background:var(--ybg);color:var(--ytext)}
+.evself .gh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.evself .gh h2{margin:0}
+.selfrow{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.selfrow b{white-space:nowrap;font-size:18px}.selfrow b small{font-size:12px;font-weight:600;color:var(--muted)}
+.selftx{padding:8px 0;border-top:1px solid var(--line)}.selftx small{color:var(--muted);font-weight:700}.selftx p{margin:3px 0 0}
+.selfgap{background:var(--ybg);border-radius:12px;padding:10px 12px;margin-bottom:8px}.selfgap p{margin:4px 0 0}

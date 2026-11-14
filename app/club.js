@@ -745,9 +745,7 @@ async function csPage(v, id, ctx) {
       <h2>Schaal</h2><div class="row" style="gap:18px;flex-wrap:wrap">
         <label class="chkl"><input type="radio" name="scale" value="woorden"${ev.scale !== "cijfers" ? " checked" : ""}><span>Woorden <span class="hint">(nog niet, soms, meestal, bijna altijd, uitblinker)</span></span></label>
         <label class="chkl"><input type="radio" name="scale" value="cijfers"${ev.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label></div>
-      <h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Eén onderdeel per regel. Een regel die begint met # is een groep. Na een | volgt de uitleg voor de trainer. Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen.</p>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button></div>
-      <textarea name="tpl" rows="14" spellcheck="false" style="width:100%;font-family:inherit">${esc((Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT).join("\n"))}</textarea>
+      ${csEvalEditorsHtml(ev)}
       ${!ctx.platform && S.teams?.length ? `<label class="chkl" style="margin-top:8px"><input type="checkbox" name="all"> Ook toepassen op de ${S.teams.length} bestaande ploegen <span class="hint">(evaluaties die al ingevuld zijn blijven bewaard)</span></label>` : ""}
       ${foot()}</form>`;
     const f = $("#cse"), list = $("#csms", f);
@@ -755,12 +753,12 @@ async function csPage(v, id, ctx) {
     wire();
     $$("[data-pre]", f).forEach(b => b.onclick = () => { list.innerHTML = EV_PRESETS[b.dataset.pre].moments.map(rowHtml).join(""); wire(); });
     $("#csadd", f).onclick = () => { list.insertAdjacentHTML("beforeend", rowHtml({ naam: "", from: "", to: "" }, $$(".csm", list).length)); wire(); };
-    $$("[data-tpl]", f).forEach(b => b.onclick = () => { f.tpl.value = (b.dataset.tpl === "kort" ? EV_TEMPLATE_SHORT : EV_TEMPLATE_DEFAULT).join("\n"); });
+    const collect = csEvalEditorsBind(f);
     f.onsubmit = async e => { e.preventDefault();
       const moments = $$(".csm", list).map(r => ({ naam: $("[name=naam]", r).value.trim(), from: $("[name=from]", r).value.trim(), to: $("[name=to]", r).value.trim(), verplicht: $("[name=verplicht]", r).checked }));
       const bad = moments.find(x => !x.naam || !evMd(x.from) || !evMd(x.to)); if (bad) { toast("Geef elk moment een naam en een datum als maand-dag, bv. 12-01."); return; }
-      const template = f.tpl.value.split("\n").map(x => x.trim()).filter(Boolean); if (!template.some(l => !l.startsWith("#"))) { toast("Vul minstens één onderdeel in."); return; }
-      if (!(await csSave({ eval: { moments, scale: f.scale.value, template } }, "Evaluaties ingesteld."))) return;
+      const q = collect(); if (q.err) { toast(q.err); return; } const template = q.template;
+      if (!(await csSave({ eval: { moments, scale: f.scale.value, template, open: q.open, self: q.self } }, "Evaluaties ingesteld."))) return;
       if (f.all?.checked) { let n = 0; for (const t of S.teams) { try { await db.save("teams", { ...t, criteria: template.slice() }); t.criteria = template.slice(); n++; } catch (x) {} } toast(`Toegepast op ${n} ploegen.`); }
       go(); };
     return; }
