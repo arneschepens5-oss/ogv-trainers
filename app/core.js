@@ -446,7 +446,7 @@ async function loadTeams() {
   try { S.logos = await db.list("club_logos"); } catch (e) { S.logos = null; } /* logo's van tegenstanders (databaseversie 45) */
 }
 async function loadTeam(id) {
-  S.team = myTeams().find(t => t.id === id) || (S.admin ? S.teams.find(t => t.id === id) : null) || null; if (!S.team) return; setTimeout(unreadCount, 800);
+  S.team = myTeams().find(t => t.id === id) || (S.admin ? S.teams.find(t => t.id === id) : null) || null; if (!S.team) return; setTimeout(unreadCount, 800); if (typeof evApplyClub === "function") evApplyClub();
   try { localStorage.setItem(TEAM_KEY, id); } catch (e) {}
   const m = { team_id: id };
   [S.players, S.events, S.att, S.evals, S.goals, S.trainers] = await Promise.all(["players","events","attendance","evaluations","goals","team_trainers"].map(t => db.list(t, m)));

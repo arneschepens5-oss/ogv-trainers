@@ -87,6 +87,11 @@ function evApplyClub(st = CLUB.settings || {}) {
   const sf = ev.self || {};
   EV_SELF = { on: sf.on === true, scale: sf.scale === "cijfers10" ? "cijfers10" : sf.scale === "cijfers" ? "cijfers" : "smiley", intro: String(sf.intro || ""), questions: (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).filter(q => q.text) };
   EV_OPEN = (Array.isArray(ev.open) ? ev.open : []).map(evCleanQ).filter(q => q.text).map(q => ({ id: q.id, text: q.text }));
+  /* eigen evaluatie voor de leeftijd van deze ploeg (ingesteld door de beheerder) */
+  const pr = typeof evProfileOf === "function" && typeof S !== "undefined" ? evProfileOf(S.team?.id, st) : null;
+  if (pr) { const ps = pr.self || {};
+    EV_SELF = { on: ps.on === true, scale: ps.scale === "cijfers10" ? "cijfers10" : ps.scale === "cijfers" ? "cijfers" : "smiley", intro: String(ps.intro || ""), questions: (Array.isArray(ps.questions) ? ps.questions : []).map(evCleanQ).filter(q => q.text) };
+    EV_OPEN = (Array.isArray(pr.open) ? pr.open : []).map(evCleanQ).filter(q => q.text).map(q => ({ id: q.id, text: q.text })); }
   EV_MOMENTS.length = 0;
   if (ms) ms.forEach((x, i) => { const f = evMd(x.from), t = evMd(x.to); if (!f || !t) return;
       EV_MOMENTS.push({ m: EV_MOMENTS.length + 1, naam: x.naam || "Moment " + (i + 1), kort: x.kort || (x.naam || "").split(" ")[0] || String(i + 1), verplicht: !!x.verplicht, from: f, to: t,

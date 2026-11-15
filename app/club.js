@@ -777,6 +777,7 @@ async function csPage(v, id, ctx) {
         <label class="chkl"><input type="radio" name="scale" value="cijfers"${ev.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label>
         <label class="chkl"><input type="radio" name="scale" value="cijfers10"${ev.scale === "cijfers10" ? " checked" : ""}><span>Cijfers 1 tot 10</span></label></div>
       <p class="hint" style="margin-top:4px">Wissel je later van schaal, dan blijven ingevulde evaluaties bewaard en worden ze omgerekend (3 op 5 wordt 6 op 10). De zelfevaluatie van de spelers heeft een eigen schaal, hieronder.</p>
+      ${ctx.platform ? "" : `<div id="csprof" class="sec"></div><h2 class="evstdh">Standaard van de club</h2><p class="hint" style="margin-top:0">Voor alle ploegen zonder eigen evaluatie per leeftijd.</p>`}
       ${csEvalEditorsHtml(ev)}
       ${!ctx.platform && S.teams?.length ? `<label class="chkl" style="margin-top:8px"><input type="checkbox" name="all"> Ook toepassen op de ${S.teams.length} bestaande ploegen <span class="hint">(evaluaties die al ingevuld zijn blijven bewaard)</span></label>` : ""}
       ${foot()}</form>`;
@@ -785,13 +786,14 @@ async function csPage(v, id, ctx) {
     wire();
     $$("[data-pre]", f).forEach(b => b.onclick = () => { list.innerHTML = EV_PRESETS[b.dataset.pre].moments.map(rowHtml).join(""); wire(); });
     $("#csadd", f).onclick = () => { list.insertAdjacentHTML("beforeend", rowHtml({ naam: "", from: "", to: "" }, $$(".csm", list).length)); wire(); };
-    const collect = csEvalEditorsBind(f);
+    const collect = csEvalEditorsBind(f); if (!ctx.platform) csProfiles($("#csprof", f), st, csSave);
     f.onsubmit = async e => { e.preventDefault();
       const moments = $$(".csm", list).map(r => ({ naam: $("[name=naam]", r).value.trim(), from: $("[name=from]", r).value.trim(), to: $("[name=to]", r).value.trim(), verplicht: $("[name=verplicht]", r).checked }));
       const bad = moments.find(x => !x.naam || !evMd(x.from) || !evMd(x.to)); if (bad) { toast("Geef elk moment een naam en een datum als maand-dag, bv. 12-01."); return; }
       const q = collect(); if (q.err) { toast(q.err); return; } const template = q.template;
-      if (!(await csSave({ eval: { moments, scale: f.scale.value, template, open: q.open, self: q.self } }, "Evaluaties ingesteld."))) return;
-      if (f.all?.checked) { let n = 0; for (const t of S.teams) { try { await db.save("teams", { ...t, criteria: template.slice() }); t.criteria = template.slice(); n++; } catch (x) {} } toast(`Toegepast op ${n} ploegen.`); }
+      if (!(await csSave({ eval: { ...((CLUB.settings || st).eval?.profiles ? { profiles: (CLUB.settings || st).eval.profiles } : {}), moments, scale: f.scale.value, template, open: q.open, self: q.self } }, "Evaluaties ingesteld."))) return;
+      if (typeof evApplyClub === "function") evApplyClub();
+      if (f.all?.checked) { let n = 0; for (const t of S.teams.filter(t => !evProfileOf(t.id))) { try { await db.save("teams", { ...t, criteria: template.slice() }); t.criteria = template.slice(); n++; } catch (x) {} } toast(`Toegepast op ${n} ploegen.`); }
       go(); };
     return; }
 

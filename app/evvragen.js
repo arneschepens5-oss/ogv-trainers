@@ -15,10 +15,10 @@ const csSelfRow = (q, crits) => csRow("csq", `data-id="${esc(q.id || evQid())}" 
    <select name="l" aria-label="Vergelijken met onderdeel van de trainer" title="Welk onderdeel van de trainer hoort hierbij? Dan zie je beide scores naast elkaar.">${csLinkOpts(crits, q.link)}</select>`);
 const csCritNames = lines => lines.filter(l => !String(l).trim().startsWith("#")).map(l => String(l).split(/\s+\|\s+/)[0].trim()).filter(Boolean);
 
-function csEvalEditorsHtml(ev) {
+function csEvalEditorsHtml(ev, forProfile) {
   const tpl = Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT, crits = csCritNames(tpl);
   const sf = ev.self || {}, qs = (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ), open = (Array.isArray(ev.open) ? ev.open : []).map(evCleanQ);
-  return `<h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Dit zijn de onderdelen waar de trainer een score voor geeft, in groepen. Voeg gerust eigen onderdelen toe, hernoem of verwijder ze. Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen.</p>
+  return `<h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Dit zijn de onderdelen waar de trainer een score voor geeft, in groepen. Voeg gerust eigen onderdelen toe, hernoem of verwijder ze. ${forProfile ? "Dit geldt voor de gekozen ploegen; hun trainers kunnen dit niet aanpassen." : "Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen."}</p>
     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button></div>
     <div id="cscrit" class="cslist">${tpl.map(csCritRow).join("")}</div>
     <div class="row" style="gap:16px;margin:4px 0 8px"><button class="link" type="button" id="csaddg">${IC.plus}Groep toevoegen</button><button class="link" type="button" id="csaddi">${IC.plus}Onderdeel toevoegen</button></div>
@@ -73,3 +73,56 @@ function csEvalEditorsBind(f) {
 /* de lijst met onderdelen terug naar tekstregels: "# Groep" en "Naam | uitleg" */
 function csCritLines(host) { return $$(".csr", host).map(r => { const n = $("[name=n]", r).value.trim().replace(/\|/g, "/").replace(/^#+\s*/, ""); if (!n) return null;
   if (r.dataset.t === "g") return "# " + n; const h = ($("[name=h]", r)?.value || "").trim().replace(/\|/g, "/"); return h ? n + " | " + h : n; }).filter(Boolean); }
+
+/* ============ evaluatie per leeftijd: de beheerder geeft groepen ploegen een eigen evaluatie en zelfevaluatie ============ */
+const evProfiles = (st = CLUB.settings || {}) => (Array.isArray(st.eval?.profiles) ? st.eval.profiles : []).filter(p => p && p.id);
+const evProfileOf = (teamId, st) => teamId ? evProfiles(st).find(p => (p.teams || []).includes(teamId)) || null : null;
+const evAgeOf = t => { const m = String(t.category || t.name || "").match(/U\s?(\d+)/i); return m ? +m[1] : 99; };
+function csProfiles(host, st, save) {
+  const club = st.eval || {}, profs = evProfiles(st), teams = [...(S.teams || [])].sort((a, b) => evAgeOf(a) - evAgeOf(b) || String(a.name).localeCompare(String(b.name)));
+  const tName = id => { const t = teams.find(x => x.id === id); return t ? (typeof teamLbl === "function" ? teamLbl(t) : t.name) : "?"; };
+  const used = new Set(profs.flatMap(p => p.teams || [])), rest = teams.filter(t => !used.has(t.id));
+  const nCrit = tpl => csCritNames(tpl || []).length, nSelf = p => p.self?.on ? (p.self.questions || []).length : 0;
+  const card = (p, std) => `<div class="evp${std ? " std" : ""}"><div class="evph"><span class="evpi">${std ? IC.gear : IC.star}</span><div><b>${esc(std ? "Standaard van de club" : p.name)}</b>
+      <small>${nCrit(std ? (club.template || EV_TEMPLATE_DEFAULT) : p.template)} onderdelen · ${(std ? club.self?.on : p.self?.on) ? nSelf(std ? club : p) + " vragen zelfevaluatie" : "geen zelfevaluatie"}</small></div>
+      ${std ? "" : `<button class="btn ghost small" type="button" data-pe="${p.id}">Bewerken</button>`}</div>
+    <div class="evpt">${(std ? rest.map(t => t.id) : p.teams || []).map(id => `<span class="pill">${esc(tName(id))}</span>`).join("") || `<span class="hint">${std ? "Alle ploegen hebben een eigen evaluatie." : "Nog geen ploegen gekozen."}</span>`}</div>
+    ${std ? `<p class="hint" style="margin:8px 0 0">Stel je hieronder in op deze pagina.</p>` : ""}</div>`;
+  host.innerHTML = `<h2>Evaluatie per leeftijd</h2><p class="hint" style="margin-top:0">Geef jonge en oudere spelers een andere evaluatie. Een groep ploegen krijgt dan eigen onderdelen voor de trainer en een eigen zelfevaluatie. Ploegen die je nergens kiest, volgen de standaard van de club.</p>
+    <div class="evps">${profs.map(p => card(p)).join("")}${card(null, true)}</div>
+    <button class="btn ghost small" type="button" id="evpnew" style="margin:10px 0 6px">${IC.plus}Evaluatie voor een leeftijd toevoegen</button>`;
+  const persist = async (list, changed, msg) => {
+    const cur = CLUB.settings || st, ev = { ...(cur.eval || {}), profiles: list };
+    if (!(await save({ eval: ev }, msg))) return false;
+    /* de onderdelen van de trainer staan per ploeg: zet ze voor de ploegen die veranderden */
+    const tplOf = id => (list.find(p => (p.teams || []).includes(id))?.template) || (ev.template?.length ? ev.template : EV_TEMPLATE_DEFAULT);
+    for (const id of changed) { const t = (S.teams || []).find(x => x.id === id); if (!t) continue; const criteria = tplOf(id).slice();
+      try { await db.save("teams", { ...t, criteria }); t.criteria = criteria; if (S.team?.id === id) S.team.criteria = criteria; } catch (x) {} }
+    if (typeof evApplyClub === "function") evApplyClub(); render(); return true; };
+  const edit = p => {
+    const isNew = !p; p = p || { id: "p" + Date.now().toString(36), name: "", teams: [], template: EV_TEMPLATE_SHORT.slice(), open: [], self: { on: !!club.self?.on, scale: "smiley", intro: club.self?.intro || "", questions: (EV_SELF_PRESETS.jong?.questions || club.self?.questions || []).map(q => ({ ...q })) } };
+    const sel = new Set(p.teams || []), owner = id => profs.find(x => x.id !== p.id && (x.teams || []).includes(id));
+    const ages = [["U6–U9", 6, 9], ["U10–U13", 10, 13], ["U14–U17", 14, 17], ["U18 en ouder", 18, 99]];
+    const d = dialog(`<form class="evpdlg" onsubmit="return false"><h2>${isNew ? "Evaluatie voor een leeftijd" : "Evaluatie bewerken"}</h2>
+      <label class="f full">Naam<input name="pnaam" maxlength="40" value="${esc(p.name)}" placeholder="bv. Onderbouw (U6–U9)" required></label>
+      <h3>Voor welke ploegen?</h3><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">${ages.map(([l, a, b]) => `<button class="btn ghost small" type="button" data-age="${a}-${b}">${l}</button>`).join("")}<button class="link" type="button" data-age="none">Niets</button></div>
+      <div class="evpteams">${teams.map(t => { const o = owner(t.id); return `<label class="evpt1"><input type="checkbox" value="${t.id}"${sel.has(t.id) ? " checked" : ""}><span><b>${esc(tName(t.id))}</b>${o ? `<small>nu: ${esc(o.name)}</small>` : ""}</span></label>`; }).join("") || `<p class="hint">Nog geen ploegen.</p>`}</div>
+      ${csEvalEditorsHtml({ template: p.template, open: p.open, self: p.self }, true)}
+      <div class="row csfoot">${isNew ? "" : `<button class="btn ghost" type="button" id="evpdel" style="color:var(--bad)">Verwijderen</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="evpok">Bewaren</button></div></form>`, "wide");
+    const f = $("form", d), collect = csEvalEditorsBind(f);
+    $$("[data-age]", d).forEach(b => b.onclick = () => { const [a, z] = b.dataset.age === "none" ? [0, -1] : b.dataset.age.split("-").map(Number);
+      $$(".evpteams input", d).forEach(c => { const t = teams.find(x => x.id === c.value), g = evAgeOf(t); if (b.dataset.age === "none") c.checked = false; else if (g >= a && g <= z) c.checked = true; }); });
+    const before = new Set(p.teams || []);
+    $("#evpok", d).onclick = async () => { const name = f.pnaam.value.trim(); if (!name) { toast("Geef de evaluatie een naam."); f.pnaam.focus(); return; }
+      const q = collect(); if (q.err) { toast(q.err); return; }
+      const chosen = $$(".evpteams input", d).filter(c => c.checked).map(c => c.value);
+      const np = { id: p.id, name, teams: chosen, template: q.template, open: q.open, self: q.self };
+      const list = profs.filter(x => x.id !== p.id).map(x => ({ ...x, teams: (x.teams || []).filter(id => !chosen.includes(id)) })).concat([np]);
+      const changed = new Set([...before, ...chosen]);
+      if (await persist(list, changed, isNew ? "Evaluatie toegevoegd." : "Evaluatie bewaard.")) d.close(); };
+    const del = $("#evpdel", d); if (del) del.onclick = async () => { if (!confirm(`"${p.name}" verwijderen? De ploegen volgen dan weer de standaard van de club. Ingevulde evaluaties blijven bewaard.`)) return;
+      if (await persist(profs.filter(x => x.id !== p.id), new Set(p.teams || []), "Evaluatie verwijderd.")) d.close(); };
+  };
+  $("#evpnew", host).onclick = () => edit(null);
+  $$("[data-pe]", host).forEach(b => b.onclick = () => edit(profs.find(p => p.id === b.dataset.pe)));
+}
