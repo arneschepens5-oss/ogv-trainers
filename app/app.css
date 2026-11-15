@@ -1885,3 +1885,15 @@ html,body{overflow-x:clip}
 @media (max-width:600px){.evhead>div:first-child{flex-basis:100%}.evhead .kpi.mini{flex:1}}
 .ptxt{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ptxt textarea{min-height:84px}@media (max-width:600px){.ptxt{grid-template-columns:1fr}}
 .dmbody .tag,.dmbody .chips .tag{white-space:normal;text-align:left}
+
+/* v124 meldingen */
+.mld-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.mld-top>div{flex:1;min-width:200px;display:flex;flex-direction:column}.mld-top small{color:var(--muted)}
+.mld-ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--card3);color:var(--muted);flex:none}.mld-ic.on{background:var(--yellow);color:var(--onY)}
+.mld-kinds{display:grid;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.mldinv{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:16px;background:var(--ybg);color:var(--ink);margin-bottom:14px}
+.mldinv>svg{color:var(--ytext)}.mldinv>div{flex:1;min-width:180px;display:flex;flex-direction:column}.mldinv small{color:var(--muted)}
+/* v124 blessures en afwezigheden */
+.abstag{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--badbg);color:var(--bad);white-space:nowrap;align-self:flex-start}
+.abstag.k-ziek{background:var(--ybg);color:var(--ytext)}.abstag.k-afwezig,.abstag.k-andere{background:var(--card3);color:var(--muted)}
+.absnow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:12px 14px;border-radius:14px;background:var(--badbg);margin-bottom:10px;border-left:4px solid var(--bad)}
+.absnow b{flex:1 1 100%;color:var(--ink)}.absnow small{flex:1;color:var(--muted)}.absnow.k-ziek{background:var(--ybg);border-left-color:var(--warn)}.absnow.k-afwezig,.absnow.k-andere{background:var(--card2);border-left-color:var(--info)}

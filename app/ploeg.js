@@ -33,7 +33,7 @@ route("start", { title: "Vandaag", render: async v => {
   const evr = t && !clubOff("evaluaties") ? evReminder() : "";
   const noTeam = `<section class="nextcard empty"><p class="nk">${logged ? "Nog geen ploeg gekozen" : "Welkom"}</p><h2 class="ntitle">${logged ? "Kies je ploeg om te beginnen" : "Meld je aan om te beginnen"}</h2>
     <p class="nmeta">Daarna zie je hier je volgende training of wedstrijd, wat je nog moet invullen en de uitslagen van de club.</p><div class="nact">${logged ? `<button class="btn" type="button" data-pick>${IC.ppl}Ploeg kiezen</button>` : `<a class="btn" href="#/aanmelden">Aanmelden</a>`}</div></section>`;
-  v.innerHTML = `${setup}<header class="today-h"><p>${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
+  v.innerHTML = `${setup}${typeof pushInvite === "function" ? pushInvite() : ""}<header class="today-h"><p>${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
       <h1>${greet}${logged && mode !== "demo" && first ? ", " + esc(first) : ""}</h1></header>
     <div class="vdgrid">
       <div class="vdcol">${t ? (next ? nextCard(next) : `<section class="nextcard empty"><p class="nk">Niets gepland</p><h2 class="ntitle">Geen trainingen of wedstrijden in de kalender</h2><div class="nact"><a class="btn" href="#/kalender">${IC.plus}Activiteit toevoegen</a></div></section>`) : noTeam}
@@ -95,7 +95,7 @@ route("ploeg", { title: "Mijn ploeg", auth: true, team: true, render: v => {
 route("spelers", { title: "Spelers", auth: true, team: true, render: v => {
   const ps = active(), old = S.players.filter(p => p.active === false);
   const card = p => { const s = playerStats(p); return pCard(p, { href: "#/speler/" + p.id, sub: [pPos(p), p.foot ? p.foot.toLowerCase() + "voetig" : "", p.birthdate ? pAge(p) + " jaar" : ""].filter(Boolean).join(" · ") || "Geen positie",
-    stats: [[s.trTot ? s.trPct + "%" : "–", "aanwezig"], [s.minutes, "minuten"], [f1(s.rating), "cijfer"]] }); };
+    extra: typeof absTag === "function" ? absTag(p.id) : "", stats: [[s.trTot ? s.trPct + "%" : "–", "aanwezig"], [s.minutes, "minuten"], [f1(s.rating), "cijfer"]] }); };
   const lines = pLines(ps);
   v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="pcont">${IC.phone}Contacten</button><button class="btn ghost" type="button" id="plinks">${IC.link}Ouderlinks</button><button class="btn ghost" type="button" id="imp">${IC.out}Importeren</button><button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
     (ps.length ? lines.map(([l, xs]) => `<section class="pgrp">${lines.length > 1 ? `<h2>${esc(l)}<small>${xs.length}</small></h2>` : ""}<div class="pgrid">${xs.map(card).join("")}</div></section>`).join("") : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
@@ -169,7 +169,8 @@ route("speler", { title: "Speler", auth: true, team: true, render: (v, id) => {
      : `<p class="hint">Zet een of twee concrete doelen per periode, bijvoorbeeld "met links leren passen over 10 meter".</p>`}</div></div>
   ${ms.length ? `<div class="sec"><h2>Wedstrijden</h2><div class="list">${ms.map(({ e, a }) => `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>${matchCrests(e)}
     <span class="main"><b>${e.report?.squad ? `<span class="pill g">${esc(e.report.squad)}</span> ` : ""}${esc(e.opponent || "Wedstrijd")}${e.report?.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b><small>${esc([a.role, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : ""].filter(Boolean).join(" · "))}</small>${a.note ? `<span class="notefull">${esc(a.note)}</span>` : ""}${a.rated_by ? `<span class="rby">door ${esc(a.rated_by)}</span>` : ""}</span><span class="val"><b>${a.rating ?? "–"}</b>cijfer</span></div>`).join("")}</div></div>` : ""}
-  ${contactsPanel(p)}${historyHtml(p)}`;
+  ${typeof absPanel === "function" ? absPanel(p) : ""}${contactsPanel(p)}${historyHtml(p)}`;
+  if (typeof absBind === "function") absBind(v);
   $("#editP").onclick = () => playerForm(p); $("#addG").onclick = () => goalForm(p);
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
   $$("[data-gs]", v).forEach(sel => sel.onchange = async () => { const g = S.goals.find(x => x.id === sel.dataset.gs); g.status = sel.value; await safe(() => db.save("goals", g), "Doel bijgewerkt."); });

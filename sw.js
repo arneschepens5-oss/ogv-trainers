@@ -1,6 +1,6 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v123";
-const SHELL = ["./", "index.html", "app/app.css?v=123", "app/core.js?v=123", "app/ploeg.js?v=123", "app/cijfers.js?v=123", "app/wedstrijd.js?v=123", "app/leerplan.js?v=123", "app/teken.js?v=123", "app/training.js?v=123", "app/video.js?v=123", "app/map.js?v=123", "app/rbfa.js?v=123", "app/club.js?v=123", "app/evaluatie.js?v=123", "app/evvragen.js?v=123", "app/dossier.js?v=123", "app/trainers.js?v=123", "app/groei.js?v=123", "app/scoutint.js?v=123", "app/kennis.js?v=123", "app/ouders.js?v=123", "app/clubdash.js?v=123", "app/betalingen.js?v=123", "app/privacy.js?v=123", "privacy.html", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=123",
+const CACHE = "ogv-platform-v124";
+const SHELL = ["./", "index.html", "app/app.css?v=124", "app/core.js?v=124", "app/ploeg.js?v=124", "app/cijfers.js?v=124", "app/wedstrijd.js?v=124", "app/leerplan.js?v=124", "app/teken.js?v=124", "app/training.js?v=124", "app/video.js?v=124", "app/map.js?v=124", "app/rbfa.js?v=124", "app/club.js?v=124", "app/evaluatie.js?v=124", "app/evvragen.js?v=124", "app/dossier.js?v=124", "app/trainers.js?v=124", "app/groei.js?v=124", "app/scoutint.js?v=124", "app/kennis.js?v=124", "app/ouders.js?v=124", "app/clubdash.js?v=124", "app/betalingen.js?v=124", "app/privacy.js?v=124", "app/meldingen.js?v=124", "app/afwezig.js?v=124", "privacy.html", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=124",
   "manifest.webmanifest", "manifest-beheer.webmanifest", "icons/beheer-192.png", "icons/beheer-apple-touch-icon.png", "icons/icon-192.png", "icons/logo.png", "icons/logo-dark.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
   "trainingen/trainingen.json", "matchday/", "tactiekbord/", "app/embed.css?v=4", "app/embed.js?v=2"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
@@ -16,3 +16,10 @@ self.addEventListener("fetch", e => {
   const fresh = html || (/\.(js|css|json|webmanifest)$/i.test(url.pathname) && !/\/vendor\//.test(url.pathname));
   e.respondWith(fetch(e.request, fresh ? { cache: "no-cache" } : undefined).then(r => { const copy = r.clone(); if (r.ok) caches.open(CACHE).then(c => c.put(e.request, copy)); return r; }).catch(() => caches.match(e.request)));
 });
+
+const ICON = "icons/icon-192.png";
+/* pushmeldingen: tonen en bij een tik de juiste pagina openen */
+self.addEventListener("push", e => { let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { d = { title: "OG Vorselaar", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.title || "OG Vorselaar", { body: d.body || "", icon: ICON, badge: ICON, tag: d.tag, renotify: !!d.tag, data: { url: d.url || "./" } })); });
+self.addEventListener("notificationclick", e => { e.notification.close(); const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => { const c = cs.find(x => x.url.split("#")[0] === url.split("#")[0]); if (c) { c.navigate ? c.navigate(url).then(w => (w || c).focus()).catch(() => c.focus()) : c.focus(); return; } return self.clients.openWindow(url); })); });

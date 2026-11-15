@@ -191,13 +191,14 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     <div class="doslines print-only-lines"><b>Afspraken uit het gesprek</b><i></i><i></i><i></i><i></i></div></div>
 
   ${matchPane}
-  ${persoonlijkPane}${groeiPane(p)}${trainingPane}${scoutPane}
+  ${persoonlijkPane}${typeof absPanel === "function" ? absPanel(p).replace('class="panel sec absp"', 'class="panel sec absp" data-t="persoonlijk"') : ""}${groeiPane(p)}${trainingPane}${scoutPane}
   </div>`;
   $("#dosG").onclick = () => goalForm(p);
   $$(".dtabs [data-tab]", v).forEach(b => b.onclick = () => { dosTab = b.dataset.tab; $(".dos", v).dataset.tab = dosTab; $$(".dtabs [data-tab]", v).forEach(x => x.setAttribute("aria-selected", x === b)); });
   if ($("#dosEdit")) $("#dosEdit").onclick = () => playerForm(p);
   $("#spEdit").onclick = () => scProfForm(p);
   if ($("#gAdd")) $("#gAdd").onclick = () => groeiForm(p);
+  if (typeof absBind === "function") absBind(v);
   $$("[data-gE]", v).forEach(b => b.onclick = () => groeiForm(p, S.pmeas.find(x => x.id === b.dataset.gE)));
   if ($("#scAdd")) $("#scAdd").onclick = () => pScoutForm(p);
   $$("[data-scE]", v).forEach(b => b.onclick = () => pScoutForm(p, S.pscout.find(x => x.id === b.dataset.scE)));

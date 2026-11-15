@@ -46,7 +46,7 @@ function applyClubTheme() {
   const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
 }
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], trainer_att:["event_id","tkey"], trainer_rates:["club_id","tkey"], trainer_profiles:["user_id"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], player_absence:["id"], trainer_att:["event_id","tkey"], trainer_rates:["club_id","tkey"], trainer_profiles:["user_id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -381,6 +381,7 @@ const IC = {
   flag:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>`,
   note:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`,
   undo:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>`,
+  bell:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`,
   check:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`,
   eye:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
   out:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`,
@@ -447,6 +448,7 @@ async function loadTeam(id) {
   try { [S.zelf, S.zelfOpen] = await Promise.all(["eval_zelf", "eval_zelf_open"].map(t => db.list(t, m))); S.zelfOk = true; } catch (e) { S.zelf = []; S.zelfOpen = []; S.zelfOk = false; }
   /* interne scouting per speler (databaseversie 40) */
   try { S.pscout = await db.list("player_scout", m); S.pscoutOk = true; } catch (e) { S.pscout = []; S.pscoutOk = false; }
+  try { S.abs = await db.list("player_absence", m); S.absOk = true; } catch (e) { S.abs = []; S.absOk = false; } /* blessures en afwezigheden (databaseversie 48) */
   try { S.tatt = await db.list("trainer_att", m); S.tattOk = true; } catch (e) { S.tatt = []; S.tattOk = false; } /* aanwezigheid trainers (databaseversie 46) */
   try { S.pmeas = await db.list("player_measures", m); S.pmeasOk = true; } catch (e) { S.pmeas = []; S.pmeasOk = false; } /* meten en wegen (databaseversie 42) */
   if (typeof tpLoad === "function") await tpLoad(); /* trainersprofielen (databaseversie 40) */
@@ -486,7 +488,8 @@ const RES_L = { win: "Gewonnen", loss: "Verloren", draw: "Gelijk" };
 const matchTitle = (e, tname) => { const us = e.report?.squad ? clubShort() + " " + e.report.squad : tname || clubShort(); return e.opponent ? (e.home === false ? esc(e.opponent) + " – " + esc(us) : esc(us) + " – " + esc(e.opponent)) : "Wedstrijd"; };
 
 function playerStats(p) {
-  const tr = past("training").filter(e => S.att.some(a => a.event_id === e.id));
+  /* trainingen waarop de speler geblesseerd was, tellen niet mee */
+  const tr = past("training").filter(e => S.att.some(a => a.event_id === e.id) && attOf(e.id, p.id)?.status !== "geblesseerd" && !(typeof absOf === "function" && absOf(p.id, e.date)?.kind === "blessure" && !attOf(e.id, p.id)));
   const trIn = tr.filter(e => { const a = attOf(e.id, p.id); return a && (a.status === "aanwezig" || a.status === "te laat"); }).length;
   const ms = matchRows(p.id).map(x => x.a);
   const ev = S.evals.filter(x => x.player_id === p.id).sort((a, b) => a.moment - b.moment);
@@ -518,7 +521,7 @@ const NAV = [
   { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["dossier", "Spelersdossier", "book"], ["cijfers", "Cijfers", "chart"]] },
   { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
-  { g: "Mijn map", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
+  { g: "Mijn map", items: [["meldingen", "Meldingen", "bell"], ["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
   { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
   { g: "Scouting", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
 ];

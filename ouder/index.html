@@ -87,6 +87,7 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .convo{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--okbg);font-size:14.5px}
 .convo.off{background:var(--chip);color:var(--muted)}
 /* kaarten */
+.pushn small{display:block;color:var(--muted);margin-top:2px}
 .note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--yellow);border-radius:14px;padding:12px 14px}
 .note.tr{border-left-color:var(--blue)}
 .note[data-go]{cursor:pointer}
@@ -301,6 +302,34 @@ function installCard() {
   return `<div class="install" id="inst"><img src="../icons/icon-192.png" alt=""><div><b>Zet de app op je beginscherm</b><p>${ios ? "Tik in Safari op de deelknop <b>⬆︎</b> en kies <b>Zet op beginscherm</b>." : deferred ? `<button class="btn sm" type="button" id="instb" style="margin-top:6px">Installeren</button>` : "Open het menu <b>⋮</b> van je browser en kies <b>App installeren</b>."} Zo open je alles met één tik.</p></div><button class="x" type="button" id="instx" aria-label="Sluiten">✕</button></div>`;
 }
 
+/* ---------- meldingen: afgelastingen en "komt je kind morgen?" ---------- */
+const VAPID = "BA0WKBktvPzXIS_S3-WPxgv1FJmsd1ub3EAgLKK7nWz5wVDX6UBLFj5_7CkDxCMCxGSue4EC7XEZxiBhg_Q1wN0";
+const pushOk = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const iosNoHome = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !(matchMedia("(display-mode: standalone)").matches || navigator.standalone);
+const b64u = x => { const r = atob((x + "=".repeat((4 - x.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+let pushOn = store.get("ogv-ouders-push", false);
+function pushCard(full) {
+  if (!pushOk() || demo && !full) return "";
+  if (!full && (pushOn || Notification.permission === "denied" || store.get("ogv-ouders-nopush", false) || iosNoHome())) return "";
+  if (full) return `<div class="card"><h3>Meldingen</h3><p style="margin:4px 0 12px;color:var(--muted);font-size:14.5px">${pushOn ? "Je krijgt een melding bij een afgelasting en de avond voordien als je nog niet doorgaf of je kind komt." : iosNoHome() ? "Zet de app eerst op je beginscherm (Delen › Zet op beginscherm) en open ze van daaruit. Daarna kan je meldingen aanzetten." : Notification.permission === "denied" ? "Je browser blokkeert meldingen. Zet ze aan in de instellingen van je browser." : "Krijg een melding bij een afgelasting en de avond voordien als je nog niet doorgaf of je kind komt."}</p>
+    ${iosNoHome() || Notification.permission === "denied" ? "" : `<button class="btn${pushOn ? " ghost" : ""} sm" type="button" data-push="${pushOn ? "off" : "on"}">${pushOn ? "Meldingen uitzetten" : "Meldingen aanzetten"}</button>`}</div>`;
+  return `<div class="note pushn"><b>Een melding bij afgelastingen?</b><small>En de avond voordien als je nog niet doorgaf of je kind komt.</small><div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" type="button" data-push="on">Aanzetten</button><button class="btn ghost sm" type="button" data-push="later">Niet nu</button></div></div>`;
+}
+async function pushToggle(want) {
+  if (want === "later") { store.set("ogv-ouders-nopush", true); draw(); return; }
+  try {
+    const reg = await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready;
+    if (want === "off") { const s0 = await reg.pushManager.getSubscription(); if (s0) { if (sb) for (const k of kids) await sb.rpc("parent_push_del", { tok: k.tok, ep: s0.endpoint }).catch(() => {}); await s0.unsubscribe(); }
+      pushOn = false; store.set("ogv-ouders-push", false); toast("Meldingen staan uit."); draw(); return; }
+    if (await Notification.requestPermission() !== "granted") { toast("Geen toestemming voor meldingen."); draw(); return; }
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID) });
+    if (!demo) { let ok = 0; for (const k of okKids()) { const { data: x, error } = await sb.rpc("parent_push_save", { tok: k.tok, sub: sub.toJSON(), pr: {} }); if (!error && x) ok++; }
+      if (!ok) throw new Error("Opslaan lukte niet. Probeer later opnieuw."); }
+    pushOn = true; store.set("ogv-ouders-push", true); toast("Meldingen staan aan."); draw();
+  } catch (e) { toast(e.message || "Meldingen aanzetten lukte niet."); }
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-push]"); if (b) { b.disabled = true; pushToggle(b.dataset.push); } });
+
 /* ---------- agenda ---------- */
 function answerHtml(e, k, hero) {
   if (isOff(e) || isOut(e)) return "";
@@ -328,7 +357,7 @@ function drawAgenda() {
   const latest = msgsAll()[0], fresh = latest && !store.get(SEEN, []).includes(latest.key);
   let lastWk = "", body = "";
   for (const r of rest) { const wk = weekKey(r.e.date); if (wk !== lastWk) { body += `<div class="wk">${weekLabel(wk)}</div>`; lastWk = wk; } body += evCard(r.e, r.k); }
-  $("#list").innerHTML = installCard() + (zPending().length ? `<div class="note" data-gz><small>Zelfevaluatie open · tik om in te vullen</small><b>${zPending().map(k => esc(k.name)).join(", ")}</b></div>` : "") + (fresh ? `<div class="note" data-go="berichten"><small>Nieuw bericht · tik om te lezen</small><b>${esc(latest.title)}</b></div>` : "") +
+  $("#list").innerHTML = installCard() + pushCard(false) + (zPending().length ? `<div class="note" data-gz><small>Zelfevaluatie open · tik om in te vullen</small><b>${zPending().map(k => esc(k.name)).join(", ")}</b></div>` : "") + (fresh ? `<div class="note" data-go="berichten"><small>Nieuw bericht · tik om te lezen</small><b>${esc(latest.title)}</b></div>` : "") +
     (next ? heroCard(next) : "") +
     (open.length > 1 ? `<div class="todo"><span>Nog <b>${open.length}</b> ${open.length === 1 ? "activiteit" : "activiteiten"} zonder antwoord.</span><button class="btn sm" type="button" id="allja">${kidMode() ? "Overal: ik kom" : "Overal: komt"}</button></div>` : "") +
     (rows.length ? body : `<div class="msg"><b>Niets gepland</b>De komende zes weken staan er nog geen trainingen of wedstrijden in de kalender.</div>`) +
@@ -446,7 +475,7 @@ function drawMessages() {
 /* ---------- gegevens ---------- */
 function drawProfile() {
   const list = sel().filter(k => !isKid(k.tok));
-  $("#list").innerHTML = `<h2>Gegevens</h2><p style="margin:0;color:var(--muted);font-size:14.5px">Zo kan de trainer je bereiken, bv. bij een blessure. Alleen de trainers van de ploeg zien dit.</p>` + list.map(k => { const x = data[k.tok], cs = (x.contacts || []).slice(0, 2); while (cs.length < 2) cs.push({}); const c = x.consent || {};
+  $("#list").innerHTML = pushCard(true) + `<h2>Gegevens</h2><p style="margin:0;color:var(--muted);font-size:14.5px">Zo kan de trainer je bereiken, bv. bij een blessure. Alleen de trainers van de ploeg zien dit.</p>` + list.map(k => { const x = data[k.tok], cs = (x.contacts || []).slice(0, 2); while (cs.length < 2) cs.push({}); const c = x.consent || {};
     return `<form class="card" data-pf="${k.tok}"><h3>${esc(k.name)} <span style="color:var(--muted);font-weight:500;font-size:15px">· ${esc(x.team || "")}</span></h3>
       ${cs.map((ct, i) => `<div class="ct"><b>${i ? "Tweede contactpersoon" : "Contactpersoon"}</b><div class="grid"><label class="f">Naam<input name="n${i}" value="${esc(ct.name || "")}" autocomplete="name"></label>
         <label class="f">Relatie<select name="r${i}">${["", "Mama", "Papa", "Voogd", "Grootouder", "Andere"].map(r => `<option${r === (ct.rel || "") ? " selected" : ""}>${r}</option>`).join("")}</select></label>

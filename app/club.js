@@ -474,7 +474,9 @@ function rsvpBadge(e, p) {
   return `<span class="rsvp ${r.status}" title="${r.note ? esc(r.note) : ""}">${r.status === "ja" ? "komt" : "komt niet"}${r.note ? ": " + esc(r.note) : ""}</span>`;
 }
 async function rsvpApply(e) { /* antwoorden overnemen in de aanwezigheden waar nog niets staat */
-  let n = 0; for (const p of active()) { const r = rsvpOf(e.id, p.id); if (!r || attOf(e.id, p.id)) continue;
+  let n = 0; for (const p of active()) { if (attOf(e.id, p.id)) continue; const ab = typeof absOf === "function" ? absOf(p.id, e.date) : null;
+    if (ab) { await putAtt({ event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {}, status: ab.kind === "blessure" ? "geblesseerd" : "verwittigd", note: ab.note || absL(ab.kind) }); n++; continue; }
+    const r = rsvpOf(e.id, p.id); if (!r) continue;
     await putAtt({ event_id: e.id, player_id: p.id, team_id: S.team.id, tags: [], strengths: [], scores: {}, status: r.status === "ja" ? "aanwezig" : "verwittigd", ...(r.note ? { note: r.note } : {}) }); n++; }
   return n;
 }
