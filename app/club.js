@@ -56,51 +56,14 @@ async function clubStatus() {
 /* ============ beheer: aparte pagina's voor meldingen, toegang, ploegen en systeem ============ */
 const ADM_TABS = [["meldingen", "Meldingen"], ["instellingen", "Instellingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["planning", "Trainingen"], ["systeem", "Systeem"]];
 async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
-/* beheer: één overzicht met wat aandacht vraagt en snelle wegen naar elk onderdeel */
-async function adminOverview(v) {
-  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">Beheer${helpLink("clubbeheer")}</h1><p class="sub">Wat vraagt aandacht, en waar regel je wat.</p></div></div><div id="admo"><p class="hint">Laden…</p></div>`;
-  const host = $("#admo"), today = todayIso(), in14 = iso(addDays(new Date(), 14));
-  let info = { members: [], waiting: [] }, teams = [], players = [], evs = [];
-  try {
-    if (mode === "demo") { info = { members: [{ user_id: "demo", role: "admin" }, { user_id: "x", role: "trainer" }], waiting: [{ user_id: "y" }] }; teams = (S.teams || []).map((t, i) => ({ ...t, trainers: i ? [] : [{ user_id: "demo" }] })); players = (await db.list("players")).filter(p => p.active !== false); evs = (await db.list("events")).filter(e => e.type === "training" && e.date >= today && e.date <= in14); }
-    else { const [a, b, c, d] = await Promise.all([sb.rpc("club_admin_info"), sb.rpc("admin_teams"), sb.from("players").select("id,team_id,birthdate,contacts").eq("active", true), sb.from("events").select("id,team_id").eq("type", "training").gte("date", today).lte("date", in14)]);
-      info = a.data || info; teams = b.data || []; players = c.data || []; evs = d.data || []; }
-  } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message || e)}</div>`; return; }
-  const noTr = teams.filter(t => !(t.trainers || []).length), trT = new Set(evs.map(e => e.team_id)), noPlan = teams.filter(t => !trT.has(t.id));
-  const hasC = p => Array.isArray(p.contacts) && p.contacts.some(c => c && (c.phone || c.email)), noCon = players.filter(p => !hasC(p)).length, noBd = players.filter(p => !p.birthdate).length;
-  const lastBk = (() => { try { return localStorage.getItem("ogv-last-backup"); } catch (e) { return null; } })(), bkDays = lastBk ? Math.floor((Date.now() - new Date(lastBk)) / 864e5) : null;
-  const names = xs => xs.slice(0, 4).map(t => esc(teamLbl ? teamLbl(t) || t.name : t.name)).join(", ") + (xs.length > 4 ? ` en ${xs.length - 4} meer` : "");
-  const todo = [
-    S.fbOpen ? [`${S.fbOpen} ${S.fbOpen === 1 ? "melding" : "meldingen"} van trainers`, "Bekijk wat er niet werkt en duid het aan als afgehandeld.", "#/clubbeheer/meldingen", "bad", "note"] : null,
-    info.waiting?.length ? [`${info.waiting.length} ${info.waiting.length === 1 ? "account wacht" : "accounts wachten"} op toegang`, "Laat ze toe als het trainers van de club zijn.", "#/clubbeheer/toegang", "warn", "ppl"] : null,
-    noTr.length ? [`${noTr.length} ${noTr.length === 1 ? "ploeg" : "ploegen"} zonder trainer`, names(noTr), "#/clubbeheer/ploegen", "warn", "ppl"] : null,
-    noPlan.length ? [`${noPlan.length} ${noPlan.length === 1 ? "ploeg" : "ploegen"} zonder trainingen de komende 2 weken`, names(noPlan), "#/clubbeheer/planning", "", "cal"] : null,
-    noCon ? [`${noCon} ${noCon === 1 ? "speler" : "spelers"} zonder oudercontact`, "Stuur de ouders hun link: ze vullen het zelf in.", "#/clubdashboard", "", "phone"] : null,
-    noBd ? [`${noBd} ${noBd === 1 ? "speler" : "spelers"} zonder geboortedatum`, "Nodig voor leeftijd, geboortekwartaal en maturiteit.", "#/clubbeheer/ploegen", "", "cal"] : null,
-    bkDays == null || bkDays > 30 ? [bkDays == null ? "Nog geen back-up op dit toestel" : `Laatste back-up ${bkDays} dagen geleden`, "Download minstens één keer per maand een back-up.", "#/clubbeheer/systeem", "", "folder"] : null].filter(Boolean);
-  const kpi = (n, l, s) => `<div><small>${l}</small><b>${n}</b>${s ? `<span>${s}</span>` : ""}</div>`;
-  const card = (href, ic, t, d) => `<a class="admcard" href="${href}"><span class="ic">${IC[ic]}</span><span><b>${t}</b><small>${d}</small></span>${IC.chev || ""}</a>`;
-  host.innerHTML = `<div class="kpis admk">${kpi(teams.length, "Ploegen", `${teams.length - noTr.length} met trainer`)}${kpi(players.length, "Spelers", "actief")}${kpi((info.members || []).length, "Leden", `${(info.members || []).filter(m => m.role === "admin").length} beheerder(s)`)}${kpi(evs.length, "Trainingen", "komende 2 weken")}</div>
-    <section class="sec"><h2>Vraagt aandacht</h2>${todo.length ? `<div class="tlist">${todo.map(([t, d, h, k, ic]) => `<a class="trow" href="${h}"><span class="ti ${k}">${IC[ic] || IC.check}</span><span><b>${t}</b><small>${d}</small></span>${IC.chev || "›"}</a>`).join("")}</div>` : `<div class="empty"><b>Alles in orde</b>Er vraagt nu niets je aandacht.</div>`}</section>
-    <section class="sec"><h2>Beheren</h2><div class="admcards">
-      ${card("#/clubbeheer/toegang", "ppl", "Toegang en leden", "Clubcode, nieuwe accounts toelaten, functies en rechten per lid.")}
-      ${card("#/clubbeheer/ploegen", "ppl", "Ploegen en trainers", "Ploegen aanmaken via RBFA, spelers importeren, trainers koppelen.")}
-      ${card("#/clubbeheer/planning", "cal", "Trainingen inplannen", "Vaste trainingen voor het hele seizoen in één keer.")}
-      ${card("#/clubinstellingen", "gear", "Clubinstellingen", "Naam, logo, evaluaties en welke onderdelen aan staan.")}
-      ${card("#/clubbeheer/meldingen", "note", "Meldingen", "Problemen en vragen die trainers doorstuurden.")}
-      ${card("#/clubbeheer/systeem", "folder", "Back-up en systeem", "Back-up downloaden en de database controleren.")}
-      ${card("#/privacybeheer", "eye", "Privacy", "Wie ziet wat, en gegevens van vertrokken spelers opruimen.")}
-      ${card("#/clubdashboard", "chart", "Clubdashboard", "Cijfers van de hele jeugdwerking.")}</div></section>`;
-}
 route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
   const TABS = ADM_TABS.concat([["club", "Club"]]);
   if (id === "instellingen") { location.replace("#/clubinstellingen"); return; }
-  if (!id) return adminOverview(v);
   const tab = TABS.some(t => t[0] === id) ? id : "meldingen";
-  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Back-up en systeem", club: "Club", platform: "Alle clubs" }[tab]}${helpLink("clubbeheer")}</h1></div></div>
-    <div id="admv"><p class="hint">Laden…</p></div>`;
-  const host = $("#admv");
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", club: "Club", platform: "Alle clubs" }[tab]}${helpLink("clubbeheer")}</h1></div></div>
+    <nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
+  const host = $("#admv"); try { $(".admtabs a[aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" }); } catch (x) {}
   const getInfo = async () => { if (mode === "demo") return { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
     const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
   if (tab === "meldingen") return adminFeedback(host);
@@ -761,14 +724,14 @@ route("platformclub", { title: "Club instellen", auth: true, render: async (v, c
   const c = list.find(x => x.id === cid); if (!c) { v.innerHTML = `<div class="empty"><b>Club niet gevonden</b><a class="link" href="#/platform">Terug naar Platform</a></div>`; return; }
   c.settings = c.settings || {}; return csPage(v, step, csCtxPlatform(c)); } });
 async function csPage(v, id, ctx) {
-  const C = ctx.club, STEPS = ctx.steps, st = C.settings || {}, step = STEPS.some(x => x[0] === id) ? id : "club", i = STEPS.findIndex(x => x[0] === step), first = !st.setup_done && !ctx.platform && !isOGV();
+  const C = ctx.club, STEPS = ctx.steps, st = C.settings || {}, step = STEPS.some(x => x[0] === id) ? id : "club", i = STEPS.findIndex(x => x[0] === step), first = !st.setup_done && !ctx.platform;
   const csSave = (patch, msg) => ctx.saveAll(C.name, C.short, { ...(C.settings || {}), ...patch }, msg);
   const nextHref = i < STEPS.length - 1 ? ctx.base + "/" + STEPS[i + 1][0] : ctx.done;
-  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} ${ctx.platform ? `<a class="link" href="#/platform">Platform</a> › ` : ""}${first ? "Je club instellen" : "Beheer"} · ${esc(ctx.platform ? C.name : clubName())}</small><h1 class="pg">${first ? "Zet je club klaar" : ctx.platform ? esc(C.name) : "Clubinstellingen"}${ctx.platform ? "" : helpLink("clubinstellingen")}</h1>
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} ${ctx.platform ? `<a class="link" href="#/platform">Platform</a> › ` : ""}${first ? "Je club instellen" : "Instellingen"} · ${esc(ctx.platform ? C.name : clubName())}</small><h1 class="pg">${first ? "Zet je club klaar" : ctx.platform ? esc(C.name) : "Instellingen van de club"}${ctx.platform ? "" : helpLink("clubinstellingen")}</h1>
       <p class="sub" style="margin:4px 0 0">${ctx.platform ? "Je past de instellingen van deze club aan. Spelers, ploegen en verslagen van de club zie je niet." : first ? "Vijf korte stappen. Je kan alles later nog aanpassen via Beheer › Instellingen." : "Kies zelf hoe jullie club werkt. Wijzigingen gelden meteen voor alle trainers."}</p></div></div>
-    <ol class="csteps${first || ctx.platform ? "" : " tabs"}">${STEPS.map(([k, l], n) => `<li><a href="${ctx.base}/${k}"${k === step ? ' aria-current="step"' : ""}${n < i ? ' class="done"' : ""}><span>${n + 1}</span>${l}</a></li>`).join("")}</ol><div id="csv"></div>`;
-  const host = $("#csv"), foot = (label = "Bewaren en verder") => !first && !ctx.platform ? `<div class="row csfoot"><span class="hint" style="margin:0">Wijzigingen gelden meteen voor alle trainers.</span><span class="spacer"></span><button class="btn">Bewaren</button></div>` : `<div class="row csfoot"><a class="btn ghost" href="${i ? ctx.base + "/" + STEPS[i - 1][0] : ctx.done}">${i ? "Vorige" : ctx.platform ? "Terug" : "Later"}</a><span class="spacer"></span><button class="btn">${label}</button></div>`;
-  const go = () => { if (!first && !ctx.platform) { toast("Bewaard."); render(); return; } location.hash = nextHref; };
+    <ol class="csteps">${STEPS.map(([k, l], n) => `<li><a href="${ctx.base}/${k}"${k === step ? ' aria-current="step"' : ""}${n < i ? ' class="done"' : ""}><span>${n + 1}</span>${l}</a></li>`).join("")}</ol><div id="csv"></div>`;
+  const host = $("#csv"), foot = (label = "Bewaren en verder") => `<div class="row csfoot"><a class="btn ghost" href="${i ? ctx.base + "/" + STEPS[i - 1][0] : ctx.done}">${i ? "Vorige" : ctx.platform ? "Terug" : "Later"}</a><span class="spacer"></span><button class="btn">${label}</button></div>`;
+  const go = () => { location.hash = nextHref; };
 
   if (step === "club") {
     host.innerHTML = `<form class="panel" id="csf" style="max-width:700px">${clubFieldsHtml(C, st, { fixed: C.id === OGV_ID, hint: ctx.platform ? "De kleuren gelden voor iedereen van deze club." : undefined })}${foot()}</form>`;
