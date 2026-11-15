@@ -149,7 +149,8 @@ async function imWrite(A, D, prog) {
   /* 3. bewaren */
   const jobs = [...[...work.values()].filter(w => w.dirty).map(w => async () => { await db.save("players", w.p); stat.players++; }),
     ...[...touched.values()].map(({ t, isNew }) => async () => { await db.save("evaluations", t); if (isNew) stat.evNew++; else stat.evAdd++; })];
-  let done = 0; for (const j of jobs) { await j(); done++; prog(done, jobs.length); }
+  let done = 0; stat.fail = 0; stat.err = "";
+  for (const j of jobs) { try { await j(); } catch (e) { stat.fail++; stat.err = stat.err || (e.message || String(e)); } done++; prog(done, jobs.length); }
   return stat;
 }
 
@@ -178,7 +179,7 @@ function scImport(D) {
         <div class="row" style="margin-top:14px"><span class="hint">${ok} spelers en ${evOk} evaluaties worden verwerkt.</span><span class="spacer"></span><button class="btn" type="button" id="imgo"${ok ? "" : " disabled"}>Importeren</button></div>`;
       $$("[data-im]", out).forEach(s => s.onchange = () => { const x = A.xs.find(y => y.id === s.dataset.im); x.match = s.value ? D.P.find(p => p.id === s.value) : null; draw(); });
       $("#imgo", out).onclick = async () => { const b = $("#imgo", out); b.disabled = true; b.textContent = "Bezig…";
-        out.insertAdjacentHTML("beforeend", `<div class="imx-prog"><i id="imbar"></i></div>`);
+        $$(".imx-prog", out).forEach(x => x.remove()); out.insertAdjacentHTML("beforeend", `<div class="imx-prog"><i id="imbar"></i></div>`);
         let st; try { st = await imWrite(A, D, (k, n) => { const bar = $("#imbar", out); if (bar) bar.style.width = Math.round(k / Math.max(1, n) * 100) + "%"; }); }
         catch (e) { toast(e.message || String(e)); b.disabled = false; b.textContent = "Opnieuw proberen"; return; }
         imDone(out, A, st, D); }; };
@@ -190,6 +191,7 @@ function imDone(out, A, st, D) {
   const ogvNames = new Set(csCritNames(EV_TEMPLATE_OGV)), uses = t => { const c = csCritNames(t.criteria || []); return c.length && c.filter(n => ogvNames.has(n)).length >= c.length * 0.8; };
   const need = tids.map(id => S.teams.find(t => t.id === id)).filter(t => t && !uses(t));
   out.innerHTML = `<div class="imx-ks">${[[st.players, "spelers bijgewerkt"], [st.evNew, "nieuwe evaluaties"], [st.evAdd, "evaluaties aangevuld"], [st.hist, "uit vorige seizoenen"]].map(([n, l]) => `<div class="imx-k ok"><b>${n}</b><span>${l}</span></div>`).join("")}</div>
+    ${st.fail ? `<p class="grpwarn">${st.fail} ${st.fail === 1 ? "rij kon" : "rijen konden"} niet bewaard worden${/row-level security|policy/i.test(st.err) ? ": voer eerst <b>supabase-evaluaties-beheerder-v54.sql</b> uit in Supabase en importeer daarna opnieuw (wat al bewaard is, wordt niet dubbel gezet)." : ": " + esc(st.err)}</p>` : ""}
     ${st.clash ? `<p class="hint">${st.clash} ${st.clash === 1 ? "score of antwoord stond" : "scores of antwoorden stonden"} al anders ingevuld (in de app of in een eerdere rij van de Excel) en ${st.clash === 1 ? "is" : "zijn"} niet overschreven.</p>` : ""}
     ${st.skipped ? `<p class="hint">${st.skipped} evaluaties van spelers die niet in de app staan, zijn overgeslagen.</p>` : ""}${st.noMoment ? `<p class="hint">${st.noMoment} evaluaties zonder moment of datum zijn overgeslagen.</p>` : ""}
     ${need.length ? `<div class="imx-need"><b>Deze ploegen evalueren in de app nog niet met de fiche van de interne scouting</b><p class="hint" style="margin:4px 0 8px">${need.map(t => esc(teamLbl(t))).join(", ")}. De geïmporteerde scores staan er wel, maar hun trainers zien ze pas in hun evaluatiescherm (en vullen ze verder aan) als de ploeg dezelfde fiche gebruikt. Het spelersprofiel en Interne scouting werken sowieso.</p>
