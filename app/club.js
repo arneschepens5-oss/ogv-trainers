@@ -703,7 +703,7 @@ const CS_STEPS = [["club", "Club"], ["evaluaties", "Evaluaties"], ["onderdelen",
 /* onderdelen die een club kan uitzetten; de basis (start, kalender, spelers, trainingen) staat altijd aan */
 const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste momenten"], ["dossier", "Spelersdossier", "Alles van een speler op één pagina"], ["cijfers", "Cijfers", "Statistieken van de ploeg"],
   ["live", "Live coachen", "Klok, doelpunten en wissels langs de lijn"], ["matchday", "Wedstrijdblad", "Opstelling om af te drukken"], ["videoanalyse", "Videoanalyse", "Videostudio met spelersherkenning"],
-  ["animatiebord", "Animatiebord", "Bewegende spelpatronen"], ["mixschema", "Mixschema", "Rotatieschema voor gemengde ploegen"], ["principes", "Mijn spelprincipes", "Eigen video's per principe"],
+  ["animatiebord", "Tactiekbord", "Bewegende spelpatronen"], ["mixschema", "Mixschema", "Rotatieschema voor gemengde ploegen"], ["principes", "Mijn spelprincipes", "Eigen video's per principe"],
   ["berichten", "Berichten", "Mededelingen aan trainers"], ["terreinen", "Terreinen", "Veldindeling en plattegrond"], ["contacten", "Wie contacteer ik?", "Contactlijst van de club"],
   ["scouting", "Scoutingsdatabase", "Spelers van andere clubs volgen"], ["clubdashboard", "Clubdashboard", "Overzicht voor de jeugdcoördinator"]];
 const CS_CATS = [["U6", "2v2"], ["U7", "3v3"], ["U8", "5v5"], ["U9", "5v5"], ["U10", "8v8"], ["U11", "8v8"], ["U12", "8v8"], ["U13", "8v8"], ["U14", "11v11"], ["U15", "11v11"], ["U16", "11v11"], ["U17", "11v11"], ["U19", "11v11"], ["U21", "11v11"]];

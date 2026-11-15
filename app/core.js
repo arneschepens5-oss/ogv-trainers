@@ -440,7 +440,7 @@ async function loadTeams() {
   try { S.logos = await db.list("club_logos"); } catch (e) { S.logos = null; } /* logo's van tegenstanders (databaseversie 45) */
 }
 async function loadTeam(id) {
-  S.team = myTeams().find(t => t.id === id) || (S.admin ? S.teams.find(t => t.id === id) : null) || null; if (!S.team) return;
+  S.team = myTeams().find(t => t.id === id) || (S.admin ? S.teams.find(t => t.id === id) : null) || null; if (!S.team) return; setTimeout(unreadCount, 800);
   try { localStorage.setItem(TEAM_KEY, id); } catch (e) {}
   const m = { team_id: id };
   [S.players, S.events, S.att, S.evals, S.goals, S.trainers] = await Promise.all(["players","events","attendance","evaluations","goals","team_trainers"].map(t => db.list(t, m)));
@@ -519,12 +519,13 @@ function menuEdit() {
 }
 /* menu: een korte lijst onderdelen; binnen een onderdeel wissel je met tabbladen bovenaan de pagina */
 const NAV = [
-  { g: null, items: [["start", "Vandaag", "home"]] },
-  { g: "Kalender", icon: "cal", items: [["kalender", "Kalender", "cal"], ["matchday", "Wedstrijdblad", "sheet"], ["live", "Live coachen", "mic"], ["uitslagen", "Uitslagen club", "ball"], ["videoanalyse", "Videoanalyse", "split"]] },
+  { g: null, items: [["start", "Vandaag", "home"], ["berichten", "Berichten", "mail"]] },
+  { g: "Kalender", icon: "cal", items: [["kalender", "Kalender", "cal"], ["matchday", "Wedstrijdblad", "sheet"], ["live", "Live coachen", "mic"], ["uitslagen", "Uitslagen club", "ball"]] },
   { g: "Ploeg", icon: "ppl", team: true, items: [["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["dossier", "Spelersdossier", "book"], ["cijfers", "Cijfers", "chart"], ["ploeg", "Overzicht", "trophy"], ["ploeg-instellingen", "Ploeg en trainers", "gear"]] },
-  { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
+  { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"]] },
+  { g: "Tactiek", icon: "board", items: [["animatiebord", "Tactiekbord", "board"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Scouting", icon: "scout", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] },
-  { g: "Club", icon: "club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
+  { g: "Club", icon: "club", items: [["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
   { g: "Mijn map", icon: "folder", items: [["meldingen", "Meldingen", "bell"], ["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] }
 ];
 /* het onderdeel van een pagina (voor de tabbladen en het actieve menu-item) */
@@ -550,12 +551,13 @@ function shell(fresh) {
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>
-    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("");
+    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}${k === "berichten" ? `<span class="bdgn" data-unread${S.unread ? "" : " hidden"} title="Nieuwe berichten">${S.unread || ""}</span>` : ""}</a>`).join("");
   /* zijbalk: één regel per onderdeel; de gsm (Meer) toont per onderdeel alle tegels */
   const curSec = secs.find(sec => sec.g && sec.items.some(([k]) => k === active));
   /* het onderdeel waar je in zit klapt open in de zijbalk en toont zijn pagina's eronder */
   const sideHtml = secs.map(sec => !sec.g ? navItems(sec) : `<a class="secl${curSec === sec ? " open" : ""}" href="#/${sec.items[0][0]}"${curSec === sec && sec.items.length < 2 ? ' aria-current="page"' : ""}>${IC[sec.icon] || IC[sec.items[0][2]]}<span>${sec.g}</span>${sec.g === "Beheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}${sec.items.length > 1 ? `<i class="car" aria-hidden="true"></i>` : ""}</a>${curSec === sec && sec.items.length > 1 ? `<div class="subside">${sec.items.map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}><span>${l}</span></a>`).join("")}</div>` : ""}`).join("");
-  const navHtml = secs.filter(sec => sec.g).map(sec => `<div class="navg" data-g="${esc(sec.g)}"><div class="navgrp">${sec.g}</div>${navItems(sec)}</div>`).join("");
+  const loose = secs.filter(sec => !sec.g).flatMap(sec => sec.items).filter(([k]) => k !== "start");
+  const navHtml = (loose.length ? `<div class="navg"><div class="navgrp">Algemeen</div>${navItems({ items: loose })}</div>` : "") + secs.filter(sec => sec.g).map(sec => `<div class="navg" data-g="${esc(sec.g)}"><div class="navgrp">${sec.g}</div>${navItems(sec)}</div>`).join("");
   const subHtml = curSec && curSec.items.length > 1 ? `<nav class="subnav" aria-label="${esc(curSec.g)}">${curSec.items.map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${String(l).replace(/\u00AD/g, "")}</a>`).join("")}</nav>` : "";
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? (CLUB.id === "platform" ? "Beheerder van het platform" : esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName())) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span>${mode === "demo" ? "" : `<button class="ib" type="button" data-account title="Mijn account" aria-label="Mijn account">${IC.gear}</button>`}<button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
@@ -576,7 +578,7 @@ function shell(fresh) {
   </main>
   <nav class="tabbar${platOnly ? " t3" : ""}" aria-label="Snelmenu">
     ${(platOnly ? [["platform","Overzicht","chart"],["platform/meldingen","Meldingen","mail"]] : [["start","Vandaag","home"],["kalender","Kalender","cal"],["spelers","Ploeg","ppl"],["trainingen","Training","plan"]]).map(([k,l,i]) => `<a href="#/${k}"${(k === "start" ? active === "start" : curSec && curSec.items.some(([x]) => x === k)) || (!curSec && active === k) ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
-    <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
+    <button type="button" data-sheet>${IC.menu}<span>Meer</span><i class="tdot" data-unread-dot${S.unread ? "" : " hidden"}></i></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}</nav>
     <div class="sheetfoot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<button class="navbtn" type="button" data-menued>${IC.gear}<span>Menu aanpassen</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>${isOGV() ? `<a class="navbtn" href="privacy.html" target="_blank" rel="noopener">${IC.eye}<span>Privacy</span></a>` : ""}</div>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
@@ -652,6 +654,14 @@ function compactHead(v) {
   if (host === ph) { const w = document.createElement("div"); w.className = "phacts"; [d, prim].filter(Boolean).forEach(x => w.appendChild(x)); ph.appendChild(w); }
   menu.addEventListener("click", () => d.removeAttribute("open")); acts.forEach(x => { if (x !== host && !x.children.length && !x.textContent.trim()) x.remove(); });
 }
+/* nieuwe berichten: ongelezen berichten van ouders + clubberichten van anderen sinds je laatste bezoek aan Berichten */
+const MSG_SEEN = "ogv-msg-seen";
+async function unreadCount() { if (!db || (mode !== "demo" && !user) || typeof loadParentMsgs !== "function") return;
+  try { const pm = (await loadParentMsgs()).filter(q => !q.read_at).length, seen = localStorage.getItem(MSG_SEEN) || (markMsgsSeen(), ""),
+      cm = (await loadMessages(30)).filter(m => m.created_at > seen && (mode === "demo" ? m.created_by !== "demo" : m.created_by !== user?.id) && m.author !== myName()).length;
+    setUnread(pm + (seen ? cm : 0)); } catch (e) {} }
+function setUnread(n) { S.unread = n; $$("[data-unread]").forEach(b => { b.hidden = !n; b.textContent = n > 9 ? "9+" : n; }); $$("[data-unread-dot]").forEach(b => b.hidden = !n); }
+function markMsgsSeen() { try { localStorage.setItem(MSG_SEEN, new Date().toISOString()); } catch (e) {} }
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}${helpLink()}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }
 
 /* ============ probleem melden ============ */
@@ -763,7 +773,7 @@ function viewLogin(v, msg) {
 }
 async function startCloud() {
   mode = "cloud"; db = SBDB;
-  await clubStatus(); if (!S.member) { render(); return; } if (typeof v14Check === "function") await v14Check(); setTimeout(fbCount, 1500); setInterval(fbCount, 120000);
+  await clubStatus(); if (!S.member) { render(); return; } if (typeof v14Check === "function") await v14Check(); setTimeout(fbCount, 1500); setInterval(fbCount, 120000); setTimeout(unreadCount, 2000); setInterval(unreadCount, 120000);
   try { await loadTeams(); const last = (() => { try { return localStorage.getItem(TEAM_KEY); } catch (e) {} })();
     const pick = myTeams().find(t => t.id === last) || (myTeams().length === 1 ? myTeams()[0] : null); if (pick) await loadTeam(pick.id); }
   catch (e) { console.error(e); db = null; mode = null; shell(true); viewLogin($("#view"), /relation|does not exist|schema cache|column/i.test(e.message || "") ? "De database is nog niet klaargezet. De beheerder moet eerst supabase-setup.sql uitvoeren." : "Laden mislukt: " + (e.message || e)); return; }

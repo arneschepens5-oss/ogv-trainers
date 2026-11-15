@@ -1997,3 +1997,7 @@ h1.pg{font-weight:800;font-stretch:108%;font-size:clamp(28px,3.4vw,40px);line-he
 .side .subside a[aria-current="page"]{background:var(--ybg);color:var(--ink);font-weight:700}
 .side .subside a[aria-current="page"]::before{display:none}
 .side .subside a span{white-space:normal}
+/* rode bol bij nieuwe berichten */
+.tabbar [data-sheet]{position:relative}
+.tdot{position:absolute;top:4px;left:calc(50% + 8px);width:10px;height:10px;border-radius:50%;background:var(--s-bad,#E11D48);box-shadow:0 0 0 2px var(--card)}
+.sheet .nav a .bdgn{position:absolute;top:8px;right:8px;margin:0}

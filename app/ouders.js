@@ -94,6 +94,7 @@ route("berichten", { title: "Berichten", auth: true, render: async v => {
     (list.length ? `<div class="msgs">${list.map(m => `<div class="msgw">${msgCard(m)}<div class="row" style="gap:6px;margin-top:8px"><a class="btn ghost small" target="_blank" rel="noopener" href="${shareWA(m.title + (m.body ? "\n\n" + m.body : ""))}">${IC.wa}Delen</a>${(m.team_id ? true : S.admin) && (m.created_by === user?.id || S.admin || mode === "demo") ? `<button class="btn ghost small" type="button" data-delm="${m.id}">Verwijderen</button>` : ""}</div></div>`).join("")}</div>`
       : `<div class="empty"><b>Geen berichten</b>Zet hier bv. een afgelasting door het weer, een clubfeest of een oproep voor vrijwilligers.</div>`);
   const nb = $("#newmsg"); if (nb) nb.onclick = () => msgForm(); bindParentMsgs(v, pm);
+  markMsgsSeen(); setUnread(pm.filter(q => !q.read_at).length); /* clubberichten gezien; ongelezen ouderberichten blijven tellen tot je ze als gelezen aanduidt */
   $$("[data-delm]", v).forEach(b => b.onclick = async () => { if (!confirm("Dit bericht verwijderen?")) return; await safe(async () => { await db.del("messages", { id: b.dataset.delm }); render(); }, "Bericht verwijderd."); });
 } });
 function msgForm() {
