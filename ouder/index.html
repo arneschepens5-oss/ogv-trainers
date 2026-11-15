@@ -524,7 +524,8 @@ async function start() {
   if (!kids.length) { fail("Open de link van de trainer", "Je kreeg van de trainer een persoonlijke link voor je kind. Open die link één keer: daarna vind je hier de trainingen, wedstrijden, convocaties en berichten terug."); return; }
   await load();
   if (kids.some(k => data[k.tok] === null)) { kids = kids.filter(k => data[k.tok] !== null); store.set(KK, kids); }
-  if (!kids.length) { fail("Deze link werkt niet meer", "De trainer heeft misschien een nieuwe link gemaakt. Vraag hem om de juiste link."); return; }
+  if (!kids.length) { fail("Deze link werkt niet meer", "De trainer heeft misschien een nieuwe link gemaakt, of je kind staat niet meer in de ploeg. Vraag de trainer om de juiste link."); return; }
+  if (!okKids().length) { fail("Geen verbinding", "De gegevens konden niet geladen worden. Controleer je internetverbinding en probeer opnieuw."); return; } /* nooit een lege agenda tonen alsof er niets gepland is */
   $("#tabs").hidden = false; draw();
 }
 async function refresh() { if (busy) return; busy = true; $("#rf").classList.add("spin"); await load(); $("#rf").classList.remove("spin"); busy = false; draw(); }

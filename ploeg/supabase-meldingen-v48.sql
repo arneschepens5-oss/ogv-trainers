@@ -83,3 +83,10 @@ do $$ begin
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := jsonb_build_object('kind', 'tick')) $c$);
 end $$;
+
+-- (v49) toegang voor de meldingsfunctie: dit project geeft de server-rol geen automatische toegang tot tabellen
+grant select on public.teams, public.team_trainers, public.players, public.events,
+  public.rsvp, public.attendance, public.player_absence to service_role;
+grant select, insert on public.push_keys to service_role;
+grant select, update, delete on public.push_subs to service_role;
+grant select, insert on public.notif_sent to service_role;
