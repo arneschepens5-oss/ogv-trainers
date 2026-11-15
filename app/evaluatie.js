@@ -80,9 +80,6 @@ const EV_OPEN_OGV = [
   { id: "fys_sterk", type: "tekst", text: "Sterke punten fysiek" }, { id: "fys_werk", type: "tekst", text: "Werkpunten fysiek" },
   { id: "keeper_opm", type: "tekst", text: "Opmerkingen keeper (enkel voor doelmannen)" },
   { id: "k_pop", type: "kop", text: "POP / PAP" },
-  { id: "algemeen_sterk", type: "tekst", text: "Positieve punten: wat willen we verder versterken? (techniek, tactiek, fysiek, mentaal)" },
-  { id: "algemeen_werk", type: "tekst", text: "Werkpunten: waar willen we aan werken? (techniek, tactiek, fysiek, mentaal)" },
-  { id: "doelstelling", type: "tekst", text: "Doelstelling: wat willen we bereiken?" },
   { id: "actie1", type: "tekst", text: "Actieplan 1: hoe gaan we hieraan werken?" }, { id: "actie2", type: "tekst", text: "Actieplan 2: hoe gaan we hieraan werken?" },
   { id: "smart", type: "tekst", text: "SMART: specifiek, meetbaar, acceptabel, realistisch en tijdsgebonden" },
   { id: "opvolging", type: "schaal", intern: true, text: "In welke mate werden de actieplannen opgevolgd?" },
@@ -103,20 +100,20 @@ const EV_FACES = { 1: "😟", 2: "🙁", 3: "😐", 4: "🙂", 5: "😄" };
 const EV_FACE_WORDS = { 1: "Nog niet zo goed", 2: "Gaat al een beetje", 3: "Gaat wel", 4: "Gaat goed", 5: "Dat kan ik super" };
 const EV_SELF_PRESETS = {
   jong: { naam: "Kort, voor de jongsten", scale: "smiley", intro: "Vul dit samen met je mama of papa in. Er zijn geen foute antwoorden.", questions: [
-    { id: "z1", type: "schaal", text: "Ik kan de bal goed doorgeven", link: "Passing" },
-    { id: "z2", type: "schaal", text: "Ik durf iemand uit te dribbelen", link: "Dribbel en 1v1" },
-    { id: "z3", type: "schaal", text: "Ik doe goed mijn best op training", link: "Inzet" },
-    { id: "z4", type: "schaal", text: "Ik speel graag samen met de anderen", link: "Bijdrage aan de ploeg" },
-    { id: "z5", type: "schaal", text: "Ik luister goed naar de trainer", link: "Leerbereidheid" },
+    { id: "z1", type: "schaal", text: "Ik kan de bal goed doorgeven", link: "Pass rechtervoet" },
+    { id: "z2", type: "schaal", text: "Ik durf iemand uit te dribbelen", link: "Dribbel" },
+    { id: "z3", type: "schaal", text: "Ik doe goed mijn best op training", link: "Werkkracht en inzet" },
+    { id: "z4", type: "schaal", text: "Ik speel graag samen met de anderen", link: "Teamgeest" },
+    { id: "z5", type: "schaal", text: "Ik luister goed naar de trainer", link: "Gedrag, respect en discipline" },
     { id: "z6", type: "tekst", text: "Waar ben je het meest trots op?" },
     { id: "z7", type: "tekst", text: "Wat wil je nog leren?" }] },
   oud: { naam: "Uitgebreid, voor oudere spelers", scale: "cijfers", intro: "Geef jezelf eerlijk een cijfer van 1 tot 5. Je trainer bespreekt het daarna met je.", questions: [
-    { id: "z1", type: "schaal", text: "Mijn balcontrole en aanname", link: "Balaanname" },
-    { id: "z2", type: "schaal", text: "Mijn passing, ook met links of rechts", link: "Passing" },
-    { id: "z3", type: "schaal", text: "Mijn dribbel en 1 tegen 1", link: "Dribbel en 1v1" },
-    { id: "z4", type: "schaal", text: "Hoe ik me positioneer zonder bal", link: "Positiespel" },
-    { id: "z5", type: "schaal", text: "Hoe ik verdedig", link: "Verdedigen" },
-    { id: "z6", type: "schaal", text: "Mijn inzet", link: "Inzet" },
+    { id: "z1", type: "schaal", text: "Mijn balcontrole en aanname", link: "Eerste gerichte aanname" },
+    { id: "z2", type: "schaal", text: "Mijn passing, ook met links of rechts", link: "Pass rechtervoet" },
+    { id: "z3", type: "schaal", text: "Mijn dribbel en 1 tegen 1", link: "Dribbel" },
+    { id: "z4", type: "schaal", text: "Hoe ik me positioneer zonder bal", link: "Positiespel B+" },
+    { id: "z5", type: "schaal", text: "Hoe ik verdedig", link: "Verdedigend gedrag" },
+    { id: "z6", type: "schaal", text: "Mijn inzet", link: "Werkkracht en inzet" },
     { id: "z7", type: "schaal", text: "Mijn zelfvertrouwen", link: "Zelfvertrouwen" },
     { id: "z8", type: "tekst", text: "Wat gaat goed dit seizoen?" },
     { id: "z9", type: "tekst", text: "Wat wil je het meest verbeteren?" },
@@ -130,28 +127,69 @@ const evCleanQ = (q, i) => { const type = EV_QTYPES.includes(q?.type) ? q.type :
 const evSelfQ = q => q.type === "schaal" || q.type === "tekst" ? { id: q.id, type: q.type, text: q.text, ...(q.link ? { link: q.link } : {}) } : q.type === "keuze" ? { id: q.id, type: "tekst", text: q.text } : null;
 /* open vragen voor de trainer: oude vragen zonder soort zijn open antwoorden */
 const evOpenList = arr => (Array.isArray(arr) ? arr : []).map(q => evCleanQ({ ...q, type: q?.type || "tekst" })).filter(q => q.text);
-/* instellingen van de club toepassen (na het laden van de club en na bewaren) */
+/* ============ één evaluatie voor de hele club ============
+   De club heeft één fiche: onderdelen in groepen (de hoeken van het spelersprofiel) en open vragen.
+   Per leeftijd vinkt de beheerder af wat niet past (bv. kopbaltechniek bij U8) en kiest hij de zelfevaluatie.
+   settings.eval.ages = { "9": { off: [onderdelen], offq: [vraag-id's], self: "uit" | "jong" | "oud" | "club" } } */
+const evAgeOf = t => { const m = String(t?.category || t?.name || "").match(/U\s?(\d+)/i); return m ? +m[1] : 99; };
+const evAgeKey = t => String(evAgeOf(t));
+const evAgeLbl = k => +k >= 99 ? "Overige" : "U" + k;
+function evMaster(st = (typeof CLUB !== "undefined" && CLUB.settings) || {}) {
+  const ev = st.eval || {}, isc = ev.isc || {};
+  const template = ev.v2 && ev.template?.length ? ev.template : isc.template?.length ? isc.template : EV_TEMPLATE_OGV;
+  const open = evOpenList(ev.v2 && Array.isArray(ev.open) ? ev.open : isc.open?.length ? isc.open : EV_OPEN_OGV).filter(q => ev.v2 || !EV_POPDUP[q.id]);
+  return { template, open, self: ev.self || {} };
+}
+const EV_POPDUP = { algemeen_sterk: "strengths", algemeen_werk: "workpoints", doelstelling: "goals" };
+/* voorstel per leeftijd zolang de beheerder niets koos: de jongsten krijgen een korte fiche */
+function evAgeSuggest(age) {
+  if (age <= 9) return { self: "jong", off: ["Doordraaien", "Uitvoeringssnelheid techniek", "Lob en voorzet linkervoet", "Lob en voorzet rechtervoet", "Kopbaltechniek", "Scanning", "Snelheid van beslissen", "Positiespel B-", "Staande tackle", "Startsnelheid (5 m)", "Sprongkracht", "Lenigheid", "Stabiliteit", "Uithouding", "Duelkracht", "Consistentie", "Emotionele controle", "Zin voor initiatief", "Progressiehonger", "Zelfkritiek en zelfanalyse", "Leiderschap", "Verbale communicatie", "Winnaarstype"],
+    offq: ["tech_sterk", "tech_werk", "tact_sterk", "tact_werk", "ment_sterk", "ment_werk", "fys_sterk", "fys_werk", "actie2", "smart", "opvolging", "competitie"] };
+  if (age <= 12) return { self: "oud", off: ["Kopbaltechniek", "Staande tackle", "Sprongkracht", "Lenigheid", "Stabiliteit", "Zelfkritiek en zelfanalyse", "Leiderschap"], offq: ["smart"] };
+  return { self: "oud", off: [], offq: [] };
+}
+function evAgeCfg(t = typeof S !== "undefined" ? S.team : null, st = (typeof CLUB !== "undefined" && CLUB.settings) || {}) {
+  const k = evAgeKey(t), a = (st.eval || {}).ages || {};
+  return a[k] ? { off: [], offq: [], self: "uit", ...a[k], custom: true } : { ...evAgeSuggest(+k), custom: false };
+}
+/* de onderdelen voor een ploeg: de fiche van de club min wat voor die leeftijd uit staat */
+function evTplFor(t, st) { const off = new Set(evAgeCfg(t, st).off || []), m = evMaster(st).template;
+  return m.filter(l => { const x = String(l).trim(); return x.startsWith("#") || !off.has(x.split(/\s+\|\s+/)[0].trim()); }); }
+function evOpenFor(t, st) { const off = new Set(evAgeCfg(t, st).offq || []); return evMaster(st).open.filter(q => !off.has(q.id)); }
+function evSelfFor(t, st) { const mode = evAgeCfg(t, st).self, club = evMaster(st).self;
+  const src = mode === "jong" ? EV_SELF_PRESETS.jong : mode === "oud" ? EV_SELF_PRESETS.oud : mode === "club" && (club.questions || []).length ? club : null;
+  if (!src) return { on: false, scale: "smiley", intro: "", questions: [] };
+  return { on: true, scale: src.scale === "cijfers10" ? "cijfers10" : src.scale === "cijfers" ? "cijfers" : "smiley", intro: String(src.intro || ""), questions: (src.questions || []).map(evCleanQ).map(evSelfQ).filter(q => q && q.text) };
+}
+/* evaluaties van vóór de ene fiche: de interne scouting (details.isc) en oude namen van onderdelen samenvoegen */
+const EV_OLDNAMES = { "Balaanname": "Eerste gerichte aanname", "Dribbel en 1v1": "Dribbel", "Keuzes aan de bal": "Keuze aan de bal", "Omschakeling": "Omschakeling en reactie", "Positiespel": "Positiespel B+", "Verdedigen": "Verdedigend gedrag", "Inzet": "Werkkracht en inzet", "Conditie": "Uithouding", "Snelheid en wendbaarheid": "Wendbaarheid", "Coaching": "Verbale communicatie", "Bijdrage aan de ploeg": "Teamgeest", "Techniek (controle over de bal)": "Balvastheid en balbescherming" };
+function evNorm(e) {
+  if (!e) return e; const I = e.details?.isc, sc0 = e.scores || {};
+  const map = Object.entries(EV_OLDNAMES).filter(([o, n]) => sc0[o] != null && sc0[n] == null);
+  if (!I && !map.length) return e;
+  const D = { ...(e.details || {}) }; delete D.isc; let scores = { ...sc0 };
+  if (I) { scores = { ...(I.scores || {}), ...scores }; const o = { ...(I.open || {}) };
+    for (const [k, d] of Object.entries(EV_POPDUP)) { if (o[k] && !D[d]) D[d] = o[k]; delete o[k]; }
+    D.open = { ...o, ...(D.open || {}) }; for (const k of ["oud", "oud_txt", "by"]) if (I[k] && !D[k]) D[k] = I[k]; }
+  for (const [o, n] of map) scores[n] = scores[o];
+  return { ...e, scores, details: D };
+}
+/* instellingen van de club toepassen (na het laden van de club, bij het wisselen van ploeg en na bewaren) */
 function evApplyClub(st = CLUB.settings || {}) {
-  const ev = st.eval || {}, ms = Array.isArray(ev.moments) && ev.moments.length ? ev.moments : null;
-  const sf = ev.self || {};
-  EV_SELF = { on: sf.on === true, scale: sf.scale === "cijfers10" ? "cijfers10" : sf.scale === "cijfers" ? "cijfers" : "smiley", intro: String(sf.intro || ""), questions: (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).map(evSelfQ).filter(q => q && q.text) };
-  EV_OPEN = evOpenList(ev.open);
-  /* eigen evaluatie voor de leeftijd van deze ploeg (ingesteld door de beheerder) */
-  const pr = typeof evProfileOf === "function" && typeof S !== "undefined" ? evProfileOf(S.team?.id, st) : null;
-  if (pr) { const ps = pr.self || {};
-    EV_SELF = { on: ps.on === true, scale: ps.scale === "cijfers10" ? "cijfers10" : ps.scale === "cijfers" ? "cijfers" : "smiley", intro: String(ps.intro || ""), questions: (Array.isArray(ps.questions) ? ps.questions : []).map(evCleanQ).map(evSelfQ).filter(q => q && q.text) };
-    EV_OPEN = evOpenList(pr.open); }
+  const ev = st.eval || {}, ms = Array.isArray(ev.moments) && ev.moments.length ? ev.moments : null, t = typeof S !== "undefined" ? S.team : null;
+  EV_SELF = evSelfFor(t, st);
+  EV_OPEN = evOpenFor(t, st);
   EV_MOMENTS.length = 0;
-  if (ms) ms.forEach((x, i) => { const f = evMd(x.from), t = evMd(x.to); if (!f || !t) return;
-      EV_MOMENTS.push({ m: EV_MOMENTS.length + 1, naam: x.naam || "Moment " + (i + 1), kort: x.kort || (x.naam || "").split(" ")[0] || String(i + 1), verplicht: !!x.verplicht, from: f, to: t,
-        periode: EV_MONTHS[f[1]] === EV_MONTHS[t[1]] ? EV_MONTHS[f[1]] : EV_MONTHS[f[1]] + " – " + EV_MONTHS[t[1]] }); });
+  if (ms) ms.forEach((x, i) => { const f = evMd(x.from), to = evMd(x.to); if (!f || !to) return;
+      EV_MOMENTS.push({ m: EV_MOMENTS.length + 1, naam: x.naam || "Moment " + (i + 1), kort: x.kort || (x.naam || "").split(" ")[0] || String(i + 1), verplicht: !!x.verplicht, from: f, to,
+        periode: EV_MONTHS[f[1]] === EV_MONTHS[to[1]] ? EV_MONTHS[f[1]] : EV_MONTHS[f[1]] + " – " + EV_MONTHS[to[1]] }); });
   if (!EV_MOMENTS.length) EV_MOMENTS_DEFAULT.forEach(x => EV_MOMENTS.push({ ...x }));
   EV_LAST = EV_MOMENTS.length;
   Object.keys(EV_LEVELS).forEach(k => delete EV_LEVELS[k]);
   EV_DISP = ev.scale === "cijfers10" ? 2 : 1;
   EV_SELFMAX = EV_SELF.scale === "cijfers10" ? 10 : 5;
   Object.assign(EV_LEVELS, ev.scale === "cijfers10" ? { 0.5: "1", 1: "2", 1.5: "3", 2: "4", 2.5: "5", 3: "6", 3.5: "7", 4: "8", 4.5: "9", 5: "10" } : ev.scale === "cijfers" ? { 1: "1", 1.5: "1,5", 2: "2", 2.5: "2,5", 3: "3", 3.5: "3,5", 4: "4", 4.5: "4,5", 5: "5" } : EV_LEVELS_WORDS);
-  EV_TEMPLATE.length = 0; (Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT).forEach(l => EV_TEMPLATE.push(l));
+  EV_TEMPLATE.length = 0; evMaster(st).template.forEach(l => EV_TEMPLATE.push(l));
 }
 evApplyClub();
 const EV_ADVICE = ["Blijft in deze ploeg", "Klaar voor een hoger niveau", "Beter op zijn plaats in een andere ploeg", "Bespreken met de jeugdcoördinator"];
@@ -163,7 +201,7 @@ const evKeeperGroup = g => /^(keeper|doelman)/i.test(String(g?.name || ""));
 const evIsKeeper = p => { const sp = p?.scout && typeof p.scout === "object" ? p.scout : {}; return sp.h === 1 || (Array.isArray(sp.n) && sp.n.includes(1)) || /doel|keeper/i.test([p?.position, sp.p1].filter(Boolean).join(" ")); };
 function evGroups(t = S.team, p, all) { return evGroupsRaw(t).filter(g => all || !evKeeperGroup(g) || (p && evIsKeeper(p))); }
 function evGroupsRaw(t = S.team) {
-  const list = t?.criteria?.length ? t.criteria : EV_TEMPLATE, out = []; let g = null;
+  const list = t?.id ? evTplFor(t) : t?.criteria?.length ? t.criteria : EV_TEMPLATE, out = []; let g = null;
   for (const raw of list) { const l = String(raw).trim(); if (!l) continue;
     if (l.startsWith("#")) { g = { name: l.replace(/^#+\s*/, ""), items: [] }; out.push(g); continue; }
     if (!g) { g = { name: "Onderdelen", items: [] }; out.push(g); }
@@ -171,7 +209,6 @@ function evGroupsRaw(t = S.team) {
   return out.filter(x => x.items.length);
 }
 const evItems = (t, p) => evGroups(t, p).flatMap(g => g.items.map(i => i.name));
-const evLegacy = t => !(t?.criteria || []).some(l => String(l).trim().startsWith("#"));
 const evScore = (e, c) => { const v = +e?.scores?.[c]; return isNaN(v) || e?.scores?.[c] == null || e?.scores?.[c] === "" ? null : v; };
 const evAvgOf = (e, names) => avg(names.map(c => evScore(e, c)).filter(v => v != null));
 const evOf = (pid, m) => S.evals.find(x => x.player_id === pid && x.moment === m) || null;
@@ -197,15 +234,12 @@ const evZelfOpen = m => (S.zelfOpen || []).some(o => o.moment === m);
 const evSelfScore = (z, q) => { const v = z?.answers?.[q.id]; return typeof v === "number" ? v * 5 / EV_SELFMAX : null; };  /* omgerekend naar de interne schaal van de trainer, zodat beide vergelijkbaar zijn */
 const evSelfOf = (z, crit) => { const l = EV_SELF.questions.filter(q => q.type === "schaal" && q.link === crit).map(q => evSelfScore(z, q)).filter(v => v != null); return l.length ? avg(l) : null; };
 const evSelfLabel = v => v == null ? "–" : EV_SELF.scale === "smiley" ? EV_FACES[Math.round(v)] || "" : String(Math.round(v));  /* v is de ruwe waarde van de speler */
-/* welke fiche gebruikt deze ploeg? de beheerder kan hier meteen wisselen */
+/* korte samenvatting van de fiche voor deze ploeg; de beheerder springt meteen naar de instellingen van die leeftijd */
 function evFicheBar() {
-  const pr = typeof evProfileOf === "function" ? evProfileOf(S.team?.id) : null, sum = typeof evProfSum === "function" ? evProfSum(pr) : "";
-  if (!S.admin) return pr ? `<p class="hint evfiche-t">Fiche van de club: <b>${esc(pr.name)}</b> · ${esc(sum)}</p>` : "";
-  const n = pr ? (pr.teams || []).length : null;
-  return `<div class="evfiche"><label><span>Evaluatiefiche van ${esc(S.team.name)}</span>${evFicheSelect(S.team.id, 'id="evFiche"')}</label>
-    <label class="check evfself" title="${pr && n > 1 ? "Geldt voor alle " + n + " ploegen met deze fiche" : "Geldt voor alle ploegen met deze fiche"}"><input type="checkbox" id="evSelfOn"${EV_SELF.on ? " checked" : ""}> <span><b>Zelfevaluatie door spelers</b><br><small class="hint">${pr ? (n > 1 ? "voor alle " + n + " ploegen met deze fiche" : "voor deze fiche") : "voor alle ploegen met de standaard"}</small></span></label>
-    <label class="check evfself"><input type="checkbox" id="evIscOn"${iscOn() ? " checked" : ""}> <span><b>Interne scouting</b><br><small class="hint">tweede, interne fiche voor deze ploeg</small></span></label>
-    <span class="evfsum"><span class="hint">${esc(sum)}</span><a class="link" href="#/clubinstellingen/evaluaties">Fiches en vragen aanpassen</a></span></div>`;
+  const n = evItems().length, kn = evGroups(S.team, null, true).filter(evKeeperGroup).reduce((a, g) => a + g.items.length, 0), oq = EV_OPEN.filter(q => q.type !== "kop").length, k = evAgeKey(S.team);
+  const self = EV_SELF.on ? (EV_SELF.scale === "smiley" ? "zelfevaluatie met smileys" : "zelfevaluatie met cijfers") : "geen zelfevaluatie";
+  return `<div class="evfiche2"><span class="evfi">${IC.star}</span><span class="evft"><b>Fiche ${esc(evAgeLbl(k))}</b><small>${n} onderdelen${kn ? ` (+${kn} voor doelmannen)` : ""} · ${oq} vragen · ${self}</small></span>
+    ${S.admin ? `<a class="btn ghost small" href="#/clubinstellingen/evaluaties" data-agepick="${esc(k)}">Aanpassen voor ${esc(evAgeLbl(k))}</a>` : ""}</div>`;
 }
 function evZelfHtml(m, ps) {
   if (!EV_SELF.on) return "";
@@ -233,35 +267,29 @@ function evPubHtml(m) {
   if (evPub.ok === false) return `<div class="panel row evpub" style="margin:10px 0"><span class="hint">Delen met ouders en spelers kan pas nadat de beheerder <b>supabase-evaluaties-publiek.sql</b> uitvoerde.</span></div>`;
   const on = evPub.m.includes(m);
   return `<div class="panel row evpub${on ? " hl" : ""}" style="margin:10px 0"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="evPubT"${on ? " checked" : ""}${evPub.ok ? "" : " disabled"}>
-    <span><b>Zichtbaar in de ouder- en spelersapp</b><br><span class="hint">${on ? "Ouders en spelers zien nu hun eigen scores, sterktes, werkpunten en doelen van dit moment." : "Staat uit. Zet aan als de evaluaties af zijn en je ze wil delen. Privénotitie, niveau, advies en oudergesprek blijven altijd intern."}</span></span></label></div>`;
+    <span><b>Zichtbaar in de ouder- en spelersapp</b><br><span class="hint">${on ? "Ouders en spelers zien nu hun eigen scores, sterktes, werkpunten en doelen van dit moment." : "Staat uit. Zet aan als de evaluaties af zijn en je ze wil delen. De vragen van de club, de privénotitie en het oudergesprek blijven altijd intern."}</span></span></label></div>`;
 }
 route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, pid, sub) => {
   if (evMoment == null) evMoment = evCurrent();
-  if (EVK === "isc" && !iscOn()) EVK = "std";
-  if (pid) { if (+sub >= 1 && +sub <= EV_LAST) evMoment = +sub; return EVK === "isc" ? evIscForm(v, pid, evMoment) : evForm(v, pid, evMoment); }
-  /* interne scouting: dezelfde overzichten, maar met de scores van de interne fiche (alleen lezen hier, invullen per speler) */
-  if (EVK === "isc") { const keep = S.evals; S.evals = keep.map(iscView); try { evOverview(v); } finally { S.evals = keep; } return; }
+  if (pid) { if (+sub >= 1 && +sub <= EV_LAST) evMoment = +sub; return evForm(v, pid, evMoment); }
   evOverview(v);
 } });
 function evOverview(v) {
-  const isc = EVK === "isc";
   /* welke momenten de trainer zichtbaar zette voor ouders en spelers (lazy geladen per ploeg) */
   if (evPub.team !== S.team.id) { evPub = { team: S.team.id, m: [], ok: null };
     db.list("eval_publicaties", { team_id: S.team.id }).then(r => { evPub.m = r.map(x => x.moment); evPub.ok = true; render(); }).catch(() => { evPub.ok = false; render(); }); }
-  const ps = active(), groups = isc ? iscGroups() : evGroups(), names = isc ? iscNames() : evItems(), mo = EV_MOMENTS[evMoment - 1], w = evWindow(mo);
-  if (isc && evView === "tabel") evView = "spelers";
+  const ps = active(), groups = evGroups(), names = evItems(), mo = EV_MOMENTS[evMoment - 1], w = evWindow(mo);
   const done = ps.filter(p => evDone(evOf(p.id, evMoment), names)).length, started = ps.filter(p => evStarted(evOf(p.id, evMoment))).length;
   const now = new Date(), open = now >= w.from && now <= w.to, late = now > w.to && done < ps.length, dfmt = d => d.toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
   v.innerHTML = head("Evaluaties", `${esc(S.team.name)} · ${EV_MOMENTS.length === 1 ? "één moment" : EV_MOMENTS.length + " momenten"} per seizoen.${(n => n.length ? " Verplicht: " + n.join(" en ").toLowerCase() + "." : "")(EV_MOMENTS.filter(m => m.verplicht).map(m => m.naam))}`,
-    isc ? "" : `<button class="btn ghost" type="button" id="evPrintAll">${IC.print}Alle rapporten</button>`) +
-  evKindBar() + (!isc && evLegacy(S.team) ? `<div class="panel hl row" style="margin-bottom:14px"><span style="flex:1;min-width:220px"><b>Uitgebreide evaluatie beschikbaar</b><br><span class="hint">${groups[0].items.length} onderdelen nu, straks ${EV_TEMPLATE.filter(l => !l.startsWith("#")).length} in vijf groepen met uitleg per onderdeel. Je huidige scores blijven staan.</span></span><button class="btn small" type="button" id="evUpgrade">Overschakelen</button></div>` : "") +
+    `<button class="btn ghost" type="button" id="evPrintAll">${IC.print}Alle rapporten</button>`) +
   evFicheBar() + `<div class="evmoments" role="tablist">${EV_MOMENTS.map(x => { const ww = evWindow(x), dn = ps.filter(p => evDone(evOf(p.id, x.m), names)).length, st = ps.filter(p => evStarted(evOf(p.id, x.m))).length;
     return `<button type="button" role="tab" data-m="${x.m}" aria-selected="${x.m === evMoment}"><span class="n">${x.m}</span><span class="tx"><b>${x.naam}${x.verplicht ? ' <i class="req">verplicht</i>' : ""}</b><small>${x.periode}</small></span>
       <span class="pr"><span style="width:${ps.length ? dn / ps.length * 100 : 0}%"></span></span><small class="ct">${dn ? dn + "/" + ps.length + " klaar" : st ? st + " bezig" : now > ww.to ? "niet gedaan" : "nog niet"}</small></button>`; }).join("")}</div>
   <div class="evhead"><div><h2 style="margin:0">${mo.naam}</h2><p class="hint" style="margin:2px 0 0">${open ? `Nu bezig · invullen tot ${dfmt(w.to)}` : now < w.from ? `Start op ${dfmt(w.from)}` : `Periode voorbij (${dfmt(w.from)} – ${dfmt(w.to)})`}${late && mo.verplicht ? ' · <b style="color:var(--bad)">nog niet afgerond</b>' : ""}</p></div>
     <div class="kpi mini"><small>Klaar</small><b>${done}<span>/${ps.length}</span></b></div><div class="kpi mini"><small>Gemiddelde ploeg</small><b>${evF(avg(ps.map(p => evAvgOf(evOf(p.id, evMoment), names)).filter(x => x != null)))}</b></div></div>
-  ${isc ? `<p class="evintern">${IC.eye}<span><b>Intern.</b> De interne scouting is enkel zichtbaar voor de trainers van de ploeg en de club (Interne scouting, spelersprofiel). Nooit voor ouders of spelers, en niet op het rapport.</span></p>` : `<div class="evopts">${evPubHtml(evMoment)}${evZelfHtml(evMoment, ps)}</div>`}
-  <div class="ptabs" role="tablist">${[["spelers", "Per speler"], ...(isc ? [] : [["tabel", "Snel invullen"]]), ["ploeg", "Ploeganalyse"]].map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-selected="${evView === k}">${l}</button>`).join("")}</div><div id="evv"></div>`;
+  <div class="evopts">${evPubHtml(evMoment)}${evZelfHtml(evMoment, ps)}</div>
+  <div class="ptabs" role="tablist">${[["spelers", "Per speler"], ["tabel", "Snel invullen"], ["ploeg", "Ploeganalyse"]].map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-selected="${evView === k}">${l}</button>`).join("")}</div><div id="evv"></div>`;
   const vv = $("#evv");
   if (!ps.length) vv.innerHTML = `<div class="empty"><b>Nog geen spelers</b><a class="link" href="#/spelers">Voeg eerst je spelers toe</a></div>`;
   else if (evView === "spelers") vv.innerHTML = `<div class="evcards">${ps.map(p => { const e = evOf(p.id, evMoment), pr = evPrev(p.id, evMoment), a = evAvgOf(e, names), b = pr ? evAvgOf(pr, names) : null;
@@ -270,7 +298,7 @@ function evOverview(v) {
         <span class="big${a == null ? " none" : ""}" style="--c:${evColor(a)};--p:${a == null ? 0 : Math.round(a / 5 * 100)}">${a == null ? "–" : evF(a)}</span></div>
         <div class="gbars">${groups.map(g => { const ga = evAvgOf(e, g.items.map(i => i.name)), gb = pr ? evAvgOf(pr, g.items.map(i => i.name)) : null;
           return `<div class="gb"><span>${esc(g.name)}</span><span class="bar"><i style="width:${ga == null ? 0 : (ga / 5) * 100}%;background:${evColor(ga)}"></i>${gb != null ? `<em style="left:${(gb / 5) * 100}%"></em>` : ""}</span><b>${evF(ga)}</b></div>`; }).join("")}</div>
-        <div class="ft">${!isc && evZelf(p.id, evMoment) ? '<span class="pill g" title="De speler vulde de zelfevaluatie in">zelf ingevuld</span> ' : ""}${b != null && a != null ? evDelta(a - b) + ` <span class="hint">t.o.v. ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}</span>` : `<span class="hint">${pr ? "" : "eerste evaluatie"}</span>`}<span class="spacer"></span><span class="go">${evStarted(e) ? "Openen" : "Evalueren"} ›</span></div></a>`; }).join("")}</div>`;
+        <div class="ft">${evZelf(p.id, evMoment) ? '<span class="pill g" title="De speler vulde de zelfevaluatie in">zelf ingevuld</span> ' : ""}${b != null && a != null ? evDelta(a - b) + ` <span class="hint">t.o.v. ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}</span>` : `<span class="hint">${pr ? "" : "eerste evaluatie"}</span>`}<span class="spacer"></span><span class="go">${evStarted(e) ? "Openen" : "Evalueren"} ›</span></div></a>`; }).join("")}</div>`;
   else if (evView === "tabel") { const opts = EV_DISP === 2 ? [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5] : [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
     vv.innerHTML = `<p class="hint" style="margin-top:0">Handig op een computer: alle spelers en onderdelen in één tabel. Elke keuze wordt meteen bewaard.</p><div class="panel wrapx evtbl" style="padding:6px 10px"><table class="tbl"><thead><tr><th class="sticky">Speler</th>${groups.map(g => g.items.map((i, k) => `<th class="${k === 0 ? "gstart" : ""}" title="${esc(i.hint)}"><span class="g">${k === 0 ? esc(g.name) : "&nbsp;"}</span>${esc(i.name)}</th>`).join("")).join("")}<th>Gem.</th></tr></thead><tbody>
       ${ps.map(p => { const e = evOf(p.id, evMoment); return `<tr data-p="${p.id}"><td class="sticky"><a href="#/evaluaties/${p.id}/${evMoment}">${esc(pname(p))}</a></td>${groups.map(g => g.items.map((i, k) => `<td class="${k === 0 ? "gstart" : ""}"><select data-c="${esc(i.name)}" aria-label="${esc(i.name)} voor ${esc(pname(p))}" style="--c:${evColor(evScore(e, i.name))}"><option value="">–</option>${opts.map(o => `<option value="${o}"${evScore(e, i.name) === o ? " selected" : ""}>${EV_DISP === 2 ? o * 2 : String(o).replace(".", ",")}</option>`).join("")}</select></td>`).join("")).join("")}<td class="avg"><b>${evF(evAvgOf(e, names))}</b></td></tr>`; }).join("")}</tbody></table></div>`;
@@ -281,8 +309,6 @@ function evOverview(v) {
   else vv.innerHTML = evTeamAnalysis(ps, groups, names);
   $$("[data-m]", v).forEach(b => b.onclick = () => { evMoment = +b.dataset.m; render(); });
   $$("[data-v]", v).forEach(b => b.onclick = () => { evView = b.dataset.v; render(); });
-  const up = $("#evUpgrade"); if (up) up.onclick = async () => { const t = S.team, old = t.criteria; t.criteria = EV_TEMPLATE.slice();
-    if (await safe(async () => { await db.save("teams", t); return true; }, "Uitgebreide evaluatie staat aan.")) render(); else t.criteria = old; };
   const pt = $("#evPubT"); if (pt) pt.onchange = async () => { const m = evMoment, on = pt.checked;
     const ok = await safe(async () => {
       if (mode === "demo") { if (on) await db.save("eval_publicaties", { team_id: S.team.id, moment: m, published_at: new Date().toISOString() }); else await db.del("eval_publicaties", { team_id: S.team.id, moment: m }); }
@@ -295,11 +321,8 @@ function evOverview(v) {
       else { const { error } = await sb.rpc("set_eval_zelf", { t: S.team.id, m, aan: on }); if (error) throw error; }
       return true; }, on ? "Spelers kunnen hun zelfevaluatie invullen." : "Zelfevaluatie gesloten.");
     if (ok) { S.zelfOpen = on ? [...(S.zelfOpen || []).filter(o => o.moment !== m), { team_id: S.team.id, moment: m }] : (S.zelfOpen || []).filter(o => o.moment !== m); render(); } else zt.checked = !on; };
+  $$("[data-agepick]", v).forEach(a => a.onclick = () => { window.EV_AGE_PICK = a.dataset.agepick; });
   if ($("#evPrintAll")) $("#evPrintAll").onclick = () => evPrint(ps.filter(p => evStarted(evOf(p.id, evMoment))), evMoment);
-  const so = $("#evSelfOn"); if (so) so.onchange = async () => { so.disabled = true; if (await evSetSelf(S.team.id, so.checked)) render(); else { so.checked = !so.checked; so.disabled = false; } };
-  const fsel = $("#evFiche"); if (fsel) fsel.onchange = async () => { fsel.disabled = true; if (await evSetTeamProfile(S.team.id, fsel.value)) render(); else fsel.disabled = false; };
-  const ic = $("#evIscOn"); if (ic) ic.onchange = async () => { ic.disabled = true; if (await iscSetTeam(S.team.id, ic.checked)) { if (!ic.checked) EVK = "std"; render(); } else { ic.checked = !ic.checked; ic.disabled = false; } };
-  $$("[data-k]", v).forEach(b => b.onclick = () => { EVK = b.dataset.k; if (EVK === "isc" && evView === "tabel") evView = "spelers"; render(); });
 }
 function evTeamAnalysis(ps, groups, names) {
   const m = evMoment, prevM = m > 1 ? m - 1 : null;
@@ -314,73 +337,6 @@ function evTeamAnalysis(ps, groups, names) {
     <div class="panel"><h3 style="margin:0 0 8px">Werkpunten van de ploeg</h3>${items.slice(0, 3).map(x => `<div class="row"><span>${esc(x.n)}</span><span class="spacer"></span><b>${evF(x.a)}</b></div>`).join("") || '<p class="hint" style="margin:0">–</p>'}<p class="hint" style="margin:8px 0 0">Goede thema's voor de trainingen van de volgende periode.</p></div>
     <div class="panel"><h3 style="margin:0 0 8px">Extra aandacht</h3>${low.map(x => `<div class="row"><a class="link" href="#/evaluaties/${x.p.id}/${m}">${esc(pname(x.p))}</a><span class="spacer"></span><b>${evF(x.a)}</b></div>`).join("") || '<p class="hint" style="margin:0">–</p>'}</div></div>
     <div class="grid2 sec">${rows}</div>`;
-}
-
-/* ============ interne scouting: een tweede, interne fiche naast de evaluatie van de club ============
-   Per evaluatiemoment, in dezelfde rij als de evaluatie (details.isc), maar nooit zichtbaar voor ouders of spelers en nooit op het rapport.
-   De beheerder kiest de onderdelen, de vragen, vanaf welke leeftijd en per ploeg aan of uit (Clubinstellingen › Evaluaties). */
-let EVK = "std";
-function iscCfg(st = (typeof CLUB !== "undefined" && CLUB.settings) || {}) {
-  const c = { on: true, from: 9, ...(((st.eval || {}).isc) || {}) };
-  c.template = Array.isArray(c.template) && c.template.length ? c.template : EV_TEMPLATE_OGV.slice();
-  c.open = Array.isArray(c.open) ? evOpenList(c.open) : EV_OPEN_OGV.map(q => ({ ...q }));
-  c.on_teams = Array.isArray(c.on_teams) ? c.on_teams : []; c.off_teams = Array.isArray(c.off_teams) ? c.off_teams : []; return c; }
-function iscOn(t = S.team, st) { if (!t) return false; const c = iscCfg(st); if (c.off_teams.includes(t.id)) return false; if (c.on_teams.includes(t.id)) return true;
-  return c.on !== false && (typeof evAgeOf === "function" ? evAgeOf(t) : 99) >= (+c.from || 0); }
-const iscGroups = (p, all) => evGroupsRaw({ criteria: iscCfg().template }).filter(g => all || !evKeeperGroup(g) || (p && evIsKeeper(p)));
-const iscNames = p => iscGroups(p).flatMap(g => g.items.map(i => i.name));
-const iscView = e => e ? { ...e, scores: e.details?.isc?.scores || {}, details: { ...(e.details || {}), ...(e.details?.isc || {}) } } : e;
-function evKindBar() {
-  if (!iscOn()) return "";
-  return `<div class="evkind" role="tablist" aria-label="Soort evaluatie">${[["std", "Evaluatie", "voor speler en ouders"], ["isc", "Interne scouting", "enkel voor trainers en club"]].map(([k, l, d]) => `<button type="button" role="tab" data-k="${k}" aria-selected="${EVK === k}"><b>${l}</b><small>${d}</small></button>`).join("")}</div>`;
-}
-function evIscForm(v, pid, m) {
-  const p = S.players.find(x => x.id === pid); if (!p) { v.innerHTML = `<div class="empty"><b>Speler niet gevonden</b><a class="link" href="#/evaluaties">Terug</a></div>`; return; }
-  const ps = active(), idx = ps.findIndex(x => x.id === pid), groups = iscGroups(p, true), names = iscNames(p), kp = evIsKeeper(p), mo = EV_MOMENTS[m - 1], OPEN = iscCfg().open;
-  const orig = evOf(pid, m), e = orig ? { ...orig, scores: { ...(orig.scores || {}) }, details: { ...(orig.details || {}) } } : { ...evNew(pid, m), details: {} };
-  const I = e.details.isc = { ...(e.details.isc || {}) }; I.scores = { ...(I.scores || {}) }; I.open = { ...(I.open || {}) };
-  let pr = null; for (let k = m - 1; k >= 1 && !pr; k--) { const x = evOf(pid, k)?.details?.isc; if (x?.scores && Object.keys(x.scores).length) pr = { m: k, ...x }; }
-  const sc = c => { const x = +I.scores[c]; return I.scores[c] == null || I.scores[c] === "" || isNaN(x) ? null : x; }, avgN = ns => avg(ns.map(sc).filter(x => x != null));
-  const steps = EV_DISP === 2 ? [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5] : [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
-  const saveLater = debounce(() => safe(async () => { I.by = byName() || I.by; I.date = I.date || todayIso(); await evPut(e); $("#evsaved").textContent = "Bewaard"; }), 600);
-  const secs = []; { let cur = null; for (const q of OPEN) { if (q.type === "kop") { cur = { kop: q.text, qs: [] }; secs.push(cur); continue; } if (!cur) { cur = { kop: "", qs: [] }; secs.push(cur); } cur.qs.push(q); } }
-  const gm = pfGroupMap([iscCfg().template]);
-  v.innerHTML = backLink("#/evaluaties", "Evaluaties") + `<div class="ph">${pAv(p, "width:56px;height:56px;border-radius:16px;background:var(--yellow);color:#000;font-size:24px;border:0")}
-    <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">Interne scouting · ${mo.naam} · ${esc(S.team.name)}${pr ? ` · vergeleken met ${EV_MOMENTS[pr.m - 1].naam.toLowerCase()}` : ""}</p></div><span class="hint" id="evsaved"></span></div>
-  ${evKindBar().replace(/data-k=/g, "data-kf=")}
-  <div class="evnav"><select id="evM" aria-label="Moment">${EV_MOMENTS.map(x => `<option value="${x.m}"${x.m === m ? " selected" : ""}>${x.m}. ${x.naam}</option>`).join("")}</select>
-    <span class="spacer"></span>${idx > 0 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx - 1].id}/${m}">‹ ${esc(ps[idx - 1].first_name)}</a>` : ""}<span class="hint">${idx + 1} / ${ps.length}</span>${idx < ps.length - 1 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx + 1].id}/${m}">${esc(ps[idx + 1].first_name)} ›</a>` : ""}</div>
-  <p class="evintern">${IC.eye}<span><b>Intern.</b> Nooit zichtbaar voor ouders of spelers. Andere trainers van de club zien enkel de scores, het potentieel en het advies in Interne scouting.</span></p>
-  <div class="evlayout"><div class="evmain">
-    <nav class="evjump" aria-label="Onderdelen"><a href="#ev-scores" data-j="ev-scores">Scores <b id="evjS"></b></a>${secs.length ? `<a href="#ev-fiche" data-j="ev-fiche">Fiche <b id="evjF"></b></a>` : ""}</nav>
-    <div id="ev-scores"></div>
-    ${groups.map((g, gi) => `<section class="panel evgroup${evKeeperGroup(g) && !kp ? " evkeep" : ""}" data-g="${gi}">${evKeeperGroup(g) && !kp ? `<button type="button" class="evkeepbtn" aria-expanded="false">${esc(g.name)} <small>enkel voor doelmannen · telt niet mee voor ${esc(p.first_name)}</small></button>` : ""}<div class="gh"><h2>${esc(g.name)}</h2><span class="gavg"></span></div>
-      ${g.items.map(i => { const cur = sc(i.name), prv = pr ? (+pr.scores?.[i.name] || null) : null;
-        return `<div class="crit" data-c="${esc(i.name)}"><div class="cl"><b>${esc(i.name)}</b>${i.hint ? `<small>${esc(i.hint)}</small>` : ""}</div>
-          <div class="scale9" role="radiogroup" aria-label="${esc(i.name)}">${steps.map(n => `<button type="button" role="radio" data-s="${n}" aria-checked="${cur === n}" title="${EV_LEVELS[n]}" class="${EV_DISP === 1 && n % 1 ? "half" : ""}${prv === n ? " prev" : ""}" style="--c:${evColor(n)}">${EV_DISP === 2 ? n * 2 : n % 1 ? "½" : n}</button>`).join("")}</div>
-          <div class="cv"><span class="lvl">${cur == null ? "" : EV_LEVELS[cur]}</span>${prv != null ? `<span class="hint">vorige: ${evF(prv)}</span>` : ""}</div></div>`; }).join("")}</section>`).join("")}
-    ${secs.length ? `<section class="panel evopen" id="ev-fiche"><h2>Fiche</h2>${secs.map((x, i) => x.kop ? `<details class="evsec" data-sec="${i}"${i === 0 ? " open" : ""}><summary><b>${esc(x.kop)}</b><span class="evsc"></span></summary><div class="fields">${x.qs.map(q => evOpenField(q, I.open[q.id])).join("")}</div></details>` : `<div class="fields" data-sec="${i}">${x.qs.map(q => evOpenField(q, I.open[q.id])).join("")}</div>`).join("")}</section>` : ""}
-  </div><aside class="evside">
-    <section class="panel evscore"><small>Gemiddelde interne scouting</small><b id="evAvg"></b><span id="evAvgD"></span><div class="hint" id="evCount"></div><div id="evRad" class="evrad"></div></section>
-    <section class="panel"><h3>Privénotitie</h3><textarea id="evNote" rows="4" placeholder="Alleen voor trainers">${esc(e.comment || "")}</textarea><p class="hint" style="margin:6px 0 0">Gedeeld met de gewone evaluatie van dit moment.</p></section>
-  </aside></div>`;
-  const recalc = () => { const a = avgN(names), b = pr ? avg(names.map(c => +pr.scores?.[c]).filter(x => !isNaN(x) && x)) : null, n = names.filter(c => sc(c) != null).length;
-    $("#evAvg").textContent = evF(a); $("#evAvg").style.color = evColor(a); $("#evAvgD").innerHTML = a != null && b != null ? evDelta(a - b) : ""; $("#evCount").textContent = `${n} van ${names.length} onderdelen`; $("#evjS").textContent = n + "/" + names.length;
-    $$(".evgroup", v).forEach(sec => { const g = groups[+sec.dataset.g], ga = avgN(g.items.map(i => i.name)), el = $(".gavg", sec); el.textContent = evF(ga); el.style.setProperty("--c", evColor(ga)); });
-    const vals = pfVals(I.scores, gm), axes = pfAxes(vals, gm).filter(x => kp || !gm.keep.has(x)); $("#evRad").innerHTML = axes.length >= 3 ? radarSvg(axes, vals, pr ? pfVals(pr.scores, gm) : null, { size: 300 }) : "";
-    let tf = 0, tn = 0; $$("[data-sec]", v).forEach(el => { const qs = secs[+el.dataset.sec].qs, f = qs.filter(q => I.open[q.id] != null && I.open[q.id] !== "").length; tf += f; tn += qs.length; const bb = $(".evsc", el); if (bb) { bb.textContent = f + "/" + qs.length; bb.classList.toggle("ok", f === qs.length); } });
-    const jf = $("#evjF"); if (jf) jf.textContent = tf + "/" + tn; };
-  const touch = () => { $("#evsaved").textContent = "Bewaren…"; saveLater(); recalc(); };
-  $$(".crit", v).forEach(row => $$("[data-s]", row).forEach(b => b.onclick = () => { const c = row.dataset.c, n = +b.dataset.s, on = b.getAttribute("aria-checked") !== "true";
-    if (on) I.scores[c] = n; else delete I.scores[c]; $$("[data-s]", row).forEach(x => x.setAttribute("aria-checked", on && x === b)); $(".lvl", row).textContent = on ? EV_LEVELS[n] : ""; e.date = e.date || todayIso(); touch(); }));
-  $$("[data-o]", v).forEach(el => el[el.tagName === "SELECT" ? "onchange" : "oninput"] = () => { if (el.value) I.open[el.dataset.o] = el.value; else delete I.open[el.dataset.o]; touch(); });
-  $$("[data-os]", v).forEach(row => $$("button", row).forEach(b => b.onclick = () => { const on = b.getAttribute("aria-checked") !== "true"; if (on) I.open[row.dataset.os] = b.dataset.v; else delete I.open[row.dataset.os]; $$("button", row).forEach(x => x.setAttribute("aria-checked", on && x === b)); touch(); }));
-  $$(".evkeepbtn", v).forEach(b => b.onclick = () => { const sec = b.closest(".evgroup"), open = !sec.classList.contains("open"); sec.classList.toggle("open", open); b.setAttribute("aria-expanded", open); });
-  $$("[data-j]", v).forEach(a => a.onclick = ev => { ev.preventDefault(); const t = document.getElementById(a.dataset.j); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); });
-  $$("[data-kf]", v).forEach(b => b.onclick = () => { EVK = b.dataset.kf; render(); });
-  $("#evNote").oninput = ev => { e.comment = ev.target.value || null; $("#evsaved").textContent = "Bewaren…"; saveLater(); };
-  $("#evM").onchange = ev => { evMoment = +ev.target.value; go("#/evaluaties/" + pid + "/" + evMoment); };
-  recalc();
 }
 
 /* één open vraag van de club in de fiche: tussentitel, keuzelijst, score van 1 tot 5 of open antwoord */
@@ -408,21 +364,21 @@ function evForm(v, pid, m) {
   v.innerHTML = backLink("#/evaluaties", "Evaluaties") + `<div class="ph">${pAv(p, "width:56px;height:56px;border-radius:16px;background:var(--yellow);color:#000;font-size:24px;border:0")}
     <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">${mo.naam}${mo.verplicht ? " (verplicht)" : ""} · ${esc(S.team.name)}${pr ? ` · vergeleken met ${EV_MOMENTS[pr.moment - 1].naam.toLowerCase()}` : ""}</p></div>
     <span class="hint" id="evsaved"></span><button class="btn ghost" type="button" id="evRep">${IC.print}Rapport</button></div>
-  ${evKindBar().replace(/data-k=/g, "data-kf=")}
   <div class="evnav"><select id="evM" aria-label="Moment">${EV_MOMENTS.map(x => `<option value="${x.m}"${x.m === m ? " selected" : ""}>${x.m}. ${x.naam}</option>`).join("")}</select>
     <span class="spacer"></span>${idx > 0 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx - 1].id}/${m}">‹ ${esc(ps[idx - 1].first_name)}</a>` : ""}<span class="hint">${idx + 1} / ${ps.length}</span>${idx < ps.length - 1 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx + 1].id}/${m}">${esc(ps[idx + 1].first_name)} ›</a>` : ""}</div>
   <div class="evlayout"><div class="evmain">
     <div class="evlegend">${(EV_DISP === 2 ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5]).map(n => `<span><i style="background:${evColor(n)}"></i>${EV_DISP === 2 ? EV_LEVELS[n] : n + (EV_LEVELS[n] !== String(n) ? " " + EV_LEVELS[n].toLowerCase() : "")}</span>`).join("")}<span><i class="prevmark"></i>vorige keer</span></div>
     <nav class="evjump" aria-label="Onderdelen van de evaluatie"><a href="#ev-scores" data-j="ev-scores">Scores <b id="evjS">${names.filter(c => evScore(e, c) != null).length}/${names.length}</b></a>${EV_SELF.on ? `<a href="#ev-self" data-j="ev-self">Zelfevaluatie <b class="${z ? "ok" : ""}">${z ? "ingevuld" : "nog niet"}</b></a>` : ""}${EV_OPEN.length ? `<a href="#ev-fiche" data-j="ev-fiche">${EV_OPEN[0].type === "kop" ? "Fiche" : "Vragen"} <b id="evjF"></b></a>` : ""}<a href="#ev-sterk" data-j="ev-sterk">Sterktes en doelen</a></nav>
     <div id="ev-scores"></div>
-    ${groups.map((g, gi) => `<section class="panel evgroup${evKeeperGroup(g) && !kp ? " evkeep" : ""}" data-g="${gi}">${evKeeperGroup(g) && !kp ? `<button type="button" class="evkeepbtn" aria-expanded="false">${esc(g.name)} <small>enkel voor doelmannen · telt niet mee voor ${esc(p.first_name)}</small></button>` : ""}<div class="gh"><h2>${esc(g.name)}</h2><span class="gavg" style="--c:${evColor(evAvgOf(e, g.items.map(i => i.name)))}">${evF(evAvgOf(e, g.items.map(i => i.name)))}</span></div>
+    ${groups.map((g, gi) => { const full = g.items.every(i => evScore(e, i.name) != null);
+      return `<section class="panel evgroup${evKeeperGroup(g) && !kp ? " evkeep" : ""}${full ? " shut" : ""}" data-g="${gi}">${evKeeperGroup(g) && !kp ? `<button type="button" class="evkeepbtn" aria-expanded="false">${esc(g.name)} <small>enkel voor doelmannen · telt niet mee voor ${esc(p.first_name)}</small></button>` : ""}<button type="button" class="gh evgh" aria-expanded="${!full}"><h2>${esc(g.name)}</h2><span class="gcnt"></span><span class="gavg" style="--c:${evColor(evAvgOf(e, g.items.map(i => i.name)))}">${evF(evAvgOf(e, g.items.map(i => i.name)))}</span><span class="gchev" aria-hidden="true">›</span></button><div class="evgb">
       ${g.items.map(i => { const cur = evScore(e, i.name), prv = pr ? evScore(pr, i.name) : null;
         return `<div class="crit" data-c="${esc(i.name)}"><div class="cl"><b>${esc(i.name)}</b>${i.hint ? `<small>${esc(i.hint)}</small>` : ""}</div>
           <div class="scale9" role="radiogroup" aria-label="${esc(i.name)}">${steps.map(n => `<button type="button" role="radio" data-s="${n}" aria-checked="${cur === n}" title="${EV_LEVELS[n]}" class="${EV_DISP === 1 && n % 1 ? "half" : ""}${prv === n ? " prev" : ""}" style="--c:${evColor(n)}">${EV_DISP === 2 ? n * 2 : n % 1 ? "½" : n}</button>`).join("")}</div>
-          <div class="cv"><span class="lvl">${cur == null ? "" : EV_LEVELS[cur]}</span>${prv != null ? `<span class="hint">vorige: ${evF(prv)}</span>` : ""}${(zs => zs == null ? "" : `<span class="selfchip${cur != null && Math.abs(zs - cur) >= 1.5 ? " gap" : ""}" title="Zo ziet de speler zichzelf">speler ${evSelfLabel(zs * EV_SELFMAX / 5)}</span>`)(z ? evSelfOf(z, i.name) : null)}</div></div>`; }).join("")}</section>`).join("")}
+          <div class="cv"><span class="lvl">${cur == null ? "" : EV_LEVELS[cur]}</span>${prv != null ? `<span class="hint">vorige: ${evF(prv)}</span>` : ""}${(zs => zs == null ? "" : `<span class="selfchip${cur != null && Math.abs(zs - cur) >= 1.5 ? " gap" : ""}" title="Zo ziet de speler zichzelf">speler ${evSelfLabel(zs * EV_SELFMAX / 5)}</span>`)(z ? evSelfOf(z, i.name) : null)}</div></div>`; }).join("")}</div></section>`; }).join("")}
     ${evSelfPanel(z, e, m)}
-    ${EV_OPEN.length ? `<section class="panel evopen" id="ev-fiche"><h2>${EV_OPEN[0].type === "kop" ? "Fiche van de club" : "Extra vragen van de club"}</h2>${evOpenSecs().map((sc, i) => sc.kop ? `<details class="evsec" data-sec="${i}"${i === 0 ? " open" : ""}><summary><b>${esc(sc.kop)}</b><span class="evsc"></span></summary><div class="fields">${sc.qs.map(q => evOpenField(q, D.open?.[q.id])).join("")}</div></details>` : `<div class="fields" data-sec="${i}">${sc.qs.map(q => evOpenField(q, D.open?.[q.id])).join("")}</div>`).join("")}</section>` : ""}
-    <section class="panel" id="ev-sterk"><h2>Sterktes en werkpunten</h2><div id="evsug"></div>
+    ${EV_OPEN.length ? `<section class="panel evopen" id="ev-fiche"><h2>Vragen van de club</h2><p class="hint" style="margin:-4px 0 8px">Wat <span class="evint">intern</span> is, komt niet op het rapport en nooit bij speler of ouders.</p>${evOpenSecs().map((sc, i) => sc.kop ? `<details class="evsec" data-sec="${i}"${i === 0 ? " open" : ""}><summary><b>${esc(sc.kop)}</b><span class="evsc"></span></summary><div class="fields">${sc.qs.map(q => evOpenField(q, D.open?.[q.id])).join("")}</div></details>` : `<div class="fields" data-sec="${i}">${sc.qs.map(q => evOpenField(q, D.open?.[q.id])).join("")}</div>`).join("")}</section>` : ""}
+    <section class="panel" id="ev-sterk"><h2>Sterktes, werkpunten en doelen</h2><p class="hint" style="margin:-4px 0 8px">Dit zien speler en ouders als je de evaluatie deelt.</p><div id="evsug"></div>
       <div class="fields"><label class="f full">Sterktes<textarea data-d="strengths" rows="3" placeholder="Waar blinkt deze speler in uit?">${esc(D.strengths || "")}</textarea></label>
       <label class="f full">Werkpunten<textarea data-d="workpoints" rows="3" placeholder="Wat moet beter? Concreet en haalbaar.">${esc(D.workpoints || "")}</textarea></label>
       <label class="f full">Doelen tot de volgende evaluatie <span class="hint">één per regel</span><textarea data-d="goals" rows="3" placeholder="bv. Met links passen over 10 meter">${esc(D.goals || "")}</textarea></label></div>
@@ -430,10 +386,10 @@ function evForm(v, pid, m) {
   </div><aside class="evside">
     <section class="panel evscore"><small>Gemiddelde</small><b id="evAvg" style="color:${evColor(evAvgOf(e, names))}">${evF(evAvgOf(e, names))}</b><span id="evAvgD">${pr ? evDelta(evAvgOf(e, names) != null && evAvgOf(pr, names) != null ? evAvgOf(e, names) - evAvgOf(pr, names) : null) : ""}</span>
       <div class="hint" id="evCount">${names.filter(c => evScore(e, c) != null).length} van ${names.length} onderdelen</div>
-      <div class="evstats"><div><small>Training</small><b>${s.trTot ? s.trPct + "%" : "–"}</b></div><div><small>Wedstrijden</small><b>${s.matches}</b></div><div><small>Minuten</small><b>${s.minutes}</b></div><div><small>Matchcijfer</small><b>${evF(s.rating)}</b></div></div></section>
-    <section class="panel"><h3>Positie en niveau</h3><div class="fields"><label class="f full">Beste positie(s)<input data-d="position" value="${esc(D.position || p.position || "")}" placeholder="bv. Piloot, staart"></label>
+      <div id="evRad" class="evrad"></div><div class="evstats"><div><small>Training</small><b>${s.trTot ? s.trPct + "%" : "–"}</b></div><div><small>Wedstrijden</small><b>${s.matches}</b></div><div><small>Minuten</small><b>${s.minutes}</b></div><div><small>Matchcijfer</small><b>${evF(s.rating)}</b></div></div></section>
+    ${EV_OPEN.some(q => q.id === "posities") && EV_OPEN.some(q => q.id === "niveau") && (m !== EV_LAST || EV_OPEN.some(q => q.id === "advies")) ? "" : `<section class="panel"><h3>Positie en niveau</h3><div class="fields">${EV_OPEN.some(q => q.id === "posities") ? "" : `<label class="f full">Beste positie(s)<input data-d="position" value="${esc(D.position || p.position || "")}" placeholder="bv. Piloot, staart"></label>`}
       ${EV_OPEN.some(q => q.id === "niveau") ? "" : `<label class="f full">Niveau t.o.v. de ploeg<select data-d="level"><option value="">–</option>${EV_LEVEL_TEAM.map(x => `<option${D.level === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>`}
-      ${m === EV_LAST && !EV_OPEN.some(q => q.id === "advies") ? `<label class="f full">Advies volgend seizoen<select data-d="advice"><option value="">–</option>${EV_ADVICE.map(x => `<option${D.advice === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>` : ""}</div></section>
+      ${m === EV_LAST && !EV_OPEN.some(q => q.id === "advies") ? `<label class="f full">Advies volgend seizoen<select data-d="advice"><option value="">–</option>${EV_ADVICE.map(x => `<option${D.advice === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>` : ""}</div></section>`}
     <section class="panel"><h3>Oudergesprek</h3><div class="fields"><label class="f full">Boodschap voor speler en ouders <span class="hint">komt op het rapport</span><textarea data-d="parents" rows="4" placeholder="Wat wil je zeker meegeven?">${esc(D.parents || "")}</textarea></label>
       <label class="check"><input type="checkbox" data-d="talk"${D.talk ? " checked" : ""}> Gesprek gevoerd</label></div></section>
     <section class="panel"><h3>Privénotitie</h3><textarea id="evNote" rows="4" placeholder="Alleen voor trainers, niet op het rapport">${esc(e.comment || "")}</textarea></section>
@@ -441,8 +397,11 @@ function evForm(v, pid, m) {
   const recalc = () => { const a = evAvgOf(e, names); $("#evAvg").textContent = evF(a); $("#evAvg").style.color = evColor(a);
     $("#evAvgD").innerHTML = pr && a != null && evAvgOf(pr, names) != null ? evDelta(a - evAvgOf(pr, names)) : "";
     $("#evCount").textContent = `${names.filter(c => evScore(e, c) != null).length} van ${names.length} onderdelen`;
-    $$(".evgroup", v).forEach(sec => { const g = groups[+sec.dataset.g], ga = evAvgOf(e, g.items.map(i => i.name)), el = $(".gavg", sec); el.textContent = evF(ga); el.style.setProperty("--c", evColor(ga)); });
+    $$(".evgroup", v).forEach(sec => { const g = groups[+sec.dataset.g], ns = g.items.map(i => i.name), ga = evAvgOf(e, ns), el = $(".gavg", sec), n = ns.filter(c => evScore(e, c) != null).length; el.textContent = evF(ga); el.style.setProperty("--c", evColor(ga));
+      const c = $(".gcnt", sec); c.textContent = n + "/" + ns.length; c.classList.toggle("ok", n === ns.length); });
+    const vals = pfVals(e.scores, gm), axes = pfAxes(vals, gm).filter(x => kp || !gm.keep.has(x)); $("#evRad").innerHTML = axes.length >= 3 ? radarSvg(axes, vals, pr ? pfVals(pr.scores, gm) : null, { size: 260 }) : "";
     sugg(); };
+  const gm = pfGroupMap();
   const sugg = () => { const sc = names.map(c => [c, evScore(e, c)]).filter(x => x[1] != null && x[0] !== "Potentieel"); if (sc.length < 4) { $("#evsug").innerHTML = ""; return; }
     const top = sc.slice().sort((a, b) => b[1] - a[1]).slice(0, 3), low = sc.slice().sort((a, b) => a[1] - b[1]).slice(0, 3);
     $("#evsug").innerHTML = `<p class="hint" style="margin-top:0">Volgens de scores: sterk in ${top.map(x => `<b style="color:var(--ink)">${esc(x[0].replace(/ \(.*\)/, ""))}</b>`).join(", ")}; werkpunten ${low.map(x => `<b style="color:var(--ink)">${esc(x[0].replace(/ \(.*\)/, ""))}</b>`).join(", ")}. <button class="link" type="button" id="evFill">Overnemen</button></p>`;
@@ -457,14 +416,14 @@ function evForm(v, pid, m) {
     D.open = { ...(D.open || {}) }; if (val) D.open[row.dataset.os] = val; else delete D.open[row.dataset.os]; $$("button", row).forEach(x => x.setAttribute("aria-checked", on && x === b)); touch(); }));
   $$(".evkeepbtn", v).forEach(b => b.onclick = () => { const sec = b.closest(".evgroup"), open = !sec.classList.contains("open"); sec.classList.toggle("open", open); b.setAttribute("aria-expanded", open); });
   $("#evNote").oninput = ev => { e.comment = ev.target.value || null; touch(); };
+  $$(".evgh", v).forEach(b => b.onclick = () => { const sec = b.closest(".evgroup"), shut = !sec.classList.contains("shut"); sec.classList.toggle("shut", shut); b.setAttribute("aria-expanded", !shut); });
   $("#evM").onchange = ev => { evMoment = +ev.target.value; go("#/evaluaties/" + pid + "/" + evMoment); };
-  $$("[data-kf]", v).forEach(b => b.onclick = () => { EVK = b.dataset.kf; render(); });
   $("#evRep").onclick = () => { evPrint([p], m); };
   $("#evGoals").onclick = async () => { const lines = (D.goals || "").split("\n").map(x => x.trim()).filter(Boolean); if (!lines.length) { toast("Schrijf eerst een of meer doelen."); return; }
     const have = new Set(S.goals.filter(g => g.player_id === pid).map(g => g.text.toLowerCase())); let n = 0;
     await safe(async () => { for (const t of lines) { if (have.has(t.toLowerCase())) continue; const g = { id: uid(), team_id: S.team.id, player_id: pid, text: t, area: null, term: "kort", status: "bezig" }; await db.save("goals", g); S.goals.push(g); n++; } }); toast(n ? `${n} ${n === 1 ? "doel" : "doelen"} bewaard op de spelerskaart.` : "Die doelen staan al op de spelerskaart."); };
   $$("[data-j]", v).forEach(a => a.onclick = ev => { ev.preventDefault(); const t = document.getElementById(a.dataset.j); if (!t) return; const d = t.closest("details"); if (d) d.open = true; t.scrollIntoView({ behavior: "smooth", block: "start" }); });
-  sugg(); counts();
+  recalc(); counts();
 }
 /* open vragen per tussentitel */
 function evOpenSecs() { const out = []; let cur = null;

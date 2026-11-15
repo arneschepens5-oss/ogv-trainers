@@ -105,20 +105,18 @@ function imAnalyse(X, wb, D) {
 }
 
 /* één evaluatie samenvoegen in een bestaande: enkel lege velden aanvullen */
-/* alles van de Excel komt in de interne scouting van die evaluatie (details.isc), los van de evaluatie voor de ouders */
-const IM_DET2OPEN = { strengths: "algemeen_sterk", workpoints: "algemeen_werk", goals: "doelstelling" };
+/* alles van de Excel komt in de evaluatie van dat moment; sterktes, werkpunten en doelen in de vaste velden */
 function imMerge(target, e, stat) {
-  target.details = { ...(target.details || {}) }; const D = target.details, I = D.isc = { ...(D.isc || {}) }; I.scores = { ...(I.scores || {}) }; I.open = { ...(I.open || {}) };
+  target.details = { ...(target.details || {}) }; const D = target.details; D.open = { ...(D.open || {}) }; target.scores = { ...(target.scores || {}) };
   let add = 0, clash = 0;
-  const put = (k, v) => { if (I.open[k] == null || I.open[k] === "") { I.open[k] = v; add++; } else if (String(I.open[k]) !== String(v)) clash++; };
-  for (const [k, v] of Object.entries(e.scores)) { if (I.scores[k] == null || I.scores[k] === "") { I.scores[k] = v; add++; } else if (+I.scores[k] !== v) clash++; }
-  for (const [k, v] of Object.entries(e.open)) put(k, v);
-  for (const [k, v] of Object.entries(e.det)) { if (IM_DET2OPEN[k]) put(IM_DET2OPEN[k], v); else if (!D[k]) D[k] = v; }
-  if (Object.keys(e.old).length) I.oud = { ...e.old, ...(I.oud || {}) };
-  if (Object.keys(e.oldTxt).length) I.oud_txt = { ...e.oldTxt, ...(I.oud_txt || {}) };
-  if (e.by) { I.by = I.by || e.by; D.by_all = [...new Set([...(D.by_all || []), e.by])]; }
-  if (!target.date && e.date) target.date = e.date; if (!I.date && e.date) I.date = e.date;
-  if (!target.scores) target.scores = {};
+  const put = (o, k, v) => { if (o[k] == null || o[k] === "") { o[k] = v; add++; } else if (String(o[k]) !== String(v)) clash++; };
+  for (const [k, v] of Object.entries(e.scores)) { if (target.scores[k] == null || target.scores[k] === "") { target.scores[k] = v; add++; } else if (+target.scores[k] !== v) clash++; }
+  for (const [k, v] of Object.entries(e.open)) { if (EV_POPDUP[k]) put(D, EV_POPDUP[k], v); else put(D.open, k, v); }
+  for (const [k, v] of Object.entries(e.det)) put(D, k, v);
+  if (Object.keys(e.old).length) D.oud = { ...e.old, ...(D.oud || {}) };
+  if (Object.keys(e.oldTxt).length) D.oud_txt = { ...e.oldTxt, ...(D.oud_txt || {}) };
+  if (e.by) { D.by = D.by || e.by; D.by_all = [...new Set([...(D.by_all || []), e.by])]; }
+  if (!target.date && e.date) target.date = e.date;
   D.import = D.import || todayIso();
   stat.add += add; stat.clash += clash; return add > 0 || Object.keys(e.old).length > 0;
 }
@@ -190,12 +188,10 @@ function scImport(D) {
 }
 /* verslag, en welke ploegen de interne scouting nog niet gebruiken */
 function imDone(out, A, st, D) {
-  const tids = [...new Set(A.xs.filter(x => x.match && A.evs.some(e => e.pid === x.id)).map(x => x.match.team_id))];
-  const off = tids.map(id => S.teams.find(t => t.id === id)).filter(t => t && !iscOn(t));
   out.innerHTML = `<div class="imx-ks">${[[st.players, "spelers bijgewerkt"], [st.evNew, "nieuwe evaluaties"], [st.evAdd, "evaluaties aangevuld"], [st.hist, "uit vorige seizoenen"]].map(([n, l]) => `<div class="imx-k ok"><b>${n}</b><span>${l}</span></div>`).join("")}</div>
     ${st.fail ? `<p class="grpwarn">${st.fail} ${st.fail === 1 ? "rij kon" : "rijen konden"} niet bewaard worden${/row-level security|policy/i.test(st.err) ? ": voer eerst <b>supabase-evaluaties-beheerder-v54.sql</b> uit in Supabase en importeer daarna opnieuw (wat al bewaard is, wordt niet dubbel gezet)." : ": " + esc(st.err)}</p>` : ""}
     ${st.clash ? `<p class="hint">${st.clash} ${st.clash === 1 ? "score of antwoord stond" : "scores of antwoorden stonden"} al anders ingevuld (in de app of in een eerdere rij van de Excel) en ${st.clash === 1 ? "is" : "zijn"} niet overschreven.</p>` : ""}
     ${st.skipped ? `<p class="hint">${st.skipped} evaluaties van spelers die niet in de app staan, zijn overgeslagen.</p>` : ""}${st.noMoment ? `<p class="hint">${st.noMoment} evaluaties zonder moment of datum zijn overgeslagen.</p>` : ""}
-    <p class="hint">Alles staat in de <b>interne scouting</b> van elke evaluatie, apart van de evaluatie voor de ouders.${off.length ? ` Let op: bij ${off.map(t => esc(teamLbl(t))).join(", ")} staat de interne scouting uit, dus hun trainers zien deze fiche niet. Zet ze aan in Clubinstellingen › Evaluaties.` : ""}</p>`;
+    <p class="hint">Alles staat in de evaluatie van dat moment. Vragen die je als <b>intern</b> markeerde, komen nooit bij speler of ouders.</p>`;
   setTimeout(() => render(), 0);
 }

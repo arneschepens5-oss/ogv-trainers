@@ -8,7 +8,7 @@ const PF_SKIP = /^(algemeen|onderdelen)$/i;
    Een evaluatie wordt gelezen met de fiche die de meeste van haar onderdelen kent (dezelfde naam kan in twee fiches in een andere groep staan). */
 function pfGroupMap(extra = []) {
   const st = (typeof CLUB !== "undefined" && CLUB.settings) || {}, ev = st.eval || {};
-  const raw = [...extra, ...(typeof iscCfg === "function" ? [iscCfg(st).template] : []), ...(typeof evProfiles === "function" ? evProfiles(st).map(p => p.template || []) : []), ev.template || [], EV_TEMPLATE_OGV, EV_TEMPLATE_DEFAULT, EV_TEMPLATE_SHORT];
+  const raw = [...extra, evMaster(st).template, ...(((ev.isc || {}).template) ? [ev.isc.template] : []), ev.v2 ? [] : ev.template || [], EV_TEMPLATE_OGV, EV_TEMPLATE_DEFAULT, EV_TEMPLATE_SHORT];
   const tpls = [], seen = new Set(), keep = new Set(), order = [];
   for (const tpl of raw) { const sig = JSON.stringify(tpl || []); if (!tpl || !tpl.length || seen.has(sig)) continue; seen.add(sig);
     const m = new Map(), ord = []; let g = null;
@@ -31,7 +31,7 @@ function pfVals(scores, gm) {
 function pfAxes(vals, gm) { const ord = [...(vals._order || []), ...gm.order.filter(g => !(vals._order || []).includes(g))]; return ord.filter(g => vals[g] != null && !PF_SKIP.test(g)); }
 const pfTotal = (vals, axes) => { const xs = axes.map(a => vals[a]).filter(v => v != null); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
 /* alle evaluaties van een speler, oudste eerst: dit seizoen (lijst) en de vorige seizoenen (p.history) */
-/* het profiel komt uit de interne scouting (details.isc); zonder interne scouting uit de gewone evaluatie */
+/* oude evaluaties kunnen nog een aparte interne scouting (details.isc) hebben: die scores tellen voor het profiel */
 const pfSrc = e => { const I = e?.details?.isc; const isc = I && I.scores && Object.keys(I.scores).length;
   return { scores: isc ? I.scores : (e?.scores || {}), details: { ...(e?.details || {}), open: { ...(e?.details?.open || {}), ...(I?.open || {}) } }, isc: !!isc }; };
 function pfList(p, evals, season) {

@@ -19,19 +19,18 @@ const csSelfRow = (q, crits) => csRow("csq", `data-id="${esc(q.id || evQid())}" 
    <select name="l" aria-label="Vergelijken met onderdeel van de trainer" title="Welk onderdeel van de trainer hoort hierbij? Dan zie je beide scores naast elkaar.">${csLinkOpts(crits, q.link)}</select>`);
 const csCritNames = lines => lines.filter(l => !String(l).trim().startsWith("#")).map(l => String(l).split(/\s+\|\s+/)[0].trim()).filter(Boolean);
 
-function csEvalEditorsHtml(ev, forProfile, isc) {
-  const tpl = Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT, crits = csCritNames(tpl);
-  const sf = ev.self || {}, qs = (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).map(evSelfQ).filter(Boolean), open = evOpenList(ev.open);
-  return `<h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Dit zijn de onderdelen waar de trainer een score voor geeft, in groepen. Voeg gerust eigen onderdelen toe, hernoem of verwijder ze. ${forProfile ? "Dit geldt voor de gekozen ploegen; hun trainers kunnen dit niet aanpassen." : "Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen."}</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button>${isc ? `<button class="btn ghost small" type="button" data-tpl="ogv">Fiche OG Vorselaar (6 blokken + keeper)</button>` : ""}</div>
+function csEvalEditorsHtml(ev) {
+  const M = evMaster({ eval: ev }), tpl = M.template, crits = csCritNames(tpl);
+  const sf = ev.self || {}, qs = (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).map(evSelfQ).filter(Boolean), open = M.open;
+  return `<h2>Onderdelen met een score</h2><p class="hint" style="margin-top:0">De trainer scoort elk onderdeel. De groepen zijn de hoeken van het spelersprofiel. Een groep die begint met <b>Keeper</b> geldt enkel voor doelmannen. Wat niet past bij een leeftijd, vink je af onder <b>Per leeftijd</b>; hier staat alles wat de club kan gebruiken.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="ogv">Fiche OG Vorselaar herstellen</button></div>
     <div id="cscrit" class="cslist">${tpl.map(csCritRow).join("")}</div>
     <div class="row" style="gap:16px;margin:4px 0 8px"><button class="link" type="button" id="csaddg">${IC.plus}Groep toevoegen</button><button class="link" type="button" id="csaddi">${IC.plus}Onderdeel toevoegen</button></div>
-    <h2>Extra vragen voor de trainer</h2><p class="hint" style="margin-top:0">Open vragen die de trainer bij elke speler beantwoordt, naast de scores. Ze komen ook op het rapport voor het oudergesprek.</p>
-    <p class="hint">Kies per vraag de soort. ${isc ? "Alles in de interne scouting is intern. De vragen <b>Potentieel</b> en <b>Advies</b> gebruik je ook om op te zoeken in Interne scouting: laat hun naam en keuzes staan." : "Vink <b>intern</b> aan voor wat enkel voor de trainers is: dat komt niet op het rapport voor de ouders."}</p>
-    ${isc ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" id="csogvq">Vragen van de fiche OG Vorselaar</button></div>` : ""}
+    <h2>Vragen voor de trainer</h2><p class="hint" style="margin-top:0">Open vragen, keuzelijsten en scores naast de onderdelen. Tussentitels maken er inklapbare blokken van. Vink <b>intern</b> aan voor wat enkel voor trainers en club is: dat komt niet op het rapport. Sterktes, werkpunten en doelen staan al vast in elke evaluatie, die hoef je hier niet toe te voegen.</p>
+    <p class="hint">Laat de vragen <b>Potentieel</b> en <b>Advies</b> staan: daarop zoek je in Interne scouting.</p>
     <div id="csopen" class="cslist">${open.map(csOpenRow).join("")}</div><button class="link" type="button" id="csaddo" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button>
-    <div class="csselfwrap"${isc ? " hidden" : ""}><h2>Zelfevaluatie door de spelers</h2>
-    <label class="csmod" style="max-width:640px"><span><b>Spelers evalueren zichzelf</b><small>Per moment zet de trainer dit open voor zijn ploeg. Spelers of ouders vullen de vragen in via hun persoonlijke link in de app. Zo zie je naast jouw score wat de speler zelf vindt.</small></span><span class="tgl"><input type="checkbox" name="selfon"${sf.on === true ? " checked" : ""}><span></span></span></label>
+    <div class="csselfwrap"><h2>Eigen zelfevaluatie (optioneel)</h2>
+    <label class="csmod" style="max-width:640px"><span><b>Eigen vragen voor de zelfevaluatie</b><small>Per leeftijd kies je de zelfevaluatie: een korte lijst met smileys, een uitgebreide met cijfers, of deze eigen vragen van de club.</small></span><span class="tgl"><input type="checkbox" name="selfon"${sf.on === true ? " checked" : ""}><span></span></span></label>
     <div id="csself"${sf.on === true ? "" : " hidden"}>
       <p class="hint"><b>Deze vragen staan los van de scores van de trainer.</b> Schrijf ze helemaal zelf, in kindertaal, en kies per vraag een schaal of een open antwoord. Koppelen aan een onderdeel van de trainer is optioneel en dient enkel om beide scores naast elkaar te tonen.</p>
       <p class="hint">Voor kinderen tot 9 jaar raden we de korte lijst met smileys aan: ouders vullen die samen met hun kind in. Vanaf 10 jaar kan een speler dit zelf met cijfers.</p>
@@ -56,15 +55,14 @@ function csEvalEditorsBind(f) {
   const refresh = () => $$("select[name=l]", sl).forEach(s => { const cur = s.value; s.innerHTML = csLinkOpts(names(), cur); s.value = names().includes(cur) ? cur : ""; });
   sl.addEventListener("focusin", e => { if (e.target.name === "l") refresh(); }); sl.addEventListener("mousedown", e => { if (e.target.name === "l") refresh(); });
   [sl, open].forEach(h => h.addEventListener("change", e => { if (e.target.name === "ty") e.target.closest(".csr").dataset.ty = e.target.value; }));
-  if ($("#csogvq", f)) $("#csogvq", f).onclick = () => { if ($$(".csr", open).length && !confirm("De open vragen worden vervangen door de vragen van de fiche van de interne scouting. Doorgaan?")) return; open.innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); };
+  if ($("#csogvq", f)) $("#csogvq", f).onclick = () => { if ($$(".csr", open).length && !confirm("De vragen worden vervangen door de vragen van de fiche van OG Vorselaar. Doorgaan?")) return; open.innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); };
   const add = (host, html, focus = "input") => { host.insertAdjacentHTML("beforeend", html); host.lastElementChild.querySelector(focus)?.focus(); };
   $("#csaddg", f).onclick = () => add(crit, csCritRow("# "));
   $("#csaddi", f).onclick = () => add(crit, csCritRow("x").replace('value="x"', 'value=""'));
   $("#csaddo", f).onclick = () => add(open, csOpenRow({}));
   $("#csaddq", f).onclick = () => add(sl, csSelfRow({ type: "schaal" }, names()));
   f.selfon.onchange = () => { self.hidden = !f.selfon.checked; };
-  $$("[data-tpl]", f).forEach(b => b.onclick = () => { crit.innerHTML = (b.dataset.tpl === "kort" ? EV_TEMPLATE_SHORT : b.dataset.tpl === "ogv" ? EV_TEMPLATE_OGV : EV_TEMPLATE_DEFAULT).map(csCritRow).join("");
-    if (b.dataset.tpl === "ogv" && !$$(".csr", open).length) open.innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); refresh(); });
+  $$("[data-tpl]", f).forEach(b => b.onclick = () => { if (!confirm("Alle onderdelen terugzetten naar de fiche van OG Vorselaar? Ingevulde evaluaties blijven bewaard.")) return; crit.innerHTML = EV_TEMPLATE_OGV.map(csCritRow).join(""); refresh(); });
   $("#csclrq", f).onclick = () => { if ($$(".csr", sl).length && !confirm("Alle vragen van de zelfevaluatie worden gewist. Doorgaan?")) return; sl.innerHTML = ""; add(sl, csSelfRow({ type: "schaal" }, names())); };
   $$("[data-sp]", f).forEach(b => b.onclick = () => { const p = EV_SELF_PRESETS[b.dataset.sp];
     if ($$(".csr", sl).length && !confirm("De vragen van de zelfevaluatie worden vervangen door deze lijst. Doorgaan?")) return;
@@ -83,116 +81,54 @@ function csEvalEditorsBind(f) {
 function csCritLines(host) { return $$(".csr", host).map(r => { const n = $("[name=n]", r).value.trim().replace(/\|/g, "/").replace(/^#+\s*/, ""); if (!n) return null;
   if (r.dataset.t === "g") return "# " + n; const h = ($("[name=h]", r)?.value || "").trim().replace(/\|/g, "/"); return h ? n + " | " + h : n; }).filter(Boolean); }
 
-/* ============ evaluatie per leeftijd: de beheerder geeft groepen ploegen een eigen evaluatie en zelfevaluatie ============ */
-const evProfiles = (st = CLUB.settings || {}) => (Array.isArray(st.eval?.profiles) ? st.eval.profiles : []).filter(p => p && p.id);
-const evProfileOf = (teamId, st) => teamId ? evProfiles(st).find(p => (p.teams || []).includes(teamId)) || null : null;
-const evAgeOf = t => { const m = String(t.category || t.name || "").match(/U\s?(\d+)/i); return m ? +m[1] : 99; };
-function csProfiles(host, st, save) {
-  const club = st.eval || {}, profs = evProfiles(st), teams = [...(S.teams || [])].sort((a, b) => evAgeOf(a) - evAgeOf(b) || String(a.name).localeCompare(String(b.name)));
-  const tName = id => { const t = teams.find(x => x.id === id); return t ? (typeof teamLbl === "function" ? teamLbl(t) : t.name) : "?"; };
-  const used = new Set(profs.flatMap(p => p.teams || [])), rest = teams.filter(t => !used.has(t.id));
-  const nCrit = tpl => csCritNames(tpl || []).length, nSelf = p => p.self?.on ? (p.self.questions || []).length : 0;
-  const card = (p, std) => `<div class="evp${std ? " std" : ""}"><div class="evph"><span class="evpi">${std ? IC.gear : IC.star}</span><div><b>${esc(std ? "Standaard van de club" : p.name)}</b>
-      <small>${nCrit(std ? (club.template || EV_TEMPLATE_DEFAULT) : p.template)} onderdelen · ${(std ? club.self?.on : p.self?.on) ? nSelf(std ? club : p) + " vragen zelfevaluatie" : "geen zelfevaluatie"}</small></div>
-      ${std ? "" : `<button class="btn ghost small" type="button" data-pe="${p.id}">Bewerken</button>`}</div>
-    <div class="evpt">${(std ? rest.map(t => t.id) : p.teams || []).map(id => `<span class="pill">${esc(tName(id))}</span>`).join("") || `<span class="hint">${std ? "Alle ploegen hebben een eigen evaluatie." : "Nog geen ploegen gekozen."}</span>`}</div>
-    ${std ? `<p class="hint" style="margin:8px 0 0">Stel je hieronder in op deze pagina.</p>` : ""}</div>`;
-  host.innerHTML = `<h2>Evaluatie per leeftijd</h2><p class="hint" style="margin-top:0">Geef jonge en oudere spelers een andere evaluatie. Een groep ploegen krijgt dan eigen onderdelen voor de trainer en een eigen zelfevaluatie. Ploegen die je nergens kiest, volgen de standaard van de club.</p>
-    <div class="evps">${profs.map(p => card(p)).join("")}${card(null, true)}</div>
-    <button class="btn ghost small" type="button" id="evpnew" style="margin:10px 0 6px">${IC.plus}Evaluatie voor een leeftijd toevoegen</button>`;
-  const persist = async (list, changed, msg) => {
-    const cur = CLUB.settings || st, ev = { ...(cur.eval || {}), profiles: list };
-    if (!(await save({ eval: ev }, msg))) return false;
-    /* de onderdelen van de trainer staan per ploeg: zet ze voor de ploegen die veranderden */
-    const tplOf = id => (list.find(p => (p.teams || []).includes(id))?.template) || (ev.template?.length ? ev.template : EV_TEMPLATE_DEFAULT);
-    for (const id of changed) { const t = (S.teams || []).find(x => x.id === id); if (!t) continue; const criteria = tplOf(id).slice();
-      try { await db.save("teams", { ...t, criteria }); t.criteria = criteria; if (S.team?.id === id) S.team.criteria = criteria; } catch (x) {} }
-    if (typeof evApplyClub === "function") evApplyClub(); render(); return true; };
-  const edit = p => {
-    const isNew = !p; p = p || { id: "p" + Date.now().toString(36), name: "", teams: [], template: EV_TEMPLATE_SHORT.slice(), open: [], self: { on: !!club.self?.on, scale: "smiley", intro: club.self?.intro || "", questions: (EV_SELF_PRESETS.jong?.questions || club.self?.questions || []).map(q => ({ ...q })) } };
-    const sel = new Set(p.teams || []), owner = id => profs.find(x => x.id !== p.id && (x.teams || []).includes(id));
-    const ages = [["U6–U9", 6, 9], ["U10–U13", 10, 13], ["U14–U17", 14, 17], ["U18 en ouder", 18, 99]];
-    const d = dialog(`<form class="evpdlg" onsubmit="return false"><h2>${isNew ? "Evaluatie voor een leeftijd" : "Evaluatie bewerken"}</h2>
-      <label class="f full">Naam<input name="pnaam" maxlength="40" value="${esc(p.name)}" placeholder="bv. Onderbouw (U6–U9)" required></label>
-      <h3>Voor welke ploegen?</h3><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">${ages.map(([l, a, b]) => `<button class="btn ghost small" type="button" data-age="${a}-${b}">${l}</button>`).join("")}<button class="link" type="button" data-age="none">Niets</button></div>
-      <div class="evpteams">${teams.map(t => { const o = owner(t.id); return `<label class="evpt1"><input type="checkbox" value="${t.id}"${sel.has(t.id) ? " checked" : ""}><span><b>${esc(tName(t.id))}</b>${o ? `<small>nu: ${esc(o.name)}</small>` : ""}</span></label>`; }).join("") || `<p class="hint">Nog geen ploegen.</p>`}</div>
-      ${csEvalEditorsHtml({ template: p.template, open: p.open, self: p.self }, true)}
-      <div class="row csfoot">${isNew ? "" : `<button class="btn ghost" type="button" id="evpdel" style="color:var(--bad)">Verwijderen</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="evpok">Bewaren</button></div></form>`, "wide");
-    const f = $("form", d), collect = csEvalEditorsBind(f);
-    $$("[data-age]", d).forEach(b => b.onclick = () => { const [a, z] = b.dataset.age === "none" ? [0, -1] : b.dataset.age.split("-").map(Number);
-      $$(".evpteams input", d).forEach(c => { const t = teams.find(x => x.id === c.value), g = evAgeOf(t); if (b.dataset.age === "none") c.checked = false; else if (g >= a && g <= z) c.checked = true; }); });
-    const before = new Set(p.teams || []);
-    $("#evpok", d).onclick = async () => { const name = f.pnaam.value.trim(); if (!name) { toast("Geef de evaluatie een naam."); f.pnaam.focus(); return; }
-      const q = collect(); if (q.err) { toast(q.err); return; }
-      const chosen = $$(".evpteams input", d).filter(c => c.checked).map(c => c.value);
-      const np = { id: p.id, name, teams: chosen, template: q.template, open: q.open, self: q.self };
-      const list = profs.filter(x => x.id !== p.id).map(x => ({ ...x, teams: (x.teams || []).filter(id => !chosen.includes(id)) })).concat([np]);
-      const changed = new Set([...before, ...chosen]);
-      if (await persist(list, changed, isNew ? "Evaluatie toegevoegd." : "Evaluatie bewaard.")) d.close(); };
-    const del = $("#evpdel", d); if (del) del.onclick = async () => { if (!confirm(`"${p.name}" verwijderen? De ploegen volgen dan weer de standaard van de club. Ingevulde evaluaties blijven bewaard.`)) return;
-      if (await persist(profs.filter(x => x.id !== p.id), new Set(p.teams || []), "Evaluatie verwijderd.")) d.close(); };
+/* ============ per leeftijd: wat de trainers van die leeftijd zien ============
+   De beheerder vinkt onderdelen en vragen af en kiest de zelfevaluatie. Zolang een leeftijd niet aangepast is, geldt het voorstel van de app. */
+const CSA = { k: null, ages: null };
+function csAgeTeams() { return [...(S.teams || [])].sort((a, b) => evAgeOf(a) - evAgeOf(b) || teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true })); }
+function csAges(host, st, getMaster) {
+  const teams = csAgeTeams(), keys = [...new Set(teams.map(evAgeKey))].sort((a, b) => +a - +b);
+  if (!CSA.ages) CSA.ages = JSON.parse(JSON.stringify((st.eval || {}).ages || {}));
+  if (window.EV_AGE_PICK && keys.includes(window.EV_AGE_PICK)) { CSA.k = window.EV_AGE_PICK; window.EV_AGE_PICK = null; }
+  if (!keys.includes(CSA.k)) CSA.k = keys[0] || null;
+  const cfgOf = k => CSA.ages[k] ? { off: [], offq: [], self: "uit", ...CSA.ages[k], custom: true } : { ...evAgeSuggest(+k), custom: false };
+  const SELF = [["uit", "Geen zelfevaluatie"], ["jong", "Kort, met smileys (samen met de ouders)"], ["oud", "Uitgebreid, met cijfers"], ["club", "Eigen vragen van de club"]];
+  const draw = () => {
+    if (!keys.length) { host.innerHTML = `<p class="hint">Nog geen ploegen. Maak eerst ploegen aan; daarna stel je hier per leeftijd de fiche in.</p>`; return; }
+    const M = getMaster(), groups = evGroupsRaw({ criteria: M.template }), all = groups.flatMap(g => g.items.map(i => i.name)), qs = M.open, k = CSA.k, c = cfgOf(k);
+    const off = new Set(c.off), offq = new Set(c.offq), qn = qs.filter(q => q.type !== "kop");
+    const field = groups.filter(g => !evKeeperGroup(g)).flatMap(g => g.items.map(i => i.name)), cnt = kk => { const x = cfgOf(kk), o = new Set(x.off); return field.filter(n => !o.has(n)).length; };
+    const secs = []; { let cur = null; for (const q of qs) { if (q.type === "kop") { cur = { kop: q.text, qs: [] }; secs.push(cur); continue; } if (!cur) { cur = { kop: "Algemeen", qs: [] }; secs.push(cur); } cur.qs.push(q); } }
+    host.innerHTML = `<div class="agtabs" role="tablist" aria-label="Leeftijd">${keys.map(kk => `<button type="button" role="tab" data-ag="${kk}" aria-selected="${kk === k}"><b>${esc(evAgeLbl(kk))}</b><small>${cnt(kk)} onderdelen</small>${CSA.ages[kk] ? "" : '<i title="Voorstel van de app">voorstel</i>'}</button>`).join("")}</div>
+      <div class="agcard">
+        <div class="aghead"><div><h3>${esc(evAgeLbl(k))}</h3><small>${teams.filter(t => evAgeKey(t) === k).map(t => esc(teamLbl(t))).join(" · ")}</small></div>
+          <div class="agtools"><select data-agcopy aria-label="Kopiëren van een andere leeftijd"><option value="">Kopiëren van…</option>${keys.filter(x => x !== k).map(x => `<option value="${x}">${esc(evAgeLbl(x))}</option>`).join("")}</select>
+          <button class="btn ghost small" type="button" data-agsug>Voorstel van de app</button><button class="btn ghost small" type="button" data-agall>Alles aan</button></div></div>
+        ${c.custom ? "" : `<p class="agnote">${IC.star}<span>Dit is het voorstel van de app voor deze leeftijd. Pas gerust aan; het wordt pas jullie keuze als je bewaart.</span></p>`}
+        <label class="agself"><span><b>Zelfevaluatie door de spelers</b><small>De trainer zet ze per moment open in Evaluaties.</small></span><select data-agself>${SELF.map(([v, l]) => `<option value="${v}"${c.self === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        <div class="agsec"><h4>Onderdelen <small>${all.filter(n => !off.has(n)).length} van ${all.length} aan</small></h4>
+        ${groups.map(g => { const on = g.items.filter(i => !off.has(i.name)).length;
+          return `<div class="aggrp${on ? "" : " none"}"><label class="aggh"><input type="checkbox" data-agg="${esc(g.name)}"${on === g.items.length ? " checked" : ""}${on && on < g.items.length ? ' data-mixed="1"' : ""}><b>${esc(g.name)}</b><small>${on}/${g.items.length}</small>${evKeeperGroup(g) ? '<em>enkel doelmannen</em>' : ""}</label>
+            <div class="agchips">${g.items.map(i => `<label class="agc"><input type="checkbox" data-agi="${esc(i.name)}"${off.has(i.name) ? "" : " checked"}><span>${esc(i.name)}</span></label>`).join("")}</div></div>`; }).join("")}</div>
+        <div class="agsec"><h4>Vragen <small>${qn.filter(q => !offq.has(q.id)).length} van ${qn.length} aan</small></h4>
+        ${secs.filter(x => x.qs.length).map(x => { const on = x.qs.filter(q => !offq.has(q.id)).length;
+          return `<details class="aggrp q${on ? "" : " none"}"><summary><b>${esc(x.kop)}</b><small>${on}/${x.qs.length}</small></summary><div class="agqs">${x.qs.map(q => `<label class="agq"><input type="checkbox" data-agq="${esc(q.id)}"${offq.has(q.id) ? "" : " checked"}><span>${esc(q.text)}${q.intern ? ' <span class="evint">intern</span>' : ""}</span></label>`).join("")}</div></details>`; }).join("")}</div>
+      </div>`;
+    $$("[data-mixed]", host).forEach(x => { x.indeterminate = true; });
+    const save = patch => { const cur = cfgOf(k); CSA.ages[k] = { off: cur.off, offq: cur.offq, self: cur.self, ...patch }; const open = $$("details[open] summary b", host).map(b => b.textContent); draw(); $$("details summary b", host).forEach(b => { if (open.includes(b.textContent)) b.closest("details").open = true; }); };
+    $$("[data-ag]", host).forEach(b => b.onclick = () => { CSA.k = b.dataset.ag; draw(); });
+    $("[data-agself]", host).onchange = e => save({ self: e.target.value });
+    $$("[data-agi]", host).forEach(x => x.onchange = () => { const o = new Set(cfgOf(k).off); if (x.checked) o.delete(x.dataset.agi); else o.add(x.dataset.agi); save({ off: [...o] }); });
+    $$("[data-agg]", host).forEach(x => x.onchange = () => { const g = groups.find(g => g.name === x.dataset.agg), o = new Set(cfgOf(k).off); g.items.forEach(i => x.checked ? o.delete(i.name) : o.add(i.name)); save({ off: [...o] }); });
+    $$("[data-agq]", host).forEach(x => x.onchange = () => { const o = new Set(cfgOf(k).offq); if (x.checked) o.delete(x.dataset.agq); else o.add(x.dataset.agq); save({ offq: [...o] }); });
+    $("[data-agall]", host).onclick = () => save({ off: [], offq: [] });
+    $("[data-agsug]", host).onclick = () => { const sg = evAgeSuggest(+k); save({ off: sg.off, offq: sg.offq, self: sg.self }); };
+    $("[data-agcopy]", host).onchange = e => { const from = e.target.value; if (!from) return; const x = cfgOf(from); save({ off: [...x.off], offq: [...x.offq], self: x.self }); toast(`Overgenomen van ${evAgeLbl(from)}.`); };
   };
-  $("#evpnew", host).onclick = () => edit(null);
-  $$("[data-pe]", host).forEach(b => b.onclick = () => edit(profs.find(p => p.id === b.dataset.pe)));
-}
-
-/* ============ fiche per ploeg: snel wisselen (Evaluaties en Beheer › Ploegen en trainers) ============ */
-const evProfSum = (p, st = CLUB.settings || {}) => { const ev = st.eval || {}, tpl = p ? p.template : (ev.template?.length ? ev.template : EV_TEMPLATE_DEFAULT), open = p ? p.open : ev.open, self = p ? p.self : ev.self;
-  const n = csCritNames(tpl || []).length, oq = evOpenList(open).filter(q => q.type !== "kop").length;
-  return [n + " onderdelen", oq ? oq + " open vragen" : "", self?.on ? "zelfevaluatie aan" : "zonder zelfevaluatie"].filter(Boolean).join(" · "); };
-function evFicheSelect(teamId, attr) {
-  const profs = evProfiles(), cur = evProfileOf(teamId);
-  return `<select ${attr} aria-label="Evaluatiefiche van deze ploeg"><option value=""${cur ? "" : " selected"}>Standaard van de club</option>${profs.map(p => `<option value="${esc(p.id)}"${cur?.id === p.id ? " selected" : ""}>${esc(p.name || "Zonder naam")}</option>`).join("")}</select>`;
-}
-async function evSetTeamProfile(teamId, profId) {
-  const st = CLUB.settings || {}, ev = { ...(st.eval || {}) };
-  const profs = evProfiles(st).map(p => ({ ...p, teams: (p.teams || []).filter(id => id !== teamId) })), pr = profId ? profs.find(p => p.id === profId) : null;
-  if (pr) pr.teams.push(teamId);
-  if (!(await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st, eval: { ...ev, profiles: profs } }, pr ? `Deze ploeg evalueert nu met "${pr.name}".` : "Deze ploeg evalueert nu met de standaard van de club."))) return false;
-  const t = (S.teams || []).find(x => x.id === teamId), criteria = (pr?.template?.length ? pr.template : ev.template?.length ? ev.template : EV_TEMPLATE_DEFAULT).slice();
-  if (t) { try { await db.save("teams", { ...t, criteria }); t.criteria = criteria; if (S.team?.id === teamId) S.team.criteria = criteria; } catch (e) { toast(e.message || String(e)); } }
-  if (typeof evApplyClub === "function") evApplyClub(); return true;
-}
-/* zelfevaluatie aan of uit voor de fiche van deze ploeg (geldt voor alle ploegen met dezelfde fiche) */
-async function evSetSelf(teamId, on) {
-  const st = CLUB.settings || {}, ev = { ...(st.eval || {}) }, profs = evProfiles(st).map(p => ({ ...p })), pr = profs.find(p => (p.teams || []).includes(teamId)) || null;
-  const cur = { ...((pr ? pr.self : ev.self) || {}) }, t = (S.teams || []).find(x => x.id === teamId);
-  cur.on = !!on; if (on && !(cur.questions || []).length) { const k = (t ? evAgeOf(t) : 99) <= 9 ? "jong" : "oud", ps = EV_SELF_PRESETS[k]; Object.assign(cur, { scale: ps.scale, intro: ps.intro, questions: ps.questions.map(q => ({ ...q })) }); }
-  if (pr) pr.self = cur; else ev.self = cur;
-  if (!(await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st, eval: { ...ev, profiles: profs } }, on ? "Zelfevaluatie staat aan." : "Zelfevaluatie staat uit."))) return false;
-  if (typeof evApplyClub === "function") evApplyClub(); return true;
-}
-
-/* ============ interne scouting: de tweede, interne fiche (beheerder) ============ */
-async function iscSave(patch, msg) { const st = CLUB.settings || {}, ev = { ...(st.eval || {}) }, cur = { ...(ev.isc || {}) };
-  const ok = await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st, eval: { ...ev, isc: { ...cur, ...patch } } }, msg); return ok; }
-async function iscSetTeam(teamId, on) { const c = iscCfg(), t = (S.teams || []).find(x => x.id === teamId) || { id: teamId };
-  const byAge = c.on !== false && evAgeOf(t) >= (+c.from || 0), on_teams = c.on_teams.filter(x => x !== teamId), off_teams = c.off_teams.filter(x => x !== teamId);
-  if (on && !byAge) on_teams.push(teamId); if (!on && byAge) off_teams.push(teamId);
-  return iscSave({ on_teams, off_teams }, on ? "Interne scouting staat aan voor deze ploeg." : "Interne scouting staat uit voor deze ploeg."); }
-function csIsc(host, st) {
-  const draw = () => { const c = iscCfg(CLUB.settings || st), teams = (S.teams || []).slice().sort((a, b) => evAgeOf(a) - evAgeOf(b) || teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true }));
-    const n = csCritNames(c.template).length, oq = c.open.filter(q => q.type !== "kop").length, on = teams.filter(t => iscOn(t, CLUB.settings || st));
-    host.innerHTML = `<h2>Interne scouting</h2><p class="hint" style="margin-top:0">Een tweede fiche naast de evaluatie: de trainer vult ze per moment apart in. Enkel voor de trainers en de club, nooit voor ouders of spelers. Hieruit komen het spelersprofiel en het zoeken in Interne scouting.</p>
-      <div class="iscbox"><label class="csmod"><span><b>Interne scouting gebruiken</b><small>${n} onderdelen · ${oq} vragen</small></span><span class="tgl"><input type="checkbox" id="iscon"${c.on !== false ? " checked" : ""}><span></span></span></label>
-        <label class="iscfrom"><span>Voor elke ploeg vanaf</span><select id="iscfrom">${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(a => `<option value="${a}"${+c.from === a ? " selected" : ""}>U${a}</option>`).join("")}</select></label>
-        <div class="iscbtns"><button class="btn small" type="button" id="iscedit">Onderdelen en vragen aanpassen</button></div></div>
-      <div class="iscteams">${teams.map(t => `<label class="iscteam${iscOn(t, CLUB.settings || st) ? " on" : ""}"><input type="checkbox" data-it="${t.id}"${iscOn(t, CLUB.settings || st) ? " checked" : ""}><span>${esc(teamLbl(t))}</span></label>`).join("")}</div>
-      <p class="hint" style="margin:6px 0 0">${on.length} van ${teams.length} ploegen. Vink een ploeg aan of uit om af te wijken van de leeftijd.</p>`;
-    $("#iscon", host).onchange = async e => { if (await iscSave({ on: e.target.checked }, e.target.checked ? "Interne scouting staat aan." : "Interne scouting staat uit.")) draw(); };
-    $("#iscfrom", host).onchange = async e => { if (await iscSave({ from: +e.target.value, on_teams: [], off_teams: [] }, "Bewaard.")) draw(); };
-    $$("[data-it]", host).forEach(x => x.onchange = async () => { if (await iscSetTeam(x.dataset.it, x.checked)) draw(); });
-    $("#iscedit", host).onclick = () => iscEdit(draw); };
   draw();
+  return { redraw: draw, value: () => JSON.parse(JSON.stringify(CSA.ages)), reset: () => { CSA.ages = null; } };
 }
-function iscEdit(after) {
-  const c = iscCfg();
-  const d = dialog(`<form class="evpdlg iscdlg" onsubmit="return false"><h2>Fiche van de interne scouting</h2><p class="hint" style="margin-top:0">De groepen zijn de hoeken van het spelersprofiel. Een groep die begint met <b>Keeper</b> geldt enkel voor doelmannen.</p>
-    ${csEvalEditorsHtml({ template: c.template, open: c.open, self: { on: false } }, true, true)}
-    <div class="row"><button class="btn ghost" type="button" id="iscreset">Fiche OG Vorselaar herstellen</button><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="iscok">Bewaren</button></div></form>`, "xl");
-  const f = $("form", d), collect = csEvalEditorsBind(f);
-  $("#iscreset", d).onclick = () => { if (!confirm("Alle onderdelen en vragen van de interne scouting terugzetten naar de fiche van OG Vorselaar?")) return;
-    $("#cscrit", f).innerHTML = EV_TEMPLATE_OGV.map(csCritRow).join(""); $("#csopen", f).innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); };
-  $("#iscok", d).onclick = async () => { const r = collect(); if (r.err) { toast(r.err); return; }
-    if (await iscSave({ template: r.template, open: r.open.map(q => ({ ...q, intern: true })) }, "Fiche van de interne scouting bewaard.")) { d.close(); after && after(); } };
+/* de onderdelen van elke ploeg ook op de ploeg zelf zetten (voor Interne scouting en oudere schermen) */
+async function evSyncTeams(st = CLUB.settings || {}) {
+  for (const t of S.teams || []) { const criteria = evTplFor(t, st).slice(); if (JSON.stringify(criteria) === JSON.stringify(t.criteria || [])) continue;
+    try { await db.save("teams", { ...t, criteria }); t.criteria = criteria; if (S.team?.id === t.id) S.team.criteria = criteria; } catch (e) {} }
 }

@@ -450,6 +450,7 @@ async function loadTeam(id) {
   try { localStorage.setItem(TEAM_KEY, id); } catch (e) {}
   const m = { team_id: id };
   [S.players, S.events, S.att, S.evals, S.goals, S.trainers] = await Promise.all(["players","events","attendance","evaluations","goals","team_trainers"].map(t => db.list(t, m)));
+  if (typeof evNorm === "function") S.evals = S.evals.map(evNorm);
   try { S.rsvp = await db.list("rsvp", m); } catch (e) { S.rsvp = []; } /* tabel bestaat pas vanaf databaseversie 5 */
   /* zelfevaluatie van spelers (databaseversie 38): ontbreekt de tabel nog, dan werkt de rest gewoon verder */
   try { [S.zelf, S.zelfOpen] = await Promise.all(["eval_zelf", "eval_zelf_open"].map(t => db.list(t, m))); S.zelfOk = true; } catch (e) { S.zelf = []; S.zelfOpen = []; S.zelfOk = false; }
