@@ -7,7 +7,11 @@ const csCritRow = raw => { const l = String(raw || "").trim(); if (!l) return ""
   if (l.startsWith("#")) return csRow("csg", 'data-t="g"', `<input name="n" maxlength="40" placeholder="Naam van de groep, bv. Techniek" value="${esc(l.replace(/^#+\s*/, ""))}" aria-label="Groep">`);
   const [n, h] = l.split(/\s+\|\s+/);
   return csRow("csi", 'data-t="i"', `<input name="n" maxlength="40" placeholder="Onderdeel, bv. Passing" value="${esc((n || "").trim())}" aria-label="Onderdeel"><input name="h" maxlength="120" placeholder="Uitleg voor de trainer (optioneel)" value="${esc((h || "").trim())}" aria-label="Uitleg">`); };
-const csOpenRow = q => csRow("cso", `data-id="${esc(q.id || evQid())}"`, `<input name="t" maxlength="160" placeholder="Vraag, bv. Wat is de volgende stap voor deze speler?" value="${esc(q.text || "")}" aria-label="Vraag">`);
+const csOpenRow = q => { const ty = ["tekst", "keuze", "schaal", "kop"].includes(q.type) ? q.type : "tekst";
+  return csRow("cso", `data-id="${esc(q.id || evQid())}" data-ty="${ty}"`, `<select name="ty" aria-label="Soort vraag">${[["tekst", "Open antwoord"], ["keuze", "Keuzelijst"], ["schaal", "Score 1 tot 5"], ["kop", "Tussentitel"]].map(([k, l]) => `<option value="${k}"${k === ty ? " selected" : ""}>${l}</option>`).join("")}</select>
+   <input name="t" maxlength="160" placeholder="Vraag, bv. Wat is de volgende stap voor deze speler?" value="${esc(q.text || "")}" aria-label="Vraag">
+   <input name="o" class="csopts" maxlength="600" placeholder="Keuzes, gescheiden door ; bv. Laag; Gemiddeld; Hoog" value="${esc((q.opts || []).join("; "))}" aria-label="Keuzes">
+   <label class="csint" title="Niet op het rapport voor de ouders"><input type="checkbox" name="i"${q.intern ? " checked" : ""}> intern</label>`); };
 const csLinkOpts = (crits, sel) => `<option value="">Niet vergelijken</option>` + crits.map(c => `<option${c === sel ? " selected" : ""}>${esc(c)}</option>`).join("");
 const csSelfRow = (q, crits) => csRow("csq", `data-id="${esc(q.id || evQid())}" data-ty="${q.type === "tekst" ? "tekst" : "schaal"}"`,
   `<select name="ty" aria-label="Soort vraag"><option value="schaal"${q.type === "tekst" ? "" : " selected"}>Schaal</option><option value="tekst"${q.type === "tekst" ? " selected" : ""}>Open antwoord</option></select>
@@ -17,12 +21,14 @@ const csCritNames = lines => lines.filter(l => !String(l).trim().startsWith("#")
 
 function csEvalEditorsHtml(ev, forProfile) {
   const tpl = Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT, crits = csCritNames(tpl);
-  const sf = ev.self || {}, qs = (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ), open = (Array.isArray(ev.open) ? ev.open : []).map(evCleanQ);
+  const sf = ev.self || {}, qs = (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).map(evSelfQ).filter(Boolean), open = evOpenList(ev.open);
   return `<h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Dit zijn de onderdelen waar de trainer een score voor geeft, in groepen. Voeg gerust eigen onderdelen toe, hernoem of verwijder ze. ${forProfile ? "Dit geldt voor de gekozen ploegen; hun trainers kunnen dit niet aanpassen." : "Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen."}</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="ogv">Fiche interne scouting (6 blokken + keeper)</button></div>
     <div id="cscrit" class="cslist">${tpl.map(csCritRow).join("")}</div>
     <div class="row" style="gap:16px;margin:4px 0 8px"><button class="link" type="button" id="csaddg">${IC.plus}Groep toevoegen</button><button class="link" type="button" id="csaddi">${IC.plus}Onderdeel toevoegen</button></div>
     <h2>Extra vragen voor de trainer</h2><p class="hint" style="margin-top:0">Open vragen die de trainer bij elke speler beantwoordt, naast de scores. Ze komen ook op het rapport voor het oudergesprek.</p>
+    <p class="hint">Kies per vraag de soort. Vink <b>intern</b> aan voor wat enkel voor de trainers en de club is (bv. potentieel of advies): dat komt niet op het rapport voor de ouders. De vragen <b>Potentieel</b> en <b>Advies</b> van de fiche van de interne scouting kan je ook in Interne scouting gebruiken om op te zoeken.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" id="csogvq">Vragen van de fiche interne scouting</button></div>
     <div id="csopen" class="cslist">${open.map(csOpenRow).join("")}</div><button class="link" type="button" id="csaddo" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button>
     <h2>Zelfevaluatie door de spelers</h2>
     <label class="csmod" style="max-width:640px"><span><b>Spelers evalueren zichzelf</b><small>Per moment zet de trainer dit open voor zijn ploeg. Spelers of ouders vullen de vragen in via hun persoonlijke link in de app. Zo zie je naast jouw score wat de speler zelf vindt.</small></span><span class="tgl"><input type="checkbox" name="selfon"${sf.on === true ? " checked" : ""}><span></span></span></label>
@@ -49,14 +55,16 @@ function csEvalEditorsBind(f) {
   /* de keuzelijst "vergelijken met" volgt de onderdelen zoals ze nu in de lijst staan */
   const refresh = () => $$("select[name=l]", sl).forEach(s => { const cur = s.value; s.innerHTML = csLinkOpts(names(), cur); s.value = names().includes(cur) ? cur : ""; });
   sl.addEventListener("focusin", e => { if (e.target.name === "l") refresh(); }); sl.addEventListener("mousedown", e => { if (e.target.name === "l") refresh(); });
-  sl.addEventListener("change", e => { if (e.target.name === "ty") e.target.closest(".csr").dataset.ty = e.target.value; });
+  [sl, open].forEach(h => h.addEventListener("change", e => { if (e.target.name === "ty") e.target.closest(".csr").dataset.ty = e.target.value; }));
+  $("#csogvq", f).onclick = () => { if ($$(".csr", open).length && !confirm("De open vragen worden vervangen door de vragen van de fiche van de interne scouting. Doorgaan?")) return; open.innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); };
   const add = (host, html, focus = "input") => { host.insertAdjacentHTML("beforeend", html); host.lastElementChild.querySelector(focus)?.focus(); };
   $("#csaddg", f).onclick = () => add(crit, csCritRow("# "));
   $("#csaddi", f).onclick = () => add(crit, csCritRow("x").replace('value="x"', 'value=""'));
   $("#csaddo", f).onclick = () => add(open, csOpenRow({}));
   $("#csaddq", f).onclick = () => add(sl, csSelfRow({ type: "schaal" }, names()));
   f.selfon.onchange = () => { self.hidden = !f.selfon.checked; };
-  $$("[data-tpl]", f).forEach(b => b.onclick = () => { crit.innerHTML = (b.dataset.tpl === "kort" ? EV_TEMPLATE_SHORT : EV_TEMPLATE_DEFAULT).map(csCritRow).join(""); refresh(); });
+  $$("[data-tpl]", f).forEach(b => b.onclick = () => { crit.innerHTML = (b.dataset.tpl === "kort" ? EV_TEMPLATE_SHORT : b.dataset.tpl === "ogv" ? EV_TEMPLATE_OGV : EV_TEMPLATE_DEFAULT).map(csCritRow).join("");
+    if (b.dataset.tpl === "ogv" && !$$(".csr", open).length) open.innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); refresh(); });
   $("#csclrq", f).onclick = () => { if ($$(".csr", sl).length && !confirm("Alle vragen van de zelfevaluatie worden gewist. Doorgaan?")) return; sl.innerHTML = ""; add(sl, csSelfRow({ type: "schaal" }, names())); };
   $$("[data-sp]", f).forEach(b => b.onclick = () => { const p = EV_SELF_PRESETS[b.dataset.sp];
     if ($$(".csr", sl).length && !confirm("De vragen van de zelfevaluatie worden vervangen door deze lijst. Doorgaan?")) return;
@@ -65,7 +73,8 @@ function csEvalEditorsBind(f) {
     const lines = csCritLines(crit), items = csCritNames(lines);
     if (!items.length) return { err: "Vul minstens één onderdeel in." };
     const dup = items.find((n, i) => items.indexOf(n) !== i); if (dup) return { err: `Het onderdeel "${dup}" staat twee keer in de lijst. Geef elk onderdeel een andere naam.` };
-    const oq = $$(".csr", open).map(r => ({ id: r.dataset.id, text: $("[name=t]", r).value.trim() })).filter(q => q.text).map(evCleanQ).map(q => ({ id: q.id, text: q.text }));
+    const oq = $$(".csr", open).map(r => ({ id: r.dataset.id, type: $("[name=ty]", r).value, text: $("[name=t]", r).value.trim(), opts: $("[name=o]", r).value, intern: $("[name=i]", r).checked })).filter(q => q.text).map(evCleanQ).map(q => { delete q.link; return q; });
+    const bad = oq.find(q => q.type === "tekst" && $$(".csr", open).some(r => r.dataset.id === q.id && $("[name=ty]", r).value === "keuze")); if (bad) return { err: `Geef bij "${bad.text}" minstens één keuze op, gescheiden door ;` };
     const sq = $$(".csr", sl).map(r => { const ty = $("[name=ty]", r).value, l = $("[name=l]", r).value; return { id: r.dataset.id, type: ty, text: $("[name=t]", r).value.trim(), ...(ty === "schaal" && items.includes(l) ? { link: l } : {}) }; }).filter(q => q.text).map(evCleanQ);
     const on = f.selfon.checked; if (on && !sq.length) return { err: "Zet minstens één vraag in de zelfevaluatie, of zet ze uit." };
     return { template: lines, open: oq, self: { on, scale: ["cijfers", "cijfers10"].includes(f.sscale.value) ? f.sscale.value : "smiley", intro: f.selfintro.value.trim().slice(0, 200), questions: sq } }; };

@@ -23,18 +23,23 @@ let dosTab = "overzicht";
 const SC_POT = ["Beperkt", "Gemiddeld", "Groot", "Zeer groot"];
 const scProf = p => p?.scout && typeof p.scout === "object" ? p.scout : {};
 function scProfForm(p) {
-  const sp = scProf(p), pos = Object.keys(SC_POS), opt = (cur, list) => `<option value=""></option>` + list.map(x => `<option${x === cur ? " selected" : ""}>${esc(x)}</option>`).join("");
+  const sp = scProf(p), ps = posOf(p), opt = (cur, list) => `<option value=""></option>` + list.map(x => `<option${x === cur ? " selected" : ""}>${esc(x)}</option>`).join("");
   const d = dialog(`<form><h2>Scoutingprofiel · ${esc(p.first_name)}</h2><p class="hint" style="margin:0">Dezelfde onderdelen als in de scoutingdatabase. Alleen zichtbaar voor de trainers van deze ploeg. Laat een score leeg als je het nog niet weet.</p><div class="fields">
-    <label class="f">Hoofdpositie<select name="p1">${opt(sp.p1 || "", pos)}</select></label><label class="f">Alternatieve positie<select name="p2">${opt(sp.p2 || "", pos)}</select></label>
-    <label class="f">Tweede alternatief<select name="p3">${opt(sp.p3 || "", pos)}</select></label><label class="f">Lengte (cm)<input name="len" type="number" min="80" max="220" value="${esc(sp.len || "")}"></label>
-    <label class="f">Potentieel<select name="pot">${opt(sp.pot || "", SC_POT)}</select></label>
+    <div class="f full"><span>Posities</span>${posPicker(ps)}</div>
+    <label class="f">Ontwikkelen naar positie<input name="ontw" maxlength="40" value="${esc(sp.ontw || "")}" placeholder="bv. 6 of 8"></label><label class="f">Lengte (cm)<input name="len" type="number" min="80" max="220" value="${esc(sp.len || "")}"></label>
+    <label class="f">Potentieel<select name="pot">${opt(sp.pot || "", SC_POT.includes(sp.pot) ? SC_POT : EV_POT)}</select></label>
+    <label class="f">Speelt op leeftijd<select name="opl">${opt(sp.opl || "", ["Ja", "Nee - gedispenseerd", "Nee - doorgeschoven"])}</select></label>
     ${SC_COMP.map((c, i) => `<label class="f">${esc(c)} (1 tot 10)<input name="k${i}" type="number" min="1" max="10" step="0.5" value="${scNum(sp["k" + i]) ? sp["k" + i] : ""}"></label>`).join("")}
     <label class="f full">Sterktes en spelbeschrijving<textarea name="sterk" rows="3" maxlength="1500">${esc(sp.sterk || "")}</textarea></label>
     <label class="f full">Werkpunten<textarea name="werk" rows="3" maxlength="1500">${esc(sp.werk || "")}</textarea></label>
     <label class="f full">Extra info over de speler<textarea name="ctx" rows="3" maxlength="1500" placeholder="Bv. matuur, speelt graag op links, familie, wat hem motiveert…">${esc(sp.ctx || "")}</textarea></label></div>
     <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
-  $("form", d).onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), o = {};
-    for (const k of ["p1", "p2", "p3", "pot"]) if (f[k]) o[k] = f[k];
+  posBind(d, ps);
+  $("form", d).onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), o = { ...sp };
+    ["p1", "p2", "p3", "pot", "h", "n", "ontw", "opl", "len", "sterk", "werk", "ctx", ...SC_COMP.map((c, i) => "k" + i)].forEach(k => delete o[k]);
+    if (ps.h) o.h = ps.h; if (ps.n.length) o.n = ps.n;
+    [...new Set([ps.h, ...ps.n].filter(Boolean).map(posScName))].slice(0, 3).forEach((nm, i) => o["p" + (i + 1)] = nm);
+    for (const k of ["pot", "opl"]) if (f[k]) o[k] = f[k]; if (f.ontw.trim()) o.ontw = f.ontw.trim();
     if (f.len) o.len = Math.max(80, Math.min(220, +f.len)); SC_COMP.forEach((c, i) => { const n = parseFloat(f["k" + i]); if (!isNaN(n)) o["k" + i] = Math.max(1, Math.min(10, n)); });
     for (const k of ["sterk", "werk", "ctx"]) if (f[k].trim()) o[k] = f[k].trim();
     o.upd = new Date().toISOString().slice(0, 10); o.by = typeof tpOf === "function" ? (tpOf(user?.id)?.name || tNice(user?.email)) : "";
@@ -81,9 +86,10 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   /* tags */
   const work = dosCount(A.flatMap(a => a.tags || [])), str = dosCount(A.flatMap(a => (a.strengths || []).filter(t => t !== "Kapitein")));
   /* evaluaties */
-  const ev = S.evals.filter(x => x.player_id === p.id).sort((a, b) => a.moment - b.moment), groups = evGroups(), names = evItems();
+  const ev = S.evals.filter(x => x.player_id === p.id).sort((a, b) => a.moment - b.moment), groups = evGroups(S.team, p), names = evItems(S.team, p);
   const evMs = EV_MOMENTS.filter(m => ev.some(e => e.moment === m.m && Object.keys(e.scores || {}).length));
   const evTexts = ev.flatMap(e => { const D = e.details || {}, mo = EV_MOMENTS[e.moment - 1]; return [["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen", D.goals], ["Niveau", D.level], ["Positie", D.position], ["Boodschap voor de ouders", D.parents]]
+    .concat(EV_OPEN.filter(q => q.type !== "kop").map(q => [q.text, D.open?.[q.id] != null && D.open[q.id] !== "" ? String(D.open[q.id]) + (q.type === "schaal" ? " op 5" : "") : ""]))
     .filter(x => x[1]).map(([k, t]) => ({ mo, k, t, by: (D.by_all || (D.by ? [D.by] : [])).join(", ") })); });
   const notes = rows.filter(x => x.a.note || x.a.rating != null).slice().reverse();
   const gs = S.goals.filter(g => g.player_id === p.id);
@@ -138,13 +144,13 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   /* startblad: positie, leeftijd, potentieel en wat de trainers verder over de speler weten */
   const sp = scProf(p), has = [sp.p1, sp.p2, sp.p3, sp.pot, sp.sterk, sp.werk, sp.ctx, sp.len].some(Boolean) || scAvg(sp) != null;
   const fichePos = Object.keys(SC_POS).find(k => String(p.position || "").toLowerCase().includes(k.toLowerCase()));
-  const spPos = [sp.p1, sp.p2, sp.p3].filter(Boolean), pitchPos = spPos.length ? spPos : fichePos ? [fichePos] : [], spAvg = scAvg(sp);
+  const spPos = [sp.p1, sp.p2, sp.p3].filter(Boolean), pitchPos = spPos.length ? spPos : fichePos ? [fichePos] : [], spAvg = scAvg(sp), ps11 = posOf(p);
   const big = (k, val, sub) => `<div class="spk"><small>${k}</small><b>${val ? esc(val) : "–"}</b>${sub ? `<span>${esc(sub)}</span>` : ""}</div>`;
   const note = (cls, t, txt) => txt ? `<div class="spn ${cls}"><h3>${t}</h3><p>${esc(txt)}</p></div>` : "";
   const startblad = `<div class="sec panel startblad" data-t="overzicht"><div class="row" style="margin-bottom:14px"><h2 style="margin:0;margin-right:auto">Scoutingprofiel</h2><button class="btn small noprint${has ? " ghost" : ""}" type="button" id="spEdit">${has ? "Profiel aanpassen" : "Profiel invullen"}</button></div>
-    <div class="spgrid"><div class="pitchpick sm" role="img" aria-label="Positie op het veld: ${esc(pitchPos.join(", ") || "nog niet ingevuld")}">${Object.entries(SC_POS).map(([n, [ab, x, y]]) => { const i = pitchPos.indexOf(n); return `<span class="pp ${i >= 0 ? "s" + (i + 1) : ""}" style="left:${x}%;top:${y}%" title="${esc(n)}">${ab}</span>`; }).join("")}</div>
+    <div class="spgrid"><div class="pos11 ro sm" role="img" aria-label="Posities: ${esc(posTxt(ps11) || "nog niet ingevuld")}">${POS11.map(([n, ab, nm, x, y]) => `<span class="pp11 ${ps11.h === n ? "h" : ps11.n.includes(n) ? "n" : ""}" style="left:${x}%;top:${y}%" title="${n} · ${esc(nm)}"><b>${n}</b><small>${ab}</small></span>`).join("")}</div>
      <div class="spmain">
-      <div class="spks">${big("Hoofdpositie", sp.p1 || fichePos || String(p.position || "").replace(/^\d+\s*·\s*/, ""), spPos.length > 1 ? "ook " + spPos.slice(1).join(", ").toLowerCase() : "")}${big("Leeftijd", age != null ? age + " jaar" : "", p.foot ? p.foot + "voetig" : "")}${big("Potentieel", sp.pot, sp.len ? sp.len + " cm" : "")}${big("Algemeen", spAvg != null ? f1(spAvg) : "", spAvg != null ? "op 10" : "")}</div>
+      <div class="spks">${big("Hoofdpositie", ps11.h ? ps11.h + " · " + posName(ps11.h) : sp.p1 || fichePos || String(p.position || "").replace(/^\d+\s*·\s*/, ""), ps11.n.length ? "ook " + ps11.n.join(", ") + (sp.ontw ? " · ontwikkelen naar " + sp.ontw : "") : sp.ontw ? "ontwikkelen naar " + sp.ontw : "")}${big("Leeftijd", age != null ? age + " jaar" : "", p.foot ? p.foot + "voetig" : "")}${big("Potentieel", sp.pot, sp.len ? sp.len + " cm" : "")}${big("Algemeen", spAvg != null ? f1(spAvg) : "", spAvg != null ? "op 10" : "")}</div>
       ${SC_COMP.some((c, i) => scNum(sp["k" + i])) ? `<div class="spbars">${SC_COMP.map((c, i) => { const val = sp["k" + i]; return `<div class="mbar"><span>${SC_SH[i]}</span><span class="b"><i style="width:${scNum(val) ? val * 10 : 0}%;background:${scNum(val) ? scCol(val) : "transparent"}"></i></span><b style="color:var(--ink);text-align:right">${scNum(val) ? f1(val) : "–"}</b></div>`; }).join("")}</div>` : ""}</div></div>
     ${sp.sterk || sp.werk || sp.ctx ? `<div class="spnotes">${note("good", "Sterktes", sp.sterk)}${note("work", "Werkpunten", sp.werk)}${note("", "Extra info", sp.ctx)}</div>` : ""}
     <p class="hint" style="margin:14px 0 0">${has ? `Enkel zichtbaar voor de trainers van deze ploeg${sp.upd ? " · bijgewerkt op " + esc(dShort(sp.upd)) : ""}${sp.by ? " door " + esc(sp.by) : ""}.` : "Nog niet ingevuld. Noteer positie, potentieel, sterktes en wat je verder over de speler weet."}</p></div>`;
@@ -163,6 +169,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
 
   <div class="dtabs noprint" role="tablist" aria-label="Onderdelen van het dossier">${DOS_TABS.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === dosTab}">${l}</button>`).join("")}</div>
   ${startblad}
+  <div class="sec panel" data-t="overzicht" id="dosPf"></div>
   <details class="sec dmore" data-t="overzicht"><summary>Meer statistieken: groepjes, werkpunten en cijfers</summary><div class="grid2 sec">
     <div class="panel"><h2>Per groepje en per trainer</h2>
       ${bySquad.some(([k]) => k !== "Zonder groepje") ? `<div class="dosrow">${bySquad.map(([k, c]) => `<span class="pill g">${esc(k)}: ${c}×</span>`).join(" ")}</div>` : rows.length ? "" : `<p class="hint">Nog geen wedstrijden.</p>`}
@@ -175,6 +182,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
 
   ${dosChart(rows) ? `<div class="sec panel"><h2>Verloop wedstrijdcijfer</h2>${dosChart(rows)}<p class="hint" style="margin:6px 0 0">Eén punt per speeldag. Ga met de muis over een punt voor de tegenstander en wie quoteerde.</p></div>` : ""}</details>
 
+  <div class="sec panel" data-t="evaluaties" id="dosPf2"></div>
   <div class="sec panel" data-t="evaluaties"><h2>Evaluaties</h2>
     ${evMs.length ? `<div class="tblwrap"><table class="dostbl"><thead><tr><th>Onderdeel</th>${evMs.map(m => `<th>${esc(m.kort)}</th>`).join("")}</tr></thead><tbody>
       ${groups.map(g => `<tr class="g"><td>${esc(g.name)}</td>${evMs.map(m => `<td>${f1(evAvgOf(ev.find(e => e.moment === m.m), g.items.map(i => i.name)))}</td>`).join("")}</tr>
@@ -193,6 +201,10 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   ${matchPane}
   ${persoonlijkPane}${typeof absPanel === "function" ? absPanel(p).replace('class="panel sec absp"', 'class="panel sec absp" data-t="persoonlijk"') : ""}${groeiPane(p)}${trainingPane}${scoutPane}
   </div>`;
+  const gm = pfGroupMap([S.team.criteria || []]), lst = q => pfList(q, S.evals, S.team.season);
+  const pfCtx = { p, list: lst(p), gm, teamAvg: e => e.key && e.key[0] === "c" ? pfAvgScores(S.evals.filter(x => x.moment === e.moment && ps.some(q => q.id === x.player_id))) : null,
+    others: ps.filter(q => q.id !== p.id).map(q => ({ id: q.id, name: pname(q), list: lst(q) })) };
+  pfMount($("#dosPf", v), pfCtx); pfMount($("#dosPf2", v), pfCtx);
   $("#dosG").onclick = () => goalForm(p);
   $$(".dtabs [data-tab]", v).forEach(b => b.onclick = () => { dosTab = b.dataset.tab; $(".dos", v).dataset.tab = dosTab; $$(".dtabs [data-tab]", v).forEach(x => x.setAttribute("aria-selected", x === b)); });
   if ($("#dosEdit")) $("#dosEdit").onclick = () => playerForm(p);
