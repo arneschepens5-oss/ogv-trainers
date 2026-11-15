@@ -845,6 +845,6 @@ async function csPage(v, id, ctx) {
       <div class="codebox"><b translate="no">${esc(code)}</b><button class="btn ghost small" type="button" id="cscp">${IC.copy}Uitnodiging kopiëren</button><a class="btn small" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}">${IC.wa}Via WhatsApp</a></div>
       ${foot(first ? "Klaar" : ctx.platform ? "Klaar" : "Bewaren")}</form>`;
     $("#cscp").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Uitnodiging gekopieerd."));
-    $("#cst").onsubmit = async e => { e.preventDefault(); if (ctx.platform) { location.hash = ctx.done; return; } if (await csSave({ setup_done: true }, first ? "Je club staat klaar." : "Bewaard.")) { shell(); if (first) location.hash = "#/start"; else render(); } };
+    $("#cst").onsubmit = async e => { e.preventDefault(); if (ctx.platform) { location.hash = ctx.done; return; } if (await csSave({ setup_done: true }, first ? "Je club staat klaar." : "Bewaard.")) { shell(); location.hash = "#/start"; } };
   }
 }
