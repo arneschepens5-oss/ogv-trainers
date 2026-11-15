@@ -40,7 +40,7 @@ function notifyChange(before, after) {
 
 /* ============ convocatie per wedstrijd ============ */
 function convoTab(tv, e) {
-  if (!V14()) { tv.innerHTML = needV14("De convocatie"); return; }
+  if (!V14()) { tv.innerHTML = needV14("Ouders verwittigen"); return; }
   /* met groepjes (bv. PU9 A en B): enkel de spelers die niet in een ander groepje van die dag zitten */
   const sib = siblings(e), ps = active().filter(p => !sib.some(x => isIn(attOf(x.id, p.id)))), C = e.convo || {}, home = e.home !== false;
   const sel = new Set(C.players || ps.filter(p => sib.length ? isIn(attOf(e.id, p.id)) : rsvpOf(e.id, p.id)?.status !== "nee" && !(typeof absOf === "function" && absOf(p.id, e.date))).map(p => p.id));
@@ -54,10 +54,10 @@ function convoTab(tv, e) {
         <label class="f full">Meebrengen<input id="cvb" value="${esc(v.bring)}"></label>
         <label class="f full">Extra info voor de ouders<textarea id="cvn" placeholder="bv. we rijden samen vanaf de kerk, carpool via de groep">${esc(v.note)}</textarea></label></div></div>
       <div class="panel"><div class="row"><h2 style="margin:0;margin-right:auto">Geselecteerd (${sel.size})</h2><button class="link" type="button" id="cvall">Iedereen</button></div>
-        <p class="hint">Tik om iemand (niet) te selecteren. ${C.sent ? "Ouders zien de convocatie via hun persoonlijke link." : "Nog niet verstuurd."}</p>
+        <p class="hint">Tik om iemand (niet) te selecteren. ${C.sent ? "De ouders zien wie geselecteerd is en wanneer ze er moeten zijn, via hun persoonlijke link." : "Nog niet naar de ouders gestuurd. Dit is optioneel: gebruik het als je de ouders via de app wil verwittigen."}</p>
         <div class="field">${ps.map(p => { const r = rs(p); return `<button type="button" data-cv="${p.id}" aria-pressed="${sel.has(p.id)}"><span class="n">${p.number ?? ""}</span>${esc(p.first_name)}${r ? `<em class="rs ${r}">${r === "ja" ? "komt" : "komt niet"}</em>` : ""}</button>`; }).join("") || '<span class="muted">Nog geen spelers.</span>'}</div>
         ${C.sent ? `<div class="rsvpbar" style="margin-top:12px"><b>Bevestigd:</b> <span class="rsvp ja">${ja} komen</span> <span class="rsvp nee">${nee} komen niet</span> <span class="rsvp none">${sel.size - ja - nee} nog geen antwoord</span></div>` : ""}</div></div>
-      <div class="row sec" style="gap:10px"><button class="btn" type="button" id="cvsave">${IC.check}${C.sent ? "Convocatie bijwerken" : "Convocatie versturen"}</button><button class="btn ghost" type="button" id="cvwa">${IC.wa}Bericht voor WhatsApp</button>
+      <div class="row sec" style="gap:10px"><button class="btn" type="button" id="cvsave">${IC.check}${C.sent ? "Ouders opnieuw verwittigen" : "Naar de ouders sturen"}</button><button class="btn ghost" type="button" id="cvwa">${IC.wa}Bericht voor WhatsApp</button>
         ${C.sent ? `<span class="hint">Verstuurd op ${new Date(C.sent).toLocaleString("nl-BE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>` : ""}</div>`;
     const keep = () => { v.meet = $("#cvm", tv).value; v.place = $("#cvp", tv).value; v.bring = $("#cvb", tv).value; v.note = $("#cvn", tv).value; };
     $$("[data-cv]", tv).forEach(b => b.onclick = () => { keep(); sel.has(b.dataset.cv) ? sel.delete(b.dataset.cv) : sel.add(b.dataset.cv); paint(); });
@@ -68,9 +68,9 @@ function convoTab(tv, e) {
         + `\n✅ Geselecteerd: ${names || "–"}${off.length ? "\n(Niet geselecteerd deze keer: " + off.map(p => p.first_name).join(", ") + ")" : ""}\n`
         + `${v.bring ? "\n🎒 Meebrengen: " + v.bring : ""}${v.note ? "\n\n" + v.note : ""}\n\nBevestig via je persoonlijke link of je kind erbij is. Bedankt en komoan OG! 💛🖤`; };
     $("#cvsave", tv).onclick = async () => { keep(); const conv = { players: [...sel], meet: v.meet || null, place: v.place || null, bring: v.bring || null, note: v.note || null, sent: new Date().toISOString() };
-      const ok = await safe(async () => { e.convo = conv; await putEvent(e); return true; }, "Convocatie verstuurd. Ouders zien ze via hun link.");
-      if (ok) { Object.assign(C, conv); paint(); shareDialog("Ook in de WhatsApp-groep zetten?", text(), "Ouders zien de convocatie al via hun persoonlijke link. Met dit bericht verwittig je ook de WhatsApp-groep."); } };
-    $("#cvwa", tv).onclick = () => shareDialog("Convocatie delen", text());
+      const ok = await safe(async () => { e.convo = conv; await putEvent(e); return true; }, "Verstuurd. De ouders zien het via hun link.");
+      if (ok) { Object.assign(C, conv); paint(); shareDialog("Ook in de WhatsApp-groep zetten?", text(), "De ouders zien het al via hun persoonlijke link. Met dit bericht verwittig je ook de WhatsApp-groep."); } };
+    $("#cvwa", tv).onclick = () => shareDialog("Delen met de ouders", text());
   };
   paint();
 }

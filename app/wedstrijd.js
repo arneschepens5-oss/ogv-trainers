@@ -68,7 +68,7 @@ route("activiteit", { title: "Activiteit", auth: true, team: true, keepScroll: t
   const e = S.events.find(x => x.id === id);
   if (!e) { v.innerHTML = `<div class="empty"><b>Activiteit niet gevonden</b>Ze hoort misschien bij een andere ploeg.<br><a class="btn" href="#/kalender">Naar de kalender</a></div>`; return; }
   e.report = e.report || {};
-  return e.type === "wedstrijd" ? viewMatch(v, e, sub || (e.date >= todayIso() && !e.cancelled ? "convocatie" : "verslag")) : viewTraining(v, e, sub || "aanwezig");
+  return e.type === "wedstrijd" ? viewMatch(v, e, sub || (e.date >= todayIso() && !e.cancelled ? "aanwezig" : "verslag")) : viewTraining(v, e, sub || "aanwezig");
 } });
 function tabsHtml(base, tabs, curT) { return `<div class="ptabs noprint" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === curT}" data-tab="${base}/${k}">${l}</button>`).join("")}</div>`; }
 function bindTabs(v) { $$("[data-tab]", v).forEach(b => b.onclick = () => { history.replaceState(null, "", "#/activiteit/" + b.dataset.tab); render(); }); }
@@ -167,10 +167,11 @@ function viewMatch(v, e, tab) {
   v.innerHTML = backLink("#/kalender", "Kalender") + head(matchTitle(e, S.team.name),
     `${cap(dLong(e.date))}${e.start_time ? ", " + tm(e.start_time) : ""}${e.location ? " · " + esc(e.location) + (e.field_part && fieldOf(e.location) ? " (" + esc(partLong(e.field_part, fieldOf(e.location))) + ")" : "") : ""}${r ? ` · <span class="pill ${r}">${RES_L[r]}</span>` : ""}`,
     `<span class="hint" id="saved"></span><a class="btn noprint" href="#/live/${e.id}">${IC.mic}Live coachen</a><button class="btn ghost small noprint" type="button" id="editEv">Bewerken</button><button class="btn ghost small noprint" type="button" onclick="print()">${IC.print}Afdrukken</button>`) +
-    matchLinks(e) + (e.cancelled ? `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Afgelast.</b> Ouders zien deze wedstrijd als afgelast. Via Bewerken zet je ze terug aan.</div></div>` : "") + tabsHtml(e.id, [...(e.date >= todayIso() ? [["convocatie", "Convocatie"]] : []), ["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"], ...(e.date < todayIso() ? [["convocatie", "Convocatie"]] : [])], tab || (e.date >= todayIso() ? "convocatie" : "verslag")) + `<div id="tabv"></div>`;
+    matchLinks(e) + (e.cancelled ? `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Afgelast.</b> Ouders zien deze wedstrijd als afgelast. Via Bewerken zet je ze terug aan.</div></div>` : "") + tabsHtml(e.id, e.date >= todayIso() ? [["aanwezig", "Selectie"], ["opstelling", "Opstelling per kwart"], ["convocatie", "Ouders verwittigen"], ["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"]]
+      : [["verslag", "Verslag"], ["spelers", "Spelers beoordelen"], ["momenten", "Hoofdmomenten"], ["opstelling", "Opstelling per kwart"], ["aanwezig", "Selectie"], ["convocatie", "Ouders verwittigen"]], tab || (e.date >= todayIso() ? "aanwezig" : "verslag")) + `<div id="tabv"></div>`;
   $("#editEv").onclick = () => eventForm(e); bindTabs(v);
   const tv = $("#tabv");
-  ({ convocatie: convoTab, verslag: reportTab, spelers: playersTab, momenten: momentsTab, opstelling: lineupTab, aanwezig: attendanceView }[tab || (e.date >= todayIso() ? "convocatie" : "verslag")] || reportTab)(tv, e);
+  ({ convocatie: convoTab, verslag: reportTab, spelers: playersTab, momenten: momentsTab, opstelling: lineupTab, aanwezig: attendanceView }[tab || (e.date >= todayIso() ? "aanwezig" : "verslag")] || reportTab)(tv, e);
 }
 function reportTab(tv, e) {
   const R = e.report, sv = saver(e), ps = S.players;
