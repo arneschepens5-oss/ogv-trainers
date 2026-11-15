@@ -139,7 +139,7 @@ dialog h3{margin:0;font-family:var(--display);font-size:26px;font-weight:400}
 }
 html.in-platform a[href="../"]{display:none!important}
 </style>
-<script src="../app/embed.js?v=1"></script>
+<script src="../app/embed.js?v=2"></script>
 </head>
 <body>
 <nav class="topbar">
@@ -350,7 +350,7 @@ load();
   if(t.match){t.match.sel=(t.match.sel||[]).filter(id=>t.squad.some(p=>p.id===id));if(!t.match.sel.length)t.match.sel=imp.sel&&imp.sel.length?imp.sel.filter(id=>t.squad.some(p=>p.id===id)):t.squad.map(p=>p.id);
     if(imp.opp&&!t.match.opp)t.match.opp=imp.opp;if(imp.date)t.match.date=imp.date;if(imp.kick)t.match.kick=imp.kick;if(imp.home)t.match.home=imp.home;}
   S.cur=tid;delete S.fresh;save();}catch(e){console.warn(e)}})();
-if(window.self!==window.top){document.documentElement.classList.add('in-platform');const h=document.querySelector('.panel h1');if(h)h.textContent='Wedstrijdblad';}
+if(window.self!==window.top){document.documentElement.classList.add('in-platform');const h=document.querySelector('.panel h1');if(h)h.innerHTML='<span>WEDSTRIJD</span> blad';}
 const T=()=>S.teams[S.cur];
 const M=()=>T().match;
 const P=id=>T().squad.find(p=>p.id===id);
