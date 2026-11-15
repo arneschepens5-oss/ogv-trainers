@@ -443,7 +443,12 @@ const playerUrl = p => location.origin + location.pathname.replace(/index\.html$
 async function parentLinks() {
   const ps = active(); if (!ps.length) { toast("Voeg eerst spelers toe."); return; }
   if (mode === "demo") for (const p of ps) { await ensureToken(p); if (!p.player_token) { p.player_token = uid(); await db.save("players", p); } }
-  if (ps.some(p => !p.parent_token)) { toast("Voer eerst het databasescript ogv-database.sql uit in Supabase."); return; }
+  /* nieuw toegevoegde spelers: de database maakt hun link zelf aan, haal die even op */
+  if (mode !== "demo" && ps.some(p => !p.parent_token || !p.player_token)) await safe(async () => {
+    const { data, error } = await sb.from("players").select("id,parent_token,player_token").in("id", ps.map(p => p.id)); if (error) throw error;
+    for (const r of data || []) { const p = ps.find(x => x.id === r.id); if (p) { p.parent_token = r.parent_token || p.parent_token; p.player_token = r.player_token || p.player_token; } } });
+  for (const p of ps) if (!p.parent_token) await safe(() => ensureToken(p)); /* vangnet: bv. speler nog niet verstuurd (offline) */
+  if (ps.some(p => !p.parent_token)) { toast("Niet alle links konden gemaakt worden. Controleer je verbinding en probeer opnieuw."); return; }
   const kidOK = ps.every(p => p.player_token);
   const msgO = p => `Dag ouders van ${p.first_name}! 👋\nVia de app ${clubShort()} Ouders zien jullie de trainingen, wedstrijden en convocaties van ${S.team.name}, laten jullie weten of ${p.first_name} komt en vullen jullie je contactgegevens in.\n\nOpen deze link één keer en zet de app op je beginscherm: ${parentUrl(p)}\n\nHeb je nog een kind bij de club? Open ook die link: het komt er gewoon bij. Deze link is persoonlijk, stuur hem niet door.`;
   const msgS = p => `Hey ${p.first_name}! ⚽\nMet deze link zie je al je trainingen en wedstrijden van ${S.team.name}, of je geselecteerd bent en hoe je seizoen loopt. Je kan ook zelf zeggen of je komt.\n\nOpen hem op je gsm en zet hem op je beginscherm: ${playerUrl(p)}\n\nDeze link is alleen voor jou: stuur hem niet door.`;
