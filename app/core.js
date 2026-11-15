@@ -29,7 +29,13 @@ const rgbHex = a => "#" + a.map(v => Math.round(Math.max(0, Math.min(255, v))).t
 const mixRgb = (a, b, t) => a.map((v, i) => v * (1 - t) + b[i] * t);
 const lumRgb = a => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(a[0]) + .7152 * f(a[1]) + .0722 * f(a[2]); };
 const CLUB_VARS = ["--yellow", "--yellow2", "--onY", "--ytext", "--ybg", "--bg", "--sidebg", "--card", "--card2", "--card3", "--navact", "--line", "--input"];
-function applyClubTheme() {
+/* app op het beginscherm: bij OG Vorselaar het clublogo en de naam OGV Trainers in plaats van het algemene icoon */
+function setAppIcon() { if (ADMIN_APP) return; const ogv = isOGV() && (CLUB_KNOWN || mode === "demo" || !!user || !CLUB.id || CLUB.id === OGV_ID), q = x => document.querySelector(x);
+  const set = (sel, attr, v) => { const el = q(sel); if (el && el.getAttribute(attr) !== v) el.setAttribute(attr, v); };
+  set('link[rel="manifest"]', "href", ogv ? "manifest-ogv.webmanifest" : "manifest.webmanifest");
+  set('link[rel="apple-touch-icon"]', "href", ogv ? "icons/ogv-apple-touch-icon.png" : "icons/apple-touch-icon.png");
+  set('meta[name="apple-mobile-web-app-title"]', "content", ogv ? "OGV Trainers" : "FootballCoachHub"); }
+function applyClubTheme() { setAppIcon();
   if (typeof evApplyClub === "function") evApplyClub();
   /* nog geen club bekend op dit toestel (aanmelden): de huisstijl van het platform */
   const product = ADMIN_APP || (!CLUB_KNOWN && !user && mode !== "demo");
