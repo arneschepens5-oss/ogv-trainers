@@ -281,7 +281,11 @@ function brandClub() { const c = clubOf(); if (!c) return;
     const [r, g, b] = [1, 3, 5].map(i => parseInt(c.color.slice(i, i + 2), 16) / 255), L = 0.2126 * r + 0.7152 * g + 0.0722 * b; document.documentElement.style.setProperty("--onY", L > .5 ? "#111" : "#fff"); } }
 function header() {
   const ok = okKids();
-  $("#h").innerHTML = ok.length === 1 ? (isKid(ok[0].tok) ? `Hey ${esc(ok[0].name)}<span>!</span>` : `Komt ${esc(ok[0].name)}<span>?</span>`) : `${esc(cshort() || "Voor")} <span>${cshort() ? "Ouders" : "ouders"}</span>`;
+  /* titel volgt het tabblad: enkel in de agenda de vraag of je kind komt */
+  const nm = ok.length === 1 ? esc(ok[0].name) : "", kid = ok.length === 1 && isKid(ok[0].tok);
+  const T = { seizoen: nm ? (kid ? `Jouw <span>seizoen</span>` : `Seizoen van <span>${nm}</span>`) : `Het <span>seizoen</span>`,
+    berichten: parentKids().length ? `<span>Berichten</span>` : `<span>Nieuws</span>`, gegevens: nm ? `Gegevens van <span>${nm}</span>` : `Jullie <span>gegevens</span>` };
+  $("#h").innerHTML = T[view] || (ok.length === 1 ? (kid ? `Hey ${nm}<span>!</span>` : `Komt ${nm}<span>?</span>`) : `${esc(cshort() || "Voor")} <span>${cshort() ? "Ouders" : "ouders"}</span>`);
   $(".brand span").textContent = `${clubOf() ? cname() + " · " : ""}${ok.length && ok.every(k => isKid(k.tok)) ? "voor spelers" : "voor ouders"}`;
   $("[data-v=gegevens]").hidden = !parentKids().length; if (view === "gegevens" && !parentKids().length) view = "agenda";
   $("[data-v=berichten] .lb").textContent = parentKids().length ? "Berichten" : "Nieuws";
