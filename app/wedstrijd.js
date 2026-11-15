@@ -245,12 +245,16 @@ async function syncGoalStats(e) {
     if (!a && !g && !as) continue; const row = { ...(a || { event_id: e.id, player_id: p.id, team_id: S.team.id, status: "aanwezig", tags: [], strengths: [], scores: {} }) };
     if ((row.goals || 0) !== g || (row.assists || 0) !== as) { row.goals = g || null; row.assists = as || null; await safe(() => putAtt(row)); } }
 }
+/* korte uitleg onder de naam: de notitie, anders de sterke punten en werkpunten */
+function pvHtml(a) { if (a.note) return esc(a.note);
+  const st = (a.strengths || []).filter(t => t !== "Kapitein"), wp = a.tags || [];
+  return [st.length ? `<span class="pvs">+</span> ${esc(st.join(", "))}` : "", wp.length ? `<span class="pvw">−</span> ${esc(wp.join(", "))}` : ""].filter(Boolean).join("<br>"); }
 function playersTab(tv, e) {
   const ps = selPlayers(e);
   const absent = active().filter(p => !ps.includes(p));
   const card = p => { const a = attOf(e.id, p.id) || {};
     return `<details class="pcard" data-p="${p.id}"><summary><span class="num">${p.number ?? ""}</span><span style="flex:1;min-width:0"><b style="display:block">${esc(pname(p))}${e.report.motm === p.id ? ' <span class="pill w">Man van de match</span>' : ""}${isCaptain(e, p, a) ? ' <span class="pill w">Kapitein</span>' : ""}</b>
-      ${a.note ? `<span class="notepv">${esc(a.note)}</span>` : ""}<small class="muted">${esc([a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : "", a.rated_by ? "door " + a.rated_by : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld")}</small></span>
+      <span class="notepv">${pvHtml(a)}</span><small class="muted">${esc([a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : "", a.rated_by ? "door " + a.rated_by : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld")}</small></span>
       <span class="rate${a.rating ? " on" : ""}">${a.rating ?? "–"}</span></summary>
     <div class="bd"><div class="stats">
       <label class="f">Rol<select data-k="role"><option value="">–</option><option${a.role === "basis" ? " selected" : ""}>basis</option><option${a.role === "wissel" ? " selected" : ""}>wissel</option></select></label>
@@ -268,6 +272,7 @@ function playersTab(tv, e) {
   $$(".pcard", tv).forEach(c => {
     const pid = c.dataset.p, get = () => ({ ...(attOf(e.id, pid) || { event_id: e.id, player_id: pid, team_id: S.team.id, status: "aanwezig", tags: [], strengths: [], scores: {} }) });
     const refresh = () => { const a = attOf(e.id, pid) || {}; $("summary small", c).textContent = [a.role, a.position, a.minutes != null ? a.minutes + " min" : "", a.goals ? a.goals + " goal" : "", a.assists ? a.assists + " assist" : "", a.rated_by ? "door " + a.rated_by : ""].filter(Boolean).join(" · ") || "Nog niet beoordeeld";
+      const pv = $(".notepv", c); if (pv) pv.innerHTML = pvHtml(a);
       const rt = $(".rate", c); rt.textContent = a.rating ?? "–"; rt.classList.toggle("on", !!a.rating); };
     /* elke wijziging meteen lokaal bewaren, zodat snelle opeenvolgende tikken elkaar niet overschrijven */
     const local = a => { if (a.status !== "aanwezig" && a.status !== "te laat") a.status = "aanwezig"; a.rated_by = byName() || a.rated_by || null; a.rated_by_id = user?.id || a.rated_by_id || null; S.att = S.att.filter(z => !(z.event_id === e.id && z.player_id === pid)).concat([a]); refresh(); };
