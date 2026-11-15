@@ -19,18 +19,18 @@ const csSelfRow = (q, crits) => csRow("csq", `data-id="${esc(q.id || evQid())}" 
    <select name="l" aria-label="Vergelijken met onderdeel van de trainer" title="Welk onderdeel van de trainer hoort hierbij? Dan zie je beide scores naast elkaar.">${csLinkOpts(crits, q.link)}</select>`);
 const csCritNames = lines => lines.filter(l => !String(l).trim().startsWith("#")).map(l => String(l).split(/\s+\|\s+/)[0].trim()).filter(Boolean);
 
-function csEvalEditorsHtml(ev, forProfile) {
+function csEvalEditorsHtml(ev, forProfile, isc) {
   const tpl = Array.isArray(ev.template) && ev.template.length ? ev.template : EV_TEMPLATE_DEFAULT, crits = csCritNames(tpl);
   const sf = ev.self || {}, qs = (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).map(evSelfQ).filter(Boolean), open = evOpenList(ev.open);
   return `<h2>Wat evalueren jullie?</h2><p class="hint" style="margin-top:0">Dit zijn de onderdelen waar de trainer een score voor geeft, in groepen. Voeg gerust eigen onderdelen toe, hernoem of verwijder ze. ${forProfile ? "Dit geldt voor de gekozen ploegen; hun trainers kunnen dit niet aanpassen." : "Dit wordt de standaard voor nieuwe ploegen; een trainer kan het voor zijn ploeg nog aanpassen."}</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="ogv">Fiche interne scouting (6 blokken + keeper)</button></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="std">Uitgebreid (21 onderdelen)</button><button class="btn ghost small" type="button" data-tpl="kort">Kort, voor de jongsten (9 onderdelen)</button>${isc ? `<button class="btn ghost small" type="button" data-tpl="ogv">Fiche OG Vorselaar (6 blokken + keeper)</button>` : ""}</div>
     <div id="cscrit" class="cslist">${tpl.map(csCritRow).join("")}</div>
     <div class="row" style="gap:16px;margin:4px 0 8px"><button class="link" type="button" id="csaddg">${IC.plus}Groep toevoegen</button><button class="link" type="button" id="csaddi">${IC.plus}Onderdeel toevoegen</button></div>
     <h2>Extra vragen voor de trainer</h2><p class="hint" style="margin-top:0">Open vragen die de trainer bij elke speler beantwoordt, naast de scores. Ze komen ook op het rapport voor het oudergesprek.</p>
-    <p class="hint">Kies per vraag de soort. Vink <b>intern</b> aan voor wat enkel voor de trainers en de club is (bv. potentieel of advies): dat komt niet op het rapport voor de ouders. De vragen <b>Potentieel</b> en <b>Advies</b> van de fiche van de interne scouting kan je ook in Interne scouting gebruiken om op te zoeken.</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" id="csogvq">Vragen van de fiche interne scouting</button></div>
+    <p class="hint">Kies per vraag de soort. ${isc ? "Alles in de interne scouting is intern. De vragen <b>Potentieel</b> en <b>Advies</b> gebruik je ook om op te zoeken in Interne scouting: laat hun naam en keuzes staan." : "Vink <b>intern</b> aan voor wat enkel voor de trainers is: dat komt niet op het rapport voor de ouders."}</p>
+    ${isc ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" id="csogvq">Vragen van de fiche OG Vorselaar</button></div>` : ""}
     <div id="csopen" class="cslist">${open.map(csOpenRow).join("")}</div><button class="link" type="button" id="csaddo" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button>
-    <h2>Zelfevaluatie door de spelers</h2>
+    <div class="csselfwrap"${isc ? " hidden" : ""}><h2>Zelfevaluatie door de spelers</h2>
     <label class="csmod" style="max-width:640px"><span><b>Spelers evalueren zichzelf</b><small>Per moment zet de trainer dit open voor zijn ploeg. Spelers of ouders vullen de vragen in via hun persoonlijke link in de app. Zo zie je naast jouw score wat de speler zelf vindt.</small></span><span class="tgl"><input type="checkbox" name="selfon"${sf.on === true ? " checked" : ""}><span></span></span></label>
     <div id="csself"${sf.on === true ? "" : " hidden"}>
       <p class="hint"><b>Deze vragen staan los van de scores van de trainer.</b> Schrijf ze helemaal zelf, in kindertaal, en kies per vraag een schaal of een open antwoord. Koppelen aan een onderdeel van de trainer is optioneel en dient enkel om beide scores naast elkaar te tonen.</p>
@@ -42,7 +42,7 @@ function csEvalEditorsHtml(ev, forProfile) {
         <label class="chkl"><input type="radio" name="sscale" value="cijfers10"${sf.scale === "cijfers10" ? " checked" : ""}><span>Cijfers 1 tot 10</span></label></div>
       <label class="f full" style="display:block;margin-bottom:10px">Korte uitleg bovenaan de lijst<input name="selfintro" maxlength="200" value="${esc(sf.intro || "")}" placeholder="bv. Vul dit samen met je mama of papa in. Er zijn geen foute antwoorden."></label>
       <div id="csslist" class="cslist">${qs.map(q => csSelfRow(q, crits)).join("")}</div><button class="link" type="button" id="csaddq" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button>
-    </div></div>`;
+    </div></div></div>`;
 }
 
 /* koppelt knoppen en lijsten; geeft een functie terug die de gekozen vragen verzamelt (of een foutmelding) */
@@ -56,7 +56,7 @@ function csEvalEditorsBind(f) {
   const refresh = () => $$("select[name=l]", sl).forEach(s => { const cur = s.value; s.innerHTML = csLinkOpts(names(), cur); s.value = names().includes(cur) ? cur : ""; });
   sl.addEventListener("focusin", e => { if (e.target.name === "l") refresh(); }); sl.addEventListener("mousedown", e => { if (e.target.name === "l") refresh(); });
   [sl, open].forEach(h => h.addEventListener("change", e => { if (e.target.name === "ty") e.target.closest(".csr").dataset.ty = e.target.value; }));
-  $("#csogvq", f).onclick = () => { if ($$(".csr", open).length && !confirm("De open vragen worden vervangen door de vragen van de fiche van de interne scouting. Doorgaan?")) return; open.innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); };
+  if ($("#csogvq", f)) $("#csogvq", f).onclick = () => { if ($$(".csr", open).length && !confirm("De open vragen worden vervangen door de vragen van de fiche van de interne scouting. Doorgaan?")) return; open.innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); };
   const add = (host, html, focus = "input") => { host.insertAdjacentHTML("beforeend", html); host.lastElementChild.querySelector(focus)?.focus(); };
   $("#csaddg", f).onclick = () => add(crit, csCritRow("# "));
   $("#csaddi", f).onclick = () => add(crit, csCritRow("x").replace('value="x"', 'value=""'));
@@ -161,4 +161,38 @@ async function evSetSelf(teamId, on) {
   if (pr) pr.self = cur; else ev.self = cur;
   if (!(await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st, eval: { ...ev, profiles: profs } }, on ? "Zelfevaluatie staat aan." : "Zelfevaluatie staat uit."))) return false;
   if (typeof evApplyClub === "function") evApplyClub(); return true;
+}
+
+/* ============ interne scouting: de tweede, interne fiche (beheerder) ============ */
+async function iscSave(patch, msg) { const st = CLUB.settings || {}, ev = { ...(st.eval || {}) }, cur = { ...(ev.isc || {}) };
+  const ok = await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st, eval: { ...ev, isc: { ...cur, ...patch } } }, msg); return ok; }
+async function iscSetTeam(teamId, on) { const c = iscCfg(), t = (S.teams || []).find(x => x.id === teamId) || { id: teamId };
+  const byAge = c.on !== false && evAgeOf(t) >= (+c.from || 0), on_teams = c.on_teams.filter(x => x !== teamId), off_teams = c.off_teams.filter(x => x !== teamId);
+  if (on && !byAge) on_teams.push(teamId); if (!on && byAge) off_teams.push(teamId);
+  return iscSave({ on_teams, off_teams }, on ? "Interne scouting staat aan voor deze ploeg." : "Interne scouting staat uit voor deze ploeg."); }
+function csIsc(host, st) {
+  const draw = () => { const c = iscCfg(CLUB.settings || st), teams = (S.teams || []).slice().sort((a, b) => evAgeOf(a) - evAgeOf(b) || teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true }));
+    const n = csCritNames(c.template).length, oq = c.open.filter(q => q.type !== "kop").length, on = teams.filter(t => iscOn(t, CLUB.settings || st));
+    host.innerHTML = `<h2>Interne scouting</h2><p class="hint" style="margin-top:0">Een tweede fiche naast de evaluatie: de trainer vult ze per moment apart in. Enkel voor de trainers en de club, nooit voor ouders of spelers. Hieruit komen het spelersprofiel en het zoeken in Interne scouting.</p>
+      <div class="iscbox"><label class="csmod"><span><b>Interne scouting gebruiken</b><small>${n} onderdelen · ${oq} vragen</small></span><span class="tgl"><input type="checkbox" id="iscon"${c.on !== false ? " checked" : ""}><span></span></span></label>
+        <label class="iscfrom"><span>Voor elke ploeg vanaf</span><select id="iscfrom">${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(a => `<option value="${a}"${+c.from === a ? " selected" : ""}>U${a}</option>`).join("")}</select></label>
+        <div class="iscbtns"><button class="btn small" type="button" id="iscedit">Onderdelen en vragen aanpassen</button></div></div>
+      <div class="iscteams">${teams.map(t => `<label class="iscteam${iscOn(t, CLUB.settings || st) ? " on" : ""}"><input type="checkbox" data-it="${t.id}"${iscOn(t, CLUB.settings || st) ? " checked" : ""}><span>${esc(teamLbl(t))}</span></label>`).join("")}</div>
+      <p class="hint" style="margin:6px 0 0">${on.length} van ${teams.length} ploegen. Vink een ploeg aan of uit om af te wijken van de leeftijd.</p>`;
+    $("#iscon", host).onchange = async e => { if (await iscSave({ on: e.target.checked }, e.target.checked ? "Interne scouting staat aan." : "Interne scouting staat uit.")) draw(); };
+    $("#iscfrom", host).onchange = async e => { if (await iscSave({ from: +e.target.value, on_teams: [], off_teams: [] }, "Bewaard.")) draw(); };
+    $$("[data-it]", host).forEach(x => x.onchange = async () => { if (await iscSetTeam(x.dataset.it, x.checked)) draw(); });
+    $("#iscedit", host).onclick = () => iscEdit(draw); };
+  draw();
+}
+function iscEdit(after) {
+  const c = iscCfg();
+  const d = dialog(`<form class="evpdlg iscdlg" onsubmit="return false"><h2>Fiche van de interne scouting</h2><p class="hint" style="margin-top:0">De groepen zijn de hoeken van het spelersprofiel. Een groep die begint met <b>Keeper</b> geldt enkel voor doelmannen.</p>
+    ${csEvalEditorsHtml({ template: c.template, open: c.open, self: { on: false } }, true, true)}
+    <div class="row"><button class="btn ghost" type="button" id="iscreset">Fiche OG Vorselaar herstellen</button><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="iscok">Bewaren</button></div></form>`, "xl");
+  const f = $("form", d), collect = csEvalEditorsBind(f);
+  $("#iscreset", d).onclick = () => { if (!confirm("Alle onderdelen en vragen van de interne scouting terugzetten naar de fiche van OG Vorselaar?")) return;
+    $("#cscrit", f).innerHTML = EV_TEMPLATE_OGV.map(csCritRow).join(""); $("#csopen", f).innerHTML = EV_OPEN_OGV.map(csOpenRow).join(""); };
+  $("#iscok", d).onclick = async () => { const r = collect(); if (r.err) { toast(r.err); return; }
+    if (await iscSave({ template: r.template, open: r.open.map(q => ({ ...q, intern: true })) }, "Fiche van de interne scouting bewaard.")) { d.close(); after && after(); } };
 }

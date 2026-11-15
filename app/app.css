@@ -2172,3 +2172,17 @@ h1.pg{font-weight:800;font-stretch:108%;font-size:clamp(28px,3.4vw,40px);line-he
 .evsc{margin-left:auto;font-size:12px;font-weight:800;color:var(--muted);background:var(--card2);border-radius:7px;padding:2px 8px}.evsc.ok{color:#1F9D57}
 .evsec>.fields{padding-bottom:12px}
 .atev{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--muted);margin:8px 0 2px}.atev select{flex:1;min-height:34px;font-size:13.5px}
+
+/* v149 · evaluatie en interne scouting naast elkaar */
+.evkind{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;margin:0 0 14px;border-radius:16px;background:var(--card3);max-width:620px}
+.evkind button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;border-radius:12px;background:transparent;color:var(--muted);font:inherit;padding:10px 14px;cursor:pointer;text-align:left}
+.evkind button b{font-size:15px;color:var(--ink)}.evkind button small{font-size:12px;font-weight:600}
+.evkind button[aria-selected=true]{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12)}.evkind button[aria-selected=true] b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--yellow);margin-right:7px;vertical-align:1px}
+.evintern{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--card2);border:1px dashed var(--line2);font-size:13.5px;color:var(--muted)}.evintern svg{width:18px;height:18px;flex:none;margin-top:1px}.evintern b{color:var(--ink)}
+.evrad{margin-top:10px}.evrad .pfradar{max-width:280px;margin:0 auto}
+.iscbox{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--card2);border:1px solid var(--line)}
+.iscbox .csmod{margin:0;flex:1 1 260px;max-width:420px}.iscfrom{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--muted)}.iscfrom select{min-height:36px}
+.iscteams{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.iscteam{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--line2);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.iscteam input{width:auto;margin:0}.iscteam.on{background:var(--ybg);border-color:transparent;color:var(--ytext)}
+.atevrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin:8px 0 2px}.atevrow .atev{margin:0;flex:1 1 220px}.atisc{margin:0;font-size:13px;font-weight:700;white-space:nowrap}

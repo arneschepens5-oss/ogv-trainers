@@ -8,7 +8,7 @@ const PF_SKIP = /^(algemeen|onderdelen)$/i;
    Een evaluatie wordt gelezen met de fiche die de meeste van haar onderdelen kent (dezelfde naam kan in twee fiches in een andere groep staan). */
 function pfGroupMap(extra = []) {
   const st = (typeof CLUB !== "undefined" && CLUB.settings) || {}, ev = st.eval || {};
-  const raw = [...extra, ...(typeof evProfiles === "function" ? evProfiles(st).map(p => p.template || []) : []), ev.template || [], EV_TEMPLATE_OGV, EV_TEMPLATE_DEFAULT, EV_TEMPLATE_SHORT];
+  const raw = [...extra, ...(typeof iscCfg === "function" ? [iscCfg(st).template] : []), ...(typeof evProfiles === "function" ? evProfiles(st).map(p => p.template || []) : []), ev.template || [], EV_TEMPLATE_OGV, EV_TEMPLATE_DEFAULT, EV_TEMPLATE_SHORT];
   const tpls = [], seen = new Set(), keep = new Set(), order = [];
   for (const tpl of raw) { const sig = JSON.stringify(tpl || []); if (!tpl || !tpl.length || seen.has(sig)) continue; seen.add(sig);
     const m = new Map(), ord = []; let g = null;
@@ -31,11 +31,14 @@ function pfVals(scores, gm) {
 function pfAxes(vals, gm) { const ord = [...(vals._order || []), ...gm.order.filter(g => !(vals._order || []).includes(g))]; return ord.filter(g => vals[g] != null && !PF_SKIP.test(g)); }
 const pfTotal = (vals, axes) => { const xs = axes.map(a => vals[a]).filter(v => v != null); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
 /* alle evaluaties van een speler, oudste eerst: dit seizoen (lijst) en de vorige seizoenen (p.history) */
+/* het profiel komt uit de interne scouting (details.isc); zonder interne scouting uit de gewone evaluatie */
+const pfSrc = e => { const I = e?.details?.isc; const isc = I && I.scores && Object.keys(I.scores).length;
+  return { scores: isc ? I.scores : (e?.scores || {}), details: { ...(e?.details || {}), open: { ...(e?.details?.open || {}), ...(I?.open || {}) } }, isc: !!isc }; };
 function pfList(p, evals, season) {
   const mo = m => EV_MOMENTS[m - 1] || { naam: "Evaluatie " + m, kort: "E" + m };
-  const now = (evals || []).filter(e => e.player_id === p.id && Object.keys(e.scores || {}).length)
+  const now = (evals || []).filter(e => e.player_id === p.id).map(e => ({ ...e, ...pfSrc(e) })).filter(e => Object.keys(e.scores || {}).length)
     .map(e => ({ key: "c" + e.moment, label: mo(e.moment).naam + (season ? " " + season : ""), short: mo(e.moment).kort + (season ? " " + String(season).slice(2, 4) + "–" + String(season).slice(7, 9) : ""), date: e.date || "", season: season || "", moment: e.moment, scores: e.scores, team_id: e.team_id, details: e.details }));
-  const old = (Array.isArray(p.history) ? p.history : []).flatMap((h, hi) => (h.evals || []).filter(e => Object.keys(e.scores || {}).length)
+  const old = (Array.isArray(p.history) ? p.history : []).flatMap((h, hi) => (h.evals || []).map(e => ({ ...e, ...pfSrc(e) })).filter(e => Object.keys(e.scores || {}).length)
     .map(e => ({ key: "h" + hi + "-" + e.moment, label: mo(e.moment).naam + " " + (h.season || ""), short: mo(e.moment).kort + " " + String(h.season || "").slice(2, 4) + "–" + String(h.season || "").slice(7, 9), date: e.date || "", season: h.season || "", moment: e.moment, scores: e.scores, team: h.team, details: e.details })));
   return [...old, ...now].sort((a, b) => (a.season + (a.date || "") + a.moment).localeCompare(b.season + (b.date || "") + b.moment));
 }
@@ -105,7 +108,7 @@ function pfMount(host, ctx) {
   draw();
 }
 /* gemiddelde scores van een groep evaluaties (voor "gemiddelde van de ploeg") */
-function pfAvgScores(evs) { const acc = {}; evs.forEach(e => Object.entries(e.scores || {}).forEach(([k, v]) => { const n = +v; if (v == null || v === "" || isNaN(n)) return; (acc[k] = acc[k] || []).push(n); }));
+function pfAvgScores(evs) { const acc = {}; evs.forEach(e => Object.entries(pfSrc(e).scores).forEach(([k, v]) => { const n = +v; if (v == null || v === "" || isNaN(n)) return; (acc[k] = acc[k] || []).push(n); }));
   const out = Object.fromEntries(Object.entries(acc).map(([k, xs]) => [k, xs.reduce((a, b) => a + b, 0) / xs.length])); return Object.keys(out).length ? out : null; }
 
 /* ============ posities 1 tot 11 (nummering van de club), hoofdpositie (H) en nevenposities (N) ============ */

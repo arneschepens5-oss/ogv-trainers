@@ -440,13 +440,14 @@ async function adminTeams(host, info) {
         <div class="atl">${t.trainers.map(x => `<div class="atr"><span class="av sm" aria-hidden="true">${esc((x.name || x.email || "?").replace(/[^a-z]/gi, "").slice(0, 1).toUpperCase())}</span><span class="main"><b>${esc(x.name || x.email || "")}${x.user_id === user?.id ? ' <small class="me">jij</small>' : ""}</b>${x.name ? `<small>${esc(x.email || "")}</small>` : ""}</span>
           <select data-mv="${x.user_id}" data-from="${t.id}" aria-label="Verplaatsen naar een andere ploeg" title="Verplaatsen naar een andere ploeg"><option value="">Verplaatsen…</option>${teams.filter(o => o.id !== t.id).map(o => `<option value="${o.id}">${esc(o.name)}${o.season ? " (" + esc(o.season) + ")" : ""}</option>`).join("")}</select>
           <button class="ib" type="button" data-del="${x.user_id}" data-t="${t.id}" data-mail="${esc(x.name || x.email || "")}" data-last="${t.trainers.length === 1}" title="Weghalen bij deze ploeg" aria-label="Weghalen bij deze ploeg">${IC.trash}</button></div>`).join("") || `<p class="atempty">Nog geen trainer. Alleen beheerders zien deze ploeg.</p>`}</div>
-        <label class="atev"><span>Evaluatie</span>${evFicheSelect(t.id, `data-evp="${t.id}"`)}</label>
+        <div class="atevrow"><label class="atev"><span>Evaluatie</span>${evFicheSelect(t.id, `data-evp="${t.id}"`)}</label><label class="check atisc"><input type="checkbox" data-isc="${t.id}"${iscOn(t) ? " checked" : ""}> Interne scouting</label></div>
         ${free.length ? `<select class="admadd" data-add="${t.id}" aria-label="Trainer toevoegen"><option value="">+ Trainer toevoegen…</option>${free.map(m => `<option value="${m.user_id}">${esc(m.name ? m.name + " – " + m.email : m.email)}</option>`).join("")}</select>` : ""}</div>`; }).join("") || `<p class="muted">Nog geen ploegen.</p>`}</div><p class="hint" id="tmnone" hidden>Geen ploegen gevonden.</p>`;
   let tf = ""; const tfilt = () => { const q = ($("#tmq", host).value || "").toLowerCase().trim(); let n = 0;
     $$(".admteam", host).forEach(c => { const ok = (!q || c.dataset.q.includes(q)) && (!tf || c.dataset.leeg === "true"); c.hidden = !ok; if (ok) n++; }); $("#tmnone", host).hidden = n > 0; };
   $("#tmq", host).oninput = tfilt; $$("[data-tf]", host).forEach(b => b.onclick = () => { tf = b.dataset.tf; $$("[data-tf]", host).forEach(x => x.setAttribute("aria-pressed", x === b)); tfilt(); });
   const call = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) { toast(error.message); return; } toast(ok); if (fn !== "admin_teams") { await loadTeams().catch(() => {}); } adminTeams(host, info); };
   const tName = id => teams.find(t => t.id === id)?.name || "de ploeg";
+  $$("[data-isc]", host).forEach(x => x.onchange = async () => { x.disabled = true; if (!(await iscSetTeam(x.dataset.isc, x.checked))) x.checked = !x.checked; x.disabled = false; });
   $$("[data-evp]", host).forEach(sel => sel.onchange = async () => { sel.disabled = true; await evSetTeamProfile(sel.dataset.evp, sel.value); sel.disabled = false; });
   $$("[data-mv]", host).forEach(sel => sel.onchange = () => { const to = sel.value; if (!to) return; const mail = sel.closest(".atr").querySelector("b").textContent;
     if (!confirm(`${mail} verplaatsen van ${tName(sel.dataset.from)} naar ${tName(to)}?`)) { sel.value = ""; return; }
@@ -779,7 +780,7 @@ async function csPage(v, id, ctx) {
         <label class="chkl"><input type="radio" name="scale" value="cijfers"${ev.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label>
         <label class="chkl"><input type="radio" name="scale" value="cijfers10"${ev.scale === "cijfers10" ? " checked" : ""}><span>Cijfers 1 tot 10</span></label></div>
       <p class="hint" style="margin-top:4px">Wissel je later van schaal, dan blijven ingevulde evaluaties bewaard en worden ze omgerekend (3 op 5 wordt 6 op 10). De zelfevaluatie van de spelers heeft een eigen schaal, hieronder.</p>
-      ${ctx.platform ? "" : `<div id="csprof" class="sec"></div><h2 class="evstdh">Standaard van de club</h2><p class="hint" style="margin-top:0">Voor alle ploegen zonder eigen evaluatie per leeftijd.</p>`}
+      ${ctx.platform ? "" : `<div id="csisc" class="sec"></div><div id="csprof" class="sec"></div><h2 class="evstdh">Standaard van de club</h2><p class="hint" style="margin-top:0">Voor alle ploegen zonder eigen evaluatie per leeftijd.</p>`}
       ${csEvalEditorsHtml(ev)}
       ${!ctx.platform && S.teams?.length ? `<label class="chkl" style="margin-top:8px"><input type="checkbox" name="all"> Ook toepassen op de ${S.teams.length} bestaande ploegen <span class="hint">(evaluaties die al ingevuld zijn blijven bewaard)</span></label>` : ""}
       ${foot()}</form>`;
@@ -788,7 +789,7 @@ async function csPage(v, id, ctx) {
     wire();
     $$("[data-pre]", f).forEach(b => b.onclick = () => { list.innerHTML = EV_PRESETS[b.dataset.pre].moments.map(rowHtml).join(""); wire(); });
     $("#csadd", f).onclick = () => { list.insertAdjacentHTML("beforeend", rowHtml({ naam: "", from: "", to: "" }, $$(".csm", list).length)); wire(); };
-    const collect = csEvalEditorsBind(f); if (!ctx.platform) csProfiles($("#csprof", f), st, csSave);
+    const collect = csEvalEditorsBind(f); if (!ctx.platform) { csIsc($("#csisc", f), st); csProfiles($("#csprof", f), st, csSave); }
     f.onsubmit = async e => { e.preventDefault();
       const moments = $$(".csm", list).map(r => ({ naam: $("[name=naam]", r).value.trim(), from: $("[name=from]", r).value.trim(), to: $("[name=to]", r).value.trim(), verplicht: $("[name=verplicht]", r).checked }));
       const bad = moments.find(x => !x.naam || !evMd(x.from) || !evMd(x.to)); if (bad) { toast("Geef elk moment een naam en een datum als maand-dag, bv. 12-01."); return; }

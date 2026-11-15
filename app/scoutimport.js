@@ -105,17 +105,20 @@ function imAnalyse(X, wb, D) {
 }
 
 /* één evaluatie samenvoegen in een bestaande: enkel lege velden aanvullen */
+/* alles van de Excel komt in de interne scouting van die evaluatie (details.isc), los van de evaluatie voor de ouders */
+const IM_DET2OPEN = { strengths: "algemeen_sterk", workpoints: "algemeen_werk", goals: "doelstelling" };
 function imMerge(target, e, stat) {
-  target.scores = { ...(target.scores || {}) }; target.details = { ...(target.details || {}) }; const D = target.details; D.open = { ...(D.open || {}) };
+  target.details = { ...(target.details || {}) }; const D = target.details, I = D.isc = { ...(D.isc || {}) }; I.scores = { ...(I.scores || {}) }; I.open = { ...(I.open || {}) };
   let add = 0, clash = 0;
-  for (const [k, v] of Object.entries(e.scores)) { if (target.scores[k] == null || target.scores[k] === "") { target.scores[k] = v; add++; } else if (+target.scores[k] !== v) clash++; }
-  for (const [k, v] of Object.entries(e.open)) { if (D.open[k] == null || D.open[k] === "") { D.open[k] = v; add++; } else if (String(D.open[k]) !== String(v)) clash++; }
-  for (const [k, v] of Object.entries(e.det)) { if (!D[k]) { D[k] = v; add++; } else if (String(D[k]) !== String(v)) clash++; }
-  if (Object.keys(e.old).length) D.oud = { ...e.old, ...(D.oud || {}) };
-  if (Object.keys(e.oldTxt).length) D.oud_txt = { ...e.oldTxt, ...(D.oud_txt || {}) };
-  if (e.by) { D.by = D.by || e.by; D.by_all = [...new Set([...(D.by_all || []), e.by])]; }
-  if (!target.date && e.date) target.date = e.date;
-  if (!Object.keys(D.open).length) delete D.open;
+  const put = (k, v) => { if (I.open[k] == null || I.open[k] === "") { I.open[k] = v; add++; } else if (String(I.open[k]) !== String(v)) clash++; };
+  for (const [k, v] of Object.entries(e.scores)) { if (I.scores[k] == null || I.scores[k] === "") { I.scores[k] = v; add++; } else if (+I.scores[k] !== v) clash++; }
+  for (const [k, v] of Object.entries(e.open)) put(k, v);
+  for (const [k, v] of Object.entries(e.det)) { if (IM_DET2OPEN[k]) put(IM_DET2OPEN[k], v); else if (!D[k]) D[k] = v; }
+  if (Object.keys(e.old).length) I.oud = { ...e.old, ...(I.oud || {}) };
+  if (Object.keys(e.oldTxt).length) I.oud_txt = { ...e.oldTxt, ...(I.oud_txt || {}) };
+  if (e.by) { I.by = I.by || e.by; D.by_all = [...new Set([...(D.by_all || []), e.by])]; }
+  if (!target.date && e.date) target.date = e.date; if (!I.date && e.date) I.date = e.date;
+  if (!target.scores) target.scores = {};
   D.import = D.import || todayIso();
   stat.add += add; stat.clash += clash; return add > 0 || Object.keys(e.old).length > 0;
 }
@@ -144,7 +147,7 @@ async function imWrite(A, D, prog) {
       if (imMerge(t, e, stat)) { cur.set(k, t); touched.set(k, { t, isNew: !had && !touched.has(k) ? true : touched.get(k)?.isNew || false }); }
     } else { const w = getP(p), H = w.p.history; let h = H.find(x2 => imSeason(x2.season) === season);
       if (!h) { h = { season, team: x.ploeg || e.det.team_then || "", category: x.cat || "", evals: [], stats: {} }; H.push(h); H.sort((a, b) => String(a.season).localeCompare(String(b.season))); }
-      let he = h.evals.find(y => y.moment === m); if (!he) { he = { moment: m, date: e.date || null, scores: {} }; h.evals.push(he); h.evals.sort((a, b) => a.moment - b.moment); }
+      let he = h.evals.find(y => y.moment === m); if (!he) { he = { moment: m, date: e.date || null, scores: {}, details: {} }; h.evals.push(he); h.evals.sort((a, b) => a.moment - b.moment); }
       if (imMerge(he, e, stat)) { w.dirty = true; stat.hist++; } } }
   /* 3. bewaren */
   const jobs = [...[...work.values()].filter(w => w.dirty).map(w => async () => { await db.save("players", w.p); stat.players++; }),
@@ -185,24 +188,14 @@ function scImport(D) {
         imDone(out, A, st, D); }; };
     draw(); };
 }
-/* verslag, en welke ploegen nog niet met de fiche van de interne scouting evalueren */
+/* verslag, en welke ploegen de interne scouting nog niet gebruiken */
 function imDone(out, A, st, D) {
   const tids = [...new Set(A.xs.filter(x => x.match && A.evs.some(e => e.pid === x.id)).map(x => x.match.team_id))];
-  const ogvNames = new Set(csCritNames(EV_TEMPLATE_OGV)), uses = t => { const c = csCritNames(t.criteria || []); return c.length && c.filter(n => ogvNames.has(n)).length >= c.length * 0.8; };
-  const need = tids.map(id => S.teams.find(t => t.id === id)).filter(t => t && !uses(t));
+  const off = tids.map(id => S.teams.find(t => t.id === id)).filter(t => t && !iscOn(t));
   out.innerHTML = `<div class="imx-ks">${[[st.players, "spelers bijgewerkt"], [st.evNew, "nieuwe evaluaties"], [st.evAdd, "evaluaties aangevuld"], [st.hist, "uit vorige seizoenen"]].map(([n, l]) => `<div class="imx-k ok"><b>${n}</b><span>${l}</span></div>`).join("")}</div>
     ${st.fail ? `<p class="grpwarn">${st.fail} ${st.fail === 1 ? "rij kon" : "rijen konden"} niet bewaard worden${/row-level security|policy/i.test(st.err) ? ": voer eerst <b>supabase-evaluaties-beheerder-v54.sql</b> uit in Supabase en importeer daarna opnieuw (wat al bewaard is, wordt niet dubbel gezet)." : ": " + esc(st.err)}</p>` : ""}
     ${st.clash ? `<p class="hint">${st.clash} ${st.clash === 1 ? "score of antwoord stond" : "scores of antwoorden stonden"} al anders ingevuld (in de app of in een eerdere rij van de Excel) en ${st.clash === 1 ? "is" : "zijn"} niet overschreven.</p>` : ""}
     ${st.skipped ? `<p class="hint">${st.skipped} evaluaties van spelers die niet in de app staan, zijn overgeslagen.</p>` : ""}${st.noMoment ? `<p class="hint">${st.noMoment} evaluaties zonder moment of datum zijn overgeslagen.</p>` : ""}
-    ${need.length ? `<div class="imx-need"><b>Deze ploegen evalueren in de app nog niet met de fiche van de interne scouting</b><p class="hint" style="margin:4px 0 8px">${need.map(t => esc(teamLbl(t))).join(", ")}. De geïmporteerde scores staan er wel, maar hun trainers zien ze pas in hun evaluatiescherm (en vullen ze verder aan) als de ploeg dezelfde fiche gebruikt. Het spelersprofiel en Interne scouting werken sowieso.</p>
-      <button class="btn small" type="button" id="imfiche">Fiche instellen voor deze ${need.length} ploegen</button></div>` : `<p class="hint">Alle betrokken ploegen evalueren al met de fiche van de interne scouting.</p>`}`;
-  const b = $("#imfiche", out); if (b) b.onclick = async () => { b.disabled = true;
-    const st0 = CLUB.settings || {}, ev = { ...(st0.eval || {}) }, profs = (Array.isArray(ev.profiles) ? ev.profiles : []).map(p => ({ ...p, teams: (p.teams || []).filter(id => !need.some(t => t.id === id)) }));
-    let pr = profs.find(p => /interne scouting/i.test(p.name || "")); if (!pr) { pr = { id: "p" + Date.now().toString(36), name: "Interne scouting", teams: [], template: EV_TEMPLATE_OGV.slice(), open: EV_OPEN_OGV.map(q => ({ ...q })), self: { ...(ev.self || { on: false }) } }; profs.push(pr); }
-    pr.teams = [...new Set([...(pr.teams || []), ...need.map(t => t.id)])];
-    const ok = await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st0, eval: { ...ev, profiles: profs.filter(p => p.teams.length || p === pr) } }, "Fiche ingesteld.");
-    if (!ok) { b.disabled = false; return; }
-    for (const t of need) { const criteria = (pr.template || EV_TEMPLATE_OGV).slice(); try { await db.save("teams", { ...t, criteria }); t.criteria = criteria; } catch (x) {} }
-    if (typeof evApplyClub === "function") evApplyClub(); b.replaceWith(Object.assign(document.createElement("p"), { className: "hint", textContent: "Klaar: deze ploegen evalueren nu met de fiche van de interne scouting (Clubinstellingen › Evaluaties › Interne scouting)." })); };
+    <p class="hint">Alles staat in de <b>interne scouting</b> van elke evaluatie, apart van de evaluatie voor de ouders.${off.length ? ` Let op: bij ${off.map(t => esc(teamLbl(t))).join(", ")} staat de interne scouting uit, dus hun trainers zien deze fiche niet. Zet ze aan in Clubinstellingen › Evaluaties.` : ""}</p>`;
   setTimeout(() => render(), 0);
 }

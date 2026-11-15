@@ -92,6 +92,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const evMs = EV_MOMENTS.filter(m => ev.some(e => e.moment === m.m && Object.keys(e.scores || {}).length));
   const evTexts = ev.flatMap(e => { const D = e.details || {}, mo = EV_MOMENTS[e.moment - 1]; return [["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen", D.goals], ["Niveau", D.level], ["Positie", D.position], ["Boodschap voor de ouders", D.parents]]
     .concat(EV_OPEN.filter(q => q.type !== "kop").map(q => [q.text, D.open?.[q.id] != null && D.open[q.id] !== "" ? String(D.open[q.id]) + (q.type === "schaal" ? " op 5" : "") : ""]))
+    .concat(iscCfg().open.filter(q => q.type !== "kop").map(q => ["Interne scouting · " + q.text, D.isc?.open?.[q.id] != null && D.isc.open[q.id] !== "" ? String(D.isc.open[q.id]) + (q.type === "schaal" ? " op 5" : "") : ""]))
     .filter(x => x[1]).map(([k, t]) => ({ mo, k, t, by: (D.by_all || (D.by ? [D.by] : [])).join(", ") })); });
   const notes = rows.filter(x => x.a.note || x.a.rating != null).slice().reverse();
   const gs = S.goals.filter(g => g.player_id === p.id);
