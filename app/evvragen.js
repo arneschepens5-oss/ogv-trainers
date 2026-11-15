@@ -135,3 +135,30 @@ function csProfiles(host, st, save) {
   $("#evpnew", host).onclick = () => edit(null);
   $$("[data-pe]", host).forEach(b => b.onclick = () => edit(profs.find(p => p.id === b.dataset.pe)));
 }
+
+/* ============ fiche per ploeg: snel wisselen (Evaluaties en Beheer › Ploegen en trainers) ============ */
+const evProfSum = (p, st = CLUB.settings || {}) => { const ev = st.eval || {}, tpl = p ? p.template : (ev.template?.length ? ev.template : EV_TEMPLATE_DEFAULT), open = p ? p.open : ev.open, self = p ? p.self : ev.self;
+  const n = csCritNames(tpl || []).length, oq = evOpenList(open).filter(q => q.type !== "kop").length;
+  return [n + " onderdelen", oq ? oq + " open vragen" : "", self?.on ? "zelfevaluatie aan" : "zonder zelfevaluatie"].filter(Boolean).join(" · "); };
+function evFicheSelect(teamId, attr) {
+  const profs = evProfiles(), cur = evProfileOf(teamId);
+  return `<select ${attr} aria-label="Evaluatiefiche van deze ploeg"><option value=""${cur ? "" : " selected"}>Standaard van de club</option>${profs.map(p => `<option value="${esc(p.id)}"${cur?.id === p.id ? " selected" : ""}>${esc(p.name || "Zonder naam")}</option>`).join("")}</select>`;
+}
+async function evSetTeamProfile(teamId, profId) {
+  const st = CLUB.settings || {}, ev = { ...(st.eval || {}) };
+  const profs = evProfiles(st).map(p => ({ ...p, teams: (p.teams || []).filter(id => id !== teamId) })), pr = profId ? profs.find(p => p.id === profId) : null;
+  if (pr) pr.teams.push(teamId);
+  if (!(await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st, eval: { ...ev, profiles: profs } }, pr ? `Deze ploeg evalueert nu met "${pr.name}".` : "Deze ploeg evalueert nu met de standaard van de club."))) return false;
+  const t = (S.teams || []).find(x => x.id === teamId), criteria = (pr?.template?.length ? pr.template : ev.template?.length ? ev.template : EV_TEMPLATE_DEFAULT).slice();
+  if (t) { try { await db.save("teams", { ...t, criteria }); t.criteria = criteria; if (S.team?.id === teamId) S.team.criteria = criteria; } catch (e) { toast(e.message || String(e)); } }
+  if (typeof evApplyClub === "function") evApplyClub(); return true;
+}
+/* zelfevaluatie aan of uit voor de fiche van deze ploeg (geldt voor alle ploegen met dezelfde fiche) */
+async function evSetSelf(teamId, on) {
+  const st = CLUB.settings || {}, ev = { ...(st.eval || {}) }, profs = evProfiles(st).map(p => ({ ...p })), pr = profs.find(p => (p.teams || []).includes(teamId)) || null;
+  const cur = { ...((pr ? pr.self : ev.self) || {}) }, t = (S.teams || []).find(x => x.id === teamId);
+  cur.on = !!on; if (on && !(cur.questions || []).length) { const k = (t ? evAgeOf(t) : 99) <= 9 ? "jong" : "oud", ps = EV_SELF_PRESETS[k]; Object.assign(cur, { scale: ps.scale, intro: ps.intro, questions: ps.questions.map(q => ({ ...q })) }); }
+  if (pr) pr.self = cur; else ev.self = cur;
+  if (!(await csCtxOwn().saveAll(CLUB.name, CLUB.short, { ...st, eval: { ...ev, profiles: profs } }, on ? "Zelfevaluatie staat aan." : "Zelfevaluatie staat uit."))) return false;
+  if (typeof evApplyClub === "function") evApplyClub(); return true;
+}
