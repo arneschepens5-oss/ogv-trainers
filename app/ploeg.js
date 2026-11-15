@@ -28,7 +28,12 @@ route("start", { title: "Vandaag", render: async v => {
     return `<section class="nextcard"><p class="nk">${when(e)} · training</p><h2 class="ntitle">${esc(e.theme || "Training")}</h2>
       <p class="nmeta">${meta.map(esc).join(" · ")}</p>${rsHtml}
       <div class="nact"><a class="btn" href="#/activiteit/${e.id}">${IC.check}Aanwezigheden</a><a class="btn ghost" href="#/trainingen">${IC.plan}Training voorbereiden</a></div></section>`; };
+  /* wie is er nu afwezig (blessure, ziek ...) en wie moet nog antwoorden voor de volgende activiteit */
+  const outNow = t && typeof absNow === "function" ? active().map(p => [p, absNow(p.id)]).filter(([, a]) => a) : [];
+  const nrs = next ? rsvpSummary(next) : null;
   const todoRows = [
+    ...(outNow.length ? [`<a class="trow" href="#/spelers"><span class="ti bad">${IC.ppl}</span><span><b>${outNow.length} ${outNow.length === 1 ? "speler" : "spelers"} afwezig</b><small>${outNow.slice(0, 4).map(([p, a]) => esc(p.first_name) + " (" + esc(absL(a.kind).toLowerCase()) + ")").join(", ")}${outNow.length > 4 ? " …" : ""}</small></span>${IC.chev || "›"}</a>`] : []),
+    ...(nrs && nrs.nee ? [`<a class="trow" href="#/activiteit/${next.id}"><span class="ti warn">${IC.x}</span><span><b>${nrs.nee} afgemeld voor ${next.type === "wedstrijd" ? "de wedstrijd" : "de training"}</b><small>${esc(dShort(next.date))} · ${nrs.ja} komen, ${nrs.open} nog geen antwoord</small></span>${IC.chev || "›"}</a>`] : []),
     ...todo.map(e => `<a class="trow" href="#/activiteit/${e.id}"><span class="ti warn">${IC.check}</span><span><b>Aanwezigheden invullen</b><small>${e.type === "wedstrijd" ? "Wedstrijd" : "Training"} van ${esc(dShort(e.date))}</small></span>${IC.chev || "›"}</a>`)];
   const evr = t && !clubOff("evaluaties") ? evReminder() : "";
   const noTeam = `<section class="nextcard empty"><p class="nk">${logged ? "Nog geen ploeg gekozen" : "Welkom"}</p><h2 class="ntitle">${logged ? "Kies je ploeg om te beginnen" : "Meld je aan om te beginnen"}</h2>
@@ -52,7 +57,7 @@ function evItem(e) {
   const as = S.att.filter(a => a.event_id === e.id), inn = as.filter(a => a.status === "aanwezig" || a.status === "te laat").length, r = res(e);
   const right = e.rbfa_state === "afgelast" ? `<span class="pill loss">Afgelast</span>` : e.type === "wedstrijd" && r ? `<b>${e.score_for} - ${e.score_against}</b><span class="pill ${r}">${RES_L[r]}</span>`
     : as.length ? `<b>${inn}/${active().length}</b>aanwezig` : ((rs => rs && e.date >= todayIso() ? `<b style="color:var(--ok)">${rs.ja} komen</b>${rs.nee ? rs.nee + " niet · " : ""}${rs.open} open` : "")(rsvpSummary(e)) || (e.date <= todayIso() ? `<b style="color:var(--warn)">Invullen</b>aanwezigheden` : ""));
-  return `<div class="item" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>${e.type === "wedstrijd" ? matchCrests(e) : ""}
+  return `<div class="item ev-${e.type === "wedstrijd" ? "w" : "t"}${e.cancelled || e.rbfa_state === "afgelast" ? " ev-off" : ""}" data-go="#/activiteit/${e.id}"><span class="date"><b>${dDay(e.date)}</b><small>${dMon(e.date)}</small></span>${e.type === "wedstrijd" ? matchCrests(e) : ""}
     <span class="main"><b>${e.type === "wedstrijd" ? matchTitle(e, clubShort()) : "Training"} <span class="pill ${e.type === "wedstrijd" ? "w" : "t"}">${e.type === "wedstrijd" ? "Match" : "Training"}</span>${e.series ? ` <span class="pill" title="Ingepland door de club">Vast</span>` : ""}${e.cancelled ? ` <span class="pill loss">Afgelast</span>` : ""}</b>
     <small>${dShort(e.date)}${e.start_time ? " · " + tm(e.start_time) : ""}${e.theme ? " · " + esc(e.theme) : e.location ? " · " + esc(e.location) : ""}</small></span><span class="val">${right}</span></div>`;
 }

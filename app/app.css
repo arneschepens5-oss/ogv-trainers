@@ -1917,3 +1917,88 @@ html,body{overflow-x:clip}
   .sheet .nav>a{display:flex;width:100%;min-height:52px;margin:10px 0 0;flex-direction:row;justify-content:center;font-size:14px}
   .sheet .navg:not([open])>summary.navgrp{border-bottom:1px solid var(--line);padding-bottom:12px}
 }
+
+/* ===================================================================
+   v130 · rustiger en beter leesbaar
+   - zijbalk altijd donker (clubkleur zwart/geel), inhoud licht of donker
+   - duidelijk verschil tussen achtergrond en kaarten
+   - kleur met betekenis: groen = training, geel = wedstrijd, paars = evaluatie, rood = afwezig
+   - minder vet: enkel titels en namen
+   =================================================================== */
+:root{--bg:#0E0F0D;--card:#1A1C18;--card2:#23251F;--card3:#2D2F28;--line:#2B2D26;--line2:#3D4037;--muted:#BEC0B6;--dim:#93968C;
+  --tr:#5FD08F;--trbg:#14301F;--ev:#B99CF7;--evbg:#251C3B;--shadow:none}
+:root[data-theme="light"]{--bg:#ECEEE8;--card:#FFFFFF;--card2:#F5F6F2;--card3:#E9EBE4;--line:#E2E4DC;--line2:#CDD0C6;--muted:#4D5048;--dim:#6A6D64;
+  --tr:#16794A;--trbg:#E1F3E8;--ev:#6B3FC4;--evbg:#EFE8FC;--navact:#F1F2EC;--shadow:0 1px 2px rgba(18,20,16,.05),0 6px 18px rgba(18,20,16,.05)}
+
+/* zijbalk: donker in beide thema's, korte lijst */
+.side{--ink:#F4F4F0;--muted:#B7B9AF;--dim:#8E9187;--card2:#22241F;--line:#2B2D27;--line2:#3C3F36;--navact:rgba(255,209,0,.11);--ytext:#FFD100;
+  background:#141613;color:var(--ink);border-right:0;padding:18px 14px 18px}
+:root[data-theme="light"] .side{border-right:0}
+.side .brand{padding:4px 6px 18px}
+.side .nav{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.side .nav a{padding:11px 12px;font-size:15px;font-weight:600;border-radius:12px;color:var(--muted)}
+.side .nav a svg.i{width:21px;height:21px}
+.side .nav a:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.side .nav a[aria-current="page"]{background:var(--navact);color:#fff}
+.side .nav a[aria-current="page"]::before{left:-14px}
+.side .teampick{background:#1F211C;border-color:#2E3029}
+.side .foot{border-top:1px solid #2B2D27}
+
+/* tabbladen van een onderdeel, ook op de laptop */
+.subnav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:1160px;margin:0 auto;padding:22px clamp(16px,3.4vw,44px) 0}
+.subnav::-webkit-scrollbar{display:none}
+.subnav a{flex:none;padding:8px 15px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted);background:transparent;border:1px solid var(--line2);text-decoration:none;transition:background .15s,color .15s}
+.subnav a:hover{color:var(--ink);background:var(--card)}
+.subnav a[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.subnav + .page{padding-top:20px}
+@media (max-width:900px){.subnav{padding:12px 14px 2px}.subnav + .page{padding-top:12px}}
+
+/* koppen: minder zwaar */
+h1.pg{font-weight:800;font-stretch:108%;font-size:clamp(28px,3.4vw,40px);line-height:1.05;letter-spacing:-.02em}
+.today-h h1{font-weight:800;font-stretch:108%}
+.tsh h2,.sec>h2,.panel>h2{font-weight:700;letter-spacing:-.01em}
+
+/* kaarten: los van de achtergrond */
+.panel,.list,.nextcard,a.pcard,.dmatch,.kpis>div{box-shadow:var(--shadow)}
+:root[data-theme="light"] .panel,:root[data-theme="light"] .list,:root[data-theme="light"] a.pcard{border-color:#E6E8E1}
+:root[data-theme="light"] .nextcard:not(.match){background:var(--card);border-color:#E6E8E1}
+
+/* lijsten: lichter gewicht, betere leesbaarheid */
+.item .main b{font-weight:600}
+.item .main small{color:var(--muted);font-size:13.5px}
+.item .val b{font-weight:700}
+.item:hover{background:var(--card2)}
+
+/* kleur met betekenis in de kalender */
+.pill.t{background:var(--trbg);color:var(--tr)}
+.item.ev-t .date{background:var(--trbg);border-color:transparent;color:var(--tr)}
+.item.ev-t .date small{color:var(--tr);opacity:.85}
+.item.ev-w .date{background:var(--ybg);border-color:transparent;color:var(--ytext)}
+.item.ev-w .date small{color:var(--ytext);opacity:.85}
+.item.ev-off{opacity:.6}.item.ev-off .date{background:var(--badbg);color:var(--bad)}
+.wev{background:var(--trbg);border-left-color:var(--tr)}
+.wev.wedstrijd{background:var(--ybg);border-left-color:var(--yellow)}
+.wev:hover{filter:brightness(.97)}
+:root:not([data-theme="light"]) .wev:hover{filter:brightness(1.15)}
+.wev small{color:var(--muted)}
+/* logo in de donkere zijbalk: altijd de versie voor een donkere achtergrond */
+.side .ogvlogo .lg-l{display:none!important}.side .ogvlogo .lg-d{display:block!important}
+/* tabbladen op de laptop als onderlijnde tabs, zodat ze niet verward worden met filterknoppen */
+@media (min-width:901px){
+  .subnav{gap:2px;border-bottom:1px solid var(--line2);padding-bottom:0;margin-top:6px}
+  .subnav a{border:0;border-radius:0;padding:10px 14px 12px;background:none;position:relative}
+  .subnav a:hover{background:none;color:var(--ink)}
+  .subnav a[aria-current="page"]{background:none;color:var(--ink)}
+  .subnav a[aria-current="page"]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--yellow)}
+}
+@media (min-width:901px){.subnav{padding-left:0;padding-right:0;width:calc(100% - 2*clamp(16px,3.4vw,44px));max-width:calc(1160px - 2*clamp(16px,3.4vw,44px))}.subnav a:first-child{padding-left:2px}.subnav a:first-child[aria-current="page"]::after{left:0}}
+/* gsm: "Meer acties" bovenaan een pagina */
+.phmore{position:relative;display:inline-block}
+.phmore>summary{list-style:none;cursor:pointer}.phmore>summary::-webkit-details-marker{display:none}
+.phmenu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;min-width:220px;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+.phmenu .btn{justify-content:flex-start;border:0;background:none;width:100%;min-height:44px}
+.phmenu .btn:hover{background:var(--card2)}
+.ph:has(.phmore){flex-wrap:wrap}
+.phacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%}
+.trow .ti.bad{background:var(--badbg);color:var(--bad)}.trow .ti.ev{background:var(--evbg);color:var(--ev)}
+.evremind .ic{background:var(--evbg)!important;color:var(--ev)!important}

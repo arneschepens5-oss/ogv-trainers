@@ -386,6 +386,7 @@ const IC = {
   eye:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
   out:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`,
   dl:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>`,
+  club:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 3 20 6v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>`,
   folder:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
   up:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>`,
   file:`<svg class="i" viewBox="0 0 24 24" ${P}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`,
@@ -516,19 +517,18 @@ function menuEdit() {
   $("#mnAll", d).onclick = () => $$("[data-mk]", d).forEach(c => c.checked = true);
   $("form", d).onsubmit = e => { e.preventDefault(); const h = $$("[data-mk]", d).filter(c => !c.checked).map(c => c.dataset.mk); try { localStorage.setItem("ogv-nav-hidden", JSON.stringify(h)); } catch (x) {} d.close(); shell(); toast("Menu aangepast."); };
 }
+/* menu: een korte lijst onderdelen; binnen een onderdeel wissel je met tabbladen bovenaan de pagina */
 const NAV = [
   { g: null, items: [["start", "Vandaag", "home"]] },
-  { g: "Mijn ploeg", team: true, items: [["ploeg", "Overzicht", "trophy"], ["kalender", "Kalender", "cal"], ["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["dossier", "Spelersdossier", "book"], ["cijfers", "Cijfers", "chart"]] },
-  { g: "Wedstrijd", items: [["uitslagen", "Uitslagen club", "ball"], ["live", "Live coachen", "mic"], ["matchday", "Wedstrijdblad", "sheet"], ["videoanalyse", "Videoanalyse", "split"]] },
-  { g: "Training", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
-  { g: "Mijn map", items: [["meldingen", "Meldingen", "bell"], ["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] },
-  { g: "Club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
-  { g: "Scouting", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] }
+  { g: "Kalender", icon: "cal", items: [["kalender", "Kalender", "cal"], ["matchday", "Wedstrijdblad", "sheet"], ["live", "Live coachen", "mic"], ["uitslagen", "Uitslagen club", "ball"], ["videoanalyse", "Videoanalyse", "split"]] },
+  { g: "Ploeg", icon: "ppl", team: true, items: [["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["dossier", "Spelersdossier", "book"], ["cijfers", "Cijfers", "chart"], ["ploeg", "Overzicht", "trophy"], ["ploeg-instellingen", "Ploeg en trainers", "gear"]] },
+  { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["animatiebord", "Animatiebord", "board"]] },
+  { g: "Scouting", icon: "scout", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Scoutings\u00ADdatabase", "scout"]] },
+  { g: "Club", icon: "club", items: [["berichten", "Berichten", "mail"], ["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
+  { g: "Mijn map", icon: "folder", items: [["meldingen", "Meldingen", "bell"], ["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] }
 ];
-/* op de gsm: onderdelen die bij één tab onderaan horen, met een rij knoppen bovenaan de pagina */
-const SUBNAV = { ploeg: [["spelers", "Spelers"], ["evaluaties", "Evaluaties"], ["dossier", "Dossier"], ["cijfers", "Cijfers"], ["ploeg", "Overzicht"]],
-  kal: [["kalender", "Kalender"], ["matchday", "Wedstrijdblad"], ["live", "Live coachen"], ["uitslagen", "Uitslagen"]],
-  train: [["trainingen", "Trainingen"], ["bibliotheek", "Bibliotheek"], ["animatiebord", "Animatiebord"]] };
+/* het onderdeel van een pagina (voor de tabbladen en het actieve menu-item) */
+const SUBNAV = Object.fromEntries(NAV.filter(g => g.g).map(g => [g.g, g.items.map(([k, l]) => [k, l])]));
 const SUBNAV_OF = Object.fromEntries(Object.entries(SUBNAV).flatMap(([g, l]) => l.map(([k]) => [k, g])));
 const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
@@ -544,14 +544,18 @@ function shell(fresh) {
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
-  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
+  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
-    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
+    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>
     `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("");
-  const navHtml = secs.map(sec => sec.g ? `<details class="navg" data-g="${esc(sec.g)}"${!navClosed.includes(sec.g) || sec.items.some(([k]) => k === active) ? " open" : ""}><summary class="navgrp">${sec.g}</summary>${navItems(sec)}</details>` : navItems(sec)).join("");
+  /* zijbalk: één regel per onderdeel; de gsm (Meer) toont per onderdeel alle tegels */
+  const curSec = secs.find(sec => sec.g && sec.items.some(([k]) => k === active));
+  const sideHtml = secs.map(sec => !sec.g ? navItems(sec) : `<a href="#/${sec.items[0][0]}"${curSec === sec ? ' aria-current="page"' : ""}>${IC[sec.icon] || IC[sec.items[0][2]]}<span>${sec.g}</span>${sec.g === "Beheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}</a>`).join("");
+  const navHtml = secs.filter(sec => sec.g).map(sec => `<div class="navg" data-g="${esc(sec.g)}"><div class="navgrp">${sec.g}</div>${navItems(sec)}</div>`).join("");
+  const subHtml = curSec && curSec.items.length > 1 ? `<nav class="subnav" aria-label="${esc(curSec.g)}">${curSec.items.map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${String(l).replace(/\u00AD/g, "")}</a>`).join("")}</nav>` : "";
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
   const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? (CLUB.id === "platform" ? "Beheerder van het platform" : esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName())) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span>${mode === "demo" ? "" : `<button class="ib" type="button" data-account title="Mijn account" aria-label="Mijn account">${IC.gear}</button>`}<button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
@@ -561,19 +565,19 @@ function shell(fresh) {
   <aside class="side" aria-label="Hoofdmenu">
     <a class="brand" href="#/start">${ogvBrand() ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? LOGO("mini") + "Jeugdwerking " + esc(clubName()) : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
-    <nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen"${active === "ploeg-instellingen" ? ' aria-current="page"' : ""}>${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+    <nav class="nav">${sideHtml}</nav>
     <div class="foot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<button class="navbtn" type="button" data-menued>${IC.gear}<span>Menu aanpassen</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>${isOGV() ? `<a class="navbtn" href="privacy.html" target="_blank" rel="noopener">${IC.eye}<span>Privacy</span></a>` : ""}</div>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}</div></div>
   </aside>
   <main>
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
-    ${logged && !platOnly && SUBNAV_OF[active] ? `<nav class="subnav" aria-label="Onderdelen">${SUBNAV[SUBNAV_OF[active]].filter(([k]) => !clubOff(k) && (k !== "scouting" || mag("scouting"))).map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${l}</a>`).join("")}</nav>` : ""}
+    ${logged && !platOnly ? subHtml : ""}
     <div class="page" id="view"></div>
   </main>
   <nav class="tabbar${platOnly ? " t3" : ""}" aria-label="Snelmenu">
-    ${(platOnly ? [["platform","Overzicht","chart"],["platform/meldingen","Meldingen","mail"]] : [["start","Vandaag","home"],["kalender","Kalender","cal"],["spelers","Ploeg","ppl"],["trainingen","Training","plan"]]).map(([k,l,i]) => `<a href="#/${k}"${(SUBNAV_OF[active] ? SUBNAV[SUBNAV_OF[active]][0][0] : active) === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
+    ${(platOnly ? [["platform","Overzicht","chart"],["platform/meldingen","Meldingen","mail"]] : [["start","Vandaag","home"],["kalender","Kalender","cal"],["spelers","Ploeg","ppl"],["trainingen","Training","plan"]]).map(([k,l,i]) => `<a href="#/${k}"${(k === "start" ? active === "start" : curSec && curSec.items.some(([x]) => x === k)) || (!curSec && active === k) ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span></button>
   </nav>
-  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}${logged && t && !platOnly ? `<a href="#/ploeg-instellingen">${IC.gear}<span>Ploeg en trainers</span></a>` : ""}</nav>
+  <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}</nav>
     <div class="sheetfoot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<button class="navbtn" type="button" data-menued>${IC.gear}<span>Menu aanpassen</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>${isOGV() ? `<a class="navbtn" href="privacy.html" target="_blank" rel="noopener">${IC.eye}<span>Privacy</span></a>` : ""}</div>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}</div>${acct}</div></div></div>
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
@@ -624,7 +628,7 @@ async function renderPage(seq) {
   try { const td = await def.render(v, r.id, r.sub); settled = true;
     if (typeof td === "function") { if (seq === renderSeq) teardown = td; else try { td(); } catch (x) {} } /* een nieuwere weergave kwam tussen */ }
   catch (e) { settled = true; console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
-  clearTimeout(tLoad); clearTimeout(tSlow); $(".slowload", v)?.remove();
+  clearTimeout(tLoad); clearTimeout(tSlow); $(".slowload", v)?.remove(); compactHead(v);
   document.title = (def.title ? def.title + " | " : "") + APPNAME();
   if (!def.keepScroll) scrollTo(0, 0);
 }
@@ -636,6 +640,17 @@ const HELP = { start: "s2", ploeg: "s2", kalender: "s3", wedstrijd: "s10", activ
   evaluaties: "s12", dossier: "s12", cijfers: "s13", uitslagen: "s14", animatiebord: "s15", videoanalyse: "s15", opslag: "s16", principes: "s16", mixschema: "s16", scouting: "s17",
   oefeningen: "s7", sjablonen: "s6", sjabloon: "s6", speler: "s5", verslag: "s10", ploeginstellingen: "s18", clubbeheer: "s19", clubinstellingen: "s19", contacten: "s20", berichten: "s21", clubdashboard: "s22", terreinen: "s22" };
 const helpLink = (page = cur().page) => HELP[page] ? `<a class="hlp" href="handleiding/uitgebreid.html#${HELP[page]}" target="_blank" rel="noopener" title="Hoe werkt deze pagina?" aria-label="Hulp bij deze pagina">?</a>` : "";
+/* gsm: bijkomende knoppen bovenaan een pagina samen onder "Meer acties", enkel de hoofdknop blijft zichtbaar */
+function compactHead(v) {
+  if (innerWidth > 900) return; const ph = v && v.querySelector(":scope > .ph"); if (!ph || ph.querySelector(".phmore")) return;
+  const acts = [...ph.children].filter(x => !x.classList.contains("t")), flat = acts.flatMap(x => x.matches(".btn,a.btn,button") ? [x] : [...x.querySelectorAll(":scope > .btn, :scope > a.btn, :scope > button")]);
+  const extra = flat.filter(b => b.classList.contains("ghost") || b.classList.contains("secondary")); if (extra.length < 2) return;
+  const d = document.createElement("details"); d.className = "phmore"; d.innerHTML = `<summary class="btn ghost">${IC.menu}Meer acties</summary><div class="phmenu"></div>`;
+  const menu = d.querySelector(".phmenu"); extra.forEach(b => menu.appendChild(b));
+  const prim = flat.find(b => !extra.includes(b)), host = prim?.parentElement || ph; if (prim) host.insertBefore(d, prim); else host.appendChild(d);
+  if (host === ph) { const w = document.createElement("div"); w.className = "phacts"; [d, prim].filter(Boolean).forEach(x => w.appendChild(x)); ph.appendChild(w); }
+  menu.addEventListener("click", () => d.removeAttribute("open")); acts.forEach(x => { if (x !== host && !x.children.length && !x.textContent.trim()) x.remove(); });
+}
 function head(title, sub, actions = "") { return `<div class="ph"><div class="t"><h1 class="pg">${title}${helpLink()}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div>${actions}</div>`; }
 
 /* ============ probleem melden ============ */
