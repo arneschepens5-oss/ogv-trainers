@@ -310,7 +310,7 @@ $$;
 -- (alleen bij de allereerste installatie, zodat dit script veilig opnieuw uitgevoerd kan worden)
 insert into public.club_members(user_id, email) select id, email from auth.users
   where not exists (select 1 from public.club_members) on conflict do nothing;
-update public.club_members set role = 'admin' where lower(email) = lower('arneschepens5@gmail.com');
+update public.club_members set role = 'admin' where lower(email) = lower('VUL-HIER-HET-EMAILADRES-VAN-DE-BEHEERDER-IN');
 insert into public.club_settings(key, value) values ('invite_code', 'OGV-' || upper(substr(md5(random()::text), 1, 6))) on conflict do nothing;
 
 create or replace function public.club_status() returns json
