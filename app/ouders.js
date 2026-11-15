@@ -9,7 +9,7 @@ async function v14Check() { if (mode !== "cloud") { S.v14 = S.v19 = S.v20 = true
   try { const r = await sb.from("events").select("kk_home,referee").limit(1); S.v20 = !r.error; } catch (e) { S.v20 = false; } }
 const V19 = () => mode === "demo" || !!S.v19, V20 = () => mode === "demo" || !!S.v20;
 const needV14 = what => `<div class="empty"><b>Nog niet beschikbaar</b>${esc(what)} werkt zodra de beheerder ogv-database.sql (versie 14) uitvoert in Supabase.</div>`;
-const shareWA = txt => "https://wa.me/?text=" + encodeURIComponent(txt);
+const shareWA = txt => "https://api.whatsapp.com/send?text=" + encodeURIComponent(txt);
 const teamShort = () => S.team?.name || "onze ploeg";
 const evWhen = e => `${cap(dLong(e.date))}${e.start_time ? " om " + tm(e.start_time) : ""}`;
 const evWhat = e => e.type === "wedstrijd" ? (e.opponent ? (e.home === false ? "uitwedstrijd bij " : "thuiswedstrijd tegen ") + e.opponent : "wedstrijd") : "training";
@@ -62,10 +62,10 @@ function convoTab(tv, e) {
     const keep = () => { v.meet = $("#cvm", tv).value; v.place = $("#cvp", tv).value; v.bring = $("#cvb", tv).value; v.note = $("#cvn", tv).value; };
     $$("[data-cv]", tv).forEach(b => b.onclick = () => { keep(); sel.has(b.dataset.cv) ? sel.delete(b.dataset.cv) : sel.add(b.dataset.cv); paint(); });
     $("#cvall", tv).onclick = () => { keep(); ps.forEach(p => sel.add(p.id)); paint(); };
-    const text = () => { keep(); const names = ps.filter(p => sel.has(p.id)).map(p => p.first_name).join(", "), off = ps.filter(p => !sel.has(p.id));
+    const text = () => { keep(); const names = ps.filter(p => sel.has(p.id)).map(p => p.first_name).join(", ");
       return `⚽ Convocatie ${teamShort()}\n${cap(dLong(e.date))} – ${e.opponent ? (home ? "thuis tegen " : "uit bij ") + e.opponent : "wedstrijd"}\n`
         + `${v.meet ? "🕗 Verzamelen: " + v.meet + (v.place ? " – " + v.place : "") + "\n" : ""}${kick ? "🏁 Aftrap: " + kick + "\n" : ""}${e.location ? "📍 " + (home ? e.location.split(" · ")[0] + (e.field_part && fieldOf(e.location) ? " (" + partLong(e.field_part, fieldOf(e.location)) + ")" : "") : e.location) + "\n" : ""}`
-        + `\n✅ Geselecteerd: ${names || "–"}${off.length ? "\n(Niet geselecteerd deze keer: " + off.map(p => p.first_name).join(", ") + ")" : ""}\n`
+        + `\n✅ Geselecteerd: ${names || "–"}\n`
         + `${v.bring ? "\n🎒 Meebrengen: " + v.bring : ""}${v.note ? "\n\n" + v.note : ""}\n\nBevestig via je persoonlijke link of je kind erbij is. Bedankt en komoan OG! 💛🖤`; };
     $("#cvsave", tv).onclick = async () => { keep(); const conv = { players: [...sel], meet: v.meet || null, place: v.place || null, bring: v.bring || null, note: v.note || null, sent: new Date().toISOString() };
       const ok = await safe(async () => { e.convo = conv; await putEvent(e); return true; }, "Verstuurd. De ouders zien het via hun link.");

@@ -100,7 +100,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
   const txt = `Je bent uitgenodigd voor ${APPNAME()}, het trainersplatform van ${clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${info.code}\n\nDeel deze code niet buiten de club.`;
-  $("#wa").href = "https://wa.me/?text=" + encodeURIComponent(txt);
+  $("#wa").href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(txt);
   $("#share").onclick = () => {
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else { navigator.clipboard?.writeText(txt); toast("Uitnodiging gekopieerd."); } };
   $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 6 tekens):", String(clubShort()).replace(/\W/g, "").toUpperCase().slice(0, 4) + "-" + Math.random().toString(36).slice(2, 8).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
@@ -461,7 +461,7 @@ async function parentLinks() {
     $("#plh", d).innerHTML = kid ? `Spelers met een eigen gsm (meestal vanaf U12) krijgen hun eigen link: agenda, convocaties, hun seizoen en het nieuws, en ze geven zelf door of ze komen. Ze zien <b style="color:var(--ink)">geen</b> contactgegevens, medische info of toestemmingen en kunnen de trainer geen berichten sturen; dat blijft bij de ouders. <b style="color:var(--ink)">Stuur elke link apart</b>, liefst via de ouders.`
       : `Elke speler heeft een eigen link naar de app <b>${esc(clubShort())} Ouders</b>. Ouders zien daarin de activiteiten van de komende 6 weken, convocaties, het seizoen en berichten, tikken aan of hun kind komt, sturen de trainer een bericht en vullen zelf hun contactgegevens, medische info en toestemming voor beeldmateriaal in.<br><b style="color:var(--ink)">Stuur elke link apart</b>, niet in de groepschat: wie de link heeft, kan antwoorden voor die speler.`;
     $("#pll", d).innerHTML = ps.map(p => `<div class="item static plink" data-p="${p.id}"><span class="main"><b>${esc(pname(p))}</b><small>${esc(url(p))}</small></span>
-      <a class="btn small" href="https://wa.me/?text=${encodeURIComponent(msg(p))}" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost small" href="${esc(url(p))}" target="_blank" rel="noopener" title="Zie wat ${kid ? "de speler" : "de ouders"} ziet">Bekijk</a><button class="btn ghost small" type="button" data-cp="${p.id}">${IC.copy}Kopiëren</button><button class="link" type="button" data-new="${p.id}" title="Maak een nieuwe link; de oude werkt dan niet meer">Nieuwe link</button></div>`).join("");
+      <a class="btn small" href="https://api.whatsapp.com/send?text=${encodeURIComponent(msg(p))}" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost small" href="${esc(url(p))}" target="_blank" rel="noopener" title="Zie wat ${kid ? "de speler" : "de ouders"} ziet">Bekijk</a><button class="btn ghost small" type="button" data-cp="${p.id}">${IC.copy}Kopiëren</button><button class="link" type="button" data-new="${p.id}" title="Maak een nieuwe link; de oude werkt dan niet meer">Nieuwe link</button></div>`).join("");
     $$("[data-cp]", d).forEach(b => b.onclick = () => { const p = S.players.find(x => x.id === b.dataset.cp); navigator.clipboard?.writeText(msg(p)).then(() => toast("Bericht met link gekopieerd."), () => toast(url(p))); });
     $$("[data-new]", d).forEach(b => b.onclick = async () => { const p = S.players.find(x => x.id === b.dataset.new);
       if (!confirm(`Nieuwe ${kid ? "spelerslink" : "ouderlink"} maken voor ${p.first_name}? De oude link werkt dan niet meer.`)) return;
@@ -530,7 +530,7 @@ function historyHtml(p) {
 const CT_CATS = ["Administratie", "Sportief", "Medisch en welzijn", "Praktisch", "Algemeen"];
 const CT_COL = { Administratie: "#38BDF8", Sportief: "#FFD100", "Medisch en welzijn": "#FB7185", Praktisch: "#22C55E", Algemeen: "#A78BFA" };
 const telHref = p => "tel:" + String(p || "").replace(/[^\d+]/g, "");
-const waHref = p => { let n = String(p || "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "32" + n.slice(1); return "https://wa.me/" + n; };
+const waHref = p => { let n = String(p || "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "32" + n.slice(1); return "https://api.whatsapp.com/send?phone=" + n; };
 let CT_Q = "";
 route("contacten", { title: "Wie contacteer ik?", auth: true, render: async v => {
   v.innerHTML = head("Wie contacteer ik?", "Laden…");
@@ -805,7 +805,7 @@ async function csPage(v, id, ctx) {
     const link = location.origin + location.pathname + "#/aanmelden";
     const txt = `Je bent uitgenodigd voor ${ctx.platform ? PRODUCT : APPNAME()}, het trainersplatform van ${ctx.platform ? (C.settings?.full || C.name) : clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${code}\n\nDeel deze code niet buiten de club.`;
     host.innerHTML = `<form class="panel" id="cst" style="max-width:820px"><h2 style="margin-top:0">Trainers uitnodigen</h2><p class="hint" style="margin-top:0">Trainers maken zelf een account met de clubcode en komen meteen in jullie club. Daarna koppel je ze aan hun ploeg in Beheer › Ploegen, en geef je in Beheer › Toegang extra rechten (bv. scouting).</p>
-      <div class="codebox"><b translate="no">${esc(code)}</b><button class="btn ghost small" type="button" id="cscp">${IC.copy}Uitnodiging kopiëren</button><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">${IC.wa}Via WhatsApp</a></div>
+      <div class="codebox"><b translate="no">${esc(code)}</b><button class="btn ghost small" type="button" id="cscp">${IC.copy}Uitnodiging kopiëren</button><a class="btn small" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}">${IC.wa}Via WhatsApp</a></div>
       ${foot(first ? "Klaar" : ctx.platform ? "Klaar" : "Bewaren")}</form>`;
     $("#cscp").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Uitnodiging gekopieerd."));
     $("#cst").onsubmit = async e => { e.preventDefault(); if (ctx.platform) { location.hash = ctx.done; return; } if (await csSave({ setup_done: true }, first ? "Je club staat klaar." : "Bewaard.")) { shell(); location.hash = "#/start"; } };
