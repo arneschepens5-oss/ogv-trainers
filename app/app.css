@@ -2009,3 +2009,8 @@ h1.pg{font-weight:800;font-stretch:108%;font-size:clamp(28px,3.4vw,40px);line-he
 :root:not([data-theme="light"]) .btn.notify{background:transparent;border-color:#FFD100}
 .tabbar .tdot:not([hidden]){display:block!important;width:10px!important;height:10px!important;min-width:0!important;padding:0!important;left:calc(50% + 6px)!important;right:auto!important;top:5px!important;border-radius:50%!important}
 @media (max-width:560px){.grpadd{flex-wrap:wrap}.grpadd>div{flex:1 1 calc(100% - 44px);min-width:0}.grpadd>.btn,.grpadd>button{margin-left:44px}}
+/* clublogo in een rondje: altijd in het midden, in elke grootte (de regel voor tegenstanderlogo's mag het niet naar de hoek duwen) */
+.lcrest.us .ogvlogo,.crest.us .ogvlogo{position:absolute!important;inset:13%!important;display:block!important;height:auto!important;width:auto!important;max-width:none!important;margin:0!important}
+.lcrest.us .ogvlogo img,.lcrest.us .ogvlogo svg,.crest.us .ogvlogo img,.crest.us .ogvlogo svg{position:static!important;inset:auto!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:contain;margin:0!important}
+.crest.us{position:relative}
+.lcrest.xs.us .ogvlogo{inset:8%!important}
