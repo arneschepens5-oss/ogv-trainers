@@ -2014,3 +2014,47 @@ h1.pg{font-weight:800;font-stretch:108%;font-size:clamp(28px,3.4vw,40px);line-he
 .lcrest.us .ogvlogo img,.lcrest.us .ogvlogo svg,.crest.us .ogvlogo img,.crest.us .ogvlogo svg{position:static!important;inset:auto!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:contain;margin:0!important}
 .crest.us{position:relative}
 .lcrest.xs.us .ogvlogo{inset:8%!important}
+/* beheer: tabbladen zonder dubbele spatie */
+.admtabs a .hm{margin-left:-8px;white-space:pre}
+@media (max-width:900px){.admtabs a .hm{margin-left:-5px}}
+
+/* beheer › toegang en leden */
+.memhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.memhead h2{margin:0;margin-right:auto}
+.memhead .cnt,.tmtools .cnt{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 7px;border-radius:99px;background:var(--card3);font-size:13px;font-weight:700;vertical-align:2px;margin-left:4px}
+.memtools,.tmtools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.memtools input,.tmtools input{min-height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card);padding:0 14px;min-width:240px;flex:1}
+.tmtools input{max-width:360px}
+.memgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+.memcard{display:flex;align-items:flex-start;gap:12px;padding:14px 14px 14px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+.memcard .av,.atr .av{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--ybg);color:var(--ytext);font-weight:800;font-size:17px;flex:none}
+.memcard .mm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.memcard .mm>b{font-size:15.5px;font-weight:700;overflow-wrap:anywhere}.memcard .mm>small{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.memcard .me,.atr .me{font-size:11.5px;font-weight:700;color:var(--muted);background:var(--card2);border-radius:99px;padding:1px 7px;vertical-align:1px}
+.memcard .where{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);margin-top:4px}.memcard .where svg{width:15px;height:15px;color:var(--muted)}
+.memcard .where.none{color:var(--bad)}.memcard .where.none svg{color:var(--bad)}
+.memcard .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.memcard>.btn{flex:none;align-self:center}
+
+/* beheer › ploegen en trainers */
+.admteams{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))!important;align-items:start}
+.admteam{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);gap:12px!important}
+.admteam.leeg{border-style:dashed;border-color:var(--line2)}
+.admteam .ath{display:flex;align-items:center;gap:12px}.admteam .ath>div{flex:1;min-width:0}
+.admteam .ath h3{font-size:16.5px;margin:0;font-weight:700}.admteam .ath small{color:var(--muted);font-size:13px}
+.admteam .ath .bdg{width:42px;height:42px;border-radius:12px;background:var(--yellow);color:#111;display:grid;place-items:center;font-weight:900;font-size:13px;letter-spacing:-.02em;flex:none}
+.admteam.leeg .ath .bdg{background:var(--card3);color:var(--muted)}
+.admteam .atl{display:flex;flex-direction:column;gap:6px}
+.atr{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:12px;background:var(--card2)}
+.atr .av{width:34px;height:34px;font-size:14px}
+.atr .main{flex:1;min-width:0}.atr .main b{display:block;font-size:14.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.atr .main small{display:block;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atr select{width:auto!important;max-width:130px;min-height:32px;padding:2px 8px;font-size:13px;border-radius:9px;margin:0!important;flex:none}
+.atr .ib{flex:none}
+.admteam .atempty{margin:0;padding:10px 12px;border-radius:12px;background:var(--badbg);color:var(--bad);font-size:13.5px}
+.admteam .admadd{min-height:38px;border-radius:12px;border-style:dashed}
+@media (max-width:640px){.atr{flex-wrap:wrap}.atr .main{flex:1 1 calc(100% - 50px)}.atr select{flex:1;max-width:none}.memgrid{grid-template-columns:1fr}.memtools input{min-width:0}}
+.atr{display:grid!important;grid-template-columns:34px minmax(0,1fr) auto;column-gap:10px;row-gap:6px;align-items:center}
+.atr select{grid-column:2/4;max-width:none!important;width:100%!important}
+.atr .ib{grid-column:3;grid-row:1}
+.chip[aria-pressed="true"] .cnt{background:rgba(255,255,255,.22)!important;color:inherit}
+.memcard .mm>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+.memcard .mm>small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
