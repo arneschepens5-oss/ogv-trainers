@@ -239,6 +239,7 @@ dialog::backdrop{background:rgba(5,10,7,.55)}
 .sec{font-family:var(--display);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0}
 html.in-platform a.portal{display:none!important}
 </style>
+<script src="../app/embed.js?v=1"></script>
 </head>
 <body class="home">
 
@@ -1728,7 +1729,7 @@ const MINI={};
 function miniPitch(fmt){
   const c=document.createElement('canvas');c.width=300;c.height=200;const x=c.getContext('2d');
   const d=blankDoc(fmt==='custom'?'custom':fmt,30,20); const f=getF(d);
-  x.fillStyle='#1d1d1a';x.fillRect(0,0,300,200);
+  if(!document.documentElement.classList.contains('in-platform')){x.fillStyle='#1d1d1a';x.fillRect(0,0,300,200);}
   const V2=makeView(300,200,f,'h',6,boundsFor(d,f),null); drawPitch(x,V2,d); return c;
 }
 function renderHome(){

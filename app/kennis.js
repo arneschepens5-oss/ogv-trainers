@@ -43,13 +43,13 @@ const DEMO_PRINCIPLES = [
 ];
 /* ============ ingebouwde tools ============ */
 function embed(v, src, title) { v.innerHTML = `<iframe class="embed" src="${src}" title="${esc(title)}" allow="clipboard-write; fullscreen" loading="eager"></iframe>`; }
-route("animatiebord", { title: "Animatiebord", wide: true, render: (v, id) => embed(v, "tactiekbord/" + (id ? "#b-" + encodeURIComponent(id) : ""), "Animatiebord") });
+route("animatiebord", { title: "Animatiebord", wide: true, render: (v, id) => embed(v, "tactiekbord/?v=2" + (id ? "#b-" + encodeURIComponent(id) : ""), "Animatiebord") });
 route("matchday", { title: "Wedstrijdblad", wide: true, render: (v, id) => {
   if (S.team) { const next = (id && S.events.find(e => e.id === id)) || S.events.find(e => e.type === "wedstrijd" && e.date >= todayIso());
     const sel = next ? selPlayers(next).map(p => p.id) : [];
     try { localStorage.setItem("ogv-matchday-import", JSON.stringify({ id: S.team.id, name: S.team.name, format: S.team.format || "5v5",
       squad: active().map(p => ({ id: p.id, name: pname(p), nr: p.number ?? "" })), sel, opp: next?.opponent || "", date: next?.date || "", kick: tm(next?.start_time), home: next ? (next.home === false ? "uit" : "thuis") : "" })); } catch (e) {} }
-  embed(v, "matchday/?v=66", "Wedstrijdblad");
+  embed(v, "matchday/?v=67", "Wedstrijdblad");
 } });
 
 /* ============ scouting ============ */

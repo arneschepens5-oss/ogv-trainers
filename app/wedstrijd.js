@@ -85,8 +85,8 @@ function viewTraining(v, e, tab) {
   const tv = $("#tabv");
   if (tab === "plan") planEditor(tv, e);
   else if (tab === "verslag") { tv.innerHTML = `<div class="panel"><div class="fields">
-      <label class="f full">Wat ging goed?<textarea data-r="good">${esc(e.report.good || e.report_good || "")}</textarea></label>
-      <label class="f full">Wat kan beter?<textarea data-r="better">${esc(e.report.better || e.report_better || "")}</textarea></label>
+      <label class="f full">Sterke punten van de ploeg<textarea data-r="good">${esc(e.report.good || e.report_good || "")}</textarea></label>
+      <label class="f full">Werkpunten van de ploeg<textarea data-r="better">${esc(e.report.better || e.report_better || "")}</textarea></label>
       <label class="f full">Notities en afspraken<textarea data-r="notes">${esc(e.report.notes || e.report_notes || "")}</textarea></label></div><p class="hint" style="margin:10px 0 0">Wordt automatisch bewaard.</p></div>`;
     const sv = saver(e); $$("[data-r]", tv).forEach(x => x.oninput = () => { e.report[x.dataset.r] = x.value; sv(); }); }
   else attendanceView(tv, e);
@@ -202,8 +202,8 @@ function reportTab(tv, e) {
           <button class="link noprint" type="button" data-gx="${i}" aria-label="Verwijderen">✕</button></div>`).join("")}</div>` : `<p class="hint">Nog geen doelpunten. Bij live coachen komen ze hier vanzelf.</p>`}</div></div>
     <div class="grid2 sec">
       <div class="panel"><h2>Analyse</h2><div class="fields">
-        <label class="f full">Wat ging goed?<textarea data-r="good">${esc(R.good || e.report_good || "")}</textarea></label>
-        <label class="f full">Wat kan beter?<textarea data-r="better">${esc(R.better || e.report_better || "")}</textarea></label></div></div>
+        <label class="f full">Sterke punten van de ploeg<textarea data-r="good">${esc(R.good || e.report_good || "")}</textarea></label>
+        <label class="f full">Werkpunten van de ploeg<textarea data-r="better">${esc(R.better || e.report_better || "")}</textarea></label></div></div>
       <div class="panel"><h2>Tegenstander en vervolg</h2><div class="fields">
         <label class="f full">Tegenstander: sterktes en zwaktes<textarea data-r="opponent">${esc(R.opponent || "")}</textarea></label>
         <label class="f full">Actiepunten voor de training<textarea data-r="actions" placeholder="bv. Woensdag 3B omschakeling B+ naar B- trainen">${esc(R.actions || "")}</textarea></label>
@@ -259,10 +259,10 @@ function playersTab(tv, e) {
       <label class="f">Goals<input data-k="goals" data-n type="number" min="0" inputmode="numeric" value="${a.goals ?? ""}"></label>
       <label class="f">Assists<input data-k="assists" data-n type="number" min="0" inputmode="numeric" value="${a.assists ?? ""}"></label></div>
       <div><span class="muted" style="font-size:13.5px;font-weight:600">Cijfer op 10</span><div class="scale" style="margin-top:6px">${[1,2,3,4,5,6,7,8,9,10].map(n => `<button type="button" data-rate="${n}" aria-pressed="${a.rating === n}">${n}</button>`).join("")}</div></div>
-      <div><span class="muted" style="font-size:13.5px;font-weight:600">Sterke punten</span><div class="chips" style="margin-top:6px">${STRENGTHS.map(t => `<button type="button" class="tag good" data-str="${esc(t)}" aria-pressed="${(a.strengths || []).includes(t)}">${esc(t)}</button>`).join("")}</div></div>
-      <div><span class="muted" style="font-size:13.5px;font-weight:600">Werkpunten</span><div class="chips" style="margin-top:6px">${(S.team.worktags || DEF_TAGS).map(t => `<button type="button" class="tag" data-tag="${esc(t)}" aria-pressed="${(a.tags || []).includes(t)}">${esc(t)}</button>`).join("")}</div></div>
+      <div class="ptxt"><label class="f">Sterke punten<textarea data-list="strengths" rows="3" placeholder="Eén punt per regel, bv.&#10;Durfde de 1-tegen-1 aan">${esc((a.strengths || []).filter(t => t !== "Kapitein").join("\n"))}</textarea></label>
+        <label class="f">Werkpunten<textarea data-list="tags" rows="3" placeholder="Eén punt per regel, bv.&#10;Vaker kijken voor je de bal krijgt">${esc((a.tags || []).join("\n"))}</textarea></label></div>
       <label class="f">Notities over deze speler<textarea data-k="note" placeholder="Wat viel op? Wat bespreek je met hem of haar?">${esc(a.note || "")}</textarea></label></div></details>`; };
-  tv.innerHTML = `<p class="muted" style="margin:0 0 14px">Open een speler om hem te beoordelen: cijfer, de vier pijlers, sterke punten, werkpunten en notities. Alles wordt meteen bewaard.</p>
+  tv.innerHTML = `<p class="muted" style="margin:0 0 14px">Open een speler om hem te beoordelen: speeltijd, cijfer, sterke punten, werkpunten en notities. Alles wordt meteen bewaard.</p>
     ${ps.length ? `<div style="display:flex;flex-direction:column;gap:10px">${ps.map(card).join("")}</div>` : `<div class="empty"><b>Geen spelers in de selectie</b>Vul eerst de selectie in.</div>`}
     ${absent.length ? `<p class="hint" style="margin-top:14px">Niet in de selectie: ${absent.map(p => esc(pname(p))).join(", ")}.</p>` : ""}`;
   $$(".pcard", tv).forEach(c => {
@@ -276,6 +276,9 @@ function playersTab(tv, e) {
     $$("[data-rate]", c).forEach(b => b.onclick = () => { const a = get(); a.rating = a.rating === +b.dataset.rate ? null : +b.dataset.rate; $$("[data-rate]", c).forEach(x => x.setAttribute("aria-pressed", +x.dataset.rate === a.rating)); local(a); save(); });
     const tog = (attr, field) => $$(`[${attr}]`, c).forEach(b => b.onclick = () => { const a = get(), t = b.getAttribute(attr); a[field] = (a[field] || []).includes(t) ? a[field].filter(x => x !== t) : [...(a[field] || []), t]; b.setAttribute("aria-pressed", a[field].includes(t)); local(a); save(); });
     tog("data-str", "strengths"); tog("data-tag", "tags");
+    /* sterke punten en werkpunten: vrije tekst, één punt per regel (bewaard als lijst, zodat de cijfers en het dossier ze blijven tonen) */
+    $$("[data-list]", c).forEach(x => x.oninput = () => { const a = get(), f = x.dataset.list, keep = f === "strengths" && (a.strengths || []).includes("Kapitein") ? ["Kapitein"] : [];
+      a[f] = [...keep, ...x.value.split(/\r?\n/).map(t => t.trim().slice(0, 120)).filter(Boolean)].slice(0, 12); local(a); save(); });
   });
 }
 function momentsTab(tv, e) {

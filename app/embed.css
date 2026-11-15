@@ -1,0 +1,57 @@
+/* FootballCoachHub — huisstijl voor de onderdelen die als eigen pagina in de app draaien (animatiebord, wedstrijdblad).
+   Alleen actief binnen de app (html.in-platform). Het afdrukblad van het wedstrijdblad houdt zijn eigen opmaak. */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap");
+html.in-platform{
+  --A-bg:#0D0E0C;--A-ink:#F4F4F0;--A-muted:#B3B5AB;--A-line:#2F312A;--A-line2:#45473F;--A-card:#191A17;--A-card2:#23241F;--A-card3:#2D2E28;--A-y:#FFD100;--A-onY:#111;--A-input:#0C0C0B;--A-font:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark}
+html.in-platform[data-theme="light"]{--A-bg:#F3F3EE;--A-ink:#121311;--A-muted:#585A52;--A-line:#E0E0D8;--A-line2:#C9C9BF;--A-card:#FFFFFF;--A-card2:#F2F2EC;--A-card3:#E7E7DF;--A-input:#FFFFFF;color-scheme:light}
+
+/* ---------- animatiebord ---------- */
+html.in-platform body.home,html.in-platform #home{background:var(--A-bg)}
+html.in-platform:has(#home){--bg:var(--A-bg);--panel:var(--A-card);--ink:var(--A-ink);--muted:var(--A-muted);--line:var(--A-line);--chip:var(--A-card2);--accent:var(--A-y);--accent-ink:var(--A-onY);--body:var(--A-font);--display:var(--A-font)}
+html.in-platform body.home::before{background:var(--A-bg)}
+html.in-platform .hband{background:transparent;color:var(--A-ink)}
+html.in-platform .hin,html.in-platform .hmain{max-width:none;padding-left:clamp(16px,3vw,36px);padding-right:clamp(16px,3vw,36px)}
+html.in-platform .hin{padding-top:22px}
+html.in-platform .hband h1{font-family:var(--A-font);font-weight:900;font-size:clamp(34px,5vw,48px);letter-spacing:-.02em;font-stretch:105%}
+html.in-platform .hband h1 span{background:none;color:inherit;padding:0;margin:0}
+html.in-platform .hband p{color:var(--A-muted);font-size:16px}
+html.in-platform .newcard{background:var(--A-card);border-color:var(--A-line);color:var(--A-ink);border-radius:18px;padding:12px}
+html.in-platform .newcard:hover{border-color:var(--A-y)}
+html.in-platform .newcard b{font-family:var(--A-font);font-weight:800;font-size:18px}
+html.in-platform .newcard span{color:var(--A-muted)}
+html.in-platform .acct{background:var(--A-card);border-color:var(--A-line2);color:var(--A-ink)}
+html.in-platform .hbar h2{font-family:var(--A-font);font-weight:800;font-size:22px}
+html.in-platform .bcard{border-radius:18px;background:var(--A-card);border-color:var(--A-line)}
+html.in-platform .bcard .open{border-radius:18px}
+html.in-platform .bcard .t{font-weight:700}
+html.in-platform .chip{background:transparent;border-color:var(--A-line2);color:var(--A-muted);font-weight:700;height:34px}
+html.in-platform .chip[aria-pressed="true"]{background:var(--A-ink);border-color:var(--A-ink);color:var(--A-bg)}
+html.in-platform .btn{border-radius:12px;background:var(--A-card2);border-color:var(--A-line2);color:var(--A-ink)}
+html.in-platform .btn.primary,html.in-platform .hbtn.primary{background:var(--A-y);border-color:var(--A-y);color:var(--A-onY)}
+html.in-platform .inp{background:var(--A-input);border-color:var(--A-line2);border-radius:10px}
+html.in-platform .hfoot{border-top-color:var(--A-line)}
+html.in-platform header,html.in-platform .dock{background:var(--A-card)}
+html.in-platform #name{font-family:var(--A-font);font-weight:800}
+
+/* ---------- wedstrijdblad (enkel het invulgedeelte, niet het afdrukblad) ---------- */
+html.in-platform:has(.sheet){--ui-bg:var(--A-bg);--ui-panel:var(--A-card);--ui-fg:var(--A-ink);--ui-muted:var(--A-muted);--ui-line:var(--A-line);--ui-accent:var(--A-y)}
+html.in-platform:has(.sheet) body{font-family:var(--A-font);font-size:15px}
+html.in-platform .topbar{display:none!important}
+html.in-platform .app{padding-left:clamp(16px,3vw,36px);padding-right:clamp(16px,3vw,36px);padding-top:22px}
+html.in-platform .panel{font-family:var(--A-font)}
+html.in-platform .panel h1{font-family:var(--A-font);font-weight:900;font-size:clamp(34px,5vw,48px);letter-spacing:-.02em;font-stretch:105%;line-height:1.05}
+html.in-platform .panel h1 span{background:none;color:inherit;padding:0}
+html.in-platform .lead{font-size:15px}
+html.in-platform .panel .card{border-radius:18px;padding:18px;gap:12px}
+html.in-platform .panel .card h2{font-family:var(--A-font);text-transform:none;letter-spacing:0;font-size:18px;font-weight:800;color:var(--A-ink)}
+html.in-platform .panel .count{font-family:var(--A-font)}
+html.in-platform .panel input,html.in-platform .panel select,html.in-platform .panel textarea{background:var(--A-input);border-color:var(--A-line2);border-radius:10px;padding:9px 11px;font-family:var(--A-font)}
+html.in-platform .panel .lu input{font-family:var(--A-font);padding:8px 4px}
+html.in-platform .panel button,html.in-platform .actions button{font-family:var(--A-font);border-radius:12px;background:var(--A-card2);border-color:var(--A-line2);color:var(--A-ink);font-weight:700;padding:9px 14px}
+html.in-platform .panel button.small{padding:5px 10px;font-size:13px;border-radius:9px}
+html.in-platform .panel .seg button{padding:7px 12px}
+html.in-platform .panel .seg button[aria-pressed=true],html.in-platform button.primary{background:var(--A-y);border-color:var(--A-y);color:var(--A-onY)}
+html.in-platform .actions{background:var(--A-bg);border-top:1px solid var(--A-line)}
+html.in-platform dialog{background:var(--A-card);color:var(--A-ink);border:1px solid var(--A-line);border-radius:20px}
+html.in-platform dialog h3{font-family:var(--A-font);font-weight:800;font-size:22px}
+html.in-platform .acct:has(i.ok){display:none}html.in-platform .hrow:has(.acct i.ok){display:none}

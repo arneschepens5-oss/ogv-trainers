@@ -1,8 +1,8 @@
 // Bewaart het platform op de gsm zodat het snel opent. Gegevens komen altijd eerst online.
-const CACHE = "ogv-platform-v121";
-const SHELL = ["./", "index.html", "app/app.css?v=121", "app/core.js?v=121", "app/ploeg.js?v=121", "app/cijfers.js?v=121", "app/wedstrijd.js?v=121", "app/leerplan.js?v=121", "app/teken.js?v=121", "app/training.js?v=121", "app/video.js?v=121", "app/map.js?v=121", "app/rbfa.js?v=121", "app/club.js?v=121", "app/evaluatie.js?v=121", "app/evvragen.js?v=121", "app/dossier.js?v=121", "app/trainers.js?v=121", "app/groei.js?v=121", "app/scoutint.js?v=121", "app/kennis.js?v=121", "app/ouders.js?v=121", "app/clubdash.js?v=121", "app/betalingen.js?v=121", "app/privacy.js?v=121", "privacy.html", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=121",
+const CACHE = "ogv-platform-v123";
+const SHELL = ["./", "index.html", "app/app.css?v=123", "app/core.js?v=123", "app/ploeg.js?v=123", "app/cijfers.js?v=123", "app/wedstrijd.js?v=123", "app/leerplan.js?v=123", "app/teken.js?v=123", "app/training.js?v=123", "app/video.js?v=123", "app/map.js?v=123", "app/rbfa.js?v=123", "app/club.js?v=123", "app/evaluatie.js?v=123", "app/evvragen.js?v=123", "app/dossier.js?v=123", "app/trainers.js?v=123", "app/groei.js?v=123", "app/scoutint.js?v=123", "app/kennis.js?v=123", "app/ouders.js?v=123", "app/clubdash.js?v=123", "app/betalingen.js?v=123", "app/privacy.js?v=123", "privacy.html", "app/vendor/xlsx-0.18.5.mini.min.js", "pitch.js?v=123",
   "manifest.webmanifest", "manifest-beheer.webmanifest", "icons/beheer-192.png", "icons/beheer-apple-touch-icon.png", "icons/icon-192.png", "icons/logo.png", "icons/logo-dark.png", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-512.png", "tactiekbord/vendor/supabase-2.118.0.js",
-  "trainingen/trainingen.json", "matchday/", "tactiekbord/"];
+  "trainingen/trainingen.json", "matchday/", "tactiekbord/", "app/embed.css?v=1", "app/embed.js?v=1"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("ogv-platform-") && k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {
