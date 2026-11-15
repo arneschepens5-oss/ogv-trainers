@@ -1984,3 +1984,16 @@ h1.pg{font-weight:800;font-stretch:108%;font-size:clamp(28px,3.4vw,40px);line-he
 .phacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%}
 .trow .ti.bad{background:var(--badbg);color:var(--bad)}.trow .ti.ev{background:var(--evbg);color:var(--ev)}
 .evremind .ic{background:var(--evbg)!important;color:var(--ev)!important}
+
+/* v132 · zijbalk: het open onderdeel toont zijn pagina's eronder; de zwarte tabbalk enkel nog op de gsm */
+@media (min-width:901px){.subnav{display:none!important}.subnav + .page{padding-top:28px}}
+.side .nav a.secl .car{margin-left:auto;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);opacity:.45;transition:transform .15s}
+.side .nav a.secl.open{color:var(--ink);font-weight:700}
+.side .nav a.secl.open svg{color:var(--ytext)}
+.side .nav a.secl.open .car{transform:rotate(45deg);opacity:.7}
+.side .subside{display:flex;flex-direction:column;gap:1px;margin:2px 0 8px 21px;padding-left:12px;border-left:2px solid var(--line2)}
+.side .subside a{padding:7px 10px;font-size:14px;font-weight:500;border-radius:9px;color:var(--muted)}
+.side .subside a:hover{color:var(--ink);background:var(--card2)}
+.side .subside a[aria-current="page"]{background:var(--ybg);color:var(--ink);font-weight:700}
+.side .subside a[aria-current="page"]::before{display:none}
+.side .subside a span{white-space:normal}
