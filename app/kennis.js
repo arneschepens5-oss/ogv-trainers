@@ -43,7 +43,7 @@ const DEMO_PRINCIPLES = [
 ];
 /* ============ ingebouwde tools ============ */
 function embed(v, src, title) { v.innerHTML = `<iframe class="embed" src="${src}" title="${esc(title)}" allow="clipboard-write; fullscreen" loading="eager"></iframe>`; }
-route("animatiebord", { title: "Tactiekbord", wide: true, render: (v, id) => embed(v, "tactiekbord/?v=2" + (id ? "#b-" + encodeURIComponent(id) : ""), "Animatiebord") });
+route("animatiebord", { title: "Tactiekbord", wide: true, render: (v, id) => embed(v, "tactiekbord/?v=3" + (id ? "#b-" + encodeURIComponent(id) : ""), "Tactiekbord") });
 route("matchday", { title: "Wedstrijdblad", wide: true, render: (v, id) => {
   if (S.team) { const next = (id && S.events.find(e => e.id === id)) || S.events.find(e => e.type === "wedstrijd" && e.date >= todayIso());
     const sel = next ? selPlayers(next).map(p => p.id) : [];
