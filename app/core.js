@@ -545,19 +545,19 @@ let teardown = null;
 /* shell(true) = nieuwe lege pagina (enkel bij het openen van een pagina); shell() = enkel menu en zijbalk vernieuwen, de getoonde pagina blijft staan */
 function shell(fresh) {
   const oldView = fresh ? null : $("#view");
-  const r = cur(), active = r.page === "platform" && r.id === "meldingen" ? "platform/meldingen" : ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
+  const r = cur(), active = r.page === "platform" && r.id === "meldingen" ? "platform/meldingen" : r.page === "clubbeheer" && ["meldingen", "toegang", "ploegen", "planning", "systeem"].includes(r.id) ? "clubbeheer/" + r.id : r.page === "clubbeheer" && r.id === "club" ? "clubinstellingen" : ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g)
     .map(g => ({ ...g, items: g.items.filter(([k]) => !clubOff(k)) })).filter(g => g.items.length);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
-  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
+  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Overzicht", "gear"], ["clubbeheer/meldingen", "Meldingen", "note"], ["clubbeheer/toegang", "Toegang en leden", "ppl"], ["clubbeheer/ploegen", "Ploegen en trainers", "ppl"], ["clubbeheer/planning", "Trainingen inplannen", "cal"], ["clubinstellingen", "Clubinstellingen", "gear"], ["clubbeheer/systeem", "Back-up en systeem", "folder"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
     .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>
-    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}${k === "berichten" ? `<span class="bdgn" data-unread${S.unread ? "" : " hidden"} title="Nieuwe berichten">${S.unread || ""}</span>` : ""}</a>`).join("");
+    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer/meldingen" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}${k === "berichten" ? `<span class="bdgn" data-unread${S.unread ? "" : " hidden"} title="Nieuwe berichten">${S.unread || ""}</span>` : ""}</a>`).join("");
   /* zijbalk: één regel per onderdeel; de gsm (Meer) toont per onderdeel alle tegels */
   const curSec = secs.find(sec => sec.g && sec.items.some(([k]) => k === active));
   /* het onderdeel waar je in zit klapt open in de zijbalk en toont zijn pagina's eronder */
