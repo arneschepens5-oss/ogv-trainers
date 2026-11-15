@@ -1898,3 +1898,5 @@ html,body{overflow-x:clip}
 .abstag.k-ziek{background:var(--ybg);color:var(--ytext)}.abstag.k-afwezig,.abstag.k-andere{background:var(--card3);color:var(--muted)}
 .absnow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:12px 14px;border-radius:14px;background:var(--badbg);margin-bottom:10px;border-left:4px solid var(--bad)}
 .absnow b{flex:1 1 100%;color:var(--ink)}.absnow small{flex:1;color:var(--muted)}.absnow.k-ziek{background:var(--ybg);border-left-color:var(--warn)}.absnow.k-afwezig,.absnow.k-andere{background:var(--card2);border-left-color:var(--info)}
+
+.calopts{display:flex;flex-wrap:wrap;gap:8px}.calopts .btn{flex:1 1 140px;justify-content:center}

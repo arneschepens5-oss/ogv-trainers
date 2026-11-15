@@ -53,3 +53,22 @@ function pushInvite() {
   return `<div class="mldinv" id="mldInv">${IC.bell}<div><b>Meldingen bij afgelastingen en afmeldingen?</b><small>Zet ze aan, dan hoef je niet telkens zelf te kijken.</small></div><a class="btn small" href="#/meldingen" data-inv>Aanzetten</a><button class="link" type="button" data-inv aria-label="Niet nu">Niet nu</button></div>`;
 }
 document.addEventListener("click", e => { if (e.target.closest?.("[data-inv]")) { try { localStorage.setItem("ogv-push-invite", "1"); } catch (x) {} $("#mldInv")?.remove(); } });
+
+/* ============ agenda koppelen (abonnement: blijft vanzelf bijgewerkt) ============ */
+function calLinks(url, name) { const web = url.replace(/^https:/, "webcal:");
+  return { web, google: "https://calendar.google.com/calendar/render?cid=" + encodeURIComponent(web), outlook: "https://outlook.live.com/calendar/0/addfromweb?url=" + encodeURIComponent(url) + "&name=" + encodeURIComponent(name) }; }
+function calDialog(url, name, who) { const L = calLinks(url, name);
+  const d = dialog(`<form onsubmit="return false"><h2>In je agenda zetten</h2>
+    <p class="hint" style="margin:0 0 12px">Koppel ${esc(who)} één keer aan de agenda van je gsm of computer. Nieuwe trainingen, gewijzigde uren en afgelastingen komen er daarna vanzelf in (de agenda kijkt om de paar uur).</p>
+    <div class="calopts"><a class="btn" href="${esc(L.google)}" target="_blank" rel="noopener">Google Agenda</a><a class="btn" href="${esc(L.web)}">iPhone / Mac</a><a class="btn ghost" href="${esc(L.outlook)}" target="_blank" rel="noopener">Outlook</a></div>
+    <label class="f" style="margin-top:12px">Of kopieer de link<span class="row" style="gap:8px;flex-wrap:nowrap"><input readonly value="${esc(url)}" style="flex:1;min-width:0"><button class="btn ghost small" type="button" data-calcp>${IC.copy}Kopiëren</button></span></label>
+    <p class="hint" style="margin:10px 0 0">Android met Google Agenda: kies <b>Google Agenda</b> en meld je aan met je Google-account. Deze link is persoonlijk: stuur hem niet door.</p>
+    <div class="row"><span class="spacer"></span><button class="btn" type="button" data-close>Klaar</button></div></form>`);
+  $("[data-calcp]", d).onclick = () => navigator.clipboard?.writeText(url).then(() => toast("Link gekopieerd."), () => {});
+  return d; }
+async function myCalendar() {
+  if (mode === "demo") { calDialog(SB_URL + "/functions/v1/agenda?t=00000000-0000-4000-8000-000000000000", "Mijn ploegen", "al je ploegen"); return; }
+  const tok = await safe(async () => { const { data, error } = await sb.rpc("cal_token", {}); if (error) throw error; return data; });
+  if (!tok) { toast("Agenda koppelen is nog niet klaargezet: de beheerder moet supabase-agenda-v50.sql uitvoeren."); return; }
+  calDialog(SB_URL + "/functions/v1/agenda?t=" + tok, "Voetbal – mijn ploegen", "de trainingen en wedstrijden van al je ploegen");
+}

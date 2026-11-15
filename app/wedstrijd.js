@@ -21,14 +21,14 @@ route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   const t = todayIso();
   let list = calFilter !== "voorbij" ? S.events.filter(e => e.date >= t) : [...S.events.filter(e => e.date < t)].reverse();
   if (calType) list = list.filter(e => e.type === calType);
-  v.innerHTML = head("Kalender", "Trainingen en wedstrijden. Open een activiteit voor aanwezigheden, trainingsplan of wedstrijdverslag.", (S.team.rbfa_team_id ? `<button class="btn ghost" type="button" id="rbSync">${IC.rotate}RBFA bijwerken</button>` : `<a class="btn ghost" href="#/ploeg-instellingen">${IC.rotate}Wedstrijden van RBFA</a>`) + `<button class="btn" type="button" id="addEv">${IC.plus}Activiteit</button>`) +
+  v.innerHTML = head("Kalender", "Trainingen en wedstrijden. Open een activiteit voor aanwezigheden, trainingsplan of wedstrijdverslag.", (S.team.rbfa_team_id ? `<button class="btn ghost" type="button" id="rbSync">${IC.rotate}RBFA bijwerken</button>` : `<a class="btn ghost" href="#/ploeg-instellingen">${IC.rotate}Wedstrijden van RBFA</a>`) + `<button class="btn ghost" type="button" id="myCal">${IC.cal}In mijn agenda</button><button class="btn" type="button" id="addEv">${IC.plus}Activiteit</button>`) +
   `<div class="row" style="margin-bottom:14px"><div class="chips"><button class="chip" type="button" data-f="week" aria-pressed="${calFilter === "week"}">Mijn planning</button><button class="chip" type="button" data-f="komend" aria-pressed="${calFilter === "komend"}">Komend</button><button class="chip" type="button" data-f="voorbij" aria-pressed="${calFilter === "voorbij"}">Voorbij</button></div>
    <span class="spacer"></span><div class="chips"><button class="chip" type="button" data-t="" aria-pressed="${!calType}">Alles</button><button class="chip" type="button" data-t="training" aria-pressed="${calType === "training"}">Trainingen</button><button class="chip" type="button" data-t="wedstrijd" aria-pressed="${calType === "wedstrijd"}">Wedstrijden</button></div></div>
   ${calFilter === "week" ? weekView(calType ? S.events.filter(e => e.type === calType) : S.events) : list.length ? `<div class="list">${list.map(e => evItem(e)).join("")}</div>` : `<div class="empty"><b>${calFilter === "komend" ? "Niets gepland" : "Nog niets voorbij"}</b>Voeg een training of wedstrijd toe. Trainingen herhaal je meteen voor het hele seizoen.</div>`}`;
   $$("[data-f]", v).forEach(b => b.onclick = () => { calFilter = b.dataset.f; render(); });
   $$("[data-t]", v).forEach(b => b.onclick = () => { calType = b.dataset.t; render(); });
   $$("[data-wk]", v).forEach(b => b.onclick = () => { calWeek = b.dataset.wk === "0" ? 0 : calWeek + +b.dataset.wk; render(); });
-  $("#addEv").onclick = () => eventForm();
+  $("#addEv").onclick = () => eventForm(); $("#myCal").onclick = () => myCalendar();
   const rs = $("#rbSync"); if (rs) rs.onclick = async () => { rs.disabled = true; rs.innerHTML = '<span class="spin"></span>Ophalen…'; const r = await safe(() => rbfaSync(S.team)); if (r) { toast(r.added || r.changed ? `${r.added} nieuw, ${r.changed} bijgewerkt.` : "Alles is al up-to-date."); render(); } else { rs.disabled = false; rs.innerHTML = IC.rotate + "RBFA bijwerken"; } }; $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
 function eventForm(e, forceNew) {

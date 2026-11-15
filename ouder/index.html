@@ -83,6 +83,7 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .why input{flex:1;min-width:160px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px;color:var(--ink)}
 .foot2{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:4px}
 .state{font-size:13px;color:var(--muted);min-height:1em;flex:1}
+.calbox{margin-top:10px;display:grid;gap:10px}.calbox p{margin:0;font-size:14px}.calbox .muted{color:var(--muted);font-size:13px}.calbox small{color:var(--muted);font-weight:700}.calopts{display:flex;flex-wrap:wrap;gap:8px}.calopts .btn{flex:1 1 120px}
 .ics{border:0;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;text-decoration:underline}
 .convo{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--okbg);font-size:14.5px}
 .convo.off{background:var(--chip);color:var(--muted)}
@@ -361,13 +362,14 @@ function drawAgenda() {
     (next ? heroCard(next) : "") +
     (open.length > 1 ? `<div class="todo"><span>Nog <b>${open.length}</b> ${open.length === 1 ? "activiteit" : "activiteiten"} zonder antwoord.</span><button class="btn sm" type="button" id="allja">${kidMode() ? "Overal: ik kom" : "Overal: komt"}</button></div>` : "") +
     (rows.length ? body : `<div class="msg"><b>Niets gepland</b>De komende zes weken staan er nog geen trainingen of wedstrijden in de kalender.</div>`) +
-    (rows.length ? `<div class="row" style="justify-content:center"><button class="btn ghost sm" type="button" id="icsall">Alles in mijn agenda zetten</button></div>` : "") +
+    (okKids().length ? `<div class="row" style="justify-content:center"><button class="btn ghost sm" type="button" id="icsall">Koppel aan je agenda</button></div><div id="calbox"></div>` : "") +
     `<p class="foot">${kidMode() ? "Kan je niet komen? Zeg het ook aan je mama of papa. Deze link is alleen voor jou." : "Deze app is persoonlijk. Stuur de link van je kind niet door."}</p>`;
   bindInstall(); const nb = $("[data-go]"); if (nb) nb.onclick = () => { view = "berichten"; draw(); };
   const gz = $("[data-gz]"); if (gz) gz.onclick = () => { view = "seizoen"; draw(); scrollTo(0, 0); };
   const aj = $("#allja"); if (aj) aj.onclick = async () => { if (!confirm(`Voor ${open.length} activiteiten doorgeven dat je kind komt?`)) return; aj.disabled = true; let n = 0;
     for (const r of open) { try { if (await answer(r.k.tok, r.e.id, "ja", null)) { r.e.rsvp = "ja"; n++; } } catch (x) {} } saveCache(); toast(n + " keer doorgegeven: komt."); draw(); };
-  const ia = $("#icsall"); if (ia) ia.onclick = () => icsDownload(rows.filter(r => !isOff(r.e)), "ogv-agenda.ics");
+  const ia = $("#icsall"); if (ia) ia.onclick = () => { const box = $("#calbox"); if (box.innerHTML) { box.innerHTML = ""; return; } box.innerHTML = calBox(); box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    $$("[data-calcp]", box).forEach(b => b.onclick = () => navigator.clipboard?.writeText(b.dataset.calcp).then(() => toast("Link gekopieerd."), () => {})); };
   $$("[data-e][data-t]").forEach(bindCard);
 }
 function bindCard(card) {
@@ -501,6 +503,12 @@ function drawProfile() {
 function draw() { header(); ({ agenda: drawAgenda, seizoen: drawSeason, berichten: drawMessages, gegevens: drawProfile }[view])(); header(); }
 
 /* ---------- in de agenda van je gsm ---------- */
+/* abonnement: één keer koppelen, daarna komen nieuwe activiteiten, gewijzigde uren en afgelastingen vanzelf mee */
+function calBox() { const ks = sel();
+  return `<div class="card calbox"><b>Koppel aan je agenda</b><p>Eén keer instellen. Daarna komen nieuwe trainingen, gewijzigde uren en afgelastingen vanzelf in de agenda van je gsm.</p>` +
+    ks.map(k => { const url = SB_URL + "/functions/v1/agenda?k=" + k.tok, web = url.replace(/^https:/, "webcal:");
+      return `${ks.length > 1 ? `<small>${esc(k.name)}</small>` : ""}<div class="calopts"><a class="btn sm" href="https://calendar.google.com/calendar/render?cid=${encodeURIComponent(web)}" target="_blank" rel="noopener">Google Agenda</a><a class="btn sm" href="${web}">iPhone</a><button class="btn ghost sm" type="button" data-calcp="${url}">Link kopiëren</button></div>`; }).join("") +
+    `<p class="muted">Android: kies Google Agenda. iPhone: tik op iPhone en kies Abonneer. Deze link is persoonlijk.</p></div>`; }
 function icsDownload(rows, name) {
   const t = s => (s || "").replace(":", "") + "00", ev = rows.map(({ e, k }) => { const d = e.date.replace(/-/g, ""), end = e.end || (e.start ? String(Math.min(23, +e.start.slice(0, 2) + (e.type === "wedstrijd" ? 2 : 1))).padStart(2, "0") + e.start.slice(2) : "");
     const title = (e.type === "wedstrijd" ? (e.home === false ? "Uit bij " : "Thuis tegen ") + (e.opponent || "") : "Training") + " – " + k.name, f = fieldOf(e.location);
