@@ -2002,3 +2002,8 @@ h1.pg{font-weight:800;font-stretch:108%;font-size:clamp(28px,3.4vw,40px);line-he
 .tdot{position:absolute;top:4px;left:calc(50% + 8px);width:10px;height:10px;border-radius:50%;background:var(--s-bad,#E11D48);box-shadow:0 0 0 2px var(--card)}
 .sheet .nav a .bdgn{position:absolute;top:8px;right:8px;margin:0}
 .teampick .bdg.sm{font-size:10px;font-stretch:100%;letter-spacing:-.03em}
+/* knop "Ouders verwittigen" bij een wedstrijd: zwart met geel, valt op naast de gele hoofdknop */
+.btn.notify{background:#111;color:#FFD100;border:1.5px solid #111}
+.btn.notify:hover{background:#000}
+.btn.notify.on{box-shadow:0 0 0 3px var(--ybg)}
+:root:not([data-theme="light"]) .btn.notify{background:transparent;border-color:#FFD100}
