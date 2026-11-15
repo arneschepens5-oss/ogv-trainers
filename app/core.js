@@ -763,7 +763,19 @@ const AUTHHEAD = () => ADMIN_APP ? `${PMARK("big")}<h1>FootballCoach<span>Hub</s
 /* logo van het platform (zelfde voor alle clubs) */
 const PMARK = cls => `<span class="ogvlogo pmark ${cls || ""}"><svg viewBox="0 0 512 512" role="img" aria-label="FootballCoachHub"><rect width="512" height="512" rx="112" fill="#0F4A33"/><path d="M36 256H476" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><circle cx="256" cy="256" r="138" fill="none" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><path d="M208.8 126.3L385.7 303.2L150.3 344.7Z" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linejoin="round"/><circle cx="256" cy="256" r="13" fill="#FFFFFF" fill-opacity=".5"/><circle cx="208.8" cy="126.3" r="46" fill="#F5C542" stroke="#0F4A33" stroke-width="14"/><circle cx="385.7" cy="303.2" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/><circle cx="150.3" cy="344.7" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/></svg></span>`;
 /* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */
-const LOGO = cls => CLUB.settings?.logo ? `<span class="ogvlogo ${cls || ""}"><img src="${esc(CLUB.settings.logo)}" alt="${esc(clubName())}"></span>`
+/* het clublogo zonder lege rand eromheen, zodat het overal mooi in het midden staat (eenmalig berekend en bewaard op dit toestel) */
+const LOGO_TRIM_LS = "ogv-logo-trim-v1"; let LOGO_TRIM = (() => { try { return JSON.parse(localStorage.getItem(LOGO_TRIM_LS)) || {}; } catch (e) { return {}; } })(), LOGO_TRIMMING = false;
+const logoKeyOf = src => src.length + ":" + src.slice(-40);
+function logoSrc(src) { const k = logoKeyOf(src); if (LOGO_TRIM.k === k) return LOGO_TRIM.d || src; if (!LOGO_TRIMMING) trimLogo(src, k); return src; }
+function trimLogo(src, k) { LOGO_TRIMMING = true; const im = new Image(); im.crossOrigin = "anonymous";
+  im.onload = () => { try { const W = im.naturalWidth, H = im.naturalHeight, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d"); x.drawImage(im, 0, 0);
+      const px = x.getImageData(0, 0, W, H).data; let x0 = W, y0 = H, x1 = -1, y1 = -1;
+      for (let y = 0; y < H; y++) for (let i = 0; i < W; i++) { const o = (y * W + i) * 4; if (px[o + 3] > 24 && !(px[o] > 244 && px[o + 1] > 244 && px[o + 2] > 244)) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+      let d = null; if (x1 > x0 && y1 > y0 && (x0 > 2 || y0 > 2 || x1 < W - 3 || y1 < H - 3)) { const w = x1 - x0 + 1, h = y1 - y0 + 1, o = document.createElement("canvas"); o.width = w; o.height = h; o.getContext("2d").drawImage(c, x0, y0, w, h, 0, 0, w, h); d = o.toDataURL("image/png"); }
+      LOGO_TRIM = { k, d }; try { localStorage.setItem(LOGO_TRIM_LS, JSON.stringify(LOGO_TRIM)); } catch (e) {}
+      if (d) document.querySelectorAll(".ogvlogo img").forEach(i => { if (i.getAttribute("src") === src) i.src = d; }); } catch (e) {} LOGO_TRIMMING = false; };
+  im.onerror = () => { LOGO_TRIMMING = false; }; im.src = src; }
+const LOGO = cls => CLUB.settings?.logo ? `<span class="ogvlogo ${cls || ""}"><img src="${esc(logoSrc(CLUB.settings.logo))}" alt="${esc(clubName())}"></span>`
   : isOGV() ? `<span class="ogvlogo ${cls || ""}"><img class="lg-d" src="icons/logo-dark.png" alt="OG Vorselaar"><img class="lg-l" src="icons/logo.png" alt="OG Vorselaar"></span>`
   : `<span class="ogvlogo ${cls || ""}"><svg viewBox="0 0 40 40" role="img" aria-label="${esc(clubName())}"><path d="M20 3 35 8v12c0 9-7 15-15 17C12 35 5 29 5 20V8z" fill="${esc(CLUB.settings?.color2 || "#151613")}" stroke="${esc(CLUB.settings?.color || "#FFD100")}" stroke-width="2"/><text x="20" y="25" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" font-family="Archivo,sans-serif">${esc(String(clubShort()).slice(0, 3).toUpperCase())}</text></svg></span>`;
 

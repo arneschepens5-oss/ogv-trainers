@@ -1900,3 +1900,20 @@ html,body{overflow-x:clip}
 .absnow b{flex:1 1 100%;color:var(--ink)}.absnow small{flex:1;color:var(--muted)}.absnow.k-ziek{background:var(--ybg);border-left-color:var(--warn)}.absnow.k-afwezig,.absnow.k-andere{background:var(--card2);border-left-color:var(--info)}
 
 .calopts{display:flex;flex-wrap:wrap;gap:8px}.calopts .btn{flex:1 1 140px;justify-content:center}
+
+/* v129 · menu "Meer" op de gsm: per groep een rij tegels, groepen netjes onder elkaar */
+@media (max-width:900px){
+  .sheet .in{padding:10px 16px calc(22px + env(safe-area-inset-bottom,0px))}
+  .sheet .nav{display:block}
+  .sheet .nav>a[href="#/start"]{display:none} /* staat al in de balk onderaan */
+  .sheet .navg{display:block;margin:0 0 6px}
+  .sheet .navg>summary.navgrp{padding:14px 2px 8px;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0}
+  .sheet .navg>a,.sheet .nav>a{display:inline-flex;vertical-align:top;box-sizing:border-box;width:calc((100% - 16px)/3);margin:0 8px 8px 0;min-height:82px;padding:12px 6px;gap:7px;
+    flex-direction:column;align-items:center;justify-content:center;text-align:center;border-radius:16px;background:var(--card2);border:1px solid var(--line);font-size:12.5px;font-weight:600;line-height:1.25;color:var(--ink)}
+  .sheet .navg>a:nth-of-type(3n){margin-right:0}
+  .sheet .navg>a svg.i,.sheet .nav>a svg.i{width:22px;height:22px;color:var(--ink);opacity:.75}
+  .sheet .navg>a[aria-current="page"],.sheet .nav>a[aria-current="page"]{background:var(--ybg);border-color:var(--yellow);color:var(--ytext)}
+  .sheet .navg>a[aria-current="page"] svg.i{color:var(--ytext);opacity:1}
+  .sheet .nav>a{display:flex;width:100%;min-height:52px;margin:10px 0 0;flex-direction:row;justify-content:center;font-size:14px}
+  .sheet .navg:not([open])>summary.navgrp{border-bottom:1px solid var(--line);padding-bottom:12px}
+}
