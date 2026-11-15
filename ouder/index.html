@@ -303,7 +303,7 @@ function installCard() {
 }
 
 /* ---------- meldingen: afgelastingen en "komt je kind morgen?" ---------- */
-const VAPID = "BA0WKBktvPzXIS_S3-WPxgv1FJmsd1ub3EAgLKK7nWz5wVDX6UBLFj5_7CkDxCMCxGSue4EC7XEZxiBhg_Q1wN0";
+async function vapidKey() { const r = await fetch(SB_URL + "/functions/v1/notify", { headers: { apikey: SB_KEY } }); const j = await r.json().catch(() => ({})); if (!j.key) throw new Error("Meldingen zijn nog niet beschikbaar."); return j.key; }
 const pushOk = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 const iosNoHome = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !(matchMedia("(display-mode: standalone)").matches || navigator.standalone);
 const b64u = x => { const r = atob((x + "=".repeat((4 - x.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
@@ -322,7 +322,7 @@ async function pushToggle(want) {
     if (want === "off") { const s0 = await reg.pushManager.getSubscription(); if (s0) { if (sb) for (const k of kids) await sb.rpc("parent_push_del", { tok: k.tok, ep: s0.endpoint }).catch(() => {}); await s0.unsubscribe(); }
       pushOn = false; store.set("ogv-ouders-push", false); toast("Meldingen staan uit."); draw(); return; }
     if (await Notification.requestPermission() !== "granted") { toast("Geen toestemming voor meldingen."); draw(); return; }
-    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID) });
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(await vapidKey()) });
     if (!demo) { let ok = 0; for (const k of okKids()) { const { data: x, error } = await sb.rpc("parent_push_save", { tok: k.tok, sub: sub.toJSON(), pr: {} }); if (!error && x) ok++; }
       if (!ok) throw new Error("Opslaan lukte niet. Probeer later opnieuw."); }
     pushOn = true; store.set("ogv-ouders-push", true); toast("Meldingen staan aan."); draw();

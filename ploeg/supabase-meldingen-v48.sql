@@ -50,6 +50,11 @@ grant execute on function public.parent_push_save(uuid, json, json), public.pare
 create table if not exists public.notif_sent (key text primary key, at timestamptz not null default now());
 alter table public.notif_sent enable row level security;
 
+-- de sleutels voor de meldingen maakt de functie zelf aan en bewaart ze hier; niemand anders kan ze lezen
+create table if not exists public.push_keys (id int primary key default 1 check (id = 1), public_key text not null, private_key text not null, created_at timestamptz not null default now());
+alter table public.push_keys enable row level security;
+revoke all on public.push_keys from anon, authenticated;
+
 -- 3. blessures en afwezigheden over een periode
 create table if not exists public.player_absence (
   id         uuid primary key default gen_random_uuid(),

@@ -1,7 +1,9 @@
 /* FootballCoachHub — pushmeldingen voor trainers: aanzetten op dit toestel, kiezen waarvoor, en een testmelding.
    Versturen gebeurt door de functie "notify" in Supabase (databaseversie 48). */
 "use strict";
-const VAPID_PUBLIC = "BA0WKBktvPzXIS_S3-WPxgv1FJmsd1ub3EAgLKK7nWz5wVDX6UBLFj5_7CkDxCMCxGSue4EC7XEZxiBhg_Q1wN0";
+/* de publieke sleutel komt van de functie notify zelf */
+async function vapidKey() { const r = await fetch(SB_URL + "/functions/v1/notify", { headers: { apikey: SB_KEY } }); const j = await r.json().catch(() => ({}));
+  if (!j.key) throw new Error("Meldingen zijn nog niet klaargezet: de beheerder moet supabase-meldingen-v48.sql uitvoeren."); return j.key; }
 const PUSH_KINDS = [["cancel", "Afgelastingen", "Een training of wedstrijd van je ploeg wordt afgelast (ook via RBFA)."],
   ["nee", "Speler komt niet", "Een ouder meldt in de ouderapp dat een speler niet komt."],
   ["att", "Aanwezigheden vergeten", "De dag na een training waarvan de aanwezigheden nog niet ingevuld zijn."]];
@@ -16,7 +18,7 @@ async function pushEnable(prefs) {
   if (isIOS() && !isStandalone()) throw new Error("Op een iPhone werken meldingen enkel als de app op je beginscherm staat: tik op Delen › Zet op beginscherm en open de app van daaruit.");
   const perm = await Notification.requestPermission(); if (perm !== "granted") throw new Error("Je gaf geen toestemming voor meldingen. Dat kan je aanpassen in de instellingen van je browser.");
   const reg = await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready;
-  const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUBLIC) });
+  const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(mode === "demo" ? "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U" : await vapidKey()) });
   try { localStorage.setItem("ogv-push-prefs", JSON.stringify(prefs)); } catch (e) {}
   if (mode === "demo") return sub;
   const { error } = await sb.rpc("push_save", { sub: sub.toJSON(), pr: prefs });

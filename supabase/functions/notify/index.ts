@@ -6,9 +6,18 @@ import webpush from "npm:web-push@3.6.7";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!, KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP = Deno.env.get("APP_URL") || "https://arneschepens5-oss.github.io/ogv-trainers/";
-webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT") || "mailto:gc@og-vorselaar.be", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(URL_, KEY, { auth: { persistSession: false } });
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+/* sleutels: de eerste keer zelf aanmaken en bewaren in push_keys (enkel leesbaar voor deze functie) */
+let KEYS: { public_key: string; private_key: string } | null = null;
+async function keys() {
+  if (KEYS) return KEYS;
+  let { data } = await db.from("push_keys").select("public_key,private_key").eq("id", 1).maybeSingle();
+  if (!data) { const k = webpush.generateVAPIDKeys(); await db.from("push_keys").insert({ id: 1, public_key: k.publicKey, private_key: k.privateKey });
+    ({ data } = await db.from("push_keys").select("public_key,private_key").eq("id", 1).maybeSingle()); }
+  if (!data) throw new Error("Sleutels voor meldingen ontbreken: voer supabase-meldingen-v48.sql uit.");
+  KEYS = data; webpush.setVapidDetails("mailto:gc@og-vorselaar.be", data.public_key, data.private_key); return KEYS;
+}
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
 /* datum en uur in België */
@@ -88,6 +97,8 @@ async function tick() {
 
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  try { await keys(); } catch (e) { return json({ error: String((e as Error).message) }, 500); }
+  if (req.method === "GET") return json({ key: KEYS!.public_key }); /* publieke sleutel voor het toestel */
   let body: any = {}; try { body = await req.json(); } catch (_) { /* leeg */ }
   if (body.kind === "tick") return json(await tick());
   if (body.kind === "test") {
