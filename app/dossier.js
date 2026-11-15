@@ -19,6 +19,8 @@ function dosChart(rows) {
 
 const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["groei", "Groei"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
 let dosTab = "overzicht";
+/* van waar kwam je? (bv. Interne scouting): dan brengt "terug" je daar opnieuw naartoe */
+let dosBack = null;
 /* scoutingprofiel van een eigen speler: dezelfde 5 onderdelen en posities als de scoutingdatabase, zodat eigen en externe spelers vergelijkbaar zijn */
 const SC_POT = ["Beperkt", "Gemiddeld", "Groot", "Zeer groot"];
 const scProf = p => p?.scout && typeof p.scout === "object" ? p.scout : {};
@@ -63,7 +65,7 @@ function pScoutForm(p, r) {
 }
 route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, id) => {
   const ps = active();
-  if (!id) {
+  if (!id) { dosBack = null;
     v.innerHTML = head("Spelersdossier", "Alles wat jullie over een speler noteerden op één pagina: speeltijd en cijfers over alle groepjes, aanwezigheid, evaluaties en elke opmerking met de naam van de trainer. Om samen een oudergesprek voor te bereiden.") +
       (ps.length ? `<div class="pgrid">${ps.map(p => { const s = playerStats(p), g = dosCount(matchRows(p.id).map(x => groupOf(x.e)).filter(Boolean)), sp = scProf(p);
         return pCard(p, { href: "#/dossier/" + p.id, sub: [pPos(p), p.birthdate ? pAge(p) + " jaar · " + qOf(p.birthdate) : "", g.length ? g.map(([k, c]) => `${k} ${c}×`).join(", ") : ""].filter(Boolean).join(" · ") || "Dossier openen",
@@ -155,7 +157,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     ${sp.sterk || sp.werk || sp.ctx ? `<div class="spnotes">${note("good", "Sterktes", sp.sterk)}${note("work", "Werkpunten", sp.werk)}${note("", "Extra info", sp.ctx)}</div>` : ""}
     <p class="hint" style="margin:14px 0 0">${has ? `Enkel zichtbaar voor de trainers van deze ploeg${sp.upd ? " · bijgewerkt op " + esc(dShort(sp.upd)) : ""}${sp.by ? " door " + esc(sp.by) : ""}.` : "Nog niet ingevuld. Noteer positie, potentieel, sterktes en wat je verder over de speler weet."}</p></div>`;
 
-  v.innerHTML = `<div class="row noprint" style="margin-bottom:10px;gap:8px">${backLink("#/dossier", "Alle dossiers")}<span class="spacer"></span>
+  v.innerHTML = `<div class="row noprint" style="margin-bottom:10px;gap:8px">${backLink(dosBack?.href || "#/dossier", dosBack?.label || "Alle dossiers")}<span class="spacer"></span>
       ${prevP ? `<a class="btn ghost small" href="#/dossier/${prevP.id}" title="${esc(pname(prevP))}">‹ Vorige</a>` : ""}${nextP ? `<a class="btn ghost small" href="#/dossier/${nextP.id}" title="${esc(pname(nextP))}">Volgende ›</a>` : ""}
       <a class="btn ghost small" href="#/speler/${p.id}">Spelerskaart</a><button class="btn small" type="button" onclick="print()">${IC.print}Afdrukken</button></div>
   <div class="dos" data-tab="${dosTab}">

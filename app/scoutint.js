@@ -115,7 +115,8 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
     $$("[data-x]", $("#isA")).forEach(b => b.onclick = () => { const k = b.dataset.x; IS[k] = ""; if (k === "ax") IS.axmin = ""; syncF(); draw(); });
     if ($("#isC")) $("#isC").onclick = () => { Object.assign(IS, { ...IS_DEF, sort: IS.sort, team: IS.team, open: IS.open }); $("#isQ").value = ""; syncF(); draw(); };
     $$("[data-open]", $("#isL")).forEach(el => el.onclick = async () => { const x = all.find(y => y.p.id === el.dataset.open);
-      if (!isOwn(el.dataset.t)) { isFiche(x, all, gm, D); return; } if (S.team?.id !== el.dataset.t) await loadTeam(el.dataset.t); dosTab = "overzicht"; go("#/dossier/" + el.dataset.open); });
+      if (!isOwn(el.dataset.t)) { isFiche(x, all, gm, D); return; } IS.scroll = window.scrollY; dosBack = { href: "#/intscouting", label: "Interne scouting" };
+      if (S.team?.id !== el.dataset.t) await loadTeam(el.dataset.t); dosTab = "overzicht"; go("#/dossier/" + el.dataset.open); });
     if (typeof hydratePhotos === "function") hydratePhotos(v);
   };
   const syncF = () => { $$("[data-f]", v).forEach(s => s.value = IS[s.dataset.f] ?? ""); $$("[data-fp]", v).forEach(b => b.classList.toggle("h", String(IS.pos) === b.dataset.fp)); };
@@ -127,6 +128,8 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
   $$("[data-tm]", v).forEach(b => b.onclick = () => { IS.team = b.dataset.tm; $$("[data-tm]", v).forEach(x => x.setAttribute("aria-selected", x === b)); draw(); });
   if ($("#isImp")) $("#isImp").onclick = () => scImport(D);
   draw();
+  /* terug uit een spelersdossier: dezelfde filters en dezelfde plek in de lijst */
+  if (IS.scroll) { const y = IS.scroll; IS.scroll = 0; requestAnimationFrame(() => window.scrollTo(0, y)); }
 } });
 
 /* scoutingfiche van een speler van een andere ploeg: alleen-lezen, zonder contactgegevens, notities of foto */
