@@ -83,6 +83,7 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .why input{flex:1;min-width:160px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px;color:var(--ink)}
 .foot2{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:4px}
 .state{font-size:13px;color:var(--muted);min-height:1em;flex:1}
+.pastel{display:flex;gap:8px;margin-top:14px}.pastel input{flex:1;min-width:0;min-height:46px;border-radius:14px;border:1.5px solid var(--line);background:transparent;color:var(--ink);padding:0 14px;font-size:16px}
 .calbox{margin-top:10px;display:grid;gap:10px}.calbox p{margin:0;font-size:14px}.calbox .muted{color:var(--muted);font-size:13px}.calbox small{color:var(--muted);font-weight:700}.calopts{display:flex;flex-wrap:wrap;gap:8px}.calopts .btn{flex:1 1 120px}
 .ics{border:0;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;text-decoration:underline}
 .convo{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--okbg);font-size:14.5px}
@@ -530,7 +531,13 @@ function bindInstall() { const x = $("#instx"); if (x) x.onclick = () => { store
 function fail(title, text) { $("#h").innerHTML = `Voor <span>ouders</span>`; $("#sub").textContent = "De app voor ouders en spelers van je club"; $("#tabs").hidden = true; $("#list").innerHTML = `<div class="msg"><b>${title}</b>${text}</div>`; }
 async function start() {
   if (!kids.length) { const app = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-    fail("Open de link van de trainer", app ? "Deze snelkoppeling kent je kind nog niet. Verwijder ze van je beginscherm, open de link van de trainer opnieuw (bv. in WhatsApp) en kies daar <b>Delen → Zet op beginscherm</b>. Daarna werkt de app meteen." : "Je kreeg van de trainer een persoonlijke link voor je kind. Open die link één keer: daarna vind je hier de trainingen, wedstrijden, convocaties en berichten terug."); return; }
+    fail("Open de link van de trainer", (app ? "Deze app op je beginscherm kent je kind nog niet. Kopieer de link van de trainer (bv. in WhatsApp: houd de link ingedrukt → Kopieer) en plak hem hieronder." : "Je kreeg van de trainer een persoonlijke link voor je kind. Open die link, of kopieer hem en plak hem hieronder.")
+      + `<div class="pastel"><input id="plink" placeholder="Plak hier de link" autocomplete="off" inputmode="url"><button class="btn" type="button" id="pgo">Openen</button></div><p id="perr" class="muted" style="margin:8px 0 0;font-size:14px" hidden>Dit is geen geldige link van de trainer.</p>`);
+    const go = () => { const m = ($("#plink").value || "").match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi); if (!m) { $("#perr").hidden = false; return; }
+      for (const tok of m) if (!kids.some(k => k.tok === tok)) kids.push({ tok, name: "", team: "" }); store.set(KK, kids); only = null; start(); };
+    $("#pgo").onclick = go; $("#plink").onkeydown = e => { if (e.key === "Enter") go(); };
+    if (navigator.clipboard?.readText && app) navigator.clipboard.readText().then(t => { if (t && /[0-9a-f]{8}-[0-9a-f]{4}-/i.test(t)) $("#plink").value = t; }).catch(() => {});
+    return; }
   await load();
   if (kids.some(k => data[k.tok] === null)) { kids = kids.filter(k => data[k.tok] !== null); store.set(KK, kids); }
   if (!kids.length) { fail("Deze link werkt niet meer", "De trainer heeft misschien een nieuwe link gemaakt, of je kind staat niet meer in de ploeg. Vraag de trainer om de juiste link."); return; }
@@ -542,13 +549,9 @@ async function start() {
 function keepUrl() {
   const h = kids.length ? "#" + kids.map(k => k.tok).join("+") : "";
   if (location.hash !== h) history.replaceState(null, "", location.pathname + location.search + h);
-  try { const base = new URL(".", location.href).href, ogv = isOGVc(clubOf()), ic = n => new URL("../icons/" + n, location.href).href;
-    const m = { name: ogv ? "OGV Ouders" : "Ouders en spelers", short_name: ogv ? "OGV Ouders" : "Ouders", lang: "nl", id: "./", start_url: base + (demo ? "?demo" : "") + h, scope: base, display: "standalone",
-      background_color: "#111111", theme_color: "#111111", icons: ogv ? [{ src: ic("ogv-192.png"), sizes: "192x192", type: "image/png" }, { src: ic("ogv-512.png"), sizes: "512x512", type: "image/png" }, { src: ic("ogv-maskable-512.png"), sizes: "512x512", type: "image/png", purpose: "maskable" }]
-        : [{ src: ic("icon-192.png"), sizes: "192x192", type: "image/png" }, { src: ic("icon-512.png"), sizes: "512x512", type: "image/png" }, { src: ic("maskable-512.png"), sizes: "512x512", type: "image/png", purpose: "maskable" }] };
-    const l = document.querySelector('link[rel="manifest"]'); if (l) l.href = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(m));
-    if (ogv) { const a = document.querySelector('link[rel="apple-touch-icon"]'); if (a) a.href = ic("ogv-apple-touch-icon.png"); const t = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (t) t.content = "OGV Ouders"; }
-  } catch (e) {} }
+  /* geen start_url in het manifest: de app op het beginscherm opent zo het adres van dit moment, met de codes */
+  try { if (isOGVc(clubOf())) { const ic = n => new URL("../icons/" + n, location.href).href, a = document.querySelector('link[rel="apple-touch-icon"]'); if (a) a.href = ic("ogv-apple-touch-icon.png");
+      const t = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (t) t.content = "OGV Ouders"; } } catch (e) {} }
 async function refresh() { if (busy) return; busy = true; $("#rf").classList.add("spin"); await load(); $("#rf").classList.remove("spin"); busy = false; draw(); }
 $$("[data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; draw(); scrollTo(0, 0); });
 $("#rf").onclick = refresh;

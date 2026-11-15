@@ -3,8 +3,6 @@
   "short_name": "Ouders",
   "description": "Trainingen, wedstrijden, convocaties en nieuws van je club, voor ouders en spelers.",
   "lang": "nl",
-  "id": "./",
-  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#111111",
