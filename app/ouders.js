@@ -44,8 +44,14 @@ function convoTab(tv, e) {
   /* met groepjes (bv. PU9 A en B): enkel de spelers die niet in een ander groepje van die dag zitten */
   const sib = siblings(e), ps = active().filter(p => !sib.some(x => isIn(attOf(x.id, p.id)))), C = e.convo || {}, home = e.home !== false;
   const sel = new Set(C.players || ps.filter(p => sib.length ? isIn(attOf(e.id, p.id)) : rsvpOf(e.id, p.id)?.status !== "nee" && !(typeof absOf === "function" && absOf(p.id, e.date))).map(p => p.id));
-  const kick = tm(e.start_time), meetDef = kick ? (([h, m]) => { const t = h * 60 + m - 45; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); })(kick.split(":").map(Number)) : "";
-  const v = { meet: C.meet ?? meetDef, place: C.place ?? (home ? "Kantine " + clubName() : (e.location || "")), bring: C.bring ?? "Geel wedstrijdshirt, scheenbeschermers, drinkfles", note: C.note ?? "" };
+  /* standaard: wat de ploeg de vorige keer gebruikte (meebrengen, hoeveel minuten voor de aftrap verzamelen, plaats bij thuiswedstrijden) */
+  const prevs = S.events.filter(x => x.id !== e.id && x.type === "wedstrijd" && x.convo?.sent).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const prevBring = prevs.find(x => x.convo.bring)?.convo.bring, prevHome = home ? prevs.find(x => x.home !== false && x.convo.place)?.convo.place : null;
+  const mins = t => { const [h, m] = String(t || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
+  const pOff = (x => x ? mins(tm(x.start_time)) - mins(x.convo.meet) : null)(prevs.find(x => x.convo.meet && x.start_time && x.home === e.home));
+  const off = pOff > 0 && pOff <= 120 ? pOff : 45;
+  const kick = tm(e.start_time), meetDef = kick ? (([h, m]) => { const t = h * 60 + m - off; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); })(kick.split(":").map(Number)) : "";
+  const v = { meet: C.meet ?? meetDef, place: C.place ?? (home ? prevHome || "Kantine " + clubName() : (e.location || "")), bring: C.bring ?? prevBring ?? "Geel wedstrijdshirt, scheenbeschermers, drinkfles", note: C.note ?? "" };
   const paint = () => {
     const rs = p => rsvpOf(e.id, p.id)?.status, conf = [...sel].map(id => rs({ id })), ja = conf.filter(x => x === "ja").length, nee = conf.filter(x => x === "nee").length;
     tv.innerHTML = `<div class="grid2"><div class="panel"><h2>Afspraak</h2><div class="fields">
