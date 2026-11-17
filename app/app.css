@@ -2231,3 +2231,8 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 .agq{display:flex;gap:10px;align-items:flex-start;padding:6px 4px;border-radius:8px;cursor:pointer;font-size:14px}.agq:hover{background:var(--card2)}
 .agq input{margin-top:3px;flex:none}.agq input:not(:checked)+span{color:var(--dim);text-decoration:line-through}
 .atevrow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+/* v151: scouting per lid snel aan/uit */
+.memcard{flex-wrap:wrap}
+.memsc{flex-basis:100%;display:flex;align-items:center;gap:6px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line)}
+.memsc>span{font-size:12.5px;font-weight:700;color:var(--muted);margin-right:auto}
+.memsc .chip[aria-pressed=false]{color:var(--dim);text-decoration:line-through}

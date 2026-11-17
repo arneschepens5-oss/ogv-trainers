@@ -106,8 +106,17 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
         <span class="av" aria-hidden="true">${esc(nm.replace(/[^a-z]/gi, "").slice(0, 1).toUpperCase() || "?")}</span>
         <div class="mm"><b>${esc(nm)}${m.user_id === user?.id ? ` <small class="me">jij</small>` : ""}</b>${m.name ? `<small>${esc(m.email || "")}</small>` : ""}
           <span class="where${noTeam ? " none" : ""}">${IC.ppl}${where}</span>${tags ? `<div class="tags">${tags}</div>` : ""}</div>
-        <button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button></div>`; }).join("")}</div><p class="hint" id="memnone" hidden>Niemand gevonden.</p></div>`;
+        <button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button>
+        ${m.role === "admin" ? "" : `<div class="memsc"><span>Scouting</span><button class="chip" type="button" data-sc="int" data-u="${m.user_id}" aria-pressed="${!(m.rechten || []).includes("intscout_uit")}">Intern</button><button class="chip" type="button" data-sc="ext" data-u="${m.user_id}" aria-pressed="${(m.rechten || []).includes("scouting")}">Extern</button></div>`}</div>`; }).join("")}</div><p class="hint" id="memnone" hidden>Niemand gevonden.</p></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
+  /* scouting snel aan- of uitzetten per lid: intern = interne scouting van de club, extern = scoutingsdatabase */
+  $$("[data-sc]", v).forEach(b => b.onclick = async () => { const m = info.members.find(x => x.user_id === b.dataset.u); if (!m) return;
+    if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+    const k = b.dataset.sc === "int" ? "intscout_uit" : "scouting", on = b.getAttribute("aria-pressed") === "true", r = new Set(m.rechten || []);
+    if (b.dataset.sc === "int") { if (on) r.add(k); else r.delete(k); } else { if (on) r.delete(k); else r.add(k); }
+    b.disabled = true; const { error } = await sb.rpc("club_set_rechten", { uid: m.user_id, r: [...r] }); b.disabled = false;
+    if (error) { toast(/club_set_rechten|function|check/i.test(error.message) ? "Voer eerst supabase-interne-scouting-v43.sql uit in Supabase." : error.message); return; }
+    m.rechten = [...r]; b.setAttribute("aria-pressed", String(!on)); toast(`${b.dataset.sc === "int" ? "Interne scouting" : "Scoutingsdatabase"} ${on ? "uit" : "aan"} voor ${m.name || m.email}.`); });
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
   const txt = `Je bent uitgenodigd voor ${APPNAME()}, het trainersplatform van ${clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${info.code}\n\nDeel deze code niet buiten de club.`;
   $("#wa").href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(txt);

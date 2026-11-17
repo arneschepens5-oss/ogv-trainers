@@ -43,6 +43,7 @@ function isRows(D, gm) {
 }
 
 route("intscouting", { title: "Interne scouting", auth: true, render: async v => {
+  if (!S.admin && S.intscout === false) { v.innerHTML = head("Interne scouting", "") + `<div class="empty"><b>Geen toegang</b>De beheerder heeft de interne scouting voor jou uitgezet.</div>`; return; }
   v.innerHTML = head("Interne scouting", "Laden…");
   const D = await isData(), gm = pfGroupMap(D.T.map(t => t.criteria || []).filter(c => c.length)), all = isRows(D, gm);
   const teams = D.T.filter(t => all.some(x => x.p.team_id === t.id)).sort((a, b) => (evAgeOf(a) - evAgeOf(b)) || teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true }));

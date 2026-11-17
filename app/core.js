@@ -517,7 +517,7 @@ function route(name, def) { ROUTES[name] = def; }
 const NAV_TEAM = ["live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
 const navHidden = () => { try { const x = JSON.parse(localStorage.getItem("ogv-nav-hidden")); return Array.isArray(x) ? x : []; } catch (e) { return []; } };
 function menuEdit() {
-  const hid = new Set(navHidden()), groups = NAV.filter(g => g.g).map(g => [g.g, g.items.filter(([k]) => !["scouting", "betalingen"].includes(k) || mag(k))]).filter(([, xs]) => xs.length);
+  const hid = new Set(navHidden()), groups = NAV.filter(g => g.g).map(g => [g.g, g.items.filter(([k]) => (!["scouting", "betalingen"].includes(k) || mag(k)) && (k !== "intscouting" || S.admin || S.intscout !== false))]).filter(([, xs]) => xs.length);
   const d = dialog(`<form><h2>Menu aanpassen</h2><p class="hint" style="margin-top:0">Haal weg wat je nooit gebruikt. Dit geldt enkel voor jou, op dit toestel. Je kan alles altijd terugzetten.</p>
     <div class="mned">${groups.map(([g, xs]) => `<fieldset><legend>${esc(g)}</legend>${xs.map(([k, l]) => `<label class="check"><input type="checkbox" data-mk="${k}"${hid.has(k) ? "" : " checked"}> <span>${l}</span></label>`).join("")}</fieldset>`).join("")}</div>
     <div class="row"><button class="link" type="button" id="mnAll">Alles tonen</button><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Bewaren</button></div></form>`);
@@ -554,7 +554,7 @@ function shell(fresh) {
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
   const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
-    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
+    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "intscouting" || S.admin || S.intscout !== false) && (k !== "betalingen" || mag("betalingen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>
