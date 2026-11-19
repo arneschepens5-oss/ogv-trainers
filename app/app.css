@@ -2236,3 +2236,19 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 .memsc{flex-basis:100%;display:flex;align-items:center;gap:6px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line)}
 .memsc>span{font-size:12.5px;font-weight:700;color:var(--muted);margin-right:auto}
 .memsc .chip[aria-pressed=false]{color:var(--dim);text-decoration:line-through}
+/* v152: zijbalk klapt vloeiend open en dicht */
+.side .subwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .24s ease}
+.side .subwrap.open{grid-template-rows:1fr}
+.side .subwrap>.subside{overflow:hidden;min-height:0;margin:0 0 0 21px;transition:margin .24s ease,opacity .2s;opacity:0}
+.side .subwrap.open>.subside{margin:2px 0 8px 21px;opacity:1}
+.side .nav a.secl.cur svg{color:var(--ytext)}
+.side .nav a.secl .car{transition:transform .24s ease}
+@media (prefers-reduced-motion:reduce){.side .subwrap,.side .subwrap>.subside,.side .nav a.secl .car{transition:none}}
+.side .subwrap:not(.open)>.subside{visibility:hidden;transition:margin .24s ease,opacity .2s,visibility 0s .24s}
+.msgto{display:flex;flex-direction:column;gap:8px}
+.msgchips{display:flex;flex-wrap:wrap;gap:6px}.msgchips:empty{display:none}
+.msglist{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:4px;background:var(--card2)}
+.msglist button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:7px 8px;border-radius:9px;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.msglist button:hover,.msglist button:focus-visible{background:var(--card)}
+.msglist .av{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ybg);color:var(--ytext);font-weight:800;font-size:13px;flex:none}
+.dosvisit{display:flex;gap:10px;align-items:center;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--ybg);color:var(--ytext);font-size:14px}.dosvisit svg{width:18px;height:18px;flex:none}

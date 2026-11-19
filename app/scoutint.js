@@ -117,7 +117,7 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
     if ($("#isC")) $("#isC").onclick = () => { Object.assign(IS, { ...IS_DEF, sort: IS.sort, team: IS.team, open: IS.open }); $("#isQ").value = ""; syncF(); draw(); };
     $$("[data-open]", $("#isL")).forEach(el => el.onclick = async () => { const x = all.find(y => y.p.id === el.dataset.open);
       if (!isOwn(el.dataset.t)) { isFiche(x, all, gm, D); return; } IS.scroll = window.scrollY; dosBack = { href: "#/intscouting", label: "Interne scouting" };
-      if (S.team?.id !== el.dataset.t) await loadTeam(el.dataset.t); dosTab = "overzicht"; go("#/dossier/" + el.dataset.open); });
+      if (S.team?.id !== el.dataset.t) { if (!DOS_PREV) DOS_PREV = S.team?.id || null; await loadTeam(el.dataset.t); } dosTab = "overzicht"; go("#/dossier/" + el.dataset.open); });
     if (typeof hydratePhotos === "function") hydratePhotos(v);
   };
   const syncF = () => { $$("[data-f]", v).forEach(s => s.value = IS[s.dataset.f] ?? ""); $$("[data-fp]", v).forEach(b => b.classList.toggle("h", String(IS.pos) === b.dataset.fp)); };

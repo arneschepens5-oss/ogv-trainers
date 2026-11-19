@@ -89,7 +89,7 @@ async function loadMessages(limit = 40) {
   return all.filter(m => !m.team_id || m.team_id === S.team?.id || myTeams().some(t => t.id === m.team_id))
     .filter(m => (m.until || iso(addDays(new Date(m.created_at), 30))) >= today).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
 }
-const msgCard = m => `<div class="msgc${m.team_id ? "" : " club"}"><div class="row" style="gap:8px"><span class="pill ${m.team_id ? "t" : "w"}">${m.team_id ? esc(S.teams.find(t => t.id === m.team_id)?.name || "Ploeg") : "Club"}</span><small class="muted">${new Date(m.created_at).toLocaleDateString("nl-BE", { day: "numeric", month: "short" })}${m.author ? " · " + esc(m.author) : ""}</small></div>
+const msgCard = m => `<div class="msgc${m.team_id ? "" : " club"}"><div class="row" style="gap:8px"><span class="pill ${m.team_id ? "t" : "w"}">${m.team_id ? esc(S.teams.find(t => t.id === m.team_id)?.name || "Ploeg") : "Club"}</span>${m.to_players?.length ? `<span class="pill fn" title="${esc(m.to_players.map(id => { const p = S.players.find(x => x.id === id); return p ? pname(p) : ""; }).filter(Boolean).join(", "))}">Aan ${m.to_players.length === 1 ? esc((S.players.find(x => x.id === m.to_players[0]) || {}).first_name || "1 speler") : m.to_players.length + " spelers"}</span>` : ""}<small class="muted">${new Date(m.created_at).toLocaleDateString("nl-BE", { day: "numeric", month: "short" })}${m.author ? " · " + esc(m.author) : ""}</small></div>
   <b>${esc(m.title)}</b>${m.body ? `<p>${esc(m.body).replace(/\n/g, "<br>")}</p>` : ""}</div>`;
 route("berichten", { title: "Berichten", auth: true, render: async v => {
   if (!V14()) { v.innerHTML = head("Berichten", "") + needV14("Berichten"); return; }
@@ -105,15 +105,26 @@ route("berichten", { title: "Berichten", auth: true, render: async v => {
 } });
 function msgForm() {
   const d = dialog(`<form class="dlg"><h2>Nieuw bericht</h2><div class="fields">
-    <label class="f full">Voor wie<select name="to">${S.team ? `<option value="${S.team.id}">Ouders en trainers van ${esc(S.team.name)}</option>` : ""}${S.admin ? `<option value="">Iedereen in de club</option>` : ""}</select></label>
+    <label class="f full">Voor wie<select name="to">${S.team ? `<option value="${S.team.id}">Ouders en trainers van ${esc(S.team.name)}</option><option value="sel">Bepaalde spelers en hun ouders…</option>` : ""}${S.admin ? `<option value="">Iedereen in de club</option>` : ""}</select></label>
+    <div class="f full msgto" hidden><input type="search" id="msgq" placeholder="Zoek een naam" autocomplete="off"><div class="msgchips" id="msgsel"></div><div class="msglist" id="msgl"></div></div>
     <label class="f full">Titel<input name="title" required maxlength="120" placeholder="bv. Training van woensdag gaat niet door"></label>
     <label class="f full">Bericht<textarea name="body" maxlength="2000" placeholder="Wat moeten de ouders weten?"></textarea></label>
     <label class="f">Zichtbaar tot<input type="date" name="until"><span class="hint" style="font-weight:400">Leeg = 30 dagen</span></label></div>
     <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Plaatsen</button></div></form>`);
+  /* bepaalde spelers: zoek op naam, tik om te kiezen */
+  const sel = new Set(), ps = (S.players || []).filter(p => p.active !== false).sort((a, b) => pname(a).localeCompare(pname(b), "nl"));
+  const draw = () => { const q = ($("#msgq", d).value || "").toLowerCase().trim();
+    $("#msgsel", d).innerHTML = [...sel].map(id => { const p = ps.find(x => x.id === id); return p ? `<button type="button" class="chip" aria-pressed="true" data-un="${id}">${esc(pname(p))} ×</button>` : ""; }).join("");
+    $("#msgl", d).innerHTML = ps.filter(p => !sel.has(p.id) && (!q || pname(p).toLowerCase().includes(q))).map(p => `<button type="button" data-pk="${p.id}"><span class="av">${esc((p.first_name || "?")[0])}</span>${esc(pname(p))}</button>`).join("") || `<p class="hint">Niemand gevonden.</p>`;
+    $$("[data-pk]", d).forEach(b => b.onclick = () => { sel.add(b.dataset.pk); $("#msgq", d).value = ""; draw(); $("#msgq", d).focus(); });
+    $$("[data-un]", d).forEach(b => b.onclick = () => { sel.delete(b.dataset.un); draw(); }); };
+  $("#msgq", d).oninput = draw;
+  $("[name=to]", d).onchange = e => { $(".msgto", d).hidden = e.target.value !== "sel"; if (e.target.value === "sel") { draw(); $("#msgq", d).focus(); } };
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
-    const row = { id: uid(), team_id: f.to || null, title: f.title.trim(), body: f.body.trim() || null, author: myName() || null, until: f.until || null, created_at: new Date().toISOString(), ...(mode === "demo" ? { created_by: "demo" } : {}) };
+    if (f.to === "sel" && !sel.size) { toast("Kies minstens één speler."); return; }
+    const row = { id: uid(), team_id: f.to === "sel" ? S.team.id : f.to || null, ...(f.to === "sel" ? { to_players: [...sel] } : {}), title: f.title.trim(), body: f.body.trim() || null, author: myName() || null, until: f.until || null, created_at: new Date().toISOString(), ...(mode === "demo" ? { created_by: "demo" } : {}) };
     if (mode !== "demo") delete row.created_at;
-    const ok = await safe(async () => { await db.insert("messages", row); return true; }, "Bericht geplaatst.");
+    const ok = await safe(async () => { try { await db.insert("messages", row); } catch (e) { if (/to_players/.test(e.message || "")) throw new Error("Voer eerst supabase-berichten-v57.sql uit in Supabase."); throw e; } return true; }, "Bericht geplaatst.");
     if (ok) { d.close(); render(); shareDialog("Ook via WhatsApp sturen?", row.title + (row.body ? "\n\n" + row.body : ""), "Het bericht staat nu in de app en op de ouderlinks. Stuur het eventueel ook naar de WhatsApp-groep."); } };
 }
 /* berichten die ouders via OGV Ouders naar de trainer stuurden */

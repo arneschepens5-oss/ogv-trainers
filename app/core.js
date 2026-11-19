@@ -515,6 +515,7 @@ const ROUTES = {};
 function route(name, def) { ROUTES[name] = def; }
 /* onderdelen die enkel zin hebben met een ploeg, en wat iemand zelf uit zijn menu haalde */
 const NAV_TEAM = ["live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
+const SIDE_OPEN = new Set(), SIDE_SHUT = new Set();
 const navHidden = () => { try { const x = JSON.parse(localStorage.getItem("ogv-nav-hidden")); return Array.isArray(x) ? x : []; } catch (e) { return []; } };
 function menuEdit() {
   const hid = new Set(navHidden()), groups = NAV.filter(g => g.g).map(g => [g.g, g.items.filter(([k]) => (!["scouting", "betalingen"].includes(k) || mag(k)) && (k !== "intscouting" || S.admin || S.intscout !== false))]).filter(([, xs]) => xs.length);
@@ -562,7 +563,8 @@ function shell(fresh) {
   /* zijbalk: één regel per onderdeel; de gsm (Meer) toont per onderdeel alle tegels */
   const curSec = secs.find(sec => sec.g && sec.items.some(([k]) => k === active));
   /* het onderdeel waar je in zit klapt open in de zijbalk en toont zijn pagina's eronder */
-  const sideHtml = secs.map(sec => !sec.g ? navItems(sec) : `<a class="secl${curSec === sec ? " open" : ""}" href="#/${sec.items[0][0]}"${curSec === sec && sec.items.length < 2 ? ' aria-current="page"' : ""}>${IC[sec.icon] || IC[sec.items[0][2]]}<span>${sec.g}</span>${sec.g === "Beheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}${sec.items.length > 1 ? `<i class="car" aria-hidden="true"></i>` : ""}</a>${curSec === sec && sec.items.length > 1 ? `<div class="subside">${sec.items.map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}><span>${l}</span></a>`).join("")}</div>` : ""}`).join("");
+  const secOpen = sec => (curSec === sec && !SIDE_SHUT.has(sec.g)) || SIDE_OPEN.has(sec.g);
+  const sideHtml = secs.map(sec => !sec.g ? navItems(sec) : `<a class="secl${secOpen(sec) ? " open" : ""}${curSec === sec ? " cur" : ""}" href="#/${sec.items[0][0]}"${sec.items.length > 1 ? ` data-sec="${esc(sec.g)}" aria-expanded="${secOpen(sec)}"` : ""}${curSec === sec && sec.items.length < 2 ? ' aria-current="page"' : ""}>${IC[sec.icon] || IC[sec.items[0][2]]}<span>${sec.g}</span>${sec.g === "Beheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}${sec.items.length > 1 ? `<i class="car" aria-hidden="true"></i>` : ""}</a>${sec.items.length > 1 ? `<div class="subwrap${secOpen(sec) ? " open" : ""}"><div class="subside">${sec.items.map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}><span>${l}</span></a>`).join("")}</div></div>` : ""}`).join("");
   const loose = secs.filter(sec => !sec.g).flatMap(sec => sec.items).filter(([k]) => k !== "start");
   const navHtml = (loose.length ? `<div class="navg"><div class="navgrp">Algemeen</div>${navItems({ items: loose })}</div>` : "") + secs.filter(sec => sec.g).map(sec => `<div class="navg" data-g="${esc(sec.g)}"><div class="navgrp">${sec.g}</div>${navItems(sec)}</div>`).join("");
   const subHtml = curSec && curSec.items.length > 1 ? `<nav class="subnav" aria-label="${esc(curSec.g)}">${curSec.items.map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${String(l).replace(/\u00AD/g, "")}</a>`).join("")}</nav>` : "";
@@ -593,6 +595,10 @@ function shell(fresh) {
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
+  /* onderdelen in de zijbalk klappen vloeiend open en dicht zonder de pagina te wisselen */
+  $$(".side a.secl[data-sec]").forEach(a => a.onclick = e => { e.preventDefault(); const g = a.dataset.sec, o = !a.classList.contains("open");
+    a.classList.toggle("open", o); a.nextElementSibling?.classList.toggle("open", o); a.setAttribute("aria-expanded", o);
+    if (o) { SIDE_OPEN.add(g); SIDE_SHUT.delete(g); } else { SIDE_OPEN.delete(g); SIDE_SHUT.add(g); } });
   $$("[data-gids]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); startGids(); });
   $$("[data-menued]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); menuEdit(); });
   if (logged && !gidsSeen()) setTimeout(() => { if (!$("#dlg")?.open) startGids(); }, 600);
@@ -607,14 +613,20 @@ function shell(fresh) {
 let renderSeq = 0, rendering = 0;
 async function render() {
   const seq = ++renderSeq; rendering++;
-  try { await renderPage(seq); } finally { rendering--; }
+  try { await renderPage(seq); } finally { rendering--; requestAnimationFrame(() => { if (!rendering) document.body.style.minHeight = ""; }); }
 }
 /* vangnet: staat er ooit toch een lege pagina (zonder dat er iets aan het laden is), dan wordt ze opnieuw opgebouwd */
 setInterval(() => { const v = $("#view"); if (v && !rendering && !v.children.length && !v.textContent.trim() && !document.hidden) { console.warn("Lege pagina hersteld"); render(); } }, 1500);
+let PREV_HASH = null, DOS_PREV = null;
 async function renderPage(seq) {
+  /* dezelfde pagina opnieuw opbouwen (na bewaren, een vinkje …) mag niet naar boven springen of verspringen */
+  const h0 = location.hash, same = h0 === PREV_HASH, y0 = scrollY;
+  if (same) document.body.style.minHeight = document.documentElement.scrollHeight + "px";
   document.body.classList.remove("authpage");
   if (teardown) { try { teardown(); } catch (e) {} teardown = null; }
   const r = cur(), def = ROUTES[r.page] || ROUTES.start;
+  /* even een dossier van een andere ploeg bekeken (via Interne scouting): daarna terug naar je eigen ploeg */
+  if (DOS_PREV && r.page !== "dossier") { const t = DOS_PREV; DOS_PREV = null; if (S.team?.id !== t) try { await loadTeam(t); } catch (e) {} }
   shell(true); const v = $("#view");
   if (def.wide) v.classList.add("wide");
   const logged = !!db && (mode === "demo" || !!user);
@@ -640,7 +652,7 @@ async function renderPage(seq) {
   catch (e) { settled = true; console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
   clearTimeout(tLoad); clearTimeout(tSlow); $(".slowload", v)?.remove(); compactHead(v);
   document.title = (def.title ? def.title + " | " : "") + APPNAME();
-  if (!def.keepScroll) scrollTo(0, 0);
+  if (seq === renderSeq) { PREV_HASH = h0; if (same) { scrollTo(0, y0); requestAnimationFrame(() => { document.body.style.minHeight = ""; }); } else { document.body.style.minHeight = ""; if (!def.keepScroll) scrollTo(0, 0); } }
 }
 addEventListener("hashchange", () => { const d = $("#dlg"); if (d?.open) d.close(); render(); }); /* terugknop op gsm sluit ook een open venster */
 
