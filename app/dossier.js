@@ -18,7 +18,7 @@ function dosChart(rows) {
 }
 
 const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["groei", "Groei"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
-let dosTab = "overzicht", DOS_EVM = 0;
+let dosTab = "overzicht", DOS_EVM = 0, DOS_SEAS = "";
 /* van waar kwam je? (bv. Interne scouting): dan brengt "terug" je daar opnieuw naartoe */
 let dosBack = null;
 /* scoutingprofiel van een eigen speler: dezelfde 5 onderdelen en posities als de scoutingdatabase, zodat eigen en externe spelers vergelijkbaar zijn */
@@ -66,7 +66,14 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   /* tags */
   const work = dosCount(A.flatMap(a => a.tags || [])), str = dosCount(A.flatMap(a => (a.strengths || []).filter(t => t !== "Kapitein")));
   /* evaluaties */
-  const ev = S.evals.filter(x => x.player_id === p.id).sort((a, b) => a.moment - b.moment), groups = evGroups(S.team, p), names = evItems(S.team, p);
+  /* evaluaties per seizoen: dit seizoen uit de ploeg, vorige seizoenen uit de geschiedenis van de speler */
+  const seasons = [{ k: "", lbl: S.team?.season || "Dit seizoen", sub: teamLbl(S.team) }, ...(Array.isArray(p.history) ? p.history : []).map((h, i) => ({ k: "h" + i, lbl: h.season || "Vorig seizoen", sub: h.team ? String(h.team).replace(/^OGV\s+/i, "") : "", h })).filter(x => (x.h.evals || []).length).reverse()];
+  if (!seasons.some(x => x.k === DOS_SEAS)) DOS_SEAS = "";
+  const hSel = seasons.find(x => x.k === DOS_SEAS)?.h;
+  const ev = (hSel ? (hSel.evals || []).map(e => ({ ...e, player_id: p.id, details: e.details || {} })) : S.evals.filter(x => x.player_id === p.id)).sort((a, b) => a.moment - b.moment);
+  const groups = hSel ? evGroupsRaw({ criteria: typeof evMaster === "function" ? evMaster().template : EV_TEMPLATE }).map(g => ({ ...g, items: g.items.filter(i => ev.some(e => e.scores?.[i.name] != null)) })).filter(g => g.items.length) : evGroups(S.team, p);
+  const names = hSel ? groups.flatMap(g => g.items.map(i => i.name)) : evItems(S.team, p);
+  const seasBar = seasons.length > 1 ? `<div class="dseas sec" data-t="evaluaties"><span>Seizoen</span>${seasons.map(x => `<button type="button" data-seas="${x.k}" aria-pressed="${x.k === DOS_SEAS}"><b>${esc(x.lbl)}</b><small>${esc(x.sub || "")}</small></button>`).join("")}</div>` : "";
   const evMs = EV_MOMENTS.filter(m => ev.some(e => e.moment === m.m && Object.keys(e.scores || {}).length));
   const evTexts = ev.flatMap(e => { const D = e.details || {}, mo = EV_MOMENTS[e.moment - 1]; return [["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen", D.goals], ["Niveau", D.level], ["Positie", D.position], ["Boodschap voor de ouders", D.parents]]
     .concat(EV_OPEN.filter(q => q.type !== "kop").map(q => [q.text, D.open?.[q.id] != null && D.open[q.id] !== "" ? String(D.open[q.id]) + (q.type === "schaal" ? " op 5" : "") : ""]))
@@ -185,7 +192,8 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
 
   ${dosChart(rows) ? `<div class="sec panel"><h2>Verloop wedstrijdcijfer</h2>${dosChart(rows)}<p class="hint" style="margin:6px 0 0">Eén punt per speeldag. Ga met de muis over een punt voor de tegenstander en wie quoteerde.</p></div>` : ""}</details>
 
-  <div class="sec panel" data-t="evaluaties" id="dosPf2"></div>
+  ${seasBar}
+  <div class="sec panel" data-t="evaluaties" id="dosPf2"${hSel ? " hidden" : ""}></div>
   ${evDetail}
   <div class="sec panel" data-t="evaluaties"><h2>Scores per onderdeel</h2>
     ${evMs.length ? `<div class="tblwrap"><table class="dostbl"><thead><tr><th>Onderdeel</th>${evMs.map(m => `<th>${esc(m.kort)}</th>`).join("")}</tr></thead><tbody>
@@ -210,6 +218,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     others: ps.filter(q => q.id !== p.id).map(q => ({ id: q.id, name: pname(q), list: lst(q) })) };
   pfMount($("#dosPf", v), pfCtx); pfMount($("#dosPf2", v), pfCtx);
   $("#dosG").onclick = () => goalForm(p);
+  $$("[data-seas]", v).forEach(b => b.onclick = () => { DOS_SEAS = b.dataset.seas; DOS_EVM = 0; render(); });
   $$("[data-evm]", v).forEach(b => b.onclick = () => { DOS_EVM = +b.dataset.evm; render(); });
   $$("[data-goev]", v).forEach(b => b.onclick = () => { DOS_EVM = +b.dataset.goev; dosTab = "evaluaties"; render(); });
   $$(".dtabs [data-tab]", v).forEach(b => b.onclick = () => { dosTab = b.dataset.tab; $(".dos", v).dataset.tab = dosTab; $$(".dtabs [data-tab]", v).forEach(x => x.setAttribute("aria-selected", x === b)); });

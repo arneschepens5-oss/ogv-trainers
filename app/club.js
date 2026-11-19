@@ -523,6 +523,7 @@ async function rsvpApply(e) { /* antwoorden overnemen in de aanwezigheden waar n
 const nextSeason = s => { const m = String(s || "").match(/(\d{4})\D+(\d{4})/); if (m) return (+m[1] + 1) + "-" + (+m[2] + 1); const y = new Date().getFullYear(); return y + "-" + (y + 1); };
 const nextCat = c => String(c || "").replace(/(\d+)/, n => +n + 1);
 function seasonForm() {
+  if (!S.admin) { toast("Enkel de beheerder kan ploegen naar een nieuw seizoen brengen."); return; }
   const t = S.team, ps = active();
   const d = dialog(`<form class="dlg"><h2>Naar een nieuw seizoen</h2><p class="hint" style="margin:0">Maakt een nieuwe ploeg aan met de spelers die je aanvinkt. Hun evaluaties en cijfers van dit seizoen gaan mee als geschiedenis, en de ouderlinks blijven werken. De huidige ploeg blijft bewaard.</p>
     <div class="fields"><label class="f full">Naam nieuwe ploeg<input name="name" required value="${esc(nextCat(t.name))}"></label>
@@ -539,7 +540,7 @@ function seasonForm() {
       await db.insert("teams", nt); if (mode === "demo") await db.save("team_trainers", { team_id: nt.id, user_id: "demo", email: "demo@ogvorselaar.be" });
       if (f.co?.checked) for (const tr of S.trainers) if (tr.user_id !== user?.id && tr.email) await db.addTrainer(nt.id, tr.email).catch(() => {});
       for (const p of keep) {
-        const s = playerStats(p), evs = S.evals.filter(x => x.player_id === p.id && Object.keys(x.scores || {}).length).sort((a, b) => a.moment - b.moment).map(x => ({ moment: x.moment, date: x.date || null, scores: x.scores }));
+        const s = playerStats(p), evs = S.evals.filter(x => x.player_id === p.id && Object.keys(x.scores || {}).length).sort((a, b) => a.moment - b.moment).map(x => ({ moment: x.moment, date: x.date || null, scores: x.scores, details: x.details || {}, comment: x.comment || null }));
         const hist = [...(p.history || []), { season: t.season || "", team: t.name, category: t.category || "", evals: evs,
           stats: { trainingPct: s.trTot ? s.trPct : null, matches: s.matches, minutes: s.minutes, goals: s.goals, assists: s.assists, rating: s.rating ?? null } }];
         const token = p.parent_token; if (token) { p.parent_token = uid(); await db.save("players", p); } /* de ouderlink verhuist mee naar de nieuwe ploeg */
