@@ -109,14 +109,14 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
         <button class="btn ghost small" type="button" data-edm="${m.user_id}">Bewerken</button>
         ${m.role === "admin" ? "" : `<div class="memsc"><span>Scouting</span><button class="chip" type="button" data-sc="int" data-u="${m.user_id}" aria-pressed="${!(m.rechten || []).includes("intscout_uit")}">Intern</button><button class="chip" type="button" data-sc="ext" data-u="${m.user_id}" aria-pressed="${(m.rechten || []).includes("scouting")}">Extern</button></div>`}</div>`; }).join("")}</div><p class="hint" id="memnone" hidden>Niemand gevonden.</p></div>`;
   const rpc = async (fn, args, ok) => { if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; } const { error } = await sb.rpc(fn, args); if (error) toast(error.message); else { toast(ok); render(); } };
-  /* scouting snel aan- of uitzetten per lid: intern = interne scouting van de club, extern = scoutingsdatabase */
+  /* scouting snel aan- of uitzetten per lid: intern = interne scouting van de club, extern = externe scouting */
   $$("[data-sc]", v).forEach(b => b.onclick = async () => { const m = info.members.find(x => x.user_id === b.dataset.u); if (!m) return;
     if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
     const k = b.dataset.sc === "int" ? "intscout_uit" : "scouting", on = b.getAttribute("aria-pressed") === "true", r = new Set(m.rechten || []);
     if (b.dataset.sc === "int") { if (on) r.add(k); else r.delete(k); } else { if (on) r.delete(k); else r.add(k); }
     b.disabled = true; const { error } = await sb.rpc("club_set_rechten", { uid: m.user_id, r: [...r] }); b.disabled = false;
     if (error) { toast(/club_set_rechten|function|check/i.test(error.message) ? "Voer eerst supabase-interne-scouting-v43.sql uit in Supabase." : error.message); return; }
-    m.rechten = [...r]; b.setAttribute("aria-pressed", String(!on)); toast(`${b.dataset.sc === "int" ? "Interne scouting" : "Scoutingsdatabase"} ${on ? "uit" : "aan"} voor ${m.name || m.email}.`); });
+    m.rechten = [...r]; b.setAttribute("aria-pressed", String(!on)); toast(`${b.dataset.sc === "int" ? "Interne scouting" : "Externe scouting"} ${on ? "uit" : "aan"} voor ${m.name || m.email}.`); });
   $("#cpy").onclick = () => { navigator.clipboard?.writeText(info.code); toast("Clubcode gekopieerd."); };
   const txt = `Je bent uitgenodigd voor ${APPNAME()}, het trainersplatform van ${clubName()}.\n\n1. Open ${link}\n2. Tik op Account aanmaken\n3. Vul deze clubcode in: ${info.code}\n\nDeel deze code niet buiten de club.`;
   $("#wa").href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(txt);
@@ -132,7 +132,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
 
 /* lid bewerken: functie, beheerder en toegang tot alle ploegen */
 const FUNCTIES = ["Trainer", "Penningmeester", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
-const RECHTEN = [["scouting", "Scoutingsdatabase", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
+const RECHTEN = [["scouting", "Externe scouting", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
 function memberForm(m, rpc) {
   const me = m.user_id === user?.id;
   const d = dialog(`<form><h2>${esc(m.name || m.email)}</h2><p class="muted" style="margin:0">${esc(m.email || "")}${m.teams ? " · trainer van " + esc(m.teams) : ""}</p>
@@ -738,7 +738,7 @@ const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste mom
   ["live", "Live coachen", "Klok, doelpunten en wissels langs de lijn"], ["matchday", "Wedstrijdblad", "Opstelling om af te drukken"], ["videoanalyse", "Videoanalyse", "Videostudio met spelersherkenning"],
   ["animatiebord", "Tactiekbord", "Bewegende spelpatronen"], ["mixschema", "Mixschema", "Rotatieschema voor gemengde ploegen"], ["principes", "Mijn spelprincipes", "Eigen video's per principe"],
   ["berichten", "Berichten", "Mededelingen aan trainers"], ["terreinen", "Terreinen", "Veldindeling en plattegrond"], ["contacten", "Wie contacteer ik?", "Contactlijst van de club"],
-  ["scouting", "Scoutingsdatabase", "Spelers van andere clubs volgen"], ["clubdashboard", "Clubdashboard", "Overzicht voor de jeugdcoördinator"]];
+  ["scouting", "Externe scouting", "Spelers van andere clubs volgen"], ["clubdashboard", "Clubdashboard", "Overzicht voor de jeugdcoördinator"]];
 const CS_CATS = [["U6", "2v2"], ["U7", "3v3"], ["U8", "5v5"], ["U9", "5v5"], ["U10", "8v8"], ["U11", "8v8"], ["U12", "8v8"], ["U13", "8v8"], ["U14", "11v11"], ["U15", "11v11"], ["U16", "11v11"], ["U17", "11v11"], ["U19", "11v11"], ["U21", "11v11"]];
 /* opslaan: de eigen club via club_save_settings, een andere club (platformbeheer) via platform_update_club */
 function csCtxOwn() { return { club: CLUB, base: "#/clubinstellingen", steps: CS_STEPS, platform: false, done: "#/start",
@@ -827,7 +827,7 @@ async function csPage(v, id, ctx) {
 
   if (step === "toegang") return csAccess(host, st, csSave, foot);
 
-  /* scouting: waarop beoordelen de scouts in de scoutingsdatabase (extern)? */
+  /* scouting: waarop beoordelen de scouts in de externe scouting (extern)? */
   if (step === "scouting") {
     const sc = st.scout || {}; let comp = scComp(st).map(c => ({ ...c }));
     const nextK = () => { let n = 0; const used = new Set([...comp.map(c => c.k), ...(sc.used || []), ...SC_DEF.map(c => c.k), ...scComp(st).map(c => c.k)]); while (used.has("k" + n)) n++; return "k" + n; };
@@ -837,13 +837,13 @@ async function csPage(v, id, ctx) {
       $$("[data-s]", host).forEach(x => x.oninput = () => { comp[+x.dataset.s].s = x.value; });
       $$("[data-up]", host).forEach(b => b.onclick = () => { const i = +b.dataset.up; [comp[i - 1], comp[i]] = [comp[i], comp[i - 1]]; draw(); });
       $$("[data-rm]", host).forEach(b => b.onclick = () => { comp.splice(+b.dataset.rm, 1); draw(); }); };
-    host.innerHTML = `<form class="panel" id="csc" style="max-width:820px"><h2 style="margin-top:0">Scoutingsdatabase: waarop beoordelen jullie?</h2>
+    host.innerHTML = `<form class="panel" id="csc" style="max-width:820px"><h2 style="margin-top:0">Externe scouting: waarop beoordelen jullie?</h2>
       <p class="hint" style="margin-top:0">Scouts geven op elk criterium een cijfer van 1 tot 10. Met drie of meer criteria krijgt elke speler een spelersprofiel, net zoals bij de interne scouting. Een criterium weghalen wist geen scores: zet je het later terug, dan staan ze er weer.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn ghost small" type="button" id="scp1">Zes hoeken van de interne fiche</button><button class="btn ghost small" type="button" id="scp0">Standaard (5 criteria)</button></div>
       <div id="scc" class="scrows"></div><button class="btn ghost small" type="button" id="scadd" style="margin-top:8px">${IC.plus}Criterium toevoegen</button>
       <h2>Status van een speler</h2><p class="hint" style="margin-top:0">De stappen in jullie opvolging, één per regel.</p>
       <textarea id="scst" rows="6" style="max-width:420px">${esc(scStats(st).join("\n"))}</textarea>
-      <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de scoutingsdatabase en de interne scouting ziet, kies je per persoon bij <a class="link" href="${ctx.base}/toegang">Wie ziet wat</a>.</p>${foot()}</form>`;
+      <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de externe scouting en de interne scouting ziet, kies je per persoon bij <a class="link" href="${ctx.base}/toegang">Wie ziet wat</a>.</p>${foot()}</form>`;
     draw();
     $("#scadd").onclick = () => { comp.push({ k: nextK(), n: "", s: "" }); draw(); $$("[data-n]", host).pop().focus(); };
     $("#scp0").onclick = () => { comp = SC_DEF.map(c => ({ ...c })); draw(); };
@@ -915,7 +915,7 @@ async function csAccess(host, st, csSave, foot) {
         <h2 style="margin-top:0">${m ? esc(m.name || m.email) : "Alle trainers"}</h2>
         <p class="hint" style="margin-top:-6px">${!m ? "Wat hier uit staat, zien trainers niet in hun menu. Per persoon kan je een uitzondering maken. Beheerders zien altijd alles." : adm ? "Beheerders zien altijd alles. Maak iemand gewone trainer in Beheer › Toegang en leden om dit te beperken." : "Een bolletje naast een onderdeel betekent: eigen keuze voor deze persoon, anders dan bij Alle trainers."}</p>
         ${adm ? "" : `${m ? `<h3>Rechten</h3><div class="acclist">${RIGHTS.map(([k, l, d]) => `<label class="accrow"><span><b>${esc(l)}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" data-ar="${k}"${rOn(k) ? " checked" : ""}><span></span></span></label>`).join("")}</div>`
-          : `<h3>Scouting voor iedereen</h3><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="btn ghost small" type="button" data-bulk="on">Interne scouting voor alle trainers aan</button><button class="btn ghost small" type="button" data-bulk="off">Interne scouting voor alle trainers uit</button></div><p class="hint" style="margin-top:0">De scoutingsdatabase (extern) geef je per persoon.</p>`}
+          : `<h3>Scouting voor iedereen</h3><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="btn ghost small" type="button" data-bulk="on">Interne scouting voor alle trainers aan</button><button class="btn ghost small" type="button" data-bulk="off">Interne scouting voor alle trainers uit</button></div><p class="hint" style="margin-top:0">De externe scouting (extern) geef je per persoon.</p>`}
         <h3>Onderdelen in het menu</h3><div class="acclist">${mods.map(([k, l, d]) => `<label class="accrow"><span><b>${esc(l)}${own(k) ? ' <i class="accown" title="Eigen keuze voor deze persoon"></i>' : ""}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" data-am="${k}"${modOn(k) ? " checked" : ""}><span></span></span></label>`).join("")}</div>
         ${m && Object.keys(u).length ? `<button class="link" type="button" id="accreset" style="margin-top:10px">Zelfde als Alle trainers</button>` : ""}`}
         <p class="hint" style="margin-bottom:0">Onderdelen die de hele club niet gebruikt, zet je uit bij <a class="link" href="#/clubinstellingen/onderdelen">Onderdelen</a>. Elke wijziging wordt meteen bewaard.</p>

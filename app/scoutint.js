@@ -70,7 +70,7 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
   v.innerHTML = `<div class="isc">
     <div class="isc-top"><div><h1 class="pg">Interne scouting${typeof helpLink === "function" ? helpLink() : ""}</h1>
       <p class="sub">${D.all ? "Alle spelers van " + esc(typeof clubName === "function" ? clubName() : "de club") : "De spelers van jouw ploegen"}, met hun posities, spelersprofiel uit de evaluaties, groei en rapporten. Alleen voor trainers.</p></div>
-      <div class="row" style="gap:8px">${S.admin ? `<button class="btn ghost" type="button" id="isImp">${IC.sheet}Excel importeren</button>` : ""}<a class="btn ghost" href="#/scouting">${IC.scout}Scoutingsdatabase</a></div></div>
+      <div class="row" style="gap:8px">${S.admin ? `<button class="btn ghost" type="button" id="isImp">${IC.sheet}Excel importeren</button>` : ""}<a class="btn ghost" href="#/scouting">${IC.scout}Externe scouting</a></div></div>
     ${D.evOk === false ? `<p class="grpwarn">De scores van andere ploegen verschijnen zodra de beheerder <b>supabase-interne-scouting-v53.sql</b> uitvoert.</p>` : ""}
     <div class="isc-search"><span class="isc-ic">${IC.scout}</span><input type="search" id="isQ" placeholder="Zoek op naam, positie, kwaliteit of notitie, bv. 'linksachter snel'" value="${esc(IS.q)}" aria-label="Zoeken" autocomplete="off">
       <button type="button" class="isc-fbtn" id="isF" aria-expanded="${IS.open}">Filters<b id="isFn"${nAct() ? "" : " hidden"}>${nAct()}</b></button></div>
