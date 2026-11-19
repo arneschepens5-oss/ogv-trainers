@@ -84,7 +84,7 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
     <div class="isc-act" id="isA"></div>
     <div id="isL"></div></div>`;
 
-  const card = x => { const m = IS_MAT[x.p.maturity], pi = x.potI, h = x.ps.h, mini = x.axes.length >= 3 ? radarSvg(x.axes, x.last.vals, null, { mini: true, size: 46 }) : "";
+  const card = x => { const m = IS_MAT[x.p.maturity], pi = x.potI, h = x.ps.h, mini = x.axes.length >= 3 ? radarSvg(x.axes, x.last.vals, null, { mini: true, size: 64 }) : "";
     const sk = IS.sort.startsWith("ax:") ? IS.sort.slice(3) : "", sv = sk ? x.last?.vals[sk] : x.tot;
     return `<button type="button" class="isc-card" data-open="${x.p.id}" data-t="${x.p.team_id}">
       <span class="isc-av">${x.p.photo ? `<img data-pp="${esc(x.p.photo)}" alt="" draggable="false">` : `<b>${esc((x.p.first_name || "?").slice(0, 1).toUpperCase())}</b>`}${x.p.number != null ? `<i>${x.p.number}</i>` : ""}</span>

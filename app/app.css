@@ -2291,3 +2291,12 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 .agcard.editing{border-color:var(--yellow);box-shadow:inset 0 0 0 1px var(--yellow)}
 .evcopy{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:var(--ybg);color:var(--ytext)}
 .evcopy>span{flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start;font-size:14px}.evcopy svg{width:18px;height:18px;flex:none;margin-top:2px}
+/* v156: interne scouting — ruimere kaarten, volledige namen, leesbaarder profiel */
+.isc-grid{grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
+.isc-card{padding:16px 18px;border-radius:20px;gap:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.isc-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.08)}
+.isc-main>b{white-space:normal;overflow:visible;font-size:17px;line-height:1.2}
+.isc-rad{width:64px;height:64px;padding:3px;border-radius:14px;background:var(--card2)}
+.pfmini .pfg{stroke:var(--line2)}.pfmini .pfm{fill:color-mix(in srgb,var(--yellow) 60%,transparent);stroke:#B98F00;stroke-width:2}
+.isc-grp h2{display:flex;align-items:baseline;gap:8px;margin:22px 0 4px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+@media (max-width:600px){.isc-grid{grid-template-columns:1fr}}
