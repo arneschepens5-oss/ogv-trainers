@@ -2512,3 +2512,21 @@ html.big .hint,html.big small{font-size:max(1em,13px)}
 .plside h3{margin:0 0 6px}.plside h4{margin:16px 0 8px;font-size:14px}.plside h4 small{color:var(--muted)}
 .plmove{display:flex;flex-direction:column;gap:4px}.plmove>span{font-size:12.5px;font-weight:800;color:var(--muted)}
 .plnone{display:flex;flex-wrap:wrap;gap:10px;padding:10px;border-radius:12px;background:#2E7D3A}
+/* v168: spelerskaarten met kleur per linie */
+.pc2grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.pc2{--lc:#64748B;display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:var(--card);border:1px solid var(--line);border-top:5px solid var(--lc);color:var(--ink);text-decoration:none;transition:transform .15s,box-shadow .15s}
+.pc2:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.l-k{--lc:#E5B800}.l-d{--lc:#2563EB}.l-m{--lc:#16A34A}.l-a{--lc:#DC2626}.l-x{--lc:#64748B}
+.pc2h{display:flex;gap:12px;align-items:center}
+.pc2n{flex:none;width:54px;height:54px;border-radius:16px;background:var(--lc);color:#fff;display:grid;place-items:center;overflow:hidden}
+.l-k .pc2n{color:#000}.pc2n b{font-size:24px;font-weight:900;font-stretch:115%}.pc2n img{width:100%;height:100%;object-fit:cover}
+.pc2t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.pc2t>b{font-size:17px;line-height:1.2}.pc2t>small{color:var(--muted);font-size:13px}
+.pc2tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;align-items:center}
+.pc2tags em{font-style:normal;font-size:12px;font-weight:800;padding:2px 8px;border-radius:7px;background:color-mix(in srgb,var(--lc) 16%,transparent);color:var(--ink)}.pc2tags em.soft{background:var(--card2);color:var(--muted)}
+.pc2r{flex:none;width:64px;height:64px;padding:2px;border-radius:14px;background:var(--card2)}
+.pc2s{display:flex;gap:6px}
+.pc2s>span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border-radius:12px;background:var(--card2);min-height:58px}
+.pc2s>span>b{font-size:18px;font-weight:900}.pc2s small{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap}
+.pc2s .ring{--v:0;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-style:normal;background:conic-gradient(var(--c) calc(var(--v)*1%),var(--line) 0)}
+.pc2s .ring b{width:28px;height:28px;border-radius:50%;background:var(--card2);display:grid;place-items:center;font-size:11.5px;font-weight:900}
+.pc2g{display:flex;align-items:center;gap:8px}.pc2g i{width:12px;height:12px;border-radius:4px;background:var(--lc)}
