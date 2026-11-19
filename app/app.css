@@ -1614,10 +1614,10 @@ body.authpage .shell{display:block}
 .tmonth:first-of-type{border-top:0}
 .tm{width:120px;flex:none}.tm b{display:block;text-transform:capitalize}.tm small{color:var(--muted)}
 .tdots{display:flex;flex-wrap:wrap;gap:6px}
-.tdot{display:inline-grid;place-items:center;min-width:34px;height:34px;border-radius:10px;font:700 13px/1 inherit;background:var(--card3);color:var(--muted)}
-.tdot.ok{background:#34D17A;color:#0b2a17}.tdot.late{background:#FFD100;color:#3a2f00}.tdot.no{background:#F2615A;color:#fff}
+.trd{display:inline-grid;place-items:center;min-width:34px;height:34px;border-radius:10px;font:700 13px/1 inherit;background:var(--card3);color:var(--muted)}
+.trd.ok{background:#34D17A;color:#0b2a17}.trd.late{background:#FFD100;color:#3a2f00}.trd.no{background:#F2615A;color:#fff}
 .tleg{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
-.tleg .tdot{min-width:12px;width:12px;height:12px;border-radius:4px;display:inline-block;margin-left:8px}
+.tleg .trd{min-width:12px;width:12px;height:12px;border-radius:4px;display:inline-block;margin-left:8px}
 .dmlist{display:grid;gap:8px;margin-top:12px}
 .dmatch{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .dmatch>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer}
@@ -2434,3 +2434,17 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 .pfsec>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;flex-direction:column;gap:2px}.pfsec>summary::-webkit-details-marker{display:none}
 .pfsec>summary small{color:var(--muted);font-size:12.5px}.pfsec>summary b::after{content:" ›";color:var(--dim)}.pfsec[open]>summary b::after{content:" ⌄"}
 .pfsec>.fields{padding:0 14px 14px}
+/* v163: dossier — evaluatie per moment, samenvatting op het startblad */
+.dmoms{display:flex;gap:4px;padding:3px;border-radius:11px;background:var(--card3);flex-wrap:wrap}
+.dmoms button{border:0;background:none;padding:6px 12px;border-radius:9px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.dmoms button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.dkern{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:0 0 12px}
+.dkern .dqa{padding:12px 14px;border-radius:12px;background:var(--card2)}
+.dqa dt{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:3px}.dqa dd{margin:0;font-size:14.5px;line-height:1.45}
+.dsec{border-top:1px solid var(--line)}.dsec>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px;padding:12px 0}
+.dsec>summary::-webkit-details-marker{display:none}.dsec>summary::before{content:"›";color:var(--dim);font-weight:800;transition:transform .15s;display:inline-block}.dsec[open]>summary::before{transform:rotate(90deg)}
+.dsec>summary small{color:var(--muted);font-weight:600;font-size:12.5px}
+.dsec dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 20px;margin:0 0 14px 16px}
+.dsumtags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.dsumg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.dsumg>div{padding:12px 14px;border-radius:12px;background:var(--card2)}.dsumg small{font-size:12px;font-weight:800;color:var(--muted)}.dsumg p{margin:4px 0 0;font-size:14.5px;line-height:1.45}

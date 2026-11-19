@@ -18,7 +18,7 @@ function dosChart(rows) {
 }
 
 const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["groei", "Groei"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
-let dosTab = "overzicht";
+let dosTab = "overzicht", DOS_EVM = 0;
 /* van waar kwam je? (bv. Interne scouting): dan brengt "terug" je daar opnieuw naartoe */
 let dosBack = null;
 /* scoutingprofiel van een eigen speler: dezelfde 5 onderdelen en posities als de scoutingdatabase, zodat eigen en externe spelers vergelijkbaar zijn */
@@ -71,6 +71,27 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const evTexts = ev.flatMap(e => { const D = e.details || {}, mo = EV_MOMENTS[e.moment - 1]; return [["Sterktes", D.strengths], ["Werkpunten", D.workpoints], ["Doelen", D.goals], ["Niveau", D.level], ["Positie", D.position], ["Boodschap voor de ouders", D.parents]]
     .concat(EV_OPEN.filter(q => q.type !== "kop").map(q => [q.text, D.open?.[q.id] != null && D.open[q.id] !== "" ? String(D.open[q.id]) + (q.type === "schaal" ? " op 5" : "") : ""]))
     .filter(x => x[1]).map(([k, t]) => ({ mo, k, t, by: (D.by_all || (D.by ? [D.by] : [])).join(", ") })); });
+  /* evaluatie per moment, in dezelfde blokken als de fiche, zodat niets van het invulwerk verloren gaat */
+  const evFull = ev.filter(e => Object.keys(e.scores || {}).length || evTexts.some(x => x.mo === EV_MOMENTS[e.moment - 1]) || e.comment);
+  if (!evFull.some(e => e.moment === DOS_EVM)) DOS_EVM = evFull.length ? evFull[evFull.length - 1].moment : 0;
+  const eSel = evFull.find(e => e.moment === DOS_EVM), DS = eSel?.details || {};
+  const qa = (k, t) => t ? `<div class="dqa"><dt>${esc(k)}</dt><dd>${esc(String(t)).replace(/\n/g, "<br>")}</dd></div>` : "";
+  const val = q => { const x = DS.open?.[q.id]; return x == null || x === "" ? "" : String(x) + (q.type === "schaal" ? " op 5" : ""); };
+  /* alle vragen van de clubfiche, ook die voor deze leeftijd nu uit staan: wat ooit ingevuld werd, blijft zichtbaar */
+  const allSecs = (() => { const out = []; let cur = null; for (const q of (typeof evMaster === "function" ? evMaster().open : EV_OPEN)) { if (q.type === "kop") { cur = { kop: q.text, qs: [] }; out.push(cur); continue; } if (!cur) { cur = { kop: "", qs: [] }; out.push(cur); } cur.qs.push(q); } return out; })();
+  const secs = allSecs.map(sc => ({ kop: sc.kop || "Vragen van de club", items: sc.qs.map(q => [q.text, val(q), q.intern]).filter(x => x[1]) })).filter(sc => sc.items.length);
+  const kern = [["Sterktes", DS.strengths], ["Werkpunten", DS.workpoints], ["Doelen tot de volgende evaluatie", DS.goals], ["Boodschap voor speler en ouders", DS.parents], ["Niveau", DS.level], ["Positie", DS.position], ["Advies", DS.advice], ["Privénotitie", eSel?.comment]].filter(x => x[1]);
+  const evDetail = !evFull.length ? "" : `<div class="sec panel" data-t="evaluaties"><div class="row" style="margin-bottom:10px;gap:10px;flex-wrap:wrap"><h2 style="margin:0;margin-right:auto">Wat de trainer noteerde</h2>
+      <div class="dmoms" role="tablist">${evFull.map(e => `<button type="button" role="tab" data-evm="${e.moment}" aria-selected="${e.moment === DOS_EVM}">${esc(EV_MOMENTS[e.moment - 1]?.naam || "Moment " + e.moment)}</button>`).join("")}</div></div>
+    <p class="hint" style="margin:0 0 12px">${esc([eSel?.date ? dShort(eSel.date) : "", (DS.by_all || (DS.by ? [DS.by] : [])).join(", ")].filter(Boolean).join(" · "))}</p>
+    ${kern.length ? `<dl class="dkern">${kern.map(([k, t]) => qa(k, t)).join("")}</dl>` : ""}
+    ${secs.map((sc, i) => `<details class="dsec"${i < 2 ? " open" : ""}><summary><b>${esc(sc.kop)}</b><small>${sc.items.length} ${sc.items.length === 1 ? "antwoord" : "antwoorden"}</small></summary><dl>${sc.items.map(([k, t]) => qa(k, t)).join("")}</dl></details>`).join("")}
+    ${!kern.length && !secs.length ? `<p class="hint">Bij dit moment werden enkel scores ingevuld.</p>` : ""}</div>`;
+  /* startblad: het belangrijkste uit de laatste evaluatie */
+  const eLast = evFull[evFull.length - 1], DL = eLast?.details || {}, pot = DL.open?.potentieel, adv = DL.open?.advies || DL.advice;
+  const evSum = !eLast ? "" : `<div class="sec panel dsum" data-t="overzicht"><div class="row" style="margin-bottom:10px"><h2 style="margin:0;margin-right:auto">Uit de laatste evaluatie <small class="muted" style="font-weight:600">· ${esc(EV_MOMENTS[eLast.moment - 1]?.naam || "")}</small></h2><button class="btn ghost small" type="button" data-goev="${eLast.moment}">Alles bekijken</button></div>
+    ${pot || adv ? `<div class="dsumtags">${pot ? `<span class="pill w">Potentieel: ${esc(pot)}</span>` : ""}${adv ? `<span class="pill g">Advies: ${esc(adv)}</span>` : ""}</div>` : ""}
+    <div class="dsumg">${[["Sterktes", DL.strengths], ["Werkpunten", DL.workpoints], ["Doelen", DL.goals]].map(([k, t]) => `<div><small>${k}</small><p>${t ? esc(t).replace(/\n/g, "<br>") : '<span class="muted">Niet ingevuld</span>'}</p></div>`).join("")}</div></div>`;
   const notes = rows.filter(x => x.a.note || x.a.rating != null).slice().reverse();
   const gs = S.goals.filter(g => g.player_id === p.id);
 
@@ -104,8 +125,8 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const monName = k => { const d = new Date(k + "-01T12:00"); return d.toLocaleDateString("nl-BE", { month: "long" }) + (d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : ""); };
   const missed = tr.filter(x => !isPres(x.st)).reverse();
   const trainingPane = `<div class="sec" data-t="trainingen"><div class="dkpis"><div><small>Aanwezig</small><b>${s.trTot ? s.trPct + "%" : "–"}</b><span>${s.trIn} van ${s.trTot}</span></div><div><small>Op tijd</small><b>${nPres}</b></div><div><small>Te laat</small><b>${nLate}</b></div><div><small>Gemist</small><b>${nMiss}</b></div><div><small>Reeks</small><b>${streak}</b><span>keer na elkaar</span></div></div>
-    ${tr.length ? `<div class="panel sec"><div class="row" style="margin-bottom:10px"><h2 style="margin:0;margin-right:auto">Per maand</h2><span class="tleg"><i class="tdot ok"></i>aanwezig <i class="tdot late"></i>te laat <i class="tdot no"></i>gemist</span></div>
-      ${byMonth.map(([k, xs]) => `<div class="tmonth"><div class="tm"><b>${esc(monName(k))}</b><small>${xs.filter(x => isPres(x.st)).length} van ${xs.length}</small></div><div class="tdots">${xs.map(x => `<span class="tdot ${x.st === "aanwezig" ? "ok" : x.st === "te laat" ? "late" : "no"}" title="${esc(dShort(x.e.date) + " · " + x.st + (x.a?.note ? " · " + x.a.note : ""))}">${dDay(x.e.date)}</span>`).join("")}</div></div>`).join("")}</div>
+    ${tr.length ? `<div class="panel sec"><div class="row" style="margin-bottom:10px"><h2 style="margin:0;margin-right:auto">Per maand</h2><span class="tleg">elk vakje is een training, met de dag van de maand ·<i class="trd ok"></i>aanwezig <i class="trd late"></i>te laat <i class="trd no"></i>gemist</span></div>
+      ${byMonth.map(([k, xs]) => `<div class="tmonth"><div class="tm"><b>${esc(monName(k))}</b><small>${xs.filter(x => isPres(x.st)).length} van ${xs.length}</small></div><div class="tdots">${xs.map(x => `<span class="trd ${x.st === "aanwezig" ? "ok" : x.st === "te laat" ? "late" : "no"}" title="${esc(dShort(x.e.date) + " · " + x.st + (x.a?.note ? " · " + x.a.note : ""))}">${dDay(x.e.date)}</span>`).join("")}</div></div>`).join("")}</div>
       ${missed.length ? `<div class="panel sec"><h2>Gemist</h2><div class="list">${missed.slice(0, 12).map(x => `<div class="item static"><span class="date"><b>${dDay(x.e.date)}</b><small>${dMon(x.e.date)}</small></span><span class="main"><b>${esc(x.e.title || "Training")}</b><small>${esc([x.e.location, x.a?.note].filter(Boolean).join(" · "))}</small></span><span class="pill">${esc(x.st)}</span></div>`).join("")}</div>${missed.length > 12 ? `<p class="hint" style="margin:8px 0 0">En nog ${missed.length - 12} oudere.</p>` : ""}</div>` : `<p class="hint">Nog geen training gemist.</p>`}`
       : `<div class="empty"><b>Nog geen trainingen met aanwezigheden</b></div>`}</div>`;
   const idRow = (k, val) => val ? `<div class="dosid"><span>${k}</span><b>${esc(val)}</b></div>` : "";
@@ -130,7 +151,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const startblad = `<div class="sec panel startblad" data-t="overzicht"><div class="row" style="margin-bottom:14px"><h2 style="margin:0;margin-right:auto">Scoutingprofiel</h2><button class="btn small noprint${has ? " ghost" : ""}" type="button" id="spEdit">Speler aanpassen</button></div>
     <div class="spgrid"><div class="pos11 ro sm" role="img" aria-label="Posities: ${esc(posTxt(ps11) || "nog niet ingevuld")}">${POS11.map(([n, ab, nm, x, y]) => `<span class="pp11 ${ps11.h === n ? "h" : ps11.n.includes(n) ? "n" : ""}" style="left:${x}%;top:${y}%" title="${n} · ${esc(nm)}"><b>${n}</b><small>${ab}</small></span>`).join("")}</div>
      <div class="spmain">
-      <div class="spks">${big("Hoofdpositie", ps11.h ? ps11.h + " · " + posName(ps11.h) : sp.p1 || fichePos || String(p.position || "").replace(/^\d+\s*·\s*/, ""), ps11.n.length ? "ook " + ps11.n.join(", ") + (sp.ontw ? " · ontwikkelen naar " + sp.ontw : "") : sp.ontw ? "ontwikkelen naar " + sp.ontw : "")}${big("Leeftijd", age != null ? age + " jaar" : "", p.foot ? p.foot + "voetig" : "")}${big("Potentieel", sp.pot, sp.len ? sp.len + " cm" : "")}${big("Algemeen", spAvg != null ? f1(spAvg) : "", spAvg != null ? "op 10" : "")}</div>
+      <div class="spks">${big("Hoofdpositie", ps11.h ? ps11.h + " · " + posName(ps11.h) : sp.p1 || fichePos || String(p.position || "").replace(/^\d+\s*·\s*/, ""), ps11.n.length ? "ook " + ps11.n.join(", ") + (sp.ontw ? " · ontwikkelen naar " + sp.ontw : "") : sp.ontw ? "ontwikkelen naar " + sp.ontw : "")}${big("Leeftijd", age != null ? age + " jaar" : "", p.foot ? p.foot + "voetig" : "")}${(() => { const ep = eLast?.details?.open?.potentieel, useEv = ep && (!sp.pot || String(eLast.date || "") > String(sp.upd || "")); return big("Potentieel", useEv ? ep : sp.pot, [useEv ? "uit de evaluatie" : "", sp.len ? sp.len + " cm" : ""].filter(Boolean).join(" · ")); })()}${spAvg != null ? big("Algemeen", f1(spAvg), "scouting, op 10") : big("Evaluatie", eLast ? f1(evAvgOf(eLast, names)) : "", eLast ? "gemiddelde op 5 · " + (EV_MOMENTS[eLast.moment - 1]?.naam || "") : "")}</div>
       ${SC_COMP.some((c, i) => scNum(sp["k" + i])) ? `<div class="spbars">${SC_COMP.map((c, i) => { const val = sp["k" + i]; return `<div class="mbar"><span>${SC_SH[i]}</span><span class="b"><i style="width:${scNum(val) ? val * 10 : 0}%;background:${scNum(val) ? scCol(val) : "transparent"}"></i></span><b style="color:var(--ink);text-align:right">${scNum(val) ? f1(val) : "–"}</b></div>`; }).join("")}</div>` : ""}</div></div>
     ${sp.sterk || sp.werk || sp.ctx ? `<div class="spnotes">${note("good", "Sterktes", sp.sterk)}${note("work", "Werkpunten", sp.werk)}${note("", "Extra info", sp.ctx)}</div>` : ""}
     <p class="hint" style="margin:14px 0 0">${has ? `Enkel zichtbaar voor de trainers van deze ploeg${sp.upd ? " · bijgewerkt op " + esc(dShort(sp.upd)) : ""}${sp.by ? " door " + esc(sp.by) : ""}.` : "Nog niet ingevuld. Noteer positie, potentieel, sterktes en wat je verder over de speler weet."}</p></div>`;
@@ -150,6 +171,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
 
   <div class="dtabs noprint" role="tablist" aria-label="Onderdelen van het dossier">${DOS_TABS.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === dosTab}">${l}</button>`).join("")}</div>
   ${startblad}
+  ${evSum}
   <div class="sec panel" data-t="overzicht" id="dosPf"></div>
   <details class="sec dmore" data-t="overzicht"><summary>Meer statistieken: groepjes, werkpunten en cijfers</summary><div class="grid2 sec">
     <div class="panel"><h2>Per groepje en per trainer</h2>
@@ -164,14 +186,15 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   ${dosChart(rows) ? `<div class="sec panel"><h2>Verloop wedstrijdcijfer</h2>${dosChart(rows)}<p class="hint" style="margin:6px 0 0">Eén punt per speeldag. Ga met de muis over een punt voor de tegenstander en wie quoteerde.</p></div>` : ""}</details>
 
   <div class="sec panel" data-t="evaluaties" id="dosPf2"></div>
-  <div class="sec panel" data-t="evaluaties"><h2>Evaluaties</h2>
+  ${evDetail}
+  <div class="sec panel" data-t="evaluaties"><h2>Scores per onderdeel</h2>
     ${evMs.length ? `<div class="tblwrap"><table class="dostbl"><thead><tr><th>Onderdeel</th>${evMs.map(m => `<th>${esc(m.kort)}</th>`).join("")}</tr></thead><tbody>
       ${groups.map(g => `<tr class="g"><td>${esc(g.name)}</td>${evMs.map(m => `<td>${f1(evAvgOf(ev.find(e => e.moment === m.m), g.items.map(i => i.name)))}</td>`).join("")}</tr>
         ${g.items.map(i => `<tr><td>${esc(i.name)}</td>${evMs.map(m => { const c = evScore(ev.find(e => e.moment === m.m), i.name); return `<td${c != null ? ` style="color:${evColor(c)}"` : ""}>${c == null ? "–" : f1(c)}</td>`; }).join("")}</tr>`).join("")}`).join("")}
       <tr class="g"><td>Gemiddelde</td>${evMs.map(m => `<td>${f1(evAvgOf(ev.find(e => e.moment === m.m), names))}</td>`).join("")}</tr></tbody></table></div>
       ${evMs.length > 1 && ev.some(e => Object.keys(e.scores || {}).length < names.length) ? `<p class="hint" style="margin:8px 0 0">Niet elke evaluatie telde evenveel onderdelen. Vergelijk dus per onderdeel, niet enkel het gemiddelde.</p>` : ""}`
      : `<p class="hint">Nog geen evaluatie. <a class="link" href="#/evaluaties">Naar de evaluaties</a></p>`}
-    ${evTexts.length ? `<div class="dostexts">${evTexts.map(x => `<div><h3>${esc(x.k)} <span class="muted">· ${esc(x.mo.naam)}${x.by ? " · " + esc(x.by) : ""}</span></h3><p>${esc(x.t).replace(/\n/g, "<br>")}</p></div>`).join("")}</div>` : ""}</div>
+  </div>
 
   ${zelfHtml}
 
@@ -187,6 +210,8 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     others: ps.filter(q => q.id !== p.id).map(q => ({ id: q.id, name: pname(q), list: lst(q) })) };
   pfMount($("#dosPf", v), pfCtx); pfMount($("#dosPf2", v), pfCtx);
   $("#dosG").onclick = () => goalForm(p);
+  $$("[data-evm]", v).forEach(b => b.onclick = () => { DOS_EVM = +b.dataset.evm; render(); });
+  $$("[data-goev]", v).forEach(b => b.onclick = () => { DOS_EVM = +b.dataset.goev; dosTab = "evaluaties"; render(); });
   $$(".dtabs [data-tab]", v).forEach(b => b.onclick = () => { dosTab = b.dataset.tab; $(".dos", v).dataset.tab = dosTab; $$(".dtabs [data-tab]", v).forEach(x => x.setAttribute("aria-selected", x === b)); });
   if ($("#dosEdit")) $("#dosEdit").onclick = () => playerForm(p);
   $("#spEdit").onclick = () => scProfForm(p);
