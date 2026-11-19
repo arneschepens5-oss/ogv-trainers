@@ -22,6 +22,7 @@ route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   let list = calFilter !== "voorbij" ? S.events.filter(e => e.date >= t) : [...S.events.filter(e => e.date < t)].reverse();
   if (calType) list = list.filter(e => e.type === calType);
   v.innerHTML = head("Kalender", "Trainingen en wedstrijden. Open een activiteit voor aanwezigheden, trainingsplan of wedstrijdverslag.", (S.team.rbfa_team_id ? `<button class="btn ghost" type="button" id="rbSync">${IC.rotate}RBFA bijwerken</button>` : `<a class="btn ghost" href="#/ploeg-instellingen">${IC.rotate}Wedstrijden van RBFA</a>`) + `<button class="btn ghost" type="button" id="myCal">${IC.cal}In mijn agenda</button><button class="btn" type="button" id="addEv">${IC.plus}Activiteit</button>`) +
+  (mpOf(S.team) ? `<div class="mpbar">${IC.ball}<span><b>Thuiswedstrijden vanaf januari</b>${esc(mpTxt(mpOf(S.team)))}</span></div>` : "") +
   `<div class="row" style="margin-bottom:14px"><div class="chips"><button class="chip" type="button" data-f="week" aria-pressed="${calFilter === "week"}">Mijn planning</button><button class="chip" type="button" data-f="komend" aria-pressed="${calFilter === "komend"}">Komend</button><button class="chip" type="button" data-f="voorbij" aria-pressed="${calFilter === "voorbij"}">Voorbij</button></div>
    <span class="spacer"></span><div class="chips"><button class="chip" type="button" data-t="" aria-pressed="${!calType}">Alles</button><button class="chip" type="button" data-t="training" aria-pressed="${calType === "training"}">Trainingen</button><button class="chip" type="button" data-t="wedstrijd" aria-pressed="${calType === "wedstrijd"}">Wedstrijden</button></div></div>
   ${calFilter === "week" ? weekView(calType ? S.events.filter(e => e.type === calType) : S.events) : list.length ? `<div class="list">${list.map(e => evItem(e)).join("")}</div>` : `<div class="empty"><b>${calFilter === "komend" ? "Niets gepland" : "Nog niets voorbij"}</b>Voeg een training of wedstrijd toe. Trainingen herhaal je meteen voor het hele seizoen.</div>`}`;
@@ -31,6 +32,10 @@ route("kalender", { title: "Kalender", auth: true, team: true, render: v => {
   $("#addEv").onclick = () => eventForm(); $("#myCal").onclick = () => myCalendar();
   const rs = $("#rbSync"); if (rs) rs.onclick = async () => { rs.disabled = true; rs.innerHTML = '<span class="spin"></span>Ophalen…'; const r = await safe(() => rbfaSync(S.team)); if (r) { toast(r.added || r.changed ? `${r.added} nieuw, ${r.changed} bijgewerkt.` : "Alles is al up-to-date."); render(); } else { rs.disabled = false; rs.innerHTML = IC.rotate + "RBFA bijwerken"; } }; $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
 } });
+/* waar en wanneer de ploeg thuis speelt (tweede seizoenhelft), ingesteld door de club */
+const MP_DAG = { Ma: "maandag", Di: "dinsdag", Wo: "woensdag", Do: "donderdag", Vr: "vrijdag", Za: "zaterdag", Zo: "zondag" };
+const mpOf = t => t && CLUB.settings?.matchplan?.[t.id];
+const mpTxt = m => [MP_DAG[m.dag] ? MP_DAG[m.dag][0].toUpperCase() + MP_DAG[m.dag].slice(1) : m.dag, m.uur, m.terr, [m.comp, m.niv && m.niv !== "–" ? "niveau " + m.niv : ""].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
 function eventForm(e, forceNew) {
   const n = !e || forceNew; e = e || { type: "training", date: todayIso(), start_time: "18:00", end_time: "19:15" };
   const d = dialog(`<form><h2>${n ? "Activiteit toevoegen" : "Activiteit bewerken"}</h2>
@@ -47,7 +52,9 @@ function eventForm(e, forceNew) {
   ${!n && V14() ? `<label class="f full check"><input type="checkbox" name="cancelled"${e.cancelled ? " checked" : ""}> <span><b>Afgelast</b> <span class="muted" style="font-weight:400">— blijft in de kalender en ouders zien dat het niet doorgaat</span></span></label>` : ""}</div>
   <div class="row">${n ? "" : `<button class="btn danger" type="button" id="del">Verwijderen</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
   let type = e.type; const sync = () => { $$(".wo", d).forEach(x => x.hidden = type !== "wedstrijd"); $$(".to", d).forEach(x => x.hidden = type !== "training"); $$("#typ button", d).forEach(b => b.setAttribute("aria-pressed", b.dataset.t === type)); };
-  $$("#typ button", d).forEach(b => b.onclick = () => { type = b.dataset.t; sync(); }); sync();
+  $$("#typ button", d).forEach(b => b.onclick = () => { type = b.dataset.t; sync();
+    /* nieuwe thuiswedstrijd: uur en terrein van de club al invullen */
+    const mp = mpOf(S.team); if (n && type === "wedstrijd" && mp) { const f = $("form", d); if (!f.location.value || f.location.value === (e.location || "")) f.location.value = mp.terr; if (mp.uur && f.start_time.value === tm(e.start_time)) f.start_time.value = mp.uur; } }); sync();
   if (!n) $("#del", d).onclick = async () => { if (!confirm("Deze activiteit met aanwezigheden en verslag verwijderen?")) return;
     await safe(async () => { await db.del("events", { id: e.id }); S.events = S.events.filter(x => x.id !== e.id); S.att = S.att.filter(a => a.event_id !== e.id); S.club = null; d.close(); go("#/kalender"); }, "Activiteit verwijderd."); };
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
