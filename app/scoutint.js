@@ -35,7 +35,7 @@ function isRows(D, gm) {
     const last = scored[scored.length - 1] || null, prev = scored[scored.length - 2] || null, axes = last ? pfAxes(last.vals, gm).filter(a => !gm.keep.has(a) || evIsKeeper(p)) : [];
     const tot = last ? pfTotal(last.vals, axes.length ? axes : Object.keys(last.vals)) : null, ptot = prev ? pfTotal(prev.vals, axes) : null;
     const q = p.birthdate ? Math.floor(parse(p.birthdate).getMonth() / 3) + 1 : 0, ps = posOf(p), lens = msL.filter(m => m.height_cm != null);
-    const potI = isPotIdx(last, sp), adv = last?.details?.open?.advies || last?.details?.advice || "";
+    const potI = isPotIdx(last, sp), evAdv = last?.details?.open?.advies || last?.details?.advice || "", adv = sp.adv && (!evAdv || String(sp.upd || "") >= String(last?.date || "")) ? sp.adv : evAdv || sp.adv || "";
     return { p, sp, team, list, last, axes, tot, evo: tot != null && ptot != null ? tot - ptot : null, ps, q, half: q ? (q <= 2 ? 1 : 2) : 0, year: p.birthdate ? parse(p.birthdate).getFullYear() : 0, age: isAge(p),
       repsL: reps, msL, reps: reps.length, len: lens.length ? lens[lens.length - 1].height_cm : (+sp.len || null), potI, adv, cat: isCat(team), fmt: isFmt(team), foot: IS_FOOT(p.foot), name: pname(p),
       hay: [pname(p), p.position, p.foot, sp.sterk, sp.werk, sp.ctx, sp.ontw, sp.opm, ...[ps.h, ...ps.n].filter(Boolean).flatMap(n => [posName(n), posAb(n)]), team?.name, adv, last?.details?.strengths, last?.details?.workpoints,

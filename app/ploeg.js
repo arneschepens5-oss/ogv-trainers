@@ -121,9 +121,10 @@ function playerForm(p, opts = {}) {
   <label class="f">Rugnummer<input name="number" type="number" min="0" inputmode="numeric" value="${p.number ?? ""}"></label><label class="f">Geboortedatum<input name="birthdate" type="date" value="${esc(p.birthdate || "")}"></label>
   <div class="f full"><span>Posities <small class="muted" style="font-weight:400">— tik: hoofdpositie, nog eens: ook inzetbaar</small></span>${posPicker(ps0)}</div>
   ${n ? "" : (() => { const sp = p.scout && typeof p.scout === "object" ? p.scout : {}, opt = (cur, list) => `<option value=""></option>` + list.map(x => `<option${x === cur ? " selected" : ""}>${esc(x)}</option>`).join("");
-    return `<details class="f full pfsec"${opts.prof ? " open" : ""}><summary><b>Scoutingprofiel</b><small>potentieel, lengte, scores, sterktes en werkpunten · enkel voor trainers</small></summary><div class="fields">
+    return `<details class="f full pfsec"${opts.prof ? " open" : ""}><summary><b>Scoutingprofiel</b><small>potentieel, advies, lengte, scores, sterktes en werkpunten · enkel voor trainers</small></summary><div class="fields">
     <label class="f">Potentieel<select name="sp_pot">${opt(sp.pot || "", SC_POT.includes(sp.pot) ? SC_POT : EV_POT)}</select></label><label class="f">Lengte (cm)<input name="sp_len" type="number" min="80" max="220" value="${esc(sp.len || "")}"></label>
-    <label class="f">Ontwikkelen naar positie<input name="sp_ontw" maxlength="40" value="${esc(sp.ontw || "")}" placeholder="bv. 6 of 8"></label><label class="f">Speelt op leeftijd<select name="sp_opl">${opt(sp.opl || "", ["Ja", "Nee - gedispenseerd", "Nee - doorgeschoven"])}</select></label>
+    <label class="f">Ontwikkelen naar positie<input name="sp_ontw" maxlength="40" value="${esc(sp.ontw || "")}" placeholder="bv. 6 of 8"></label><label class="f full">Advies<select name="sp_adv">${opt(sp.adv || "", [...new Set([...evAdvOpts(), ...(sp.adv ? [sp.adv] : [])])])}</select><small class="hint">Bv. meetrainen bij een hoger niveau. Verschijnt bij de speler in Interne scouting.</small></label>
+    <label class="f">Speelt op leeftijd<select name="sp_opl">${opt(sp.opl || "", ["Ja", "Nee - gedispenseerd", "Nee - doorgeschoven"])}</select></label>
     ${SC_COMP.map((c, i) => `<label class="f">${esc(c)} <small class="muted">1–10</small><input name="sp_k${i}" type="number" min="1" max="10" step="0.5" value="${scNum(sp["k" + i]) ? sp["k" + i] : ""}"></label>`).join("")}
     <label class="f full">Sterktes en spelbeschrijving<textarea name="sp_sterk" rows="3" maxlength="1500">${esc(sp.sterk || "")}</textarea></label>
     <label class="f full">Werkpunten<textarea name="sp_werk" rows="3" maxlength="1500">${esc(sp.werk || "")}</textarea></label>
@@ -147,11 +148,11 @@ function playerForm(p, opts = {}) {
     const row = { ...(n ? { id: uid(), team_id: S.team.id } : p), first_name: f.first_name.trim(), last_name: (f.last_name || "").trim(), number: f.number === "" ? null : +f.number, birthdate: f.birthdate || null,
       position: ps0.h ? posLabel(ps0.h) : (ps0.n.length ? posLabel(ps0.n[0]) : null), scout: (() => { const o = { ...(p.scout && typeof p.scout === "object" ? p.scout : {}) }; delete o.h; delete o.n; delete o.p1; delete o.p2; delete o.p3;
         if (ps0.h) o.h = ps0.h; if (ps0.n.length) o.n = ps0.n; [...new Set([ps0.h, ...ps0.n].filter(Boolean).map(posScName))].slice(0, 3).forEach((nm, i) => o["p" + (i + 1)] = nm);
-        if ("sp_pot" in f) { const before = JSON.stringify(o); ["pot", "opl", "ontw", "len", "sterk", "werk", "ctx", ...SC_COMP.map((c, i) => "k" + i)].forEach(k => delete o[k]);
-          for (const k of ["pot", "opl"]) if (f["sp_" + k]) o[k] = f["sp_" + k]; if (f.sp_ontw.trim()) o.ontw = f.sp_ontw.trim(); if (f.sp_len) o.len = Math.max(80, Math.min(220, +f.sp_len));
+        if ("sp_pot" in f) { const before = JSON.stringify(o); ["pot", "opl", "adv", "ontw", "len", "sterk", "werk", "ctx", ...SC_COMP.map((c, i) => "k" + i)].forEach(k => delete o[k]);
+          for (const k of ["pot", "opl", "adv"]) if (f["sp_" + k]) o[k] = f["sp_" + k]; if (f.sp_ontw.trim()) o.ontw = f.sp_ontw.trim(); if (f.sp_len) o.len = Math.max(80, Math.min(220, +f.sp_len));
           SC_COMP.forEach((c, i) => { const x = parseFloat(f["sp_k" + i]); if (!isNaN(x)) o["k" + i] = Math.max(1, Math.min(10, x)); });
           for (const k of ["sterk", "werk", "ctx"]) if (f["sp_" + k].trim()) o[k] = f["sp_" + k].trim();
-          const old = p.scout || {}; if (["pot", "opl", "ontw", "len", "sterk", "werk", "ctx", ...SC_COMP.map((c, i) => "k" + i)].some(k => String(old[k] ?? "") !== String(o[k] ?? ""))) { o.upd = new Date().toISOString().slice(0, 10); o.by = typeof tpOf === "function" ? (tpOf(user?.id)?.name || tNice(user?.email)) : ""; } }
+          const old = p.scout || {}; if (["pot", "opl", "adv", "ontw", "len", "sterk", "werk", "ctx", ...SC_COMP.map((c, i) => "k" + i)].some(k => String(old[k] ?? "") !== String(o[k] ?? ""))) { o.upd = new Date().toISOString().slice(0, 10); o.by = typeof tpOf === "function" ? (tpOf(user?.id)?.name || tNice(user?.email)) : ""; } }
         return Object.keys(o).length ? o : (p.scout ?? null); })(),
       foot: f.foot || null, ...(f.maturity || "maturity" in p ? { maturity: f.maturity || null } : {}), parent_contact: f.parent_contact || null, notes: f.notes || null, active: n ? true : fd.has("active"), ...(V14() ? readContacts(f) : {}) };
     await safe(async () => { const oldPhoto = p.photo || null;

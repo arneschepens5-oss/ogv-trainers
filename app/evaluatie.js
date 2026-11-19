@@ -90,9 +90,11 @@ const EV_OPEN_OGV = [
   { id: "ontwikkeling", type: "keuze", intern: true, text: "Hoe schat je de ontwikkeling richting volgend seizoen in?", opts: ["Kan mogelijk een hoger niveau aan", "Verder ontwikkelen op hetzelfde niveau", "Heeft mogelijk baat bij een aangepast niveau", "Nog onvoldoende zicht op"] },
   { id: "toelichting", type: "tekst", intern: true, text: "Licht je inschatting kort toe." },
   { id: "potentieel", type: "keuze", intern: true, text: "Potentieel", opts: ["Laag", "Gemiddeld", "Hoog", "Uitzonderlijk"] },
-  { id: "advies", type: "keuze", intern: true, text: "Advies", opts: ["Lager niveau aanbieden", "Dispenseren", "Behouden in huidige groep", "Meetrainen hoger niveau", "Doorschuiven hoger niveau", "Doorstromen naar B-kern", "Doorstromen naar A-kern"] },
+  { id: "advies", type: "keuze", intern: true, text: "Advies", opts: ["Lager niveau aanbieden", "Meetrainen lager niveau", "Dispenseren", "Behouden in huidige groep", "Meetrainen hoger niveau", "Doorschuiven hoger niveau", "Doorstromen naar B-kern", "Doorstromen naar A-kern"] },
   { id: "volgende_stap", type: "tekst", intern: true, text: "Volgende stap" }];
 const EV_POT = ["Laag", "Gemiddeld", "Hoog", "Uitzonderlijk"];
+/* adviezen voor een speler: de keuzes van de vraag Advies in de fiche van de club */
+const evAdvOpts = () => { const q = (typeof evMaster === "function" ? evMaster().open : []).find(x => x.id === "advies"); return q?.opts?.length ? q.opts : ["Lager niveau aanbieden", "Meetrainen lager niveau", "Dispenseren", "Behouden in huidige groep", "Meetrainen hoger niveau", "Doorschuiven hoger niveau", "Doorstromen naar B-kern", "Doorstromen naar A-kern"]; };
 /* zelfevaluatie door de speler en extra open vragen voor de trainer: de club kiest zelf welke vragen
    (Beheer > Instellingen > Evaluaties). Een vraag van type "schaal" met een koppeling aan een onderdeel
    wordt naast de score van de trainer gezet; "tekst" is een open antwoord. */
