@@ -83,46 +83,90 @@ function csCritLines(host) { return $$(".csr", host).map(r => { const n = $("[na
 
 /* ============ per leeftijd: wat de trainers van die leeftijd zien ============
    De beheerder vinkt onderdelen en vragen af en kiest de zelfevaluatie. Zolang een leeftijd niet aangepast is, geldt het voorstel van de app. */
-const CSA = { k: null, ages: null };
+const CSA = { k: null, tk: "", ages: null, edit: false };
 function csAgeTeams() { return [...(S.teams || [])].sort((a, b) => evAgeOf(a) - evAgeOf(b) || teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true })); }
+/* de fiche zelf aanpassen vanuit dit scherm: we passen de rijen van de editor onder "De fiche" aan, zodat bewaren één geheel blijft */
+function csFicheOps(form) {
+  const crit = $("#cscrit", form), open = $("#csopen", form); if (!crit || !open) return null;
+  const val = (r, n) => ($(`[name=${n}]`, r)?.value || "").trim();
+  const secEnd = (rows, isHead, name, first) => { let i = name == null ? -1 : rows.findIndex(r => isHead(r) && val(r, first) === name); if (name != null && i < 0) return null;
+    let j = i; for (let k = i + 1; k < rows.length && !isHead(rows[k]); k++) j = k; return { head: i, last: j }; };
+  return {
+    addItem(g, n) { const rows = $$(".csr", crit), x = secEnd(rows, r => r.dataset.t === "g", g, "n"); if (!x) return; const at = rows[x.last] || rows[x.head]; at.insertAdjacentHTML("afterend", csCritRow(n)); },
+    rmItem(n) { $$(".csr[data-t=i]", crit).find(r => val(r, "n") === n)?.remove(); },
+    addGroup(n) { crit.insertAdjacentHTML("beforeend", csCritRow("# " + n)); },
+    addQ(kop, q) { const rows = $$(".csr", open), head = r => r.dataset.ty === "kop" || $("[name=ty]", r)?.value === "kop";
+      if (kop === null) { const f = rows.findIndex(head); if (f === 0) rows[0].insertAdjacentHTML("beforebegin", csOpenRow(q)); else if (f > 0) rows[f - 1].insertAdjacentHTML("afterend", csOpenRow(q)); else open.insertAdjacentHTML("beforeend", csOpenRow(q)); return; }
+      const x = secEnd(rows, head, kop, "t"); if (!x) return; (rows[x.last] || rows[x.head]).insertAdjacentHTML("afterend", csOpenRow(q)); },
+    rmQ(id) { $(`.csr[data-id="${CSS.escape(id)}"]`, open)?.remove(); },
+    addSec(n) { open.insertAdjacentHTML("beforeend", csOpenRow({ id: evQid(), type: "kop", text: n })); } };
+}
 function csAges(host, st, getMaster) {
-  const teams = csAgeTeams(), keys = [...new Set(teams.map(evAgeKey))].sort((a, b) => +a - +b);
+  const teams = csAgeTeams(), keys = [...new Set(teams.map(evAgeKey))].sort((a, b) => +a - +b), ops = csFicheOps(host.closest("form"));
   if (!CSA.ages) CSA.ages = JSON.parse(JSON.stringify((st.eval || {}).ages || {}));
-  if (window.EV_AGE_PICK && keys.includes(window.EV_AGE_PICK)) { CSA.k = window.EV_AGE_PICK; window.EV_AGE_PICK = null; }
-  if (!keys.includes(CSA.k)) CSA.k = keys[0] || null;
-  const cfgOf = k => CSA.ages[k] ? { off: [], offq: [], self: "uit", ...CSA.ages[k], custom: true } : { ...evAgeSuggest(+k), custom: false };
+  if (window.EV_AGE_PICK && keys.includes(window.EV_AGE_PICK)) { CSA.k = window.EV_AGE_PICK; CSA.tk = ""; window.EV_AGE_PICK = null; }
+  if (!keys.includes(CSA.k)) { CSA.k = keys[0] || null; CSA.tk = ""; }
+  const ageCfg = k => CSA.ages[k] ? { off: [], offq: [], self: "uit", ...CSA.ages[k], custom: true } : { ...evAgeSuggest(+k), custom: false };
+  /* een ploeg kan afwijken van haar leeftijd: sleutel "t:<id>"; zonder eigen keuze volgt ze de leeftijd */
+  const cfgOf = key => key.startsWith("t:") ? (CSA.ages[key] ? { off: [], offq: [], self: "uit", ...CSA.ages[key], custom: true, own: true } : { ...ageCfg(CSA.k), own: false }) : ageCfg(key);
   const SELF = [["uit", "Geen zelfevaluatie"], ["jong", "Kort, met smileys (samen met de ouders)"], ["oud", "Uitgebreid, met cijfers"], ["club", "Eigen vragen van de club"]];
   const draw = () => {
     if (!keys.length) { host.innerHTML = `<p class="hint">Nog geen ploegen. Maak eerst ploegen aan; daarna stel je hier per leeftijd de fiche in.</p>`; return; }
-    const M = getMaster(), groups = evGroupsRaw({ criteria: M.template }), all = groups.flatMap(g => g.items.map(i => i.name)), qs = M.open, k = CSA.k, c = cfgOf(k);
+    const M = getMaster(), groups = evGroupsRaw({ criteria: M.template }), all = groups.flatMap(g => g.items.map(i => i.name)), qs = M.open, k = CSA.k;
+    const tms = teams.filter(t => evAgeKey(t) === k); if (CSA.tk && !tms.some(t => t.id === CSA.tk)) CSA.tk = "";
+    const K = CSA.tk ? "t:" + CSA.tk : k, c = cfgOf(K), ed = CSA.edit && ops;
     const off = new Set(c.off), offq = new Set(c.offq), qn = qs.filter(q => q.type !== "kop");
-    const field = groups.filter(g => !evKeeperGroup(g)).flatMap(g => g.items.map(i => i.name)), cnt = kk => { const x = cfgOf(kk), o = new Set(x.off); return field.filter(n => !o.has(n)).length; };
-    const secs = []; { let cur = null; for (const q of qs) { if (q.type === "kop") { cur = { kop: q.text, qs: [] }; secs.push(cur); continue; } if (!cur) { cur = { kop: "Algemeen", qs: [] }; secs.push(cur); } cur.qs.push(q); } }
+    const field = groups.filter(g => !evKeeperGroup(g)).flatMap(g => g.items.map(i => i.name)), cnt = kk => { const o = new Set(ageCfg(kk).off); return field.filter(n => !o.has(n)).length; };
+    const secs = []; { let cur = null; for (const q of qs) { if (q.type === "kop") { cur = { kop: q.text, qs: [] }; secs.push(cur); continue; } if (!cur) { cur = { kop: "Algemeen", head: null, qs: [] }; secs.push(cur); } cur.qs.push(q); } }
+    const tname = CSA.tk ? teamLbl(tms.find(t => t.id === CSA.tk)) : "";
     host.innerHTML = `<div class="agtabs" role="tablist" aria-label="Leeftijd">${keys.map(kk => `<button type="button" role="tab" data-ag="${kk}" aria-selected="${kk === k}"><b>${esc(evAgeLbl(kk))}</b><small>${cnt(kk)} onderdelen</small>${CSA.ages[kk] ? "" : '<i title="Voorstel van de app">voorstel</i>'}</button>`).join("")}</div>
-      <div class="agcard">
-        <div class="aghead"><div><h3>${esc(evAgeLbl(k))}</h3><small>${teams.filter(t => evAgeKey(t) === k).map(t => esc(teamLbl(t))).join(" · ")}</small></div>
-          <div class="agtools"><select data-agcopy aria-label="Kopiëren van een andere leeftijd"><option value="">Kopiëren van…</option>${keys.filter(x => x !== k).map(x => `<option value="${x}">${esc(evAgeLbl(x))}</option>`).join("")}</select>
-          <button class="btn ghost small" type="button" data-agsug>Voorstel van de app</button><button class="btn ghost small" type="button" data-agall>Alles aan</button></div></div>
-        ${c.custom ? "" : `<p class="agnote">${IC.star}<span>Dit is het voorstel van de app voor deze leeftijd. Pas gerust aan; het wordt pas jullie keuze als je bewaart.</span></p>`}
+      <div class="agcard${ed ? " editing" : ""}">
+        <div class="aghead"><div><h3>${esc(CSA.tk ? tname : evAgeLbl(k))}</h3><small>${CSA.tk ? (c.own ? "Eigen keuze voor deze ploeg" : `Volgt ${esc(evAgeLbl(k))}`) : tms.map(t => esc(teamLbl(t))).join(" · ")}</small></div>
+          <div class="agtools">${CSA.tk ? (c.own ? `<button class="btn ghost small" type="button" data-agback>Terug naar ${esc(evAgeLbl(k))}</button>` : "") : `<select data-agcopy aria-label="Kopiëren van een andere leeftijd"><option value="">Kopiëren van…</option>${keys.filter(x => x !== k).map(x => `<option value="${x}">${esc(evAgeLbl(x))}</option>`).join("")}</select>
+          <button class="btn ghost small" type="button" data-agsug>Voorstel van de app</button>`}<button class="btn ghost small" type="button" data-agall>Alles aan</button>
+          ${ops ? `<button class="btn small${ed ? "" : " ghost"}" type="button" data-agedit aria-pressed="${!!ed}">${ed ? "Klaar met bewerken" : "Onderdelen en vragen bewerken"}</button>` : ""}</div></div>
+        ${tms.length > 1 || CSA.tk ? `<div class="agteams" role="group" aria-label="Voor welke ploeg?"><button type="button" data-agt="" aria-pressed="${!CSA.tk}">Alle ${esc(evAgeLbl(k))}-ploegen</button>${tms.map(t => `<button type="button" data-agt="${t.id}" aria-pressed="${CSA.tk === t.id}">${esc(teamLbl(t))}${CSA.ages["t:" + t.id] ? ' <i class="accown" title="Eigen keuze"></i>' : ""}</button>`).join("")}</div>` : tms.length === 1 ? `<div class="agteams"><button type="button" data-agt="" aria-pressed="${!CSA.tk}">Alle ${esc(evAgeLbl(k))}-ploegen</button><button type="button" data-agt="${tms[0].id}" aria-pressed="false">Enkel ${esc(teamLbl(tms[0]))}</button></div>` : ""}
+        ${ed ? `<p class="agnote">${IC.note || IC.star}<span>Je past nu de fiche van de hele club aan: tik op <b>×</b> om iets te schrappen, of typ een nieuw onderdeel en druk op Enter. Iets nieuws staat aan voor alle leeftijden; vink uit waar het niet past. Vergeet niet te bewaren.</span></p>`
+          : CSA.tk ? (c.own ? "" : `<p class="agnote">${IC.star}<span>Deze ploeg volgt ${esc(evAgeLbl(k))}. Verander je hieronder iets, dan krijgt ze een eigen fiche.</span></p>`) : c.custom ? "" : `<p class="agnote">${IC.star}<span>Dit is het voorstel van de app voor deze leeftijd. Pas gerust aan; het wordt pas jullie keuze als je bewaart.</span></p>`}
         <label class="agself"><span><b>Zelfevaluatie door de spelers</b><small>De trainer zet ze per moment open in Evaluaties.</small></span><select data-agself>${SELF.map(([v, l]) => `<option value="${v}"${c.self === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
         <div class="agsec"><h4>Onderdelen <small>${all.filter(n => !off.has(n)).length} van ${all.length} aan</small></h4>
         ${groups.map(g => { const on = g.items.filter(i => !off.has(i.name)).length;
-          return `<div class="aggrp${on ? "" : " none"}"><label class="aggh"><input type="checkbox" data-agg="${esc(g.name)}"${on === g.items.length ? " checked" : ""}${on && on < g.items.length ? ' data-mixed="1"' : ""}><b>${esc(g.name)}</b><small>${on}/${g.items.length}</small>${evKeeperGroup(g) ? '<em>enkel doelmannen</em>' : ""}</label>
-            <div class="agchips">${g.items.map(i => `<label class="agc"><input type="checkbox" data-agi="${esc(i.name)}"${off.has(i.name) ? "" : " checked"}><span>${esc(i.name)}</span></label>`).join("")}</div></div>`; }).join("")}</div>
+          return `<div class="aggrp${on || ed ? "" : " none"}"><label class="aggh"><input type="checkbox" data-agg="${esc(g.name)}"${on === g.items.length ? " checked" : ""}${on && on < g.items.length ? ' data-mixed="1"' : ""}><b>${esc(g.name)}</b><small>${on}/${g.items.length}</small>${evKeeperGroup(g) ? '<em>enkel doelmannen</em>' : ""}</label>
+            <div class="agchips">${g.items.map(i => `<span class="agcw"><label class="agc"><input type="checkbox" data-agi="${esc(i.name)}"${off.has(i.name) ? "" : " checked"}><span>${esc(i.name)}</span></label>${ed ? `<button type="button" class="agx" data-rmi="${esc(i.name)}" aria-label="${esc(i.name)} schrappen">×</button>` : ""}</span>`).join("")}
+            ${ed ? `<input class="agadd" data-addi="${esc(g.name)}" placeholder="+ Nieuw onderdeel" maxlength="40" aria-label="Nieuw onderdeel in ${esc(g.name)}">` : ""}</div></div>`; }).join("")}
+        ${ed ? `<button class="link" type="button" data-addg>${IC.plus}Groep toevoegen</button>` : ""}</div>
         <div class="agsec"><h4>Vragen <small>${qn.filter(q => !offq.has(q.id)).length} van ${qn.length} aan</small></h4>
-        ${secs.filter(x => x.qs.length).map(x => { const on = x.qs.filter(q => !offq.has(q.id)).length;
-          return `<details class="aggrp q${on ? "" : " none"}"><summary><b>${esc(x.kop)}</b><small>${on}/${x.qs.length}</small></summary><div class="agqs">${x.qs.map(q => `<label class="agq"><input type="checkbox" data-agq="${esc(q.id)}"${offq.has(q.id) ? "" : " checked"}><span>${esc(q.text)}${q.intern ? ' <span class="evint">intern</span>' : ""}</span></label>`).join("")}</div></details>`; }).join("")}</div>
+        ${secs.filter(x => x.qs.length || ed).map(x => { const on = x.qs.filter(q => !offq.has(q.id)).length;
+          return `<details class="aggrp q${on || ed ? "" : " none"}"${ed ? " open" : ""}><summary><b>${esc(x.kop)}</b><small>${on}/${x.qs.length}</small></summary><div class="agqs">${x.qs.map(q => `<div class="agqw"><label class="agq"><input type="checkbox" data-agq="${esc(q.id)}"${offq.has(q.id) ? "" : " checked"}><span>${esc(q.text)}${q.intern ? ' <span class="evint">intern</span>' : ""}${q.type === "keuze" ? ` <small class="muted">· keuze</small>` : q.type === "schaal" ? ` <small class="muted">· score</small>` : ""}</span></label>${ed ? `<button type="button" class="agx" data-rmq="${esc(q.id)}" aria-label="Vraag schrappen">×</button>` : ""}</div>`).join("")}
+            ${ed ? `<div class="agaddq"><input data-addq="${esc(x.head === null ? "\u0000" : x.kop)}" placeholder="+ Nieuwe vraag" maxlength="160" aria-label="Nieuwe vraag"><select aria-label="Soort vraag"><option value="tekst">Open antwoord</option><option value="keuze">Keuzelijst</option><option value="schaal">Score 1 tot 5</option></select><label class="csint"><input type="checkbox"> intern</label></div>` : ""}</div></details>`; }).join("")}
+        ${ed ? `<button class="link" type="button" data-adds>${IC.plus}Blok met vragen toevoegen</button>` : ""}</div>
       </div>`;
     $$("[data-mixed]", host).forEach(x => { x.indeterminate = true; });
-    const save = patch => { const cur = cfgOf(k); CSA.ages[k] = { off: cur.off, offq: cur.offq, self: cur.self, ...patch }; const open = $$("details[open] summary b", host).map(b => b.textContent); draw(); $$("details summary b", host).forEach(b => { if (open.includes(b.textContent)) b.closest("details").open = true; }); };
-    $$("[data-ag]", host).forEach(b => b.onclick = () => { CSA.k = b.dataset.ag; draw(); });
+    const keepOpen = () => { const open = $$("details[open] summary b", host).map(b => b.textContent); draw(); $$("details summary b", host).forEach(b => { if (open.includes(b.textContent)) b.closest("details").open = true; }); };
+    const save = patch => { const cur = cfgOf(K); CSA.ages[K] = { off: cur.off, offq: cur.offq, self: cur.self, ...patch }; keepOpen(); };
+    $$("[data-ag]", host).forEach(b => b.onclick = () => { CSA.k = b.dataset.ag; CSA.tk = ""; draw(); });
+    $$("[data-agt]", host).forEach(b => b.onclick = () => { CSA.tk = b.dataset.agt; draw(); });
+    const bk = $("[data-agback]", host); if (bk) bk.onclick = () => { delete CSA.ages[K]; draw(); };
     $("[data-agself]", host).onchange = e => save({ self: e.target.value });
-    $$("[data-agi]", host).forEach(x => x.onchange = () => { const o = new Set(cfgOf(k).off); if (x.checked) o.delete(x.dataset.agi); else o.add(x.dataset.agi); save({ off: [...o] }); });
-    $$("[data-agg]", host).forEach(x => x.onchange = () => { const g = groups.find(g => g.name === x.dataset.agg), o = new Set(cfgOf(k).off); g.items.forEach(i => x.checked ? o.delete(i.name) : o.add(i.name)); save({ off: [...o] }); });
-    $$("[data-agq]", host).forEach(x => x.onchange = () => { const o = new Set(cfgOf(k).offq); if (x.checked) o.delete(x.dataset.agq); else o.add(x.dataset.agq); save({ offq: [...o] }); });
+    $$("[data-agi]", host).forEach(x => x.onchange = () => { const o = new Set(cfgOf(K).off); if (x.checked) o.delete(x.dataset.agi); else o.add(x.dataset.agi); save({ off: [...o] }); });
+    $$("[data-agg]", host).forEach(x => x.onchange = () => { const g = groups.find(g => g.name === x.dataset.agg), o = new Set(cfgOf(K).off); g.items.forEach(i => x.checked ? o.delete(i.name) : o.add(i.name)); save({ off: [...o] }); });
+    $$("[data-agq]", host).forEach(x => x.onchange = () => { const o = new Set(cfgOf(K).offq); if (x.checked) o.delete(x.dataset.agq); else o.add(x.dataset.agq); save({ offq: [...o] }); });
     $("[data-agall]", host).onclick = () => save({ off: [], offq: [] });
-    $("[data-agsug]", host).onclick = () => { const sg = evAgeSuggest(+k); save({ off: sg.off, offq: sg.offq, self: sg.self }); };
-    $("[data-agcopy]", host).onchange = e => { const from = e.target.value; if (!from) return; const x = cfgOf(from); save({ off: [...x.off], offq: [...x.offq], self: x.self }); toast(`Overgenomen van ${evAgeLbl(from)}.`); };
+    const sg = $("[data-agsug]", host); if (sg) sg.onclick = () => { const x = evAgeSuggest(+k); save({ off: x.off, offq: x.offq, self: x.self }); };
+    const cp = $("[data-agcopy]", host); if (cp) cp.onchange = e => { const from = e.target.value; if (!from) return; const x = ageCfg(from); save({ off: [...x.off], offq: [...x.offq], self: x.self }); toast(`Overgenomen van ${evAgeLbl(from)}.`); };
+    const eb = $("[data-agedit]", host); if (eb) eb.onclick = () => { CSA.edit = !CSA.edit; draw(); };
+    if (!ed) return;
+    /* bewerken van de fiche van de club */
+    $$("[data-rmi]", host).forEach(b => b.onclick = () => { if (!confirm(`"${b.dataset.rmi}" schrappen uit de fiche van de club? Ingevulde scores blijven bewaard.`)) return; ops.rmItem(b.dataset.rmi); keepOpen(); });
+    $$("[data-rmq]", host).forEach(b => b.onclick = () => { if (!confirm("Deze vraag schrappen uit de fiche van de club? Ingevulde antwoorden blijven bewaard.")) return; ops.rmQ(b.dataset.rmq); keepOpen(); });
+    $$("[data-addi]", host).forEach(x => x.onkeydown = e => { if (e.key !== "Enter") return; e.preventDefault(); const n = x.value.trim(); if (!n) return;
+      if (all.includes(n)) { toast("Dat onderdeel bestaat al."); return; } ops.addItem(x.dataset.addi, n); const g = x.dataset.addi; keepOpen(); $(`[data-addi="${CSS.escape(g)}"]`, host)?.focus(); });
+    const ag = $("[data-addg]", host); if (ag) ag.onclick = () => { const n = (prompt("Naam van de nieuwe groep (een hoek van het spelersprofiel), bv. Techniek") || "").trim(); if (!n) return; ops.addGroup(n); keepOpen(); };
+    $$("[data-addq]", host).forEach(x => x.onkeydown = e => { if (e.key !== "Enter") return; e.preventDefault(); const t = x.value.trim(); if (!t) return;
+      const w = x.closest(".agaddq"), type = $("select", w).value, intern = $("input[type=checkbox]", w).checked;
+      let opts = []; if (type === "keuze") { opts = (prompt("Welke keuzes? Scheid ze met ; bv. Laag; Gemiddeld; Hoog") || "").split(";").map(o => o.trim()).filter(Boolean); if (opts.length < 2) { toast("Geef minstens twee keuzes."); return; } }
+      const kop = x.dataset.addq === "\u0000" ? null : x.dataset.addq; ops.addQ(kop, { id: evQid(), type, text: t, opts, intern }); keepOpen(); });
+    const as = $("[data-adds]", host); if (as) as.onclick = () => { const n = (prompt("Titel van het nieuwe blok, bv. Wedstrijdgedrag") || "").trim(); if (!n) return; ops.addSec(n); keepOpen(); };
   };
   draw();
   return { redraw: draw, value: () => JSON.parse(JSON.stringify(CSA.ages)), reset: () => { CSA.ages = null; } };

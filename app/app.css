@@ -2272,3 +2272,22 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 @media (max-width:600px){.scrow{grid-template-columns:24px 1fr auto auto}.scrow [data-s]{display:none}}
 .scrad{display:flex;justify-content:center;margin:-4px 0 8px}
 .accrow .tgl{margin:0}.accrow b{font-size:14.5px}
+.evtoon{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0 30px}
+.evtc{position:relative;cursor:pointer}.evtc input{position:absolute;opacity:0;pointer-events:none}
+.evtc span{display:inline-block;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid var(--line2);color:var(--dim)}
+.evtc input:checked+span{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.evtc input:focus-visible+span{outline:2px solid var(--yellow);outline-offset:2px}
+/* v154: fiche bewerken per leeftijd, ploegen apart */
+.agteams{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.agteams button{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.agteams button[aria-pressed=true]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.agcw{display:inline-flex;align-items:center}
+.agx{border:0;background:var(--card3);color:var(--muted);width:22px;height:22px;border-radius:50%;margin-left:-4px;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.agx:hover{background:var(--badbg);color:var(--bad)}
+.agadd{width:170px;min-height:30px;padding:4px 12px;border-radius:999px;font-size:13px;border:1px dashed var(--line2);background:transparent}
+.agqw{display:flex;align-items:flex-start;gap:6px}.agqw .agq{flex:1}.agqw .agx{margin:6px 4px 0 0}
+.agaddq{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;padding-top:8px;border-top:1px dashed var(--line)}
+.agaddq input:not([type=checkbox]){flex:1;min-width:180px;min-height:34px;font-size:14px}.agaddq select{width:auto;min-height:34px;font-size:13px}
+.agcard.editing{border-color:var(--yellow);box-shadow:inset 0 0 0 1px var(--yellow)}
+.evcopy{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:var(--ybg);color:var(--ytext)}
+.evcopy>span{flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start;font-size:14px}.evcopy svg{width:18px;height:18px;flex:none;margin-top:2px}

@@ -150,6 +150,7 @@ function evAgeSuggest(age) {
 }
 function evAgeCfg(t = typeof S !== "undefined" ? S.team : null, st = (typeof CLUB !== "undefined" && CLUB.settings) || {}) {
   const k = evAgeKey(t), a = (st.eval || {}).ages || {};
+  if (t?.id && a["t:" + t.id]) return { off: [], offq: [], self: "uit", ...a["t:" + t.id], custom: true, own: true };
   return a[k] ? { off: [], offq: [], self: "uit", ...a[k], custom: true } : { ...evAgeSuggest(+k), custom: false };
 }
 /* de onderdelen voor een ploeg: de fiche van de club min wat voor die leeftijd uit staat */
@@ -236,9 +237,9 @@ const evSelfOf = (z, crit) => { const l = EV_SELF.questions.filter(q => q.type =
 const evSelfLabel = v => v == null ? "–" : EV_SELF.scale === "smiley" ? EV_FACES[Math.round(v)] || "" : String(Math.round(v));  /* v is de ruwe waarde van de speler */
 /* korte samenvatting van de fiche voor deze ploeg; de beheerder springt meteen naar de instellingen van die leeftijd */
 function evFicheBar() {
-  const n = evItems().length, kn = evGroups(S.team, null, true).filter(evKeeperGroup).reduce((a, g) => a + g.items.length, 0), oq = EV_OPEN.filter(q => q.type !== "kop").length, k = evAgeKey(S.team);
+  const own = evAgeCfg(S.team).own, n = evItems().length, kn = evGroups(S.team, null, true).filter(evKeeperGroup).reduce((a, g) => a + g.items.length, 0), oq = EV_OPEN.filter(q => q.type !== "kop").length, k = evAgeKey(S.team);
   const self = EV_SELF.on ? (EV_SELF.scale === "smiley" ? "zelfevaluatie met smileys" : "zelfevaluatie met cijfers") : "geen zelfevaluatie";
-  return `<div class="evfiche2"><span class="evfi">${IC.star}</span><span class="evft"><b>Fiche ${esc(evAgeLbl(k))}</b><small>${n} onderdelen${kn ? ` (+${kn} voor doelmannen)` : ""} · ${oq} vragen · ${self}</small></span>
+  return `<div class="evfiche2"><span class="evfi">${IC.star}</span><span class="evft"><b>Fiche ${esc(own ? teamLbl(S.team) : evAgeLbl(k))}</b><small>${n} onderdelen${kn ? ` (+${kn} voor doelmannen)` : ""} · ${oq} vragen · ${self}</small></span>
     ${S.admin ? `<a class="btn ghost small" href="#/clubinstellingen/evaluaties" data-agepick="${esc(k)}">Aanpassen voor ${esc(evAgeLbl(k))}</a>` : ""}</div>`;
 }
 function evZelfHtml(m, ps) {
@@ -263,11 +264,14 @@ function evSelfPanel(z, e, m) {
 
 /* ============ overzicht ============ */
 let evMoment = null, evView = "spelers", evPub = { team: null, m: [], ok: null };
+/* wat zien ouders en spelers van dit moment? de trainer kiest */
+const EV_TOON = [["scores", "Score per onderdeel"], ["groepen", "Enkel het gemiddelde per groep"], ["sterk", "Sterktes en werkpunten"], ["doelen", "Doelen"]];
 function evPubHtml(m) {
   if (evPub.ok === false) return `<div class="panel row evpub" style="margin:10px 0"><span class="hint">Delen met ouders en spelers kan pas nadat de beheerder <b>supabase-evaluaties-publiek.sql</b> uitvoerde.</span></div>`;
-  const on = evPub.m.includes(m);
-  return `<div class="panel row evpub${on ? " hl" : ""}" style="margin:10px 0"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="evPubT"${on ? " checked" : ""}${evPub.ok ? "" : " disabled"}>
-    <span><b>Zichtbaar in de ouder- en spelersapp</b><br><span class="hint">${on ? "Ouders en spelers zien nu hun eigen scores, sterktes, werkpunten en doelen van dit moment." : "Staat uit. Zet aan als de evaluaties af zijn en je ze wil delen. De vragen van de club, de privénotitie en het oudergesprek blijven altijd intern."}</span></span></label></div>`;
+  const on = evPub.m.includes(m), toon = evPub.toon?.[m] || ["scores", "sterk", "doelen"];
+  return `<div class="panel evpub${on ? " hl" : ""}" style="margin:10px 0"><label class="check"><input type="checkbox" id="evPubT"${on ? " checked" : ""}${evPub.ok ? "" : " disabled"}>
+    <span><b>Delen met ouders en spelers</b><br><span class="hint">${on ? "Ze zien enkel wat hieronder aangevinkt is, van hun eigen kind." : "Staat uit. Zet aan als de evaluaties af zijn. De vragen van de club, de privénotitie en het oudergesprek blijven altijd intern."}</span></span></label>
+    ${on ? `<div class="evtoon" role="group" aria-label="Wat zien ze?">${EV_TOON.map(([k, l]) => `<label class="evtc"><input type="checkbox" data-toon="${k}"${toon.includes(k) ? " checked" : ""}><span>${l}</span></label>`).join("")}</div>` : ""}</div>`;
 }
 route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, pid, sub) => {
   if (evMoment == null) evMoment = evCurrent();
@@ -277,7 +281,7 @@ route("evaluaties", { title: "Evaluaties", auth: true, team: true, render: (v, p
 function evOverview(v) {
   /* welke momenten de trainer zichtbaar zette voor ouders en spelers (lazy geladen per ploeg) */
   if (evPub.team !== S.team.id) { evPub = { team: S.team.id, m: [], ok: null };
-    db.list("eval_publicaties", { team_id: S.team.id }).then(r => { evPub.m = r.map(x => x.moment); evPub.ok = true; render(); }).catch(() => { evPub.ok = false; render(); }); }
+    db.list("eval_publicaties", { team_id: S.team.id }).then(r => { evPub.m = r.map(x => x.moment); evPub.toon = Object.fromEntries(r.filter(x => x.toon?.length).map(x => [x.moment, x.toon])); evPub.ok = true; render(); }).catch(() => { evPub.ok = false; render(); }); }
   const ps = active(), groups = evGroups(), names = evItems(), mo = EV_MOMENTS[evMoment - 1], w = evWindow(mo);
   const done = ps.filter(p => evDone(evOf(p.id, evMoment), names)).length, started = ps.filter(p => evStarted(evOf(p.id, evMoment))).length;
   const now = new Date(), open = now >= w.from && now <= w.to, late = now > w.to && done < ps.length, dfmt = d => d.toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
@@ -315,6 +319,14 @@ function evOverview(v) {
       else { const { error } = await sb.rpc("set_eval_publicatie", { t: S.team.id, m, aan: on }); if (error) throw error; }
       return true; }, on ? "Gedeeld met ouders en spelers." : "Niet meer zichtbaar voor ouders en spelers.");
     if (ok) evPub.m = on ? [...new Set([...evPub.m, m])] : evPub.m.filter(x => x !== m); render(); };
+  $$("[data-toon]", v).forEach(x => x.onchange = async () => { const m = evMoment;
+    let toon = $$("[data-toon]", v).filter(y => y.checked).map(y => y.dataset.toon);
+    if (x.dataset.toon === "scores" && x.checked) toon = toon.filter(k => k !== "groepen"); if (x.dataset.toon === "groepen" && x.checked) toon = toon.filter(k => k !== "scores");
+    const ok = await safe(async () => {
+      if (mode === "demo") { const r = (await db.list("eval_publicaties", { team_id: S.team.id })).find(y => y.moment === m); if (r) await db.save("eval_publicaties", { ...r, toon }); }
+      else { const { error } = await sb.rpc("set_eval_toon", { t: S.team.id, m, toon }); if (error) throw /set_eval_toon|function/i.test(error.message) ? new Error("Voer eerst supabase-evaluaties-delen-v58.sql uit in Supabase.") : error; }
+      return true; }, "Bewaard.");
+    if (ok) { evPub.toon = { ...(evPub.toon || {}), [m]: toon }; render(); } else render(); });
   const zt = $("#evZelfT"); if (zt) zt.onchange = async () => { const m = evMoment, on = zt.checked;
     const ok = await safe(async () => {
       if (mode === "demo") { if (on) await db.save("eval_zelf_open", { team_id: S.team.id, moment: m, opened_at: new Date().toISOString() }); else await db.del("eval_zelf_open", { team_id: S.team.id, moment: m }); }
@@ -368,6 +380,7 @@ function evForm(v, pid, m) {
     <span class="spacer"></span>${idx > 0 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx - 1].id}/${m}">‹ ${esc(ps[idx - 1].first_name)}</a>` : ""}<span class="hint">${idx + 1} / ${ps.length}</span>${idx < ps.length - 1 ? `<a class="btn ghost small" href="#/evaluaties/${ps[idx + 1].id}/${m}">${esc(ps[idx + 1].first_name)} ›</a>` : ""}</div>
   <div class="evlayout"><div class="evmain">
     <div class="evlegend">${(EV_DISP === 2 ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5]).map(n => `<span><i style="background:${evColor(n)}"></i>${EV_DISP === 2 ? EV_LEVELS[n] : n + (EV_LEVELS[n] !== String(n) ? " " + EV_LEVELS[n].toLowerCase() : "")}</span>`).join("")}<span><i class="prevmark"></i>vorige keer</span></div>
+    ${pr && names.some(c => evScore(pr, c) != null) && !names.some(c => evScore(e, c) != null) ? `<div class="evcopy"><span>${IC.star}<span><b>Sneller invullen?</b> Begin van de scores van ${esc(EV_MOMENTS[pr.moment - 1]?.naam || "vorige keer")} en pas enkel aan wat veranderde.</span></span><button class="btn small" type="button" id="evCopyPrev">Scores overnemen</button></div>` : ""}
     <nav class="evjump" aria-label="Onderdelen van de evaluatie"><a href="#ev-scores" data-j="ev-scores">Scores <b id="evjS">${names.filter(c => evScore(e, c) != null).length}/${names.length}</b></a>${EV_SELF.on ? `<a href="#ev-self" data-j="ev-self">Zelfevaluatie <b class="${z ? "ok" : ""}">${z ? "ingevuld" : "nog niet"}</b></a>` : ""}${EV_OPEN.length ? `<a href="#ev-fiche" data-j="ev-fiche">${EV_OPEN[0].type === "kop" ? "Fiche" : "Vragen"} <b id="evjF"></b></a>` : ""}<a href="#ev-sterk" data-j="ev-sterk">Sterktes en doelen</a></nav>
     <div id="ev-scores"></div>
     ${groups.map((g, gi) => { const full = g.items.every(i => evScore(e, i.name) != null);
@@ -416,6 +429,8 @@ function evForm(v, pid, m) {
     D.open = { ...(D.open || {}) }; if (val) D.open[row.dataset.os] = val; else delete D.open[row.dataset.os]; $$("button", row).forEach(x => x.setAttribute("aria-checked", on && x === b)); touch(); }));
   $$(".evkeepbtn", v).forEach(b => b.onclick = () => { const sec = b.closest(".evgroup"), open = !sec.classList.contains("open"); sec.classList.toggle("open", open); b.setAttribute("aria-expanded", open); });
   $("#evNote").oninput = ev => { e.comment = ev.target.value || null; touch(); };
+  const cpv = $("#evCopyPrev", v); if (cpv) cpv.onclick = () => { names.forEach(c => { const x = evScore(pr, c); if (x != null && evScore(e, c) == null) e.scores[c] = x; });
+    $("#evsaved").textContent = "Bewaren…"; safe(async () => { await evPut(e); return true; }, "Scores overgenomen. Pas aan wat veranderde.").then(() => render()); };
   $$(".evgh", v).forEach(b => b.onclick = () => { const sec = b.closest(".evgroup"), shut = !sec.classList.contains("shut"); sec.classList.toggle("shut", shut); b.setAttribute("aria-expanded", !shut); });
   $("#evM").onchange = ev => { evMoment = +ev.target.value; go("#/evaluaties/" + pid + "/" + evMoment); };
   $("#evRep").onclick = () => { evPrint([p], m); };

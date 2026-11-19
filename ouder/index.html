@@ -93,6 +93,11 @@ h2 small{font-weight:600;font-size:13px;color:var(--muted);font-stretch:100%}
 .note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--yellow);border-radius:14px;padding:12px 14px}
 .note.tr{border-left-color:var(--blue)}
 .note[data-go]{cursor:pointer}
+.zcall{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 12px;padding:14px 16px;border:0;border-radius:16px;background:var(--yellow,#F5C400);color:#111;font:inherit;text-align:left;cursor:pointer;box-shadow:0 4px 14px rgba(245,196,0,.35);animation:zpulse 2.4s ease-in-out 2}
+.zcall small{display:block;font-size:12.5px;font-weight:600;opacity:.75}.zcall b{display:block;font-size:17px;line-height:1.25}
+.zcall .zi{font-size:26px}.zcall .zgo{margin-left:auto;font-size:28px;font-weight:700}
+@keyframes zpulse{50%{transform:scale(1.015)}}@media (prefers-reduced-motion:reduce){.zcall{animation:none}}
+.zdot{position:relative}.zdot::after{content:"";position:absolute;top:6px;right:calc(50% - 18px);width:10px;height:10px;border-radius:50%;background:#E5484D;border:2px solid var(--card,#fff)}
 .note small{display:block;color:var(--muted);font-size:12.5px}.note b{display:block;font-size:17px;margin-top:2px}.note p{margin:6px 0 0;white-space:pre-wrap}
 .msg{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;text-align:center}
 .msg b{display:block;font-size:19px;margin-bottom:4px}
@@ -287,6 +292,7 @@ function header() {
     berichten: parentKids().length ? `<span>Berichten</span>` : `<span>Nieuws</span>`, gegevens: nm ? `Gegevens van <span>${nm}</span>` : `Jullie <span>gegevens</span>` };
   $("#h").innerHTML = T[view] || (ok.length === 1 ? (kid ? `Hey ${nm}<span>!</span>` : `Komt ${nm}<span>?</span>`) : `${esc(cshort() || "Voor")} <span>${cshort() ? "Ouders" : "ouders"}</span>`);
   $(".brand span").textContent = `${clubOf() ? cname() + " · " : ""}${ok.length && ok.every(k => isKid(k.tok)) ? "voor spelers" : "voor ouders"}`;
+  { const sb2 = $("[data-v=seizoen]"); if (sb2) sb2.classList.toggle("zdot", zPending().length > 0); }
   $("[data-v=gegevens]").hidden = !parentKids().length; if (view === "gegevens" && !parentKids().length) view = "agenda";
   $("[data-v=berichten] .lb").textContent = parentKids().length ? "Berichten" : "Nieuws";
   const one = ok.length === 1 ? data[ok[0].tok] : null;
@@ -363,7 +369,7 @@ function drawAgenda() {
   const latest = msgsAll()[0], fresh = latest && !store.get(SEEN, []).includes(latest.key);
   let lastWk = "", body = "";
   for (const r of rest) { const wk = weekKey(r.e.date); if (wk !== lastWk) { body += `<div class="wk">${weekLabel(wk)}</div>`; lastWk = wk; } body += evCard(r.e, r.k); }
-  $("#list").innerHTML = installCard() + pushCard(false) + (zPending().length ? `<div class="note" data-gz><small>Zelfevaluatie open · tik om in te vullen</small><b>${zPending().map(k => esc(k.name)).join(", ")}</b></div>` : "") + (fresh ? `<div class="note" data-go="berichten"><small>Nieuw bericht · tik om te lezen</small><b>${esc(latest.title)}</b></div>` : "") +
+  $("#list").innerHTML = installCard() + pushCard(false) + (zPending().length ? `<button type="button" class="zcall" data-gz><span class="zi" aria-hidden="true">✍️</span><span><small>${kidMode() ? "Jouw trainer wil weten wat jij vindt" : "De trainer vraagt een zelfevaluatie"}</small><b>${kidMode() ? "Vul je zelfevaluatie in" : "Zelfevaluatie invullen voor " + zPending().map(k => esc(k.name)).join(", ")}</b></span><span class="zgo" aria-hidden="true">›</span></button>` : "") + (fresh ? `<div class="note" data-go="berichten"><small>Nieuw bericht · tik om te lezen</small><b>${esc(latest.title)}</b></div>` : "") +
     (next ? heroCard(next) : "") +
     (open.length > 1 ? `<div class="todo"><span>Nog <b>${open.length}</b> ${open.length === 1 ? "activiteit" : "activiteiten"} zonder antwoord.</span><button class="btn sm" type="button" id="allja">${kidMode() ? "Overal: ik kom" : "Overal: komt"}</button></div>` : "") +
     (rows.length ? body : `<div class="msg"><b>Niets gepland</b>De komende zes weken staan er nog geen trainingen of wedstrijden in de kalender.</div>`) +
@@ -441,7 +447,9 @@ const evCol = n => n >= 4 ? "var(--ok)" : n >= 3 ? "var(--yellow)" : n >= 2 ? "#
 const nl1 = n => String(n).replace(".", ",");
 function evalHtml(ev, me) { const list = ev?.evals || []; if (!list.length) return "";
   const lines = s => String(s || "").split(/\n+/).map(x => x.trim()).filter(Boolean);
-  return list.slice().reverse().map(e => { const gs = evGroupsOf(ev.criteria, e.scores || {});
+  return list.slice().reverse().map(e => { let gs = evGroupsOf(ev.criteria, e.scores || {});
+    /* de trainer deelde enkel het gemiddelde per groep */
+    if (e.toon && !e.toon.includes("scores") && e.toon.includes("groepen")) gs = [{ name: "", items: gs.filter(g => g.items.length).map(g => [g.name || "Algemeen", Math.round(g.items.reduce((a, [, v]) => a + v, 0) / g.items.length * 2) / 2]) }];
     const txt = (t, s) => lines(s).length ? `<div class="evtx"><small>${t}</small>${lines(s).map(x => `<p>${esc(x)}</p>`).join("")}</div>` : "";
     return `<div class="card evc"><h3>Evaluatie ${esc((ev.moments && ev.moments[e.moment - 1]) || EVM[e.moment] || "")}</h3><p class="h" style="margin:0 0 6px">${me ? "Zo zien je trainers jou nu" : "Van de trainers"}${e.date ? " · " + dayFmt(e.date).toLocaleDateString("nl-BE", { day: "numeric", month: "long" }) : ""}</p>
       ${gs.map(g => `${g.name ? `<div class="evg">${esc(g.name)}</div>` : ""}${g.items.map(([n, s]) => `<div class="evr"><span class="evn">${esc(n.replace(/ \(.*\)/, ""))}<small>${ev.scale === "cijfers" || ev.scale === "cijfers10" ? "" : EVL[s] || ""}</small></span><span class="evb"><i style="width:${s / 5 * 100}%;background:${evCol(s)}"></i></span><b>${nl1(ev.scale === "cijfers10" ? s * 2 : s)}<span>/${ev.scale === "cijfers10" ? 10 : 5}</span></b></div>`).join("")}`).join("")}
@@ -451,13 +459,13 @@ function drawSeason() {
     if (!s) return `<div class="card"><h3>${esc(k.name)}</h3><p class="h" style="margin:0">Het seizoensoverzicht komt binnenkort.</p></div>`;
     const pct = s.trainings ? Math.round(100 * s.present / s.trainings) : null;
     const me = isKid(k.tok), cheer = !me ? "" : pct >= 90 ? "🔥 Topper: je bent bijna altijd op training!" : s.goals >= 5 ? "⚽ Doelpuntenmachine!" : s.matches >= 5 ? "💪 Al " + s.matches + " wedstrijden gespeeld dit seizoen!" : "Elke training telt. Komaan OG!";
-    return `<h2><span class="dot" style="--c:${kidCol(k.tok)}"></span>${me ? "Jouw seizoen" : esc(k.name)} <small>${esc(x.team || "")}</small></h2>${cheer ? `<div class="note"><b style="margin:0">${cheer}</b></div>` : ""}
+    return `<h2><span class="dot" style="--c:${kidCol(k.tok)}"></span>${me ? "Jouw seizoen" : esc(k.name)} <small>${esc(x.team || "")}</small></h2>${zelfHtml(k)}${cheer ? `<div class="note"><b style="margin:0">${cheer}</b></div>` : ""}
       <div class="stats"><div class="stat"><small>Op training</small><b>${pct == null ? "–" : pct + "%"}</b><span>${s.present} van ${s.trainings} trainingen</span>${pct == null ? "" : `<div class="bar"><i style="width:${pct}%"></i></div>`}</div>
         <div class="stat"><small>Wedstrijden</small><b>${s.matches}</b><span>meegespeeld dit seizoen</span></div>
         <div class="stat"><small>Doelpunten</small><b>${s.goals}</b><span>dit seizoen</span></div><div class="stat"><small>Assists</small><b>${s.assists}</b><span>dit seizoen</span></div></div>
       <div class="card"><h3>Laatste uitslagen</h3>${rs.length ? rs.map(r => { const res = r.for > r.against ? "w" : r.for < r.against ? "l" : "d", us = x.team || cshort() || "Wij";
         return `<div class="res"><span class="rp ${res}">${{ w: "W", l: "V", d: "G" }[res]}</span><span class="rm"><b>${r.home === false ? esc(r.opponent || "") + " – " + esc(us) : esc(us) + " – " + esc(r.opponent || "")}</b><small>${dayFmt(r.date).toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })} · ${r.played ? (me ? "je speelde mee" : esc(k.name) + " speelde mee") + (r.goals ? ` · ⚽ ${r.goals}` : "") + (r.assists ? ` · ${r.assists} assist` : "") : (me ? "je speelde niet mee" : "niet meegespeeld")}</small></span><span class="sc">${r.home === false ? r.against + " – " + r.for : r.for + " – " + r.against}</span></div>`; }).join("")
-        : `<p class="h" style="margin:0">Nog geen uitslagen de laatste weken.</p>`}</div>${zelfHtml(k)}${evalHtml(x.ev, me)}`; }).join("") || `<div class="msg"><b>Nog niets</b></div>`; bindZelf();
+        : `<p class="h" style="margin:0">Nog geen uitslagen de laatste weken.</p>`}</div>${evalHtml(x.ev, me)}`; }).join("") || `<div class="msg"><b>Nog niets</b></div>`; bindZelf();
 }
 
 /* ---------- berichten ---------- */

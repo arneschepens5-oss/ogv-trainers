@@ -45,7 +45,7 @@ function pfList(p, evals, season) {
 
 /* de radar zelf: ringen per punt, één gevulde vorm (de gekozen evaluatie) en een stippellijn om mee te vergelijken */
 function radarSvg(axes, main, cmp, o = {}) {
-  const S0 = o.size || 340, mini = !!o.mini, n = axes.length, c = S0 / 2, R = mini ? S0 / 2 - 3 : S0 / 2 - 62, max = o.max || 5, RS = max === 10 ? [4, 6, 8, 10] : RS;
+  const S0 = o.size || 340, mini = !!o.mini, n = axes.length, c = S0 / 2, R = mini ? S0 / 2 - 3 : S0 / 2 - 62, max = o.max || 5, RS = max === 10 ? [4, 6, 8, 10] : [2, 3, 4, 5];
   /* het midden is 1 (de laagste score), de buitenste ring 5: zo zie je de verschillen beter */
   const ang = i => -Math.PI / 2 + i * 2 * Math.PI / n, fr = v => Math.max(0, Math.min(max, v ?? 1) - 1) / (max - 1), pt = (i, v) => [c + Math.cos(ang(i)) * R * fr(v), c + Math.sin(ang(i)) * R * fr(v)], at = (i, r) => [c + Math.cos(ang(i)) * r, c + Math.sin(ang(i)) * r];
   const poly = vs => vs.map((v, i) => pt(i, v).map(x => x.toFixed(1)).join(",")).join(" ");
