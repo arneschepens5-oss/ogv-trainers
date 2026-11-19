@@ -24,30 +24,8 @@ let dosBack = null;
 /* scoutingprofiel van een eigen speler: dezelfde 5 onderdelen en posities als de scoutingdatabase, zodat eigen en externe spelers vergelijkbaar zijn */
 const SC_POT = ["Beperkt", "Gemiddeld", "Groot", "Zeer groot"];
 const scProf = p => p?.scout && typeof p.scout === "object" ? p.scout : {};
-function scProfForm(p) {
-  const sp = scProf(p), ps = posOf(p), opt = (cur, list) => `<option value=""></option>` + list.map(x => `<option${x === cur ? " selected" : ""}>${esc(x)}</option>`).join("");
-  const d = dialog(`<form><h2>Scoutingprofiel · ${esc(p.first_name)}</h2><p class="hint" style="margin:0">Dezelfde onderdelen als in de scoutingdatabase. Alleen zichtbaar voor de trainers van deze ploeg. Laat een score leeg als je het nog niet weet.</p><div class="fields">
-    <div class="f full"><span>Posities</span><p class="hint" style="margin:2px 0 0">${esc(posTxt(ps) || "Nog niet ingevuld")} · <button class="link" type="button" id="spPosEdit">aanpassen bij de gegevens van ${esc(p.first_name)}</button></p></div>
-    <label class="f">Ontwikkelen naar positie<input name="ontw" maxlength="40" value="${esc(sp.ontw || "")}" placeholder="bv. 6 of 8"></label><label class="f">Lengte (cm)<input name="len" type="number" min="80" max="220" value="${esc(sp.len || "")}"></label>
-    <label class="f">Potentieel<select name="pot">${opt(sp.pot || "", SC_POT.includes(sp.pot) ? SC_POT : EV_POT)}</select></label>
-    <label class="f">Speelt op leeftijd<select name="opl">${opt(sp.opl || "", ["Ja", "Nee - gedispenseerd", "Nee - doorgeschoven"])}</select></label>
-    ${SC_COMP.map((c, i) => `<label class="f">${esc(c)} (1 tot 10)<input name="k${i}" type="number" min="1" max="10" step="0.5" value="${scNum(sp["k" + i]) ? sp["k" + i] : ""}"></label>`).join("")}
-    <label class="f full">Sterktes en spelbeschrijving<textarea name="sterk" rows="3" maxlength="1500">${esc(sp.sterk || "")}</textarea></label>
-    <label class="f full">Werkpunten<textarea name="werk" rows="3" maxlength="1500">${esc(sp.werk || "")}</textarea></label>
-    <label class="f full">Extra info over de speler<textarea name="ctx" rows="3" maxlength="1500" placeholder="Bv. matuur, speelt graag op links, familie, wat hem motiveert…">${esc(sp.ctx || "")}</textarea></label></div>
-    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
-  $("#spPosEdit", d).onclick = () => { d.close(); playerForm(p); };
-  $("form", d).onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), o = { ...sp };
-    ["p1", "p2", "p3", "pot", "h", "n", "ontw", "opl", "len", "sterk", "werk", "ctx", ...SC_COMP.map((c, i) => "k" + i)].forEach(k => delete o[k]);
-    if (ps.h) o.h = ps.h; if (ps.n.length) o.n = ps.n;
-    [...new Set([ps.h, ...ps.n].filter(Boolean).map(posScName))].slice(0, 3).forEach((nm, i) => o["p" + (i + 1)] = nm);
-    for (const k of ["pot", "opl"]) if (f[k]) o[k] = f[k]; if (f.ontw.trim()) o.ontw = f.ontw.trim();
-    if (f.len) o.len = Math.max(80, Math.min(220, +f.len)); SC_COMP.forEach((c, i) => { const n = parseFloat(f["k" + i]); if (!isNaN(n)) o["k" + i] = Math.max(1, Math.min(10, n)); });
-    for (const k of ["sterk", "werk", "ctx"]) if (f[k].trim()) o[k] = f[k].trim();
-    o.upd = new Date().toISOString().slice(0, 10); o.by = typeof tpOf === "function" ? (tpOf(user?.id)?.name || tNice(user?.email)) : "";
-    const row = { ...p, scout: o };
-    await safe(async () => { await db.save("players", row); const i = S.players.findIndex(x => x.id === row.id); if (i >= 0) S.players[i] = row; d.close(); render(); }, "Profiel opgeslagen."); };
-}
+/* het scoutingprofiel zit nu in hetzelfde venster als de gegevens van de speler */
+function scProfForm(p) { return playerForm(p, { prof: true }); }
 /* rapport van een trainer over een speler (interne scouting) */
 function pScoutForm(p, r) {
   const n = !r; r = r || { date: new Date().toISOString().slice(0, 10) };
@@ -131,7 +109,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
       ${missed.length ? `<div class="panel sec"><h2>Gemist</h2><div class="list">${missed.slice(0, 12).map(x => `<div class="item static"><span class="date"><b>${dDay(x.e.date)}</b><small>${dMon(x.e.date)}</small></span><span class="main"><b>${esc(x.e.title || "Training")}</b><small>${esc([x.e.location, x.a?.note].filter(Boolean).join(" · "))}</small></span><span class="pill">${esc(x.st)}</span></div>`).join("")}</div>${missed.length > 12 ? `<p class="hint" style="margin:8px 0 0">En nog ${missed.length - 12} oudere.</p>` : ""}</div>` : `<p class="hint">Nog geen training gemist.</p>`}`
       : `<div class="empty"><b>Nog geen trainingen met aanwezigheden</b></div>`}</div>`;
   const idRow = (k, val) => val ? `<div class="dosid"><span>${k}</span><b>${esc(val)}</b></div>` : "";
-  const persoonlijkPane = `<div class="sec panel" data-t="persoonlijk"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Persoonlijk</h2><button class="btn ghost small noprint" type="button" id="dosEdit">Gegevens aanpassen</button></div>
+  const persoonlijkPane = `<div class="sec panel" data-t="persoonlijk"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Persoonlijk</h2><button class="btn ghost small noprint" type="button" id="dosEdit">Speler aanpassen</button></div>
     <div class="dospers">${p.photo ? `<img class="dosphoto" data-pp="${esc(p.photo)}" alt="">` : ""}<div class="dosfacts">${idRow("Ploeg", S.team.name)}${idRow("Rugnummer", p.number)}${idRow("Positie", p.position)}${idRow("Voorkeursvoet", p.foot)}${idRow("Geboortedatum", p.birthdate ? parse(p.birthdate).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }) : "")}${idRow("Leeftijd", age != null ? age + " jaar" : "")}${idRow("Status", p.active === false ? "Niet meer actief" : "Actief")}</div></div></div>
     <div data-t="persoonlijk">${typeof contactsPanel === "function" ? contactsPanel(p) : ""}</div>`;
   const sc = (S.pscout || []).filter(x => x.player_id === p.id).sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -149,7 +127,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const spPos = [sp.p1, sp.p2, sp.p3].filter(Boolean), pitchPos = spPos.length ? spPos : fichePos ? [fichePos] : [], spAvg = scAvg(sp), ps11 = posOf(p);
   const big = (k, val, sub) => `<div class="spk"><small>${k}</small><b>${val ? esc(val) : "–"}</b>${sub ? `<span>${esc(sub)}</span>` : ""}</div>`;
   const note = (cls, t, txt) => txt ? `<div class="spn ${cls}"><h3>${t}</h3><p>${esc(txt)}</p></div>` : "";
-  const startblad = `<div class="sec panel startblad" data-t="overzicht"><div class="row" style="margin-bottom:14px"><h2 style="margin:0;margin-right:auto">Scoutingprofiel</h2><button class="btn small noprint${has ? " ghost" : ""}" type="button" id="spEdit">${has ? "Profiel aanpassen" : "Profiel invullen"}</button></div>
+  const startblad = `<div class="sec panel startblad" data-t="overzicht"><div class="row" style="margin-bottom:14px"><h2 style="margin:0;margin-right:auto">Scoutingprofiel</h2><button class="btn small noprint${has ? " ghost" : ""}" type="button" id="spEdit">Speler aanpassen</button></div>
     <div class="spgrid"><div class="pos11 ro sm" role="img" aria-label="Posities: ${esc(posTxt(ps11) || "nog niet ingevuld")}">${POS11.map(([n, ab, nm, x, y]) => `<span class="pp11 ${ps11.h === n ? "h" : ps11.n.includes(n) ? "n" : ""}" style="left:${x}%;top:${y}%" title="${n} · ${esc(nm)}"><b>${n}</b><small>${ab}</small></span>`).join("")}</div>
      <div class="spmain">
       <div class="spks">${big("Hoofdpositie", ps11.h ? ps11.h + " · " + posName(ps11.h) : sp.p1 || fichePos || String(p.position || "").replace(/^\d+\s*·\s*/, ""), ps11.n.length ? "ook " + ps11.n.join(", ") + (sp.ontw ? " · ontwikkelen naar " + sp.ontw : "") : sp.ontw ? "ontwikkelen naar " + sp.ontw : "")}${big("Leeftijd", age != null ? age + " jaar" : "", p.foot ? p.foot + "voetig" : "")}${big("Potentieel", sp.pot, sp.len ? sp.len + " cm" : "")}${big("Algemeen", spAvg != null ? f1(spAvg) : "", spAvg != null ? "op 10" : "")}</div>

@@ -162,13 +162,27 @@ function scoutForm(v, p, all) {
 
 /* ============ posities vergelijken: per ploeggroep eigen spelers (hoofd- en nevenpositie) naast de gescoute spelers van die U ============
    Ploegen A en B van dezelfde U vormen samen de IP-groep; C, D … staan apart. */
-const scLetter = t => { const m = String(t?.name || "").match(/U\s?\d+\s*([A-Za-z]+)\b/); return !m ? "" : m[1].length === 1 ? m[1].toUpperCase() : m[1].toLowerCase(); };
-function scGroups(teams) {
-  const G = new Map();
-  for (const t of teams) { const cat = isCat(t); if (!cat) continue; const l = scLetter(t), ip = !l || "AB".includes(l), k = cat + "|" + (ip ? "IP" : l);
-    if (!G.has(k)) G.set(k, { k, cat, ip, l: ip ? "" : l, teams: [] }); G.get(k).teams.push(t); }
-  for (const g of G.values()) { const ab = g.teams.filter(t => "AB".includes(scLetter(t)) && scLetter(t)); g.lbl = g.ip ? (ab.length ? g.cat + " IP" : g.cat) : g.cat + " " + g.l; g.sub = g.teams.map(teamLbl).join(" + "); }
-  return [...G.values()].sort((a, b) => (parseInt(a.cat.slice(1)) - parseInt(b.cat.slice(1))) || (a.ip ? -1 : b.ip ? 1 : a.l.localeCompare(b.l)));
+/* welke ploegen spelen samen (IP)? Uit de RBFA-kalender: zelfde dag, zelfde tegenstander (A tegen A, B tegen B). De beheerder bewaart het resultaat voor iedereen. */
+const scOppBase = o => String(o || "").toLowerCase().replace(/\s+\d[\d\s-]*$/, "").replace(/\s+[a-d]$/, "").replace(/[^a-z0-9]+/g, " ").trim();
+async function scDetectPairs(teams) {
+  let ev; const from = seasonNow().slice(0, 4) + "-07-01";
+  if (mode === "demo") ev = await db.list("events").catch(() => []);
+  else { const r = await sb.from("events").select("team_id,date,opponent").not("opponent", "is", null).gte("date", from); if (r.error) return null; ev = r.data || []; }
+  const M = new Map(); for (const e of ev) { const b = scOppBase(e.opponent); if (!b || !e.date) continue; if (!M.has(e.team_id)) M.set(e.team_id, new Map()); M.get(e.team_id).set(e.date, b); }
+  const pairs = [];
+  for (const a of teams) for (const b of teams) { if (a.id >= b.id || isCat(a) !== isCat(b) || !isCat(a)) continue; const A = M.get(a.id), B = M.get(b.id); if (!A || !B) continue;
+    let same = 0; for (const [d, o] of A) if (B.get(d) === o) same++; if (same >= 3 && same / Math.min(A.size, B.size) >= 0.4) pairs.push([a.id, b.id].sort()); }
+  return pairs;
+}
+/* groepen: elke ploeg apart, ploegen die samen spelen samen; plus per U een groep met alle ploegen */
+function scGroups(teams, pairs = []) {
+  const T = teams.filter(t => isCat(t)), par = new Map(T.map(t => [t.id, t.id])), f = x => par.get(x) === x ? x : (par.set(x, f(par.get(x))), par.get(x));
+  for (const [a, b] of pairs) if (par.has(a) && par.has(b)) par.set(f(a), f(b));
+  const by = new Map(); for (const t of T) { const r = f(t.id); if (!by.has(r)) by.set(r, []); by.get(r).push(t); }
+  const G = [...by.values()].map(ts => { ts.sort((a, b) => teamLbl(a).localeCompare(teamLbl(b), "nl", { numeric: true })); const cat = isCat(ts[0]);
+    const lbl = ts.length > 1 ? cat + " IP" : teamLbl(ts[0]).replace(/^OGV\s+/i, ""); return { k: "t|" + ts.map(t => t.id).join("+"), cat, lbl, sub: ts.length > 1 ? ts.map(teamLbl).join(" + ") + " · spelen samen" : "", teams: ts, ip: ts.length > 1 }; });
+  for (const cat of new Set(T.map(isCat))) { const ts = T.filter(t => isCat(t) === cat); if (ts.length > 1) G.push({ k: "u|" + cat, cat, lbl: "Heel " + cat, sub: ts.length + " ploegen samen", teams: ts, all: true }); }
+  return G.sort((a, b) => (parseInt(a.cat.slice(1)) - parseInt(b.cat.slice(1))) || (a.all ? -1 : b.all ? 1 : 0) || (b.ip ? 1 : 0) - (a.ip ? 1 : 0) || a.lbl.localeCompare(b.lbl, "nl", { numeric: true }));
 }
 let SC_OWN = null;
 route("scoutveld", { title: "Posities vergelijken", auth: true, render: async v => {
@@ -180,16 +194,20 @@ route("scoutveld", { title: "Posities vergelijken", auth: true, render: async v 
     let D = null, gm = null;
     if (canOwn) try { D = await isData(); gm = pfGroupMap(D.T.map(t => t.criteria || []).filter(c => c.length)); own = isRows(D, gm).filter(x => x.p.active !== false); teams = D.T; } catch (e) {}
     if (canExt) try { ext = (await db.list("scouting")).map(r => ({ id: r.id, ...r.data })); } catch (e) {}
-    SC_OWN = { t: Date.now(), own, teams, ext, D, gm }; }
+    let pairs = CLUB.settings?.scout?.pairs || [];
+    if (S.admin && teams.length) { const found = await scDetectPairs(teams).catch(() => null);
+      if (found && JSON.stringify(found) !== JSON.stringify(pairs)) { pairs = found; const ns = { ...(CLUB.settings || {}), scout: { ...(CLUB.settings?.scout || {}), pairs } };
+        try { if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm: CLUB.name, sh: CLUB.short, s: ns }); if (error) throw error; } CLUB.settings = ns; if (typeof rememberClub === "function") rememberClub(); } catch (e) {} } }
+    SC_OWN = { t: Date.now(), own, teams, ext, D, gm, pairs }; }
   scFieldDraw(v, canOwn, canExt);
 } });
 function scFieldDraw(v, canOwn, canExt) {
   const host = $("#scfv"); if (!host) return; const { own, teams, ext, D, gm } = SC_OWN;
-  let G = scGroups(teams); const cats = new Set(G.map(g => g.cat));
-  for (const c of new Set(ext.map(scCatOf).filter(Boolean))) if (!cats.has(c)) G.push({ k: c + "|IP", cat: c, ip: true, l: "", lbl: c, sub: "geen eigen ploeg", teams: [] });
-  G = G.sort((a, b) => (parseInt(a.cat.slice(1)) - parseInt(b.cat.slice(1))) || (a.ip ? -1 : b.ip ? 1 : a.l.localeCompare(b.l)));
+  let G = scGroups(teams, SC_OWN.pairs || []); const cats = new Set(G.map(g => g.cat));
+  for (const c of new Set(ext.map(scCatOf).filter(Boolean))) if (!cats.has(c)) G.push({ k: "u|" + c, cat: c, lbl: c, sub: "geen eigen ploeg", teams: [] });
+  G = G.sort((a, b) => parseInt(a.cat.slice(1)) - parseInt(b.cat.slice(1)));
   if (!G.length) { host.innerHTML = `<div class="empty"><b>Nog niets te vergelijken</b>Geef je eigen spelers posities, en vul bij gescoute spelers hun geboortedatum of U in.</div>`; return; }
-  if (scF.fpick) { const pk = scF.fpick; scF.fpick = null; const g = G.find(g => g.cat === pk.cat && g.ip) || G.find(g => g.cat === pk.cat); if (g) scF.fgrp = g.k; if (pk.pos) scF.fpos = pk.pos; scF.fhl = pk.id; }
+  if (scF.fpick) { const pk = scF.fpick; scF.fpick = null; const g = G.find(g => g.cat === pk.cat && g.all) || G.find(g => g.cat === pk.cat); if (g) scF.fgrp = g.k; if (pk.pos) scF.fpos = pk.pos; scF.fhl = pk.id; }
   if (!G.some(g => g.k === scF.fgrp)) { const mine = S.team ? G.find(g => g.teams.some(t => t.id === S.team.id)) : null; scF.fgrp = (mine || G[0]).k; }
   const g = G.find(x => x.k === scF.fgrp), tid = new Set(g.teams.map(t => t.id));
   const oc = own.filter(x => tid.has(x.p.team_id)), ec = ext.filter(p => scCatOf(p) === g.cat), o10 = x => x.tot == null ? null : x.tot * 2;
@@ -202,13 +220,13 @@ function scFieldDraw(v, canOwn, canExt) {
   const LV = { goed: "Hoog potentieel", mid: "Gemiddeld potentieel", laag: "Laag potentieel", leeg: "Niemand", onbekend: "Potentieel niet ingevuld" };
   const potBar = i => i >= 0 ? `<span class="isc-pot" title="Potentieel: ${esc(EV_POT[i])}">${EV_POT.map((_, k) => `<i${k <= i ? " class=on" : ""}></i>`).join("")}<span>${esc(EV_POT[i])}</span></span>` : `<span class="cmpnone">potentieel niet ingevuld</span>`;
   const score = val => `<span class="cmps${val == null ? " none" : ""}" style="--c:${val == null ? "var(--dim)" : scCol(val)}">${val == null ? "–" : f1(val)}<small>/10</small></span>`;
-  const ownRow = (x, alt) => `<button type="button" class="cmprow${alt ? " alt" : ""}" data-own="${x.p.id}"><span class="cmpav">${esc((x.p.first_name || "?")[0])}</span><span class="cmpn"><b>${esc(x.name)}</b><small>${esc([x.team ? teamLbl(x.team) : "", x.age != null ? x.age + " jaar" : "", alt && x.ps.h ? "hoofdpositie " + x.ps.h : ""].filter(Boolean).join(" · "))}</small>${potBar(x.potI)}</span>${score(o10(x))}<span class="cmpgo" aria-hidden="true">›</span></button>`;
+  const ownRow = (x, alt) => `<button type="button" class="cmprow${alt ? " alt" : ""}" data-own="${x.p.id}"><span class="cmpav">${esc((x.p.first_name || "?")[0])}</span><span class="cmpn"><b>${esc(x.name)}</b><small>${esc([x.team ? teamLbl(x.team) : "", x.age != null ? x.age + " jaar" : ""].filter(Boolean).join(" · "))}</small><span class="cmptags"><span class="cmprole${alt ? " alt" : ""}">${alt ? "kan hier ook · hoofdpositie " + (x.ps.h || "?") : "hoofdpositie"}</span>${potBar(x.potI)}</span></span>${score(o10(x))}<span class="cmpgo" aria-hidden="true">›</span></button>`;
   const extRow = (p, alt) => { const a = scAvg(p), better = a != null && sel.bestOwn >= 0 && a > sel.bestOwn;
-    return `<a class="cmprow ext${alt ? " alt" : ""}${scF.fhl === p.id ? " hl" : ""}" href="#/scouting/${esc(p.id)}"><span class="cmpav ext">${esc((p.naam || "?")[0])}</span><span class="cmpn"><b>${esc(p.naam)}${better ? ' <span class="cmpup">▲ beter dan eigen</span>' : ""}</b><small>${esc([p.club, scAge(p) != null ? scAge(p) + " jaar" : "", p.stat || "Nieuw"].filter(Boolean).join(" · "))}</small></span>${score(a)}<span class="cmpgo" aria-hidden="true">›</span></a>`; };
-  const block = (label, main, alt, row, none) => `<div class="cmpblk"><div class="cmpbh"><b>${label}</b><span class="cmpcnt"><em>${main.length}</em> hoofd</span><span class="cmpcnt soft"><em>${alt.length}</em> neven</span></div>
-    ${main.length ? main.map(x => row(x)).join("") : `<p class="cmpempty">${none}</p>`}${alt.length ? `<div class="cmpalt">Kan hier ook spelen</div>${alt.map(x => row(x, true)).join("")}` : ""}</div>`;
+    return `<a class="cmprow ext${alt ? " alt" : ""}${scF.fhl === p.id ? " hl" : ""}" href="#/scouting/${esc(p.id)}"><span class="cmpav ext">${esc((p.naam || "?")[0])}</span><span class="cmpn"><b>${esc(p.naam)}${better ? ' <span class="cmpup">▲ beter dan eigen</span>' : ""}</b><small>${esc([p.club, scAge(p) != null ? scAge(p) + " jaar" : "", p.stat || "Nieuw"].filter(Boolean).join(" · "))}</small><span class="cmptags"><span class="cmprole${alt ? " alt" : ""}">${alt ? "kan hier ook" : "hoofdpositie"}</span></span></span>${score(a)}<span class="cmpgo" aria-hidden="true">›</span></a>`; };
+  const block = (label, main, alt, row, none) => `<div class="cmpblk"><div class="cmpbh"><b>${label}</b><small>${main.length + alt.length ? [main.length ? `${main.length} met deze hoofdpositie` : "", alt.length ? `${alt.length} die hier ook kan` : ""].filter(Boolean).join(" · ") : ""}</small></div>
+    ${main.length || alt.length ? main.map(x => row(x)).join("") + alt.map(x => row(x, true)).join("") : `<p class="cmpempty">${none}</p>`}</div>`;
   const tab = scF.ftab === "tabel" ? "tabel" : "veld";
-  host.innerHTML = `<div class="cmptop"><label class="cmpsel"><span>Ploeg</span><select id="cmpg">${[...new Set(G.map(x => x.cat))].map(c => `<optgroup label="${c}">${G.filter(x => x.cat === c).map(x => `<option value="${esc(x.k)}"${x.k === g.k ? " selected" : ""}>${esc(x.lbl)}${x.sub && x.sub !== x.lbl ? " — " + esc(x.sub) : ""}</option>`).join("")}</optgroup>`).join("")}</select></label>
+  host.innerHTML = `<div class="cmptop"><label class="cmpsel"><span>Ploeg</span><select id="cmpg">${[...new Set(G.map(x => x.cat))].map(c => `<optgroup label="${c}">${G.filter(x => x.cat === c).map(x => `<option value="${esc(x.k)}"${x.k === g.k ? " selected" : ""}>${esc(x.lbl)}${x.sub ? " — " + esc(x.sub) : ""}</option>`).join("")}</optgroup>`).join("")}</select></label>
       <div class="cmpstats"><span><b>${oc.length}</b>eigen spelers</span>${canExt ? `<span><b>${ec.length}</b>gescout in ${esc(g.cat)}</span>` : ""}<span class="${empty.length ? "bad" : ""}"><b>${empty.length}</b>posities zonder hoofdspeler</span><span class="${low.length ? "warn" : ""}"><b>${low.length}</b>met laag potentieel</span></div></div>
     ${empty.length || low.length || noPos.length ? `<div class="cmpgaps">${empty.length || low.length ? `<b>Hier zoeken</b>${[...empty, ...low].map(x => `<button type="button" class="cmpgap ${x.lvl}" data-fpos="${x.n}">${x.n} ${esc(pn(x.n)[1])}<small>${x.lvl === "leeg" ? "niemand" : "laag potentieel"}</small></button>`).join("")}` : ""}${noPos.length ? `<span class="cmpnopos">${noPos.length} ${noPos.length === 1 ? "speler heeft" : "spelers hebben"} nog geen hoofdpositie</span>` : ""}</div>` : ""}
     <div class="cmpwrap">

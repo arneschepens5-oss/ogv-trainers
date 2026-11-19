@@ -2424,3 +2424,13 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 .cmpnote{margin:14px 0 0;font-size:12px;color:var(--dim)}
 .cmptbl td b{font-weight:800}
 @media (max-width:600px){.cmpstats{grid-template-columns:1fr 1fr}.cmpsel{flex-basis:100%}}
+/* v161: posities vergelijken — één lijst per positie met duidelijke labels */
+.cmpbh{flex-direction:column;align-items:flex-start;gap:1px}.cmpbh small{font-size:12.5px;color:var(--muted);font-weight:600}
+.cmprow.alt{background:var(--card2);border:0}
+.cmptags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px}
+.cmprole{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--ink);color:var(--card)}
+.cmprole.alt{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 1px var(--line2)}
+.pfsec{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--card2)}
+.pfsec>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;flex-direction:column;gap:2px}.pfsec>summary::-webkit-details-marker{display:none}
+.pfsec>summary small{color:var(--muted);font-size:12.5px}.pfsec>summary b::after{content:" ›";color:var(--dim)}.pfsec[open]>summary b::after{content:" ⌄"}
+.pfsec>.fields{padding:0 14px 14px}
