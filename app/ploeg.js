@@ -103,11 +103,45 @@ route("spelers", { title: "Spelers", auth: true, team: true, render: v => {
     extra: typeof absTag === "function" ? absTag(p.id) : "", stats: [[s.trTot ? s.trPct + "%" : "–", "aanwezig"], [s.minutes, "minuten"], [f1(s.rating), "cijfer"]] }); };
   const lines = pLines(ps);
   v.innerHTML = head("Spelers", `${ps.length} spelers in ${esc(S.team.name)}`, `<button class="btn ghost" type="button" id="pcont">${IC.phone}Contacten</button><button class="btn ghost" type="button" id="plinks">${IC.link}Ouderlinks</button><button class="btn ghost" type="button" id="imp">${IC.out}Importeren</button><button class="btn ghost" type="button" id="bulk">Lijst plakken</button><button class="btn" type="button" id="addP">${IC.plus}Speler</button>`) +
-    (ps.length ? lines.map(([l, xs]) => `<section class="pgrp">${lines.length > 1 ? `<h2>${esc(l)}<small>${xs.length}</small></h2>` : ""}<div class="pgrid">${xs.map(card).join("")}</div></section>`).join("") : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
-    (old.length ? `<section class="pgrp"><h2>Niet meer actief<small>${old.length}</small></h2><div class="pgrid dim">${old.map(card).join("")}</div></section>` : "");
+    (ps.length ? `<div class="plview" role="tablist" aria-label="Weergave"><button type="button" role="tab" data-plv="veld" aria-selected="${PLV === "veld"}">${IC.field}Op het veld</button><button type="button" role="tab" data-plv="lijst" aria-selected="${PLV !== "veld"}">${IC.ppl}Lijst</button></div>` : "") +
+    (ps.length && PLV === "veld" ? plField(ps) : (ps.length ? lines.map(([l, xs]) => `<section class="pgrp">${lines.length > 1 ? `<h2>${esc(l)}<small>${xs.length}</small></h2>` : ""}<div class="pgrid">${xs.map(card).join("")}</div></section>`).join("") : `<div class="empty"><b>Nog geen spelers</b>Voeg ze één voor één toe, of plak in één keer een lijst met namen uit PSD of Excel.</div>`) +
+    (old.length ? `<section class="pgrp"><h2>Niet meer actief<small>${old.length}</small></h2><div class="pgrid dim">${old.map(card).join("")}</div></section>` : ""));
   $("#addP").onclick = () => playerForm(); $("#bulk").onclick = bulkForm; $("#plinks").onclick = parentLinks; $("#pcont").onclick = teamContacts; $("#imp").onclick = () => importPlayers(false);
   $$("[data-go]", v).forEach(x => x.onclick = () => go(x.dataset.go));
+  $$("[data-plv]", v).forEach(b => b.onclick = () => { PLV = b.dataset.plv; try { localStorage.setItem("ogv-plv", PLV); } catch (e) {} render(); });
+  if (PLV === "veld" && ps.length) plFieldBind(v, ps);
 } });
+/* ============ spelers op het veld: wie staat waar, posities aanduiden met twee tikken ============ */
+let PLV = (() => { try { return localStorage.getItem("ogv-plv") || "veld"; } catch (e) { return "veld"; } })(), PL_PICK = null;
+function plField(ps) {
+  const at = n => ps.filter(p => posOf(p).h === n), alt = n => ps.filter(p => posOf(p).h !== n && posOf(p).n.includes(n)), none = ps.filter(p => !posOf(p).h);
+  const chip = p => `<button type="button" class="plchip${PL_PICK === p.id ? " pick" : ""}" data-plp="${p.id}" title="${esc(pname(p))}">${p.photo ? `<img data-pp="${esc(p.photo)}" alt="">` : `<b>${p.number ?? esc((p.first_name || "?")[0])}</b>`}<span>${esc(p.first_name)}</span></button>`;
+  const pk = PL_PICK && ps.find(p => p.id === PL_PICK);
+  return `<div class="plwrap"><div class="plpitch${pk ? " picking" : ""}">${POS11.map(([n, ab, nm, x, y]) => { const xs = at(n), al = alt(n);
+      return `<div class="plpos${xs.length ? "" : " empty"}" style="left:${x}%;top:${y}%"><button type="button" class="pllbl" data-plpos="${n}" title="${n} · ${esc(nm)}">${n} ${ab}</button><div class="plchips">${xs.map(chip).join("")}</div>${al.length ? `<small class="plalt" title="Kan hier ook: ${esc(al.map(pname).join(", "))}">+${al.length} ook</small>` : ""}</div>`; }).join("")}</div>
+    <aside class="plside panel">${pk ? `<h3>${esc(pname(pk))} verplaatsen</h3><p class="hint" style="margin:0 0 10px">Tik op het label van een positie op het veld, bv. <b>8 CM</b>. Zijn oude positie wordt een nevenpositie.</p><button class="btn ghost small" type="button" data-plcancel>Annuleren</button>`
+      : `<h3>Posities aanduiden</h3><p class="hint" style="margin:0 0 10px">Tik op een speler om zijn dossier te openen. Om iemand te verplaatsen: kies hem hieronder, of houd hem op het veld even ingedrukt. Tik daarna op een positie.</p>
+      <label class="plmove"><span>Speler verplaatsen</span><select data-plsel><option value="">Kies een speler…</option>${ps.map(p => `<option value="${p.id}">${esc(pname(p))}${posOf(p).h ? " · nu " + posOf(p).h + " " + posAb(posOf(p).h) : ""}</option>`).join("")}</select></label>`}
+      ${none.length ? `<h4>Nog geen hoofdpositie <small>${none.length}</small></h4><div class="plnone">${none.map(chip).join("")}</div>` : ""}</aside></div>`;
+}
+function plFieldBind(v, ps) {
+  if (typeof hydratePhotos === "function") hydratePhotos(v);
+  let t = null, long = false;
+  $$("[data-plp]", v).forEach(b => {
+    b.onpointerdown = () => { long = false; clearTimeout(t); t = setTimeout(() => { long = true; PL_PICK = b.dataset.plp; render(); }, 450); };
+    b.onpointerup = b.onpointerleave = () => clearTimeout(t);
+    b.oncontextmenu = e => e.preventDefault();
+    b.onclick = () => { if (long) return; if (PL_PICK) { PL_PICK = b.dataset.plp; render(); return; } go((isDossierOff() ? "#/speler/" : "#/dossier/") + b.dataset.plp); }; });
+  const sel = $("[data-plsel]", v); if (sel) sel.onchange = () => { PL_PICK = sel.value || null; render(); };
+  const c = $("[data-plcancel]", v); if (c) c.onclick = () => { PL_PICK = null; render(); };
+  $$("[data-plpos]", v).forEach(b => b.onclick = async () => { if (!PL_PICK) { toast("Kies eerst een speler om te verplaatsen."); return; }
+    const p = S.players.find(x => x.id === PL_PICK), n = +b.dataset.plpos; if (!p) return; const ps0 = posOf(p), old = ps0.h;
+    const o = { ...(p.scout && typeof p.scout === "object" ? p.scout : {}) }; o.h = n; o.n = [...new Set([...(ps0.n || []), ...(old && old !== n ? [old] : [])])].filter(x => x !== n);
+    delete o.p1; delete o.p2; delete o.p3; [...new Set([o.h, ...o.n].map(posScName))].slice(0, 3).forEach((nm, i) => o["p" + (i + 1)] = nm);
+    const row = { ...p, scout: o, position: posLabel(n) }; PL_PICK = null;
+    await safe(async () => { await db.save("players", row); const i = S.players.findIndex(x => x.id === row.id); if (i >= 0) S.players[i] = row; render(); }, `${p.first_name} staat nu op ${n} ${posName(n)}${old && old !== n ? " (" + old + " wordt nevenpositie)" : ""}.`); });
+}
+
 function playerForm(p, opts = {}) {
   const n = !p; p = p || { first_name: "", last_name: "", active: true };
   const ps0 = posOf(p);

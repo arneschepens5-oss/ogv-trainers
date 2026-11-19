@@ -18,6 +18,7 @@ function dosChart(rows) {
 }
 
 const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["groei", "Groei"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
+const DOS_IC = { overzicht: "home", persoonlijk: "phone", groei: "up", trainingen: "check", wedstrijden: "ball", evaluaties: "star", scouting: "scout" };
 let dosTab = "overzicht", DOS_EVM = 0, DOS_SEAS = "";
 /* van waar kwam je? (bv. Interne scouting): dan brengt "terug" je daar opnieuw naartoe */
 let dosBack = null;
@@ -177,7 +178,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     <div class="kpi"><small>Wedstrijden</small><b>${s.matches}</b><span>${s.basis}× basis${s.matches ? " (" + pct(s.basis, s.matches) + "%)" : ""}</span></div>
     <div class="kpi"><small>Gemiddeld cijfer</small><b>${f1(s.rating)}</b><span>ploeg ${f1(teamRate)}${s.motm ? " · " + s.motm + "× man van de match" : ""}</span></div></div>
 
-  <div class="dtabs noprint" role="tablist" aria-label="Onderdelen van het dossier">${DOS_TABS.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === dosTab}">${l}</button>`).join("")}</div>
+  <div class="dtabs noprint" role="tablist" aria-label="Onderdelen van het dossier">${DOS_TABS.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === dosTab}">${IC[DOS_IC[k]] || ""}<span>${l}</span></button>`).join("")}</div>
   ${startblad}
   ${evSum}
   <div class="sec panel" data-t="overzicht" id="dosPf"></div>

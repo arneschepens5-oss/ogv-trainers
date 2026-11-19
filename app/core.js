@@ -547,7 +547,7 @@ const NAV = [
 /* het onderdeel van een pagina (voor de tabbladen en het actieve menu-item) */
 const SUBNAV = Object.fromEntries(NAV.filter(g => g.g).map(g => [g.g, g.items.map(([k, l]) => [k, l])]));
 const SUBNAV_OF = Object.fromEntries(Object.entries(SUBNAV).flatMap(([g, l]) => l.map(([k]) => [k, g])));
-const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
+const ALIAS = { activiteit: "kalender", verslag: "uitslagen", speler: "spelers", dossier: "spelers", training: "trainingen", wedstrijd: "kalender", instellingen: "ploeg-instellingen", oefening: "bibliotheek", oefeningen: "bibliotheek", sjabloon: "trainingen", sjablonen: "bibliotheek", zonekaart: "opslag" };
 function cur() { const h = location.hash.replace(/^#\/?/, "").split("/"); return { page: h[0] || "start", id: decodeURIComponent(h[1] || ""), sub: h[2] || "" }; }
 function go(h) { if (location.hash === h) render(); else location.hash = h; }
 let teardown = null;
