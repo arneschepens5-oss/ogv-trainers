@@ -116,8 +116,7 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
     $$("[data-x]", $("#isA")).forEach(b => b.onclick = () => { const k = b.dataset.x; IS[k] = ""; if (k === "ax") IS.axmin = ""; syncF(); draw(); });
     if ($("#isC")) $("#isC").onclick = () => { Object.assign(IS, { ...IS_DEF, sort: IS.sort, team: IS.team, open: IS.open }); $("#isQ").value = ""; syncF(); draw(); };
     $$("[data-open]", $("#isL")).forEach(el => el.onclick = async () => { const x = all.find(y => y.p.id === el.dataset.open);
-      if (!isOwn(el.dataset.t)) { isFiche(x, all, gm, D); return; } IS.scroll = window.scrollY; dosBack = { href: "#/intscouting", label: "Interne scouting" };
-      if (S.team?.id !== el.dataset.t) { if (!DOS_PREV) DOS_PREV = S.team?.id || null; await loadTeam(el.dataset.t); } dosTab = "overzicht"; go("#/dossier/" + el.dataset.open); });
+      isFiche(x, all, gm, D, isOwn(el.dataset.t)); });
     if (typeof hydratePhotos === "function") hydratePhotos(v);
   };
   const syncF = () => { $$("[data-f]", v).forEach(s => s.value = IS[s.dataset.f] ?? ""); $$("[data-fp]", v).forEach(b => b.classList.toggle("h", String(IS.pos) === b.dataset.fp)); };
@@ -134,7 +133,7 @@ route("intscouting", { title: "Interne scouting", auth: true, render: async v =>
 } });
 
 /* scoutingfiche van een speler van een andere ploeg: alleen-lezen, zonder contactgegevens, notities of foto */
-function isFiche(x, all, gm, D) {
+function isFiche(x, all, gm, D, own = false) {
   if (!x) return; const sp = x.sp, m = IS_MAT[x.p.maturity], pi = x.potI;
   const k = SC_COMP.map((c, i) => [c, sp["k" + i]]).filter(([, n]) => scNum(n)), txt = t => esc(t).replace(/\n/g, "<br>");
   const d = dialog(`<form class="isf" onsubmit="return false"><div class="isf-head"><span class="isc-av"><b>${esc((x.p.first_name || "?").slice(0, 1).toUpperCase())}</b>${x.p.number != null ? `<i>${x.p.number}</i>` : ""}</span>
@@ -147,8 +146,10 @@ function isFiche(x, all, gm, D) {
     ${sp.sterk ? `<h3 class="dosh">Sterktes</h3><p>${txt(sp.sterk)}</p>` : ""}${sp.werk ? `<h3 class="dosh">Werkpunten</h3><p>${txt(sp.werk)}</p>` : ""}${sp.ctx ? `<h3 class="dosh">Extra info</h3><p>${txt(sp.ctx)}</p>` : ""}
     ${x.msL.some(q => q.height_cm != null) ? `<h3 class="dosh">Lengte</h3>${gChart(x.msL, "height_cm", "cm", "#FFD100")}` : ""}
     ${x.repsL.length ? `<h3 class="dosh">Scoutingrapporten</h3><div class="dosnotes">${x.repsL.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => `<div class="dosnote"><div style="flex:1"><div class="dosmeta"><b>${esc(dShort(r.date))}</b>${r.title ? " · " + esc(r.title) : ""}${r.by_name ? ` <small class="muted">· ${esc(r.by_name)}</small>` : ""}</div>${r.notes ? `<p>${txt(r.notes)}</p>` : ""}${r.strengths ? `<p><b>Sterk:</b> ${esc(r.strengths)}</p>` : ""}${r.workpoints ? `<p><b>Werkpunt:</b> ${esc(r.workpoints)}</p>` : ""}</div></div>`).join("")}</div>` : ""}
-    <p class="hint" style="margin:14px 0 0">Scoutingfiche van een speler van een andere ploeg. Contactgegevens, notities en de antwoorden op de open vragen zie je enkel als trainer van die ploeg.</p>
-    <div class="row"><span class="spacer"></span><button class="btn" type="button" data-close>Sluiten</button></div></form>`, "xl");
+    <p class="hint" style="margin:14px 0 0">${own ? "Contactgegevens, notities, evaluaties en rapporten staan in het volledige dossier." : "Scoutingfiche van een speler van een andere ploeg. Contactgegevens, notities en de antwoorden op de open vragen zie je enkel als trainer van die ploeg."}</p>
+    <div class="row"><span class="spacer"></span>${own ? `<button class="btn ghost" type="button" id="isfDos">${IC.book || ""}Volledig dossier</button>` : ""}<button class="btn" type="button" data-close>Sluiten</button></div></form>`, "xl");
+  if (own) $("#isfDos", d).onclick = async () => { d.close(); IS.scroll = window.scrollY; dosBack = { href: "#/intscouting", label: "Interne scouting" };
+    if (S.team?.id !== x.p.team_id) { if (!DOS_PREV) DOS_PREV = S.team?.id || null; await loadTeam(x.p.team_id); } dosTab = "overzicht"; go("#/dossier/" + x.p.id); };
   const others = all.filter(o => o.last && o.p.id !== x.p.id).sort((a, b) => (a.cat === x.cat ? 0 : 1) - (b.cat === x.cat ? 0 : 1) || a.name.localeCompare(b.name, "nl")).map(o => ({ id: o.p.id, name: o.name, team: o.team ? teamLbl(o.team) : "", list: o.list }));
   pfMount($("#isfPf", d), { p: x.p, list: x.list, gm, others, teamAvg: e => e.key && e.key[0] === "c" ? pfAvgScores((D.E || []).filter(q => q.team_id === x.p.team_id && q.moment === e.moment)) : null });
   return d;

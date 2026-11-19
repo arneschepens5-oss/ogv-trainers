@@ -65,27 +65,57 @@ const scStats = (st = CLUB.settings) => { const c = st?.scout?.stat; return Arra
 const scAvg = p => { const k = scComp().map(c => p[c.k]).filter(scNum); return k.length ? k.reduce((a, b) => a + b, 0) / k.length : null; };
 const scNiv = a => a == null ? "" : a >= 8 ? "Top talent" : a >= 7 ? "Interessant" : a >= 6 ? "Opvolgen" : "Onder niveau";
 const scCol = v => `hsl(${Math.round((v - 1) * 13.3)},72%,46%)`;
-let scTab = "db", scF = { q: "", p: "", s: "", n: "" };
+let scTab = "db", scF = { q: "", pos: [], stat: [], niv: [], voet: [], amin: "", amax: "", min: {}, sort: "score", open: false };
+const SC_NIV = ["Top talent", "Interessant", "Opvolgen", "Onder niveau"];
+const scAge = p => p.geb ? Math.floor((Date.now() - new Date(p.geb)) / 31557600000) : null;
+/* hoeveel filters staan aan (voor de knop en de lijst met actieve filters) */
+const scActive = () => [...scF.pos.map(x => ["pos", x, (SC_POS[x] || [x])[0]]), ...scF.stat.map(x => ["stat", x, x]), ...scF.niv.map(x => ["niv", x, x]), ...scF.voet.map(x => ["voet", x, x + " voet"]),
+  ...(scF.amin || scF.amax ? [["age", "", scF.amin && scF.amax ? `${scF.amin}–${scF.amax} jaar` : scF.amin ? `vanaf ${scF.amin} jaar` : `tot ${scF.amax} jaar`]] : []),
+  ...Object.entries(scF.min).filter(([, v]) => v).map(([k, v]) => ["min", k, `${(scComp().find(c => c.k === k) || {}).s || k} ${v}+`])];
 route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
   if (!mag("scouting")) { v.innerHTML = head("Scoutingsdatabase", "") + `<div class="empty"><b>Geen toegang</b>De scoutingsdatabase is enkel voor wie daar het recht voor kreeg. Vraag het aan de beheerder van de club.</div>`; return; }
   v.innerHTML = head("Scoutingsdatabase", "Laden…"); const rows = await db.list("scouting"); const all = rows.map(r => ({ id: r.id, created_by: r.created_by, ...r.data }));
   if (id) { scoutForm(v, all.find(x => x.id === id) || null, all); return; }
-  const list = all.filter(p => { const a = scAvg(p); return (!scF.q || (p.naam + " " + p.club).toLowerCase().includes(scF.q.toLowerCase())) && (!scF.p || [p.p1, p.p2, p.p3].includes(scF.p)) && (!scF.s || p.stat === scF.s) && (!scF.n || scNiv(a) === scF.n); })
-    .sort((a, b) => (scAvg(b) ?? -1) - (scAvg(a) ?? -1) || (b.ts || 0) - (a.ts || 0));
+  const list = all.filter(p => { const a = scAvg(p), age = scAge(p), pos = [p.p1, p.p2, p.p3];
+    return (!scF.q || [p.naam, p.club, p.sterk, p.werk, p.ctx, p.bron, p.scout].join(" ").toLowerCase().includes(scF.q.toLowerCase()))
+      && (!scF.pos.length || scF.pos.some(x => pos.includes(x))) && (!scF.stat.length || scF.stat.includes(p.stat || "Nieuw")) && (!scF.niv.length || scF.niv.includes(scNiv(a)))
+      && (!scF.voet.length || scF.voet.includes(p.voet)) && (!scF.amin || (age != null && age >= +scF.amin)) && (!scF.amax || (age != null && age <= +scF.amax))
+      && Object.entries(scF.min).every(([k, v]) => !v || (scNum(p[k]) && p[k] >= +v)); })
+    .sort(scF.sort === "naam" ? (a, b) => String(a.naam).localeCompare(String(b.naam), "nl") : scF.sort === "nieuw" ? (a, b) => String(b.dat || "").localeCompare(String(a.dat || "")) || (b.ts || 0) - (a.ts || 0)
+      : scF.sort === "jong" ? (a, b) => (scAge(a) ?? 99) - (scAge(b) ?? 99) : scF.sort.startsWith("k") ? (a, b) => (b[scF.sort] ?? -1) - (a[scF.sort] ?? -1) : (a, b) => (scAvg(b) ?? -1) - (scAvg(a) ?? -1) || (b.ts || 0) - (a.ts || 0));
+  const act = scActive(), chip = (k, x, l, on) => `<button type="button" class="scchip" data-tg="${k}" data-val="${esc(x)}" aria-pressed="${on}">${esc(l)}</button>`;
   const sc5 = all.map(scAvg).filter(x => x != null);
   v.innerHTML = head("Scoutingsdatabase", "Eén gedeelde database voor alle trainers. Bevat gegevens van minderjarigen: deel ze enkel binnen de club.", `<button class="btn ghost" type="button" id="exp">${IC.dl}Excel</button><a class="btn" href="#/scouting/nieuw">${IC.plus}Nieuwe speler</a>`) +
   `<div class="kpis"><div class="kpi" style="background:var(--yellow);color:#000;border-color:var(--yellow)"><small style="color:#000">Spelers</small><b>${all.length}</b></div><div class="kpi"><small>Top talent</small><b>${all.filter(p => scNiv(scAvg(p)) === "Top talent").length}</b></div><div class="kpi"><small>Gemiddeld cijfer</small><b>${sc5.length ? f1(avg(sc5)) : "–"}</b></div><div class="kpi"><small>Nieuw</small><b>${all.filter(p => p.stat === "Nieuw").length}</b></div></div>
-  <div class="fields sec scflt"><input id="fq" type="search" placeholder="Zoek op naam of club" value="${esc(scF.q)}"><select id="fp"><option value="">Positie</option>${Object.keys(SC_POS).map(x => `<option${scF.p === x ? " selected" : ""}>${x}</option>`).join("")}</select>
-    <select id="fs"><option value="">Status</option>${scStats().map(x => `<option${scF.s === x ? " selected" : ""}>${esc(x)}</option>`).join("")}</select><select id="fn"><option value="">Niveau</option>${["Top talent", "Interessant", "Opvolgen", "Onder niveau"].map(x => `<option${scF.n === x ? " selected" : ""}>${x}</option>`).join("")}</select></div>
+  <div class="scbar sec"><span class="scsrch">${IC.scout || ""}<input id="fq" type="search" placeholder="Zoek op naam, club, notitie of scout" value="${esc(scF.q)}" autocomplete="off"></span>
+    <button class="btn ${scF.open ? "" : "ghost"}" type="button" id="fo" aria-expanded="${scF.open}">Filters${act.length ? ` <span class="scn">${act.length}</span>` : ""}</button>
+    <select id="fsort" aria-label="Sorteren">${[["score", "Hoogste cijfer"], ["nieuw", "Laatst gescout"], ["naam", "Naam"], ["jong", "Jongste eerst"], ...scComp().map(c => [c.k, "Beste " + (c.s || c.n).toLowerCase()])].map(([k, l]) => `<option value="${k}"${scF.sort === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+  ${scF.open ? `<div class="scpanel panel">
+    <div class="scgrp"><h4>Positie <small>meerdere mogelijk</small></h4><div class="scchips">${Object.keys(SC_POS).map(x => chip("pos", x, (SC_POS[x] || [x])[0] + " · " + x, scF.pos.includes(x))).join("")}</div></div>
+    <div class="scgrp"><h4>Minimum per criterium</h4><div class="scmins">${scComp().map(c => `<div class="scmin"><span>${esc(c.n)}</span><span class="scseg" role="group" aria-label="${esc(c.n)}">${["", 6, 7, 8, 9].map(v => `<button type="button" data-min="${c.k}" data-v="${v}" aria-pressed="${String(scF.min[c.k] || "") === String(v)}">${v ? v + "+" : "alle"}</button>`).join("")}</span></div>`).join("")}</div></div>
+    <div class="scrow3">
+      <div class="scgrp"><h4>Leeftijd</h4><div class="scage"><input id="famin" type="number" min="5" max="25" inputmode="numeric" placeholder="van" value="${esc(scF.amin)}" aria-label="Leeftijd vanaf"><span>tot</span><input id="famax" type="number" min="5" max="25" inputmode="numeric" placeholder="tot" value="${esc(scF.amax)}" aria-label="Leeftijd tot"><span>jaar</span></div></div>
+      <div class="scgrp"><h4>Niveau</h4><div class="scchips">${SC_NIV.map(x => chip("niv", x, x, scF.niv.includes(x))).join("")}</div></div>
+      <div class="scgrp"><h4>Voorkeursvoet</h4><div class="scchips">${["Rechts", "Links", "Beide"].map(x => chip("voet", x, x, scF.voet.includes(x))).join("")}</div></div></div>
+    <div class="scgrp"><h4>Status</h4><div class="scchips">${scStats().map(x => chip("stat", x, x, scF.stat.includes(x))).join("")}</div></div>
+  </div>` : ""}
+  ${act.length ? `<div class="scact">${act.map(([k, x, l]) => `<button type="button" class="scx" data-rm="${k}" data-val="${esc(x)}">${esc(l)} <span aria-hidden="true">×</span></button>`).join("")}<button class="link" type="button" id="fclr">Alles wissen</button></div>` : ""}
   <p class="hint">${list.length} getoond</p>
   ${list.length ? `<div class="grid3">${list.map(p => { const a = scAvg(p), age = p.geb ? Math.floor((Date.now() - new Date(p.geb)) / 31557600000) : "";
     return `<a class="sc-card" href="#/scouting/${esc(p.id)}"><div class="hd"><span class="bg">${f1(a)}</span><span style="min-width:0"><b style="display:block;font-weight:800;font-stretch:112%;font-size:19px">${esc(p.naam)}</b><small class="muted">${esc([p.club, age ? age + " jaar" : "", p.voet ? p.voet + " voet" : ""].filter(Boolean).join(" · "))}</small>
       <span class="chips" style="margin-top:6px">${[p.p1, p.p2, p.p3].filter(Boolean).map(x => `<span class="pill g">${esc((SC_POS[x] || [x])[0])}</span>`).join("")}${a != null ? `<span class="pill ${a >= 8 ? "w" : "g"}">${scNiv(a)}</span>` : ""}</span></span></div>
       ${scComp().map(c => { const val = p[c.k]; return `<div class="mbar"><span>${esc(c.s || c.n)}</span><span class="b"><i style="width:${scNum(val) ? val * 10 : 0}%;background:${scNum(val) ? scCol(val) : "transparent"}"></i></span><b style="color:var(--ink);text-align:right">${scNum(val) ? f1(val) : "–"}</b></div>`; }).join("")}
       <div class="row hint"><span class="pill w">${esc(p.stat || "Nieuw")}</span><span class="spacer"></span>${esc(p.scout || "")}${p.dat ? " · " + esc(p.dat) : ""}</div></a>`; }).join("")}</div>`
-    : `<div class="empty"><b>Nog geen spelers</b>Voeg de eerste gescoute speler toe.<br><a class="btn" href="#/scouting/nieuw">Nieuwe speler</a></div>`}`;
-  const f = (sel, k) => $(sel).oninput = e => { scF[k] = e.target.value; render(); }; f("#fq", "q"); f("#fp", "p"); f("#fs", "s"); f("#fn", "n");
-  $("#fq").focus(); const q = $("#fq"); q.setSelectionRange(q.value.length, q.value.length);
+    : all.length ? `<div class="empty"><b>Geen spelers met deze filters</b>Haal een filter weg of verlaag een minimum.</div>` : `<div class="empty"><b>Nog geen spelers</b>Voeg de eerste gescoute speler toe.<br><a class="btn" href="#/scouting/nieuw">Nieuwe speler</a></div>`}`;
+  const qi = $("#fq"); qi.oninput = debounce(() => { scF.q = qi.value; scF.typing = true; render(); }, 250);
+  if (scF.typing) { scF.typing = false; qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+  $("#fo").onclick = () => { scF.open = !scF.open; render(); };
+  $("#fsort").onchange = e => { scF.sort = e.target.value; render(); };
+  $$("[data-tg]", v).forEach(b => b.onclick = () => { const k = b.dataset.tg, x = b.dataset.val; scF[k] = scF[k].includes(x) ? scF[k].filter(y => y !== x) : [...scF[k], x]; render(); });
+  $$("[data-min]", v).forEach(b => b.onclick = () => { scF.min = { ...scF.min, [b.dataset.min]: b.dataset.v }; render(); });
+  ["amin", "amax"].forEach(k => { const el = $("#f" + k); if (el) el.onchange = () => { scF[k] = el.value; render(); }; });
+  $$("[data-rm]", v).forEach(b => b.onclick = () => { const k = b.dataset.rm, x = b.dataset.val; if (k === "age") { scF.amin = scF.amax = ""; } else if (k === "min") { scF.min = { ...scF.min, [x]: "" }; } else scF[k] = scF[k].filter(y => y !== x); render(); });
+  const clr = $("#fclr"); if (clr) clr.onclick = () => { Object.assign(scF, { q: "", pos: [], stat: [], niv: [], voet: [], amin: "", amax: "", min: {} }); render(); };
   $("#exp").onclick = () => { const h = ["Naam", "Club", "Geboortedatum", "Voorkeursvoet", "Lengte (cm)", "Hoofdpositie", "Alternatieve positie 2", "Alternatieve positie 3", ...scComp().map(c => c.n), "Algemeen cijfer", "Niveau", "Sterktes / spelbeschrijving", "Werkpunten", "Situatie & context", "Status", "Gescout op", "Wedstrijd / bron", "Scout"];
     download("Scoutingsdatabase_" + String(clubName()).replace(/\W+/g, "_") + ".csv", "﻿" + [h.map(csvCell).join(";"), ...all.map(p => [p.naam, p.club, p.geb, p.voet, p.len, p.p1, p.p2, p.p3, ...scComp().map(c => scNum(p[c.k]) ? String(p[c.k]).replace(".", ",") : ""), scAvg(p) == null ? "" : f1(scAvg(p)), scNiv(scAvg(p)), p.sterk, p.werk, p.ctx, p.stat, p.dat, p.bron, p.scout].map(csvCell).join(";"))].join("\r\n")); };
 } });
