@@ -19,7 +19,9 @@ const COLS = Object.fromEntries(Object.entries(PCOL).map(([k, v]) => [k, v[0]]))
 const ARROWS = new Set(["pass", "run", "drib", "shot", "line", "lob"]);
 const TWO_PT = new Set([...ARROWS, "meas"]);
 const LINEISH = new Set([...TWO_PT, "zone", "oval"]);
-const ROTATABLE = new Set(["goal", "mini", "ladder", "hurdle", "pop", "txt", "flag", "gate", "conerow", "rebound", "pole", "cone"]);
+const ROTATABLE = new Set(["goal", "mini", "ladder", "hurdle", "pop", "txt", "flag", "gate", "conerow", "rebound", "pole", "cone", "net", "ring", "pot"]);
+/* spelers, ballen en materiaal tekenen kleiner dan vroeger: de oude maat S is nu de standaard */
+const DG_BASE = .75;
 const LEGACY_P = { p1: "geel", p2: "zwart", p3: "blauw" };
 /* standaardkleur per soort voorwerp; op een wit blad worden witte lijnen donker */
 const defCol = (t, bg) => ({ p: "geel", k: "groen", tr: "zwart", cone: "oranje", pot: "geel", pole: "rood", ring: "blauw", pop: "blauw", zone: "geel", oval: "blauw", mini: "oranje", rebound: "blauw",
@@ -84,8 +86,8 @@ const goalShape = (w, d, frame, post) => { const n = Math.max(3, Math.round(w / 
     <path d="M0 ${-w / 2}H${-d}V${w / 2}H0" fill="none" stroke="${frame}" stroke-width="${post * .55}" stroke-linejoin="round"/>
     <path d="M0 ${-w / 2}V${w / 2}" stroke="${frame}" stroke-width="${post}" stroke-linecap="round"/><path d="M0 ${-w / 2}V${w / 2}" stroke="rgba(0,0,0,.35)" stroke-width="${post * .25}" stroke-linecap="round"/>`; };
 function objSVG(o, i, W, H, bg) {
-  const x = o.x * W / 100, y = o.y * H / 100, s = o.s || 1, tag = `data-i="${i}"`, ck = colOf(o, bg), col = ck === "keeper" ? "#F2F2EE" : COLS[ck] || ck;
-  const hit = (r = 3) => `<circle cx="${x}" cy="${y}" r="${r * s}" fill="transparent"/>`, rot = (inner, def = 0) => `<g transform="translate(${x} ${y}) rotate(${o.r ?? def}) scale(${s})">${inner}</g>`;
+  const x = o.x * W / 100, y = o.y * H / 100, s = (o.s || 1) * (o.t === "goal" ? 1 : DG_BASE), tag = `data-i="${i}"`, ck = colOf(o, bg), col = ck === "keeper" ? "#F2F2EE" : COLS[ck] || ck;
+  const hit = (r = 3) => `<circle cx="${x}" cy="${y}" r="${r * Math.max(s, .9)}" fill="transparent"/>`, rot = (inner, def = 0) => `<g transform="translate(${x} ${y}) rotate(${o.r ?? def}) scale(${s})">${inner}</g>`;
   const t = LEGACY_P[o.t] ? "p" : o.t, dark = "rgba(0,0,0,.55)";
   if (ARROWS.has(t)) return arrowSVG(o, W, H, col, tag, bg);
   if (t === "pen") { const d = penPath(o.pts || [], W, H), P = (o.pts || []).map(([a, b]) => [a * W / 100, b * H / 100]), n = P.length;
@@ -322,7 +324,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
       ${named ? `<label class="dglbl wide">Naam<input id="dgnm" value="${esc(o.nm || "")}" maxlength="18" list="dgroster" placeholder="bv. Lucas"><datalist id="dgroster">${roster().map(n => `<option value="${esc(n)}">`).join("")}</datalist></label>` : ""}
       ${palette.length ? `<span class="dgcols">${palette.map(k => `<button type="button" data-cc="${k}" aria-pressed="${curC === k}" title="${cap(k)}" style="--c:${COLS[k]}"></button>`).join("")}</span>` : ""}
       <span class="dgseg" role="group" aria-label="Grootte">${[[.75, "S"], [1, "M"], [1.35, "L"]].map(([v, l]) => `<button type="button" data-sz="${v}" aria-pressed="${(o.s || 1) === v}">${l}</button>`).join("")}</span>
-      ${ROTATABLE.has(t) ? `<button class="dgb" type="button" id="dgr" title="Draaien (R)">↻<span>Draaien</span></button>` : ""}
+      ${ROTATABLE.has(t) ? `<span class="dgseg" role="group" aria-label="Draaien"><button type="button" id="dgrl" title="Naar links draaien (Shift+R)">↺</button><button type="button" id="dgr" title="Naar rechts draaien (R)">↻</button></span>` : ""}
       ${ARROWS.has(t) ? `<button class="dgb" type="button" id="dgcv">${o.cx != null ? "Recht" : "Bocht"}</button><button class="dgb" type="button" id="dgsw" title="Richting omdraaien">⇄<span>Omdraaien</span></button>` : ""}
       ${t === "pen" ? `<button class="dgb" type="button" id="dghd" aria-pressed="${!!o.head}">Pijlpunt</button>` : ""}
       ${t === "pen" || t === "line" || t === "pass" ? `<button class="dgb" type="button" id="dgda" aria-pressed="${!!o.dash}">Stippellijn</button>` : ""}
@@ -333,7 +335,8 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     const nm = $("#dgnm", c); if (nm) { nm.oninput = () => { o.nm = nm.value.trim() || undefined; draw(); }; nm.onchange = commit; nm.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); nm.blur(); } }; }
     $$("[data-cc]", c).forEach(b => b.onclick = () => { o.c = b.dataset.cc; if (t === "p") pcol = o.c; commit(); draw(); });
     $$("[data-sz]", c).forEach(b => b.onclick = () => { o.s = +b.dataset.sz === 1 ? undefined : +b.dataset.sz; commit(); draw(); });
-    const r = $("#dgr", c); if (r) r.onclick = () => { o.r = (dgRot(o) + 45) % 360; commit(); draw(); };
+    const r = $("#dgr", c); if (r) r.onclick = () => { o.r = (dgRot(o) + 15) % 360; commit(); draw(); };
+    const rl = $("#dgrl", c); if (rl) rl.onclick = () => { o.r = (dgRot(o) + 345) % 360; commit(); draw(); };
     const cv = $("#dgcv", c); if (cv) cv.onclick = () => { if (o.cx != null) { delete o.cx; delete o.cy; } else { const dx = o.x2 - o.x, dy = o.y2 - o.y; o.cx = (o.x + o.x2) / 2 - dy * .3; o.cy = (o.y + o.y2) / 2 + dx * .3; } commit(); draw(); };
     const sw = $("#dgsw", c); if (sw) sw.onclick = () => { [o.x, o.y, o.x2, o.y2] = [o.x2, o.y2, o.x, o.y]; commit(); draw(); };
     const tg = (id, k) => { const b = $(id, c); if (b) b.onclick = () => { o[k] = o[k] ? undefined : true; commit(); draw(); }; };
@@ -403,7 +406,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     if (typing) return;
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "d" && sel >= 0) { ev.preventDefault(); dup(); return; }
     if ((ev.key === "Delete" || ev.key === "Backspace") && sel >= 0) { ev.preventDefault(); del(); return; }
-    if (ev.key.toLowerCase() === "r" && sel >= 0 && ROTATABLE.has(dg.objs[sel].t)) { ev.preventDefault(); const o = dg.objs[sel]; o.r = (dgRot(o) + 45) % 360; commit(); draw(); return; }
+    if (ev.key.toLowerCase() === "r" && sel >= 0 && ROTATABLE.has(dg.objs[sel].t)) { ev.preventDefault(); const o = dg.objs[sel]; o.r = (dgRot(o) + (ev.shiftKey ? 345 : 15)) % 360; commit(); draw(); return; }
     if (ev.key === "Escape" && (tool !== "select" || sel >= 0)) { ev.preventDefault(); ev.stopPropagation(); sel = -1; setTool("select"); return; }
     const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[ev.key];
     if (mv && sel >= 0) { ev.preventDefault(); const o = dg.objs[sel], f = ev.shiftKey ? 3 : .6; dgShift(o, JSON.parse(JSON.stringify(o)), mv[0] * f, mv[1] * f); draw(); clearTimeout(key.t); key.t = setTimeout(commit, 400); }
