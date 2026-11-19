@@ -27,7 +27,7 @@ const scProf = p => p?.scout && typeof p.scout === "object" ? p.scout : {};
 function scProfForm(p) {
   const sp = scProf(p), ps = posOf(p), opt = (cur, list) => `<option value=""></option>` + list.map(x => `<option${x === cur ? " selected" : ""}>${esc(x)}</option>`).join("");
   const d = dialog(`<form><h2>Scoutingprofiel · ${esc(p.first_name)}</h2><p class="hint" style="margin:0">Dezelfde onderdelen als in de scoutingdatabase. Alleen zichtbaar voor de trainers van deze ploeg. Laat een score leeg als je het nog niet weet.</p><div class="fields">
-    <div class="f full"><span>Posities</span>${posPicker(ps)}</div>
+    <div class="f full"><span>Posities</span><p class="hint" style="margin:2px 0 0">${esc(posTxt(ps) || "Nog niet ingevuld")} · <button class="link" type="button" id="spPosEdit">aanpassen bij de gegevens van ${esc(p.first_name)}</button></p></div>
     <label class="f">Ontwikkelen naar positie<input name="ontw" maxlength="40" value="${esc(sp.ontw || "")}" placeholder="bv. 6 of 8"></label><label class="f">Lengte (cm)<input name="len" type="number" min="80" max="220" value="${esc(sp.len || "")}"></label>
     <label class="f">Potentieel<select name="pot">${opt(sp.pot || "", SC_POT.includes(sp.pot) ? SC_POT : EV_POT)}</select></label>
     <label class="f">Speelt op leeftijd<select name="opl">${opt(sp.opl || "", ["Ja", "Nee - gedispenseerd", "Nee - doorgeschoven"])}</select></label>
@@ -36,7 +36,7 @@ function scProfForm(p) {
     <label class="f full">Werkpunten<textarea name="werk" rows="3" maxlength="1500">${esc(sp.werk || "")}</textarea></label>
     <label class="f full">Extra info over de speler<textarea name="ctx" rows="3" maxlength="1500" placeholder="Bv. matuur, speelt graag op links, familie, wat hem motiveert…">${esc(sp.ctx || "")}</textarea></label></div>
     <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
-  posBind(d, ps);
+  $("#spPosEdit", d).onclick = () => { d.close(); playerForm(p); };
   $("form", d).onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), o = { ...sp };
     ["p1", "p2", "p3", "pot", "h", "n", "ontw", "opl", "len", "sterk", "werk", "ctx", ...SC_COMP.map((c, i) => "k" + i)].forEach(k => delete o[k]);
     if (ps.h) o.h = ps.h; if (ps.n.length) o.n = ps.n;
@@ -131,7 +131,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
       ${missed.length ? `<div class="panel sec"><h2>Gemist</h2><div class="list">${missed.slice(0, 12).map(x => `<div class="item static"><span class="date"><b>${dDay(x.e.date)}</b><small>${dMon(x.e.date)}</small></span><span class="main"><b>${esc(x.e.title || "Training")}</b><small>${esc([x.e.location, x.a?.note].filter(Boolean).join(" · "))}</small></span><span class="pill">${esc(x.st)}</span></div>`).join("")}</div>${missed.length > 12 ? `<p class="hint" style="margin:8px 0 0">En nog ${missed.length - 12} oudere.</p>` : ""}</div>` : `<p class="hint">Nog geen training gemist.</p>`}`
       : `<div class="empty"><b>Nog geen trainingen met aanwezigheden</b></div>`}</div>`;
   const idRow = (k, val) => val ? `<div class="dosid"><span>${k}</span><b>${esc(val)}</b></div>` : "";
-  const persoonlijkPane = `<div class="sec panel" data-t="persoonlijk"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Persoonlijk</h2><button class="btn ghost small noprint" type="button" id="dosEdit">Fiche bewerken</button></div>
+  const persoonlijkPane = `<div class="sec panel" data-t="persoonlijk"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Persoonlijk</h2><button class="btn ghost small noprint" type="button" id="dosEdit">Gegevens aanpassen</button></div>
     <div class="dospers">${p.photo ? `<img class="dosphoto" data-pp="${esc(p.photo)}" alt="">` : ""}<div class="dosfacts">${idRow("Ploeg", S.team.name)}${idRow("Rugnummer", p.number)}${idRow("Positie", p.position)}${idRow("Voorkeursvoet", p.foot)}${idRow("Geboortedatum", p.birthdate ? parse(p.birthdate).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }) : "")}${idRow("Leeftijd", age != null ? age + " jaar" : "")}${idRow("Status", p.active === false ? "Niet meer actief" : "Actief")}</div></div></div>
     <div data-t="persoonlijk">${typeof contactsPanel === "function" ? contactsPanel(p) : ""}</div>`;
   const sc = (S.pscout || []).filter(x => x.player_id === p.id).sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -160,7 +160,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   const visit = DOS_PREV && DOS_PREV !== S.team?.id ? S.teams.find(t => t.id === DOS_PREV) : null;
   v.innerHTML = (visit ? `<p class="dosvisit noprint">${IC.eye}<span>Je bekijkt een speler van <b>${esc(teamLbl(S.team))}</b>. Als je dit dossier verlaat, sta je terug bij <b>${esc(teamLbl(visit))}</b>.</span></p>` : "") + `<div class="row noprint" style="margin-bottom:10px;gap:8px">${backLink(dosBack?.href || "#/dossier", dosBack?.label || "Alle dossiers")}<span class="spacer"></span>
       ${prevP ? `<a class="btn ghost small" href="#/dossier/${prevP.id}" title="${esc(pname(prevP))}">‹ Vorige</a>` : ""}${nextP ? `<a class="btn ghost small" href="#/dossier/${nextP.id}" title="${esc(pname(nextP))}">Volgende ›</a>` : ""}
-      <a class="btn ghost small" href="#/speler/${p.id}">Spelerskaart</a><button class="btn small" type="button" onclick="print()">${IC.print}Afdrukken</button></div>
+      <button class="btn small" type="button" onclick="print()">${IC.print}Afdrukken</button></div>
   <div class="dos" data-tab="${dosTab}">
   <div class="ph">${pAv(p, "width:60px;height:60px;border-radius:16px;background:var(--yellow);color:#000;font-size:26px;border:0")}
     <div class="t"><h1 class="pg">${esc(pname(p))}</h1><p class="sub">${esc([S.team.name, p.position, age != null ? age + " jaar" : "", p.birthdate ? "geboren " + parse(p.birthdate).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }) + " (" + qOf(p.birthdate) + ")" : ""].filter(Boolean).join(" · "))}</p>
