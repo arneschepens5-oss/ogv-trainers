@@ -2460,3 +2460,23 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 .dseas button{display:flex;flex-direction:column;align-items:flex-start;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:7px 14px;font:inherit;cursor:pointer;color:var(--ink)}
 .dseas button small{font-size:11.5px;color:var(--muted);font-weight:600}.dseas button[aria-pressed=true]{border-color:var(--yellow);box-shadow:inset 0 0 0 1px var(--yellow)}
 .evsecc>summary::after{display:none!important}.evsecc>summary .evsc{margin-left:0}
+/* v166: gebruiksvriendelijker — kleur per onderdeel, meer contrast, grotere letters op vraag */
+:root[data-theme="light"]{--muted:#4B4D46;--dim:#6A6C63;--line2:#BDBDB2}
+body{--sc:#E5B800}
+body[data-sec="Kalender"]{--sc:#2563EB}body[data-sec="Ploeg"]{--sc:#16A34A}body[data-sec="Training"]{--sc:#EA580C}body[data-sec="Tactiek"]{--sc:#7C3AED}
+body[data-sec="Scouting"]{--sc:#0891B2}body[data-sec="Club"]{--sc:#DC2626}body[data-sec="Mijn map"]{--sc:#DB2777}body[data-sec="Beheer"]{--sc:#475569}
+.side .nav a.secl svg{width:30px;height:30px;padding:6px;border-radius:9px;background:color-mix(in srgb,var(--c,#888) 14%,transparent);color:var(--c,var(--ink));box-sizing:border-box}
+.side .nav a[data-sc="Kalender"]{--c:#2563EB}.side .nav a[data-sc="Ploeg"]{--c:#16A34A}.side .nav a[data-sc="Training"]{--c:#EA580C}.side .nav a[data-sc="Tactiek"]{--c:#7C3AED}
+.side .nav a[data-sc="Scouting"]{--c:#0891B2}.side .nav a[data-sc="Club"]{--c:#DC2626}.side .nav a[data-sc="Mijn map"]{--c:#DB2777}.side .nav a[data-sc="Beheer"]{--c:#475569}
+.side .nav a.secl.open svg,.side .nav a.secl.cur svg{background:var(--c,#888);color:#fff}
+.side .nav a.secl{font-size:15.5px}
+.side .subside{border-left-color:color-mix(in srgb,var(--sc) 45%,transparent)}
+h1.pg{position:relative;padding-bottom:10px}h1.pg::after{content:"";position:absolute;left:0;bottom:0;width:56px;height:5px;border-radius:3px;background:var(--sc)}
+.btn.ghost{border:1.5px solid var(--line2)}
+:focus-visible{outline:3px solid var(--sc);outline-offset:2px}
+.bigsw{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:10px;height:34px;min-width:44px;margin-left:6px;font:inherit;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:0 8px}
+.bigsw b{font-size:17px}.bigsw[aria-pressed=true]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+/* grote letters: alles in de pagina en de zijbalk een stuk groter, met meer contrast */
+html.big .page{zoom:1.15}html.big .side .nav a{font-size:17px}html.big .side .subside a{font-size:16px}
+html.big{--muted:#3A3C36;--dim:#55574F}
+html.big .hint,html.big small{font-size:max(1em,13px)}

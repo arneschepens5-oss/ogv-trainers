@@ -43,6 +43,7 @@ function pScoutForm(p, r) {
 }
 route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, id) => {
   const ps = active();
+  if (!id && !isDossierOff()) { location.replace("#/spelers"); return; }
   if (!id) { dosBack = null;
     v.innerHTML = head("Spelersdossier", "Alles wat jullie over een speler noteerden op één pagina: speeltijd en cijfers over alle groepjes, aanwezigheid, evaluaties en elke opmerking met de naam van de trainer. Om samen een oudergesprek voor te bereiden.") +
       (ps.length ? `<div class="pgrid">${ps.map(p => { const s = playerStats(p), g = dosCount(matchRows(p.id).map(x => groupOf(x.e)).filter(Boolean)), sp = scProf(p);
@@ -164,7 +165,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     <p class="hint" style="margin:14px 0 0">${has ? `Enkel zichtbaar voor de trainers van deze ploeg${sp.upd ? " · bijgewerkt op " + esc(dShort(sp.upd)) : ""}${sp.by ? " door " + esc(sp.by) : ""}.` : "Nog niet ingevuld. Noteer positie, potentieel, sterktes en wat je verder over de speler weet."}</p></div>`;
 
   const visit = DOS_PREV && DOS_PREV !== S.team?.id ? S.teams.find(t => t.id === DOS_PREV) : null;
-  v.innerHTML = (visit ? `<p class="dosvisit noprint">${IC.eye}<span>Je bekijkt een speler van <b>${esc(teamLbl(S.team))}</b>. Als je dit dossier verlaat, sta je terug bij <b>${esc(teamLbl(visit))}</b>.</span></p>` : "") + `<div class="row noprint" style="margin-bottom:10px;gap:8px">${backLink(dosBack?.href || "#/dossier", dosBack?.label || "Alle dossiers")}<span class="spacer"></span>
+  v.innerHTML = (visit ? `<p class="dosvisit noprint">${IC.eye}<span>Je bekijkt een speler van <b>${esc(teamLbl(S.team))}</b>. Als je dit dossier verlaat, sta je terug bij <b>${esc(teamLbl(visit))}</b>.</span></p>` : "") + `<div class="row noprint" style="margin-bottom:10px;gap:8px">${backLink(dosBack?.href || "#/spelers", dosBack?.label || "Spelers")}<span class="spacer"></span>
       ${prevP ? `<a class="btn ghost small" href="#/dossier/${prevP.id}" title="${esc(pname(prevP))}">‹ Vorige</a>` : ""}${nextP ? `<a class="btn ghost small" href="#/dossier/${nextP.id}" title="${esc(pname(nextP))}">Volgende ›</a>` : ""}
       <button class="btn small" type="button" onclick="print()">${IC.print}Afdrukken</button></div>
   <div class="dos" data-tab="${dosTab}">

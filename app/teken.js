@@ -139,7 +139,9 @@ function selSVG(o, W, H) {
   if (o.t === "zone" || o.t === "oval") { const A = p(o.x, o.y), B = p(o.x2, o.y2);
     return `<rect x="${Math.min(A[0], B[0])}" y="${Math.min(A[1], B[1])}" width="${Math.abs(B[0] - A[0])}" height="${Math.abs(B[1] - A[1])}" fill="none" stroke="#FFD100" stroke-width=".35" pointer-events="none"/>${h("a", A)}${h("b", B)}`; }
   const [x, y] = p(o.x, o.y), r = ({ goal: 5.8, ladder: 5.8, conerow: 7.4, rebound: 3.4, gate: 3.6, txt: 3 }[o.t] || 3.3) * (o.s || 1);
-  return `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#FFD100" stroke-width=".45" stroke-dasharray="1 .7" pointer-events="none"/>`;
+  /* draaigreep: sleep het gele bolletje boven het voorwerp rond om het te draaien */
+  const rot = ROTATABLE.has(o.t) ? (() => { const hy = y - r - 3.2; return `<path d="M${x} ${y - r}V${hy + 1.4}" stroke="#FFD100" stroke-width=".35" pointer-events="none"/><g data-h="r" style="cursor:grab"><circle cx="${x}" cy="${hy}" r="2.6" fill="transparent"/><circle cx="${x}" cy="${hy}" r="1.45" fill="#FFD100" stroke="#000" stroke-width=".3"/><path d="M${x - .7} ${hy - .1}a.75 .75 0 1 1 .3 .65" fill="none" stroke="#000" stroke-width=".28" stroke-linecap="round"/></g>`; })() : "";
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#FFD100" stroke-width=".45" stroke-dasharray="1 .7" pointer-events="none"/>${rot}`;
 }
 function diagramSVG(dg, opts = {}) {
   dg = dg || { field: "5v5", objs: [] }; const { rot, W, H } = dgDims(dg), wit = dg.bg === "wit", lc = wit ? "#9AA79C" : "rgba(255,255,255,.8)";
@@ -374,6 +376,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     if (draft) { draft.x2 = p.x; draft.y2 = p.y; if (draft.t === "lob") { const dx = draft.x2 - draft.x, dy = draft.y2 - draft.y; draft.cx = (draft.x + draft.x2) / 2 - dy * .35; draft.cy = (draft.y + draft.y2) / 2 + dx * .35; } draw(); return; }
     const o = dg.objs[sel]; if (!o) return; const dx = p.x - drag.p.x, dy = p.y - drag.p.y;
     if (Math.abs(dx) + Math.abs(dy) > .4) drag.moved = true;
+    if (drag.h === "r") { const { W, H } = dgDims(dg), a = Math.atan2((p.y - o.y) * H / 100, (p.x - o.x) * W / 100) * 180 / Math.PI + 90; o.r = ((Math.round(a / 5) * 5) % 360 + 360) % 360; draw(); return; }
     if (drag.h === "a") { o.x = p.x; o.y = p.y; } else if (drag.h === "b") { o.x2 = p.x; o.y2 = p.y; }
     else if (drag.h === "c") { /* het bolletje ligt op de bocht (t = .5): controlepunt = 2·P − (A+B)/2 */ o.cx = 2 * p.x - (o.x + o.x2) / 2; o.cy = 2 * p.y - (o.y + o.y2) / 2; }
     else dgShift(o, drag.o, dx, dy);
