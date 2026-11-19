@@ -258,14 +258,15 @@ async function fieldsData(d1, d2) {
 const CLUB_FIELDS = [
   { k: "A", name: "Terrein A", short: "A", kk: "A1–A3 (bij de kantine)" },
   { k: "B", name: "Terrein B", short: "B", kk: "B1–B4 (EHBO en scheidsrechter bij B)" },
-  { k: "C", name: "Terrein C", short: "C", kk: "B1–B4" },
-  { k: "D", name: "KGV (terrein D)", short: "KGV", kk: "B1–B4 · kunstgras", kgv: true },
+  { k: "C", name: "Terrein C", short: "C", kk: "B1–B4 · ook terrein 3 of C-plein" },
+  { k: "D", name: "KGV (terrein D)", short: "KGV", kk: "B1–B4 · kunstgras, ook terrein 4", kgv: true },
   { k: "E", name: "Terrein E", short: "E", kk: "E4–E8" },
   { k: "1", name: "Terrein 1", short: "1", kk: "B1–B4 · klein veld" },
   { k: "2", name: "Terrein 2", short: "2", kk: "B1–B4 · klein veld" }];
 const FIELD_NAMES = CLUB_FIELDS.map(f => f.name);
 function fieldOf(loc) { const s = String(loc || "").toLowerCase(); if (!s) return null;
-  if (/\bkgv\b|kunstgras/.test(s)) return "D";
+  if (/\bkgv\b|kunstgras|(?:terrein|terr\.?|veld)\s*4\b/.test(s)) return "D";
+  if (/(?:terrein|terr\.?|veld)\s*3\b|c[\s-]*plein/.test(s)) return "C"; /* terrein 3 = C-plein, terrein 4 = kunstgrasveld */
   const m = s.match(/(?:terrein|veld|plein)\s*([a-e]|[12])\b/) || s.match(/(?:^|\s)([a-e]|[12])[\s-]*(?:plein|veld|terrein)\b/) || s.match(/^\s*([a-e])\s*$/);
   return m ? m[1].toUpperCase() : null; }
 const fieldName = k => CLUB_FIELDS.find(f => f.k === k)?.name || k;
