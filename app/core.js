@@ -8,7 +8,10 @@ const CLUB = { id: OGV_ID, name: "KVV OG Vorselaar", short: "OGV", settings: {} 
 const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 /* huisstijl van OG Vorselaar enkel als we weten dat dit toestel bij OGV hoort; anders die van het platform */
 /* onderdelen die de club heeft uitgezet (Beheer > Instellingen) */
-const clubOff = page => (CLUB.settings?.hidden || []).includes(page);
+/* een onderdeel staat uit voor de hele club, of enkel voor deze trainer (Instellingen › Wie ziet wat) */
+const accOff = page => { if (S.admin || typeof user === "undefined" || !user) return false; const A = CLUB.settings?.access || {}, u = (A.users || {})[user.id] || {};
+  if ((u.on || []).includes(page)) return false; if ((u.off || []).includes(page)) return true; return (A.all?.hide || []).includes(page); };
+const clubOff = page => (CLUB.settings?.hidden || []).includes(page) || accOff(page);
 const ogvBrand = () => isOGV() && (CLUB_KNOWN || mode === "demo" || !!user);
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
 const clubShort = () => CLUB.short || clubName();
@@ -553,7 +556,7 @@ function shell(fresh) {
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
-  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
+  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["clubinstellingen", "Instellingen", "star"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
     .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "intscouting" || S.admin || S.intscout !== false) && (k !== "betalingen" || mag("betalingen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */

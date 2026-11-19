@@ -732,7 +732,7 @@ function accountDialog() {
 }
 
 /* ============ clubinstellingen: bij de opstart stap voor stap, daarna altijd aan te passen ============ */
-const CS_STEPS = [["club", "Club"], ["evaluaties", "Evaluaties"], ["onderdelen", "Onderdelen"], ["ploegen", "Ploegen"], ["trainers", "Trainers"]];
+const CS_STEPS = [["club", "Club"], ["onderdelen", "Onderdelen"], ["toegang", "Wie ziet wat"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"], ["ploegen", "Ploegen"], ["trainers", "Trainers"]];
 /* onderdelen die een club kan uitzetten; de basis (start, kalender, spelers, trainingen) staat altijd aan */
 const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste momenten"], ["dossier", "Spelersdossier", "Alles van een speler op één pagina"], ["cijfers", "Cijfers", "Statistieken van de ploeg"],
   ["live", "Live coachen", "Klok, doelpunten en wissels langs de lijn"], ["matchday", "Wedstrijdblad", "Opstelling om af te drukken"], ["videoanalyse", "Videoanalyse", "Videostudio met spelersherkenning"],
@@ -744,7 +744,7 @@ const CS_CATS = [["U6", "2v2"], ["U7", "3v3"], ["U8", "5v5"], ["U9", "5v5"], ["U
 function csCtxOwn() { return { club: CLUB, base: "#/clubinstellingen", steps: CS_STEPS, platform: false, done: "#/start",
   async saveAll(nm, sh, s, msg) { if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm, sh, s }); if (error) { toast(error.message); return false; } }
     Object.assign(CLUB, { name: (nm || "").trim() || CLUB.name, short: (sh || "").trim() || CLUB.short, settings: s }); rememberClub(); applyClubTheme(); shell(); if (msg) toast(msg + (mode === "demo" ? " (in de demo enkel op dit toestel)" : "")); return true; } }; }
-function csCtxPlatform(c) { return { club: c, base: "#/platformclub/" + c.id, steps: CS_STEPS.filter(x => x[0] !== "ploegen"), platform: true, done: "#/platform",
+function csCtxPlatform(c) { return { club: c, base: "#/platformclub/" + c.id, steps: CS_STEPS.filter(x => !["ploegen", "toegang"].includes(x[0])), platform: true, done: "#/platform",
   async saveAll(nm, sh, s, msg) { if (mode !== "demo") { const { error } = await sb.rpc("platform_update_club", { c: c.id, nm, sh, s }); if (error) { toast(/platform_update_club|function/i.test(error.message) ? "Voer eerst het databasescript v33 uit." : error.message); return false; } }
     Object.assign(c, { name: (nm || "").trim() || c.name, short: (sh || "").trim() || c.short, settings: s }); if (msg) toast(msg); return true; } }; }
 route("clubinstellingen", { title: "Instellingen van de club", auth: true, render: async (v, id) => {
@@ -761,7 +761,7 @@ async function csPage(v, id, ctx) {
   const csSave = (patch, msg) => ctx.saveAll(C.name, C.short, { ...(C.settings || {}), ...patch }, msg);
   const nextHref = i < STEPS.length - 1 ? ctx.base + "/" + STEPS[i + 1][0] : ctx.done;
   v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} ${ctx.platform ? `<a class="link" href="#/platform">Platform</a> › ` : ""}${first ? "Je club instellen" : "Instellingen"} · ${esc(ctx.platform ? C.name : clubName())}</small><h1 class="pg">${first ? "Zet je club klaar" : ctx.platform ? esc(C.name) : "Instellingen van de club"}${ctx.platform ? "" : helpLink("clubinstellingen")}</h1>
-      <p class="sub" style="margin:4px 0 0">${ctx.platform ? "Je past de instellingen van deze club aan. Spelers, ploegen en verslagen van de club zie je niet." : first ? "Vijf korte stappen. Je kan alles later nog aanpassen via Beheer › Instellingen." : "Kies zelf hoe jullie club werkt. Wijzigingen gelden meteen voor alle trainers."}</p></div></div>
+      <p class="sub" style="margin:4px 0 0">${ctx.platform ? "Je past de instellingen van deze club aan. Spelers, ploegen en verslagen van de club zie je niet." : first ? "Een paar korte stappen. Je kan alles later nog aanpassen via Beheer › Instellingen." : "Kies zelf hoe jullie club werkt. Wijzigingen gelden meteen voor alle trainers."}</p></div></div>
     <ol class="csteps">${STEPS.map(([k, l], n) => `<li><a href="${ctx.base}/${k}"${k === step ? ' aria-current="step"' : ""}${n < i ? ' class="done"' : ""}><span>${n + 1}</span>${l}</a></li>`).join("")}</ol><div id="csv"></div>`;
   const host = $("#csv"), foot = (label = "Bewaren en verder") => `<div class="row csfoot"><a class="btn ghost" href="${i ? ctx.base + "/" + STEPS[i - 1][0] : ctx.done}">${i ? "Vorige" : ctx.platform ? "Terug" : "Later"}</a><span class="spacer"></span><button class="btn">${label}</button></div>`;
   const go = () => { location.hash = nextHref; };
@@ -825,6 +825,36 @@ async function csPage(v, id, ctx) {
       if (await csSave({ hidden }, "Onderdelen bewaard.")) { if (!ctx.platform) shell(); go(); } };
     return; }
 
+  if (step === "toegang") return csAccess(host, st, csSave, foot);
+
+  /* scouting: waarop beoordelen de scouts in de scoutingsdatabase (extern)? */
+  if (step === "scouting") {
+    const sc = st.scout || {}; let comp = scComp(st).map(c => ({ ...c }));
+    const nextK = () => { let n = 0; const used = new Set([...comp.map(c => c.k), ...(sc.used || []), ...SC_DEF.map(c => c.k), ...scComp(st).map(c => c.k)]); while (used.has("k" + n)) n++; return "k" + n; };
+    const draw = () => { $("#scc", host).innerHTML = comp.map((c, i) => `<div class="scrow"><span class="scnr">${i + 1}</span><input data-n="${i}" value="${esc(c.n)}" placeholder="Criterium" aria-label="Criterium ${i + 1}"><input data-s="${i}" value="${esc(c.s || "")}" placeholder="Kort" maxlength="12" aria-label="Korte naam ${i + 1}">
+      <button class="btn ghost small ic" type="button" data-up="${i}" aria-label="Hoger"${i ? "" : " disabled"}>↑</button><button class="btn ghost small ic" type="button" data-rm="${i}" aria-label="Verwijderen">✕</button></div>`).join("");
+      $$("[data-n]", host).forEach(x => x.oninput = () => { comp[+x.dataset.n].n = x.value; });
+      $$("[data-s]", host).forEach(x => x.oninput = () => { comp[+x.dataset.s].s = x.value; });
+      $$("[data-up]", host).forEach(b => b.onclick = () => { const i = +b.dataset.up; [comp[i - 1], comp[i]] = [comp[i], comp[i - 1]]; draw(); });
+      $$("[data-rm]", host).forEach(b => b.onclick = () => { comp.splice(+b.dataset.rm, 1); draw(); }); };
+    host.innerHTML = `<form class="panel" id="csc" style="max-width:820px"><h2 style="margin-top:0">Scoutingsdatabase: waarop beoordelen jullie?</h2>
+      <p class="hint" style="margin-top:0">Scouts geven op elk criterium een cijfer van 1 tot 10. Met drie of meer criteria krijgt elke speler een spelersprofiel, net zoals bij de interne scouting. Een criterium weghalen wist geen scores: zet je het later terug, dan staan ze er weer.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn ghost small" type="button" id="scp1">Zes hoeken van de interne fiche</button><button class="btn ghost small" type="button" id="scp0">Standaard (5 criteria)</button></div>
+      <div id="scc" class="scrows"></div><button class="btn ghost small" type="button" id="scadd" style="margin-top:8px">${IC.plus}Criterium toevoegen</button>
+      <h2>Status van een speler</h2><p class="hint" style="margin-top:0">De stappen in jullie opvolging, één per regel.</p>
+      <textarea id="scst" rows="6" style="max-width:420px">${esc(scStats(st).join("\n"))}</textarea>
+      <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de scoutingsdatabase en de interne scouting ziet, kies je per persoon bij <a class="link" href="${ctx.base}/toegang">Wie ziet wat</a>.</p>${foot()}</form>`;
+    draw();
+    $("#scadd").onclick = () => { comp.push({ k: nextK(), n: "", s: "" }); draw(); $$("[data-n]", host).pop().focus(); };
+    $("#scp0").onclick = () => { comp = SC_DEF.map(c => ({ ...c })); draw(); };
+    $("#scp1").onclick = () => { comp = []; SC_HOEKEN.forEach(([n, sh]) => comp.push({ k: nextK(), n, s: sh })); draw(); };
+    $("#csc").onsubmit = async e => { e.preventDefault(); const c = comp.map(x => ({ k: x.k, n: x.n.trim(), s: (x.s || "").trim() || x.n.trim().split(" ")[0] })).filter(x => x.n);
+      if (!c.length) { toast("Geef minstens één criterium."); return; }
+      const stat = $("#scst").value.split("\n").map(x => x.trim()).filter(Boolean);
+      const used = [...new Set([...(sc.used || []), ...scComp(st).map(x => x.k), ...c.map(x => x.k)])];
+      if (await csSave({ scout: { ...sc, comp: c, stat: stat.length ? stat : SC_STAT, used } }, "Scouting bewaard.")) go(); };
+    return; }
+
   if (step === "ploegen") {
     const have = new Set((S.teams || []).map(t => (t.category || t.name || "").toUpperCase()));
     host.innerHTML = `<form class="panel" id="csp" style="max-width:820px"><h2 style="margin-top:0">Ploegen</h2>
@@ -852,4 +882,59 @@ async function csPage(v, id, ctx) {
     $("#cscp").onclick = () => navigator.clipboard?.writeText(txt).then(() => toast("Uitnodiging gekopieerd."));
     $("#cst").onsubmit = async e => { e.preventDefault(); if (ctx.platform) { location.hash = ctx.done; return; } if (await csSave({ setup_done: true }, first ? "Je club staat klaar." : "Bewaard.")) { shell(); location.hash = "#/start"; } };
   }
+}
+
+/* ============ wie ziet wat: per persoon één lijst om alles aan of uit te zetten ============
+   Onderdelen van het menu staan in settings.access (all.hide = standaard voor alle trainers; users[uid].on/off = uitzondering).
+   Rechten (scouting, betalingen, terreinen) staan bij het lid zelf en gaan via club_set_rechten. Beheerders zien altijd alles. */
+let ACC_SEL = "";
+async function csMembers() {
+  if (mode === "demo") return [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", name: "Trainer U11", role: "trainer", teams: "Demoploeg U11", rechten: [] }, { user_id: "z", email: "scout@ogvorselaar.be", name: "Scout", functie: "Scout", role: "trainer", rechten: ["scouting"] }];
+  const r = await sb.rpc("club_admin_info"); if (r.error) throw r.error; return r.data?.members || [];
+}
+async function csAccess(host, st, csSave, foot) {
+  host.innerHTML = `<div class="panel"><span class="spin"></span> Laden…</div>`;
+  let mem; try { mem = await csMembers(); } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message)}</div>`; return; }
+  mem.sort((a, b) => (a.role === "admin") - (b.role === "admin") || String(a.name || a.email).localeCompare(String(b.name || b.email), "nl"));
+  const mods = CS_MODULES.filter(([k]) => !(st.hidden || []).includes(k) && k !== "scouting");
+  const RIGHTS = [["intscout", "Interne scouting", "Spelers van alle ploegen van de club opzoeken en hun profiel bekijken."], ...RECHTEN];
+  const acc = () => JSON.parse(JSON.stringify((CLUB.settings || st).access || {}));
+  const draw = () => {
+    const A = acc(), all = A.all || { hide: [] }, m = mem.find(x => x.user_id === ACC_SEL), u = m ? ((A.users || {})[m.user_id] || {}) : null, adm = m?.role === "admin";
+    const modOn = k => !m ? !(all.hide || []).includes(k) : (u.on || []).includes(k) ? true : (u.off || []).includes(k) ? false : !(all.hide || []).includes(k);
+    const own = k => m && ((u.on || []).includes(k) || (u.off || []).includes(k));
+    const rOn = k => k === "intscout" ? !(m.rechten || []).includes("intscout_uit") : (m.rechten || []).includes(k);
+    const q = ($("#accq", host)?.value || "").toLowerCase();
+    host.innerHTML = `<div class="acc">
+      <aside class="accp"><input type="search" id="accq" placeholder="Zoek een persoon" value="${esc(q)}" autocomplete="off">
+        <button type="button" data-acc="" aria-pressed="${!m}"><span class="av">★</span><span><b>Alle trainers</b><small>wat iedereen standaard ziet</small></span></button>
+        ${mem.filter(x => !q || (x.name + " " + x.email + " " + (x.functie || "") + " " + (x.teams || "")).toLowerCase().includes(q)).map(x => { const o = (A.users || {})[x.user_id], n = o ? (o.on || []).length + (o.off || []).length : 0;
+          return `<button type="button" data-acc="${x.user_id}" aria-pressed="${x.user_id === ACC_SEL}"><span class="av">${esc(String(x.name || x.email || "?").replace(/[^a-z]/gi, "")[0] || "?").toUpperCase()}</span><span><b>${esc(x.name || x.email)}</b><small>${x.role === "admin" ? "beheerder · ziet alles" : esc([x.functie, x.teams].filter(Boolean).join(" · ") || "trainer")}${n ? ` · ${n} eigen` : ""}</small></span></button>`; }).join("")}
+      </aside>
+      <div class="accl panel">
+        <h2 style="margin-top:0">${m ? esc(m.name || m.email) : "Alle trainers"}</h2>
+        <p class="hint" style="margin-top:-6px">${!m ? "Wat hier uit staat, zien trainers niet in hun menu. Per persoon kan je een uitzondering maken. Beheerders zien altijd alles." : adm ? "Beheerders zien altijd alles. Maak iemand gewone trainer in Beheer › Toegang en leden om dit te beperken." : "Een bolletje naast een onderdeel betekent: eigen keuze voor deze persoon, anders dan bij Alle trainers."}</p>
+        ${adm ? "" : `${m ? `<h3>Rechten</h3><div class="acclist">${RIGHTS.map(([k, l, d]) => `<label class="accrow"><span><b>${esc(l)}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" data-ar="${k}"${rOn(k) ? " checked" : ""}><span></span></span></label>`).join("")}</div>`
+          : `<h3>Scouting voor iedereen</h3><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="btn ghost small" type="button" data-bulk="on">Interne scouting voor alle trainers aan</button><button class="btn ghost small" type="button" data-bulk="off">Interne scouting voor alle trainers uit</button></div><p class="hint" style="margin-top:0">De scoutingsdatabase (extern) geef je per persoon.</p>`}
+        <h3>Onderdelen in het menu</h3><div class="acclist">${mods.map(([k, l, d]) => `<label class="accrow"><span><b>${esc(l)}${own(k) ? ' <i class="accown" title="Eigen keuze voor deze persoon"></i>' : ""}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" data-am="${k}"${modOn(k) ? " checked" : ""}><span></span></span></label>`).join("")}</div>
+        ${m && Object.keys(u).length ? `<button class="link" type="button" id="accreset" style="margin-top:10px">Zelfde als Alle trainers</button>` : ""}`}
+        <p class="hint" style="margin-bottom:0">Onderdelen die de hele club niet gebruikt, zet je uit bij <a class="link" href="#/clubinstellingen/onderdelen">Onderdelen</a>. Elke wijziging wordt meteen bewaard.</p>
+      </div></div>`;
+    const qi = $("#accq", host); qi.oninput = () => { const pos = qi.selectionStart; draw(); const n = $("#accq", host); n.focus(); n.setSelectionRange(pos, pos); };
+    $$("[data-acc]", host).forEach(b => b.onclick = () => { ACC_SEL = b.dataset.acc; draw(); });
+    const saveA = async (A, msg) => { if (await csSave({ access: A }, msg)) draw(); };
+    $$("[data-am]", host).forEach(x => x.onchange = () => { const A = acc(), k = x.dataset.am;
+      if (!m) { A.all = A.all || { hide: [] }; const h = new Set(A.all.hide || []); x.checked ? h.delete(k) : h.add(k); A.all.hide = [...h]; }
+      else { A.users = A.users || {}; const o = A.users[m.user_id] || { on: [], off: [] }, def = !(A.all?.hide || []).includes(k);
+        o.on = (o.on || []).filter(y => y !== k); o.off = (o.off || []).filter(y => y !== k); if (x.checked !== def) (x.checked ? o.on : o.off).push(k);
+        if (o.on.length || o.off.length) A.users[m.user_id] = o; else delete A.users[m.user_id]; }
+      saveA(A, "Bewaard."); });
+    const rset = async (mm, k, on) => { const r = new Set(mm.rechten || []); if (k === "intscout") on ? r.delete("intscout_uit") : r.add("intscout_uit"); else on ? r.add(k) : r.delete(k);
+      if (mode !== "demo") { const { error } = await sb.rpc("club_set_rechten", { uid: mm.user_id, r: [...r] }); if (error) { toast(/club_set_rechten|function|check/i.test(error.message) ? "Voer eerst supabase-interne-scouting-v43.sql uit in Supabase." : error.message); return false; } }
+      mm.rechten = [...r]; return true; };
+    $$("[data-ar]", host).forEach(x => x.onchange = async () => { x.disabled = true; const ok = await rset(m, x.dataset.ar, x.checked); x.disabled = false; if (!ok) x.checked = !x.checked; else toast("Bewaard."); });
+    $$("[data-bulk]", host).forEach(b => b.onclick = async () => { b.disabled = true; let n = 0; for (const mm of mem.filter(x => x.role !== "admin")) if (await rset(mm, "intscout", b.dataset.bulk === "on")) n++; b.disabled = false; toast(`Aangepast voor ${n} trainers.`); draw(); });
+    const rs = $("#accreset", host); if (rs) rs.onclick = () => { const A = acc(); if (A.users) delete A.users[m.user_id]; saveA(A, "Terug zoals bij Alle trainers."); };
+  };
+  draw();
 }

@@ -2252,3 +2252,23 @@ details.aggrp summary small{color:var(--dim);font-weight:700}
 .msglist button:hover,.msglist button:focus-visible{background:var(--card)}
 .msglist .av{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ybg);color:var(--ytext);font-weight:800;font-size:13px;flex:none}
 .dosvisit{display:flex;gap:10px;align-items:center;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--ybg);color:var(--ytext);font-size:14px}.dosvisit svg{width:18px;height:18px;flex:none}
+/* v153: instellingen — wie ziet wat, scouting */
+.acc{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.acc{grid-template-columns:1fr}}
+.accp{display:flex;flex-direction:column;gap:4px;position:sticky;top:12px;max-height:calc(100vh - 40px);overflow:auto;padding:10px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.accp input{margin-bottom:6px}
+.accp button{display:flex;gap:10px;align-items:center;border:0;background:none;border-radius:11px;padding:8px;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.accp button:hover{background:var(--card2)}.accp button[aria-pressed=true]{background:var(--ybg)}
+.accp button>span:last-child{display:flex;flex-direction:column;min-width:0}.accp small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.accp .av{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--card3);font-weight:800;font-size:14px;flex:none}
+.accl h3{margin:18px 0 8px;font-size:15px}
+.acclist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.accrow{display:flex;gap:12px;align-items:center;padding:11px 14px;background:var(--card);cursor:pointer}.accrow+.accrow{border-top:1px solid var(--line)}
+.accrow>span:first-child{flex:1;display:flex;flex-direction:column}.accrow small{color:var(--muted);font-size:12.5px}
+.accown{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--yellow);vertical-align:middle;margin-left:4px}
+.scrows{display:flex;flex-direction:column;gap:6px}
+.scrow{display:grid;grid-template-columns:28px 1fr 130px auto auto;gap:6px;align-items:center}
+.scrow .scnr{font-weight:800;color:var(--dim);text-align:center}
+@media (max-width:600px){.scrow{grid-template-columns:24px 1fr auto auto}.scrow [data-s]{display:none}}
+.scrad{display:flex;justify-content:center;margin:-4px 0 8px}
+.accrow .tgl{margin:0}.accrow b{font-size:14.5px}
