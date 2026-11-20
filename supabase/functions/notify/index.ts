@@ -17,7 +17,7 @@ async function keys() {
   if (!data) throw new Error("Sleutels voor meldingen ontbreken: voer supabase-meldingen-v48.sql uit.");
   KEYS = data; webpush.setVapidDetails("mailto:gc@og-vorselaar.be", data.public_key, data.private_key); return KEYS;
 }
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info, x-cron-key", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
 /* datum en uur in België */
@@ -100,7 +100,11 @@ Deno.serve(async req => {
   try { await keys(); } catch (e) { return json({ error: String((e as Error).message) }, 500); }
   if (req.method === "GET") return json({ key: KEYS!.public_key }); /* publieke sleutel voor het toestel */
   let body: any = {}; try { body = await req.json(); } catch (_) { /* leeg */ }
-  if (body.kind === "tick") return json(await tick());
+  if (body.kind === "tick") { /* enkel de geplande taak (pg_cron) mag de ronde starten */
+    const { data: k } = await db.from("push_keys").select("cron_key").eq("id", 1).maybeSingle();
+    const got = req.headers.get("x-cron-key") || "";
+    if (!k?.cron_key || got.length !== k.cron_key.length || got !== k.cron_key) return json({ error: "Geen toegang." }, 403);
+    return json(await tick()); }
   if (body.kind === "test") {
     const auth = req.headers.get("Authorization")?.replace(/^Bearer /, "");
     let q = db.from("push_subs").select("id,endpoint,p256dh,auth,prefs,fails");
