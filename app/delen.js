@@ -52,7 +52,7 @@ async function printFiche(pl, meta, layout = "vol") {
 /* ---------- deelbare link ---------- */
 const dlToken = () => { const b = crypto.getRandomValues(new Uint8Array(16)); return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
 /* korte link via de databank: zonder de naam van de website (en dus zonder je GitHub-naam) in het bericht */
-const dlUrl = t => SB_URL + "/functions/v1/t/" + t;
+const dlUrl = t => /github\.io$|^localhost$/.test(location.hostname) ? SB_URL + "/functions/v1/t/" + t : location.origin + location.pathname.replace(/[^/]*$/, "") + "bekijk/?t=" + t; /* met een eigen domeinnaam: gewoon het eigen adres */
 async function dlInlineImg(x) { /* foto's uit de privé-opslag meesturen als kleine jpg, anders ziet de ontvanger ze niet */
   if (!x.img_path || x.img) return; try { const u = await files.url(x.img_path); const bl = await (await fetch(u)).blob();
     const im = await createImageBitmap(bl), k = Math.min(1, 1100 / Math.max(im.width, im.height)), c = document.createElement("canvas");
