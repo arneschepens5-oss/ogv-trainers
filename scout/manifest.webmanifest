@@ -1,0 +1,16 @@
+{
+  "name": "Scouting · speler toevoegen",
+  "short_name": "Scouting",
+  "description": "Snel een gescoute speler toevoegen aan de externe scouting van de club.",
+  "lang": "nl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#121311",
+  "theme_color": "#121311",
+  "icons": [
+    { "src": "../icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "../icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "../icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

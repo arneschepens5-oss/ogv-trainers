@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Scouting · OG Vorselaar</title>
+<meta name="theme-color" content="#121311">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght,wdth@400..900,100..125&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F3EE;--card:#fff;--card2:#F7F7F2;--ink:#121311;--muted:#5D5F56;--line:#E2E2DA;--yellow:#FFD100;--ok:#15803D;--bad:#C2261D}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Archivo",system-ui,-apple-system,sans-serif;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:12px 16px calc(12px);padding-top:calc(12px + env(safe-area-inset-top,0px));background:var(--ink);color:#fff}
+header img{width:34px;height:34px;border-radius:9px;background:#fff}
+header b{font-weight:900;font-size:18px;font-stretch:110%}header small{display:block;color:#bdbdb4;font-size:12.5px}
+header .sp{flex:1}header button{all:unset;cursor:pointer;font-size:13px;color:#d8d8cf;padding:6px 8px}
+main{max-width:620px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+h2{margin:0 0 12px;font-size:19px;font-weight:900;font-stretch:108%}
+label{display:block;font-size:13.5px;font-weight:700;color:var(--muted);margin-bottom:12px}
+label .req{color:var(--bad)}
+input,select,textarea{display:block;width:100%;margin-top:5px;padding:12px 13px;border:1.5px solid var(--line);border-radius:12px;background:var(--card2);font-size:16px;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);background:#fff}
+textarea{min-height:76px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.two label{margin-bottom:12px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{all:unset;cursor:pointer;padding:9px 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.chip.on{background:var(--yellow);border-color:var(--yellow)}.chip i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:11.5px}
+.chip:focus-visible,.btn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.hint{font-size:13px;color:var(--muted);margin:6px 0 0}
+.crit{padding:10px 0;border-top:1px solid var(--line)}.crit:first-of-type{border-top:0}
+.crit .t{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:800}
+.crit .v{min-width:46px;text-align:center;padding:3px 8px;border-radius:9px;background:var(--card2);color:var(--muted);font-weight:900}
+.crit input[type=range]{padding:0;margin:10px 0 2px;border:0;background:none;accent-color:#B58F00;height:28px}
+.crit.off input[type=range]{opacity:.35}
+.crit .clr{all:unset;cursor:pointer;font-size:12px;color:var(--muted);text-decoration:underline;font-weight:600}
+.tot{display:flex;align-items:baseline;gap:10px;margin-top:10px;padding:12px 14px;border-radius:14px;background:var(--card2)}.tot b{font-size:28px;font-weight:900}.tot span{color:var(--muted);font-size:13.5px}
+.leer{margin-top:14px;padding:13px;border:1.5px dashed var(--line);border-radius:14px}
+.leer b{display:block}.leer .chips{margin-top:9px}
+.btn{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 18px;border-radius:14px;background:var(--yellow);color:#121311;font-weight:900;font-size:16.5px;text-align:center}
+.btn.dark{background:var(--ink);color:#fff}.btn.ghost{background:transparent;border:1.5px solid var(--line)}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(243,243,238,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+.bar .btn{max-width:588px;margin:0 auto}
+.msg{padding:12px 14px;border-radius:12px;background:#FDE2E0;color:var(--bad);font-weight:700;font-size:14px;margin-bottom:12px}
+.done{text-align:center;padding:28px 16px}.done .ok{width:64px;height:64px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;background:var(--ok);color:#fff;font-size:34px;font-weight:900}
+.list{margin:0;padding:0;list-style:none}.list li{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14.5px}.list li:first-child{border-top:0}.list small{color:var(--muted)}
+.center{max-width:420px;margin:8vh auto 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><img src="../icons/icon-192.png" alt=""><div><b>Scouting</b><small id="hclub">Speler toevoegen</small></div><span class="sp"></span><button id="out" hidden>Afmelden</button></header>
+<main id="app"><p class="hint" style="text-align:center;margin-top:30vh">Laden…</p></main>
+<script src="../tactiekbord/vendor/supabase-2.118.0.js"></script>
+<script>
+const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
+/* zelfde aanmelding als de trainersapp (zelfde opslagsleutel): wie daar al aangemeld is, kan hier meteen scouten */
+const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tb_auth", lock: async (_n, _t, fn) => await fn() } });
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const f1 = n => (Math.round(n * 10) / 10).toString().replace(".", ",");
+const ls = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const POS = [["DOEL", "Doelman"], ["RA", "Rechtsachter"], ["CV", "Centrale verdediger"], ["LA", "Linksachter"], ["VM", "Verdedigende middenvelder"], ["CM", "Centrale middenvelder"], ["AM", "Aanvallende middenvelder"], ["RB", "Rechtsbuiten"], ["SP", "Spits"], ["LB", "Linksbuiten"]];
+const DEF = [["k3", "Techniek aan de bal"], ["k5", "Pas- en traptechniek"], ["k2", "Spelinzicht"], ["k6", "Verdedigen"], ["k1", "Fysiek"], ["k0", "Mentaal"]].map(([k, n]) => ({ k, n }));
+const LV = [[2, "Laag"], [4, "Eerder laag"], [6, "Gemiddeld"], [8, "Eerder hoog"], [10, "Hoog"]];
+const col = v => `hsl(${Math.round((v - 1) * 13.3)},72%,40%)`;
+const niv = a => a >= 8 ? "Top talent" : a >= 7 ? "Interessant" : a >= 6 ? "Opvolgen" : "Onder niveau";
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const season = () => { const d = new Date(); const y = d.getMonth() >= 6 ? d.getFullYear() + 1 : d.getFullYear(); return y; };
+const catOf = geb => { if (!geb) return ""; const u = season() - +geb.slice(0, 4); return u >= 6 && u <= 21 ? "U" + u : ""; };
+let COMP = DEF, CLUBN = "", P, SC;
+
+function blank() { const keep = ls.get("ogv-scout-keep", {}); P = { naam: "", club: "", geb: "", cat: "", voet: "", sterk: "", werk: "", ctx: "", bron: keep.bron || "", dat: keep.dat === today() ? keep.dat : today(), scout: ls.get("ogv-scout-naam", "") || "", pos: [], leer: 0, leerZ: "s" }; SC = {}; }
+
+async function start() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return login();
+  $("#out").hidden = false;
+  const r = await sb.rpc("club_status");
+  const d = r.data || {}; const st = (d.club && d.club.settings) || {};
+  CLUBN = (d.club && (d.club.short || d.club.name)) || ""; $("#hclub").textContent = CLUBN ? "Speler toevoegen · " + CLUBN : "Speler toevoegen";
+  if (!d.member || !(d.admin || (d.rechten || []).includes("scouting"))) {
+    app.innerHTML = `<div class="card center"><h2>Nog geen toegang</h2><p>Je bent aangemeld als <b>${esc(session.user.email)}</b>, maar je hebt nog geen recht om te scouten.</p><p class="hint">Vraag de beheerder van de club om je toegang te geven tot de externe scouting (Instellingen › Wie ziet wat).</p></div>`; return; }
+  if (Array.isArray(st.scout?.comp) && st.scout.comp.length) COMP = st.scout.comp;
+  blank(); form();
+}
+
+function login(err) {
+  $("#out").hidden = true;
+  app.innerHTML = `<form class="card center" id="lf"><h2>Aanmelden</h2><p class="hint" style="margin:-4px 0 14px">Met hetzelfde account als de trainersapp.</p>${err ? `<div class="msg">${esc(err)}</div>` : ""}
+    <label>E-mailadres<input name="email" type="email" autocomplete="email" required></label><label>Wachtwoord<input name="pw" type="password" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">Aanmelden</button><p class="hint" style="text-align:center;margin-top:14px">Nog geen account of wachtwoord vergeten? Doe dat in de <a href="../">trainersapp</a>.</p></form>`;
+  $("#lf").onsubmit = async e => { e.preventDefault(); const b = e.target.querySelector("button"); b.textContent = "Even geduld…";
+    const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
+    if (error) login("Aanmelden lukt niet. Controleer je e-mailadres en wachtwoord."); else start(); };
+}
+
+function keep() { ["naam", "club", "geb", "voet", "sterk", "werk", "ctx", "bron", "dat", "scout", "cat"].forEach(k => { const el = $("#" + k); if (el) P[k] = el.value.trim(); }); }
+
+function totHtml() { const xs = COMP.map(c => SC[c.k]).filter(v => v != null); if (!xs.length) return `<div class="tot" id="tot"><span>Het algemeen cijfer verschijnt zodra je een eerste score geeft.</span></div>`;
+  const a = xs.reduce((x, y) => x + y, 0) / xs.length; return `<div class="tot" id="tot"><b style="color:${col(a)}">${f1(a)}</b><span>${niv(a)}${xs.length < COMP.length ? ` · ${xs.length} van ${COMP.length} gescoord` : ""}</span></div>`; }
+
+function form(err) {
+  const leerApart = !COMP.some(c => c.k === "k4"), auto = catOf(P.geb);
+  app.innerHTML = `${err ? `<div class="msg">${esc(err)}</div>` : ""}
+  <section class="card"><h2>Speler</h2>
+    <label>Naam <span class="req">*</span><input id="naam" value="${esc(P.naam)}" autocomplete="off" placeholder="Voornaam en achternaam"></label>
+    <label>Club<input id="club" value="${esc(P.club)}" autocomplete="off"></label>
+    <div class="two"><label>Geboortedatum<input id="geb" type="date" value="${esc(P.geb)}"></label>
+      <label>Categorie<select id="cat"><option value="">${auto ? "Volgens geboortejaar: " + auto : "Kies de U"}</option>${Array.from({ length: 16 }, (_, i) => "U" + (i + 6)).map(c => `<option${P.cat === c ? " selected" : ""}>${c}</option>`).join("")}</select></label></div>
+    <label>Voorkeursvoet<select id="voet">${["", "Rechts", "Links", "Beide"].map(x => `<option${P.voet === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>
+  </section>
+  <section class="card"><h2>Positie <span class="req">*</span></h2><div class="chips">${POS.map(([ab, n]) => { const i = P.pos.indexOf(n); return `<button type="button" class="chip${i >= 0 ? " on" : ""}" data-pos="${esc(n)}" aria-pressed="${i >= 0}">${i >= 0 ? `<i>${i + 1}</i>` : ""}${ab} · ${esc(n)}</button>`; }).join("")}</div>
+    <p class="hint">Eerst de hoofdpositie, daarna maximaal 2 andere posities.</p></section>
+  <section class="card"><h2>Beoordeling</h2><p class="hint" style="margin:-6px 0 6px">Score van 1 tot 10. Raak een onderdeel enkel aan als je het kon zien.</p>
+    ${COMP.map(c => { const v = SC[c.k]; return `<div class="crit${v == null ? " off" : ""}"><div class="t"><span>${esc(c.n)}</span><span class="v" id="v_${c.k}" style="${v != null ? `background:${col(v)};color:#fff` : ""}">${v != null ? f1(v) : "–"}</span></div>
+      <input type="range" min="1" max="10" step="0.5" value="${v ?? 5}" data-k="${c.k}" aria-label="${esc(c.n)}">${v != null ? `<button type="button" class="clr" data-clr="${c.k}">Niet gezien</button>` : ""}</div>`; }).join("")}
+    ${totHtml()}
+    ${leerApart ? `<div class="leer"><b>Leervermogen</b><span class="hint">Apart, telt niet mee in het cijfer. Laat leeg als je het niet kon zien.</span>
+      <div class="chips">${[[0, "Niet ingevuld"], ...LV].map(([k, l]) => `<button type="button" class="chip${P.leer === k ? " on" : ""}" data-lv="${k}" aria-pressed="${P.leer === k}">${l}</button>`).join("")}</div>
+      ${P.leer ? `<div class="chips"><span class="hint" style="align-self:center;margin:0 4px 0 0">Hoe zeker?</span>${[["s", "Schatting"], ["z", "Goed kunnen beoordelen"]].map(([k, l]) => `<button type="button" class="chip${P.leerZ === k ? " on" : ""}" data-lz="${k}" aria-pressed="${P.leerZ === k}">${l}</button>`).join("")}</div>` : ""}</div>` : ""}
+  </section>
+  <section class="card"><h2>Notities</h2>
+    <label>Sterktes en spelbeschrijving<textarea id="sterk">${esc(P.sterk)}</textarea></label>
+    <label>Werkpunten<textarea id="werk">${esc(P.werk)}</textarea></label>
+    <label>Situatie en context<textarea id="ctx" placeholder="Rugnummer, matuur, speelminuten…">${esc(P.ctx)}</textarea></label>
+  </section>
+  <section class="card"><h2>Wedstrijd</h2>
+    <label>Wedstrijd of bron<input id="bron" value="${esc(P.bron)}" placeholder="Club A U14 – Club B U14"></label>
+    <div class="two"><label>Gescout op<input id="dat" type="date" value="${esc(P.dat)}"></label><label>Scout <span class="req">*</span><input id="scout" value="${esc(P.scout)}" placeholder="Jouw naam"></label></div>
+    <p class="hint">Wedstrijd, datum en jouw naam blijven staan voor de volgende speler.</p>
+  </section>
+  <div class="bar"><button class="btn" type="button" id="save">Speler opslaan</button></div>`;
+  $("#geb").onchange = () => { keep(); form(); };
+  $$("[data-pos]").forEach(b => b.onclick = () => { keep(); const n = b.dataset.pos, i = P.pos.indexOf(n); if (i >= 0) P.pos.splice(i, 1); else if (P.pos.length < 3) P.pos.push(n); form(); });
+  $$("[data-k]").forEach(r => { r.oninput = () => { const k = r.dataset.k, v = +r.value; SC[k] = v; const s = $("#v_" + k); s.textContent = f1(v); s.style.background = col(v); s.style.color = "#fff"; r.parentElement.classList.remove("off"); $("#tot").outerHTML = totHtml(); };
+    r.onchange = () => { keep(); const y = scrollY; form(); scrollTo(0, y); }; });
+  $$("[data-clr]").forEach(b => b.onclick = () => { keep(); delete SC[b.dataset.clr]; const y = scrollY; form(); scrollTo(0, y); });
+  $$("[data-lv]").forEach(b => b.onclick = () => { keep(); P.leer = +b.dataset.lv; const y = scrollY; form(); scrollTo(0, y); });
+  $$("[data-lz]").forEach(b => b.onclick = () => { keep(); P.leerZ = b.dataset.lz; const y = scrollY; form(); scrollTo(0, y); });
+  $("#save").onclick = save;
+}
+
+async function save() {
+  keep();
+  if (!P.naam || !P.pos[0] || !P.scout) { form("Vul minstens de naam, de hoofdpositie en jouw naam als scout in."); scrollTo(0, 0); return; }
+  const b = $("#save"); b.textContent = "Opslaan…"; b.style.pointerEvents = "none";
+  const data = { naam: P.naam, club: P.club, geb: P.geb, cat: P.cat, voet: P.voet, sterk: P.sterk, werk: P.werk, ctx: P.ctx, bron: P.bron, dat: P.dat, scout: P.scout, stat: "Nieuw", p1: P.pos[0] || "", p2: P.pos[1] || "", p3: P.pos[2] || "", ts: Date.now() };
+  for (const c of COMP) if (SC[c.k] != null) data[c.k] = SC[c.k];
+  if (!COMP.some(c => c.k === "k4") && P.leer) { data.k4 = P.leer; if (P.leerZ === "z") data.k4z = true; }
+  Object.keys(data).forEach(k => { if (data[k] === "") delete data[k]; });
+  const { error } = await sb.from("scouting").insert({ id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data, updated_at: new Date().toISOString() });
+  if (error) { form("Opslaan lukte niet. Controleer je internetverbinding en probeer opnieuw."); return; }
+  ls.set("ogv-scout-naam", P.scout); ls.set("ogv-scout-keep", { bron: P.bron, dat: P.dat });
+  const done = ls.get("ogv-scout-done", []).filter(x => x.d === today()); done.unshift({ n: P.naam, c: P.club, d: today() }); ls.set("ogv-scout-done", done.slice(0, 30));
+  app.innerHTML = `<div class="card done"><div class="ok">✓</div><h2>${esc(P.naam)} is opgeslagen</h2><p class="hint">De speler staat nu in de externe scouting van de club.</p></div>
+    <div class="card"><h2>Vandaag toegevoegd</h2><ul class="list">${done.map(x => `<li><b>${esc(x.n)}</b><small>${esc(x.c || "")}</small></li>`).join("")}</ul></div>
+    <div class="bar"><button class="btn" type="button" id="next">Nog een speler toevoegen</button></div>`;
+  scrollTo(0, 0); $("#next").onclick = () => { blank(); form(); scrollTo(0, 0); };
+}
+
+$("#out").onclick = async () => { await sb.auth.signOut(); login(); };
+start().catch(() => login("Er ging iets mis bij het laden. Probeer opnieuw."));
+</script>
+</body>
+</html>
