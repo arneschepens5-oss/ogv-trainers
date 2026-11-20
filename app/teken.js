@@ -223,23 +223,52 @@ function dgPlay(el, dg, { loop = true, onStep, onEnd } = {}) {
   raf = requestAnimationFrame(tick);
   return () => { stopped = true; cancelAnimationFrame(raf); };
 }
-/* filmpje maken: alle beelden eerst klaarzetten, daarna aan 30 beelden per seconde opnemen */
-async function dgVideo(dg, name = "oefening") {
-  if (!("MediaRecorder" in window) || !HTMLCanvasElement.prototype.captureStream) { toast("Een filmpje maken lukt niet in deze browser. Gebruik een recente Chrome of Edge."); return; }
-  const fps = 30, dur = dgDuration(dg), n = Math.ceil(dur / 1000 * fps), size = 1280;
-  toast("Filmpje wordt gemaakt…");
+/* filmpje maken: titelkaart, daarna elke stap met een balk "Stap x van y"; alle beelden eerst klaarzetten en dan aan 30 beelden per seconde opnemen.
+   opts.speed: 1 normaal, 1.5 trager; opts.club: naam onder de titel */
+async function dgVideo(dg, name = "oefening", opts = {}) {
+  if (!("MediaRecorder" in window) || !HTMLCanvasElement.prototype.captureStream) { toast("Een filmpje maken lukt niet in deze browser. Gebruik Safari, Chrome of Edge."); return; }
+  if (typeof name === "function") name = name(); if (opts.club == null && typeof clubName === "function") try { opts.club = clubName(); } catch (e) {}
+  const sp = opts.speed || 1.3, fps = 30, dur = dgDuration(dg) * sp, n = Math.ceil(dur / 1000 * fps), size = 1280, nF = dgFrames(dg).length, intro = opts.intro === false ? 0 : Math.round(1.6 * fps);
+  toast("Filmpje wordt gemaakt… laat dit scherm open.");
   const load = svg => new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); });
-  const imgs = []; for (let i = 0; i <= n; i++) { const f = dgAt(dg, i * 1000 / fps); imgs.push(await load(diagramSVG(dg, { objs: f.objs, op: f.op, size }))); }
-  const c = document.createElement("canvas"); c.width = imgs[0].width; c.height = imgs[0].height; const cx = c.getContext("2d"); cx.drawImage(imgs[0], 0, 0);
+  const imgs = [], steps = []; for (let i = 0; i <= n; i++) { const f = dgAt(dg, i * 1000 / fps / sp); imgs.push(await load(diagramSVG(dg, { objs: f.objs, op: f.op, size }))); steps.push(f.step); }
+  const W = imgs[0].width, H0 = imgs[0].height, bar = Math.round(W * .075), c = document.createElement("canvas"); c.width = W; c.height = H0 + bar; const cx = c.getContext("2d");
+  const font = (px, w = 800) => `${w} ${px}px system-ui,-apple-system,Segoe UI,Arial,sans-serif`, title = String(name || "Oefening");
+  const fit = (txt, px, max) => { cx.font = font(px); while (px > 14 && cx.measureText(txt).width > max) cx.font = font(--px); return px; };
+  const drawIntro = a => { cx.fillStyle = "#111"; cx.fillRect(0, 0, c.width, c.height); cx.globalAlpha = a; cx.fillStyle = "#FFD100"; cx.fillRect(W * .08, c.height * .44, W * .1, 8);
+    cx.fillStyle = "#fff"; cx.textBaseline = "alphabetic"; fit(title, Math.round(W * .06), W * .84); cx.fillText(title, W * .08, c.height * .40);
+    cx.font = font(Math.round(W * .028), 600); cx.fillStyle = "#BDBDB4"; cx.fillText([opts.club, nF > 1 ? nF + " stappen" : ""].filter(Boolean).join("  ·  "), W * .08, c.height * .53); cx.globalAlpha = 1; };
+  const drawFrame = i => { cx.drawImage(imgs[i], 0, 0); cx.fillStyle = "#111"; cx.fillRect(0, H0, W, bar); cx.textBaseline = "middle";
+    const lab = nF > 1 ? `Stap ${steps[i] + 1} van ${nF}` : ""; cx.font = font(Math.round(bar * .42)); const lw = lab ? cx.measureText(lab).width + bar * .6 : 0;
+    if (lab) { cx.fillStyle = "#FFD100"; cx.beginPath(); cx.roundRect ? cx.roundRect(bar * .3, H0 + bar * .18, lw, bar * .64, bar * .32) : cx.rect(bar * .3, H0 + bar * .18, lw, bar * .64); cx.fill(); cx.fillStyle = "#111"; cx.fillText(lab, bar * .6, H0 + bar / 2); }
+    cx.fillStyle = "#fff"; fit(title, Math.round(bar * .4), W - lw - bar * 1.4); cx.fillText(title, lw + bar * .7, H0 + bar / 2); };
+  const total = intro + imgs.length, paint = k => k < intro ? drawIntro(Math.min(1, k / 8)) : drawFrame(k - intro);
+  paint(0);
   const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp9", "video/webm"], mime = types.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || "";
-  const rec = new MediaRecorder(c.captureStream(fps), mime ? { mimeType: mime, videoBitsPerSecond: 5e6 } : {}), chunks = [];
+  const rec = new MediaRecorder(c.captureStream(fps), mime ? { mimeType: mime, videoBitsPerSecond: 6e6 } : {}), chunks = [];
   rec.ondataavailable = ev => ev.data.size && chunks.push(ev.data);
   const done = new Promise(ok => rec.onstop = ok); rec.start();
-  await new Promise(ok => { const t0 = performance.now(); const step = now => { const i = Math.max(0, Math.min(imgs.length - 1, Math.floor((now - t0) / 1000 * fps))); cx.drawImage(imgs[i], 0, 0); if (i < imgs.length - 1) requestAnimationFrame(step); else setTimeout(ok, 120); }; requestAnimationFrame(step); });
+  await new Promise(ok => { const t0 = performance.now(); let last = -1; const step = now => { const k = Math.max(0, Math.min(total - 1, Math.floor((now - t0) / 1000 * fps))); if (k !== last) { paint(k); last = k; } if (k < total - 1) requestAnimationFrame(step); else setTimeout(ok, 150); }; requestAnimationFrame(step); });
   rec.stop(); await done;
-  const type = (rec.mimeType || mime || "video/webm").split(";")[0], ext = type.includes("mp4") ? "mp4" : "webm", a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(chunks, { type })); a.download = (name || "oefening").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() + "." + ext; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  toast(ext === "mp4" ? "Filmpje gedownload." : "Filmpje gedownload (WebM). Speelt niet op elke iPhone; open de app in Safari voor MP4.");
+  const type = (rec.mimeType || mime || "video/webm").split(";")[0], ext = type.includes("mp4") ? "mp4" : "webm";
+  const fname = title.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() + "." + ext, blob = new Blob(chunks, { type });
+  dgOffer(blob, fname, ext === "mp4" ? "" : "WebM-filmpje: speelt niet op elke iPhone. Maak het filmpje in Safari voor MP4.");
+}
+/* klaar bestand: op gsm meteen delen (WhatsApp, Mail…), anders downloaden */
+function dgOffer(blob, fname, note = "") {
+  const dl = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000); };
+  let file = null; try { file = new File([blob], fname, { type: blob.type }); } catch (e) {}
+  const canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+  if (!canShare) { dl(); toast(note || "Bestand gedownload."); return; }
+  const d = document.createElement("dialog"); d.className = "dgoffer";
+  d.innerHTML = `<b>${blob.type.startsWith("video") ? "Je filmpje is klaar" : "Klaar"}</b><span>${esc(fname)} · ${Math.max(1, Math.round(blob.size / 1024))} kB${note ? "<br>" + esc(note) : ""}</span><div><button type="button" data-a="share">Delen</button><button type="button" data-a="dl">Bewaren</button><button type="button" data-a="x">Sluiten</button></div>`;
+  d.style.cssText = "border:0;border-radius:18px;padding:18px;max-width:340px;width:calc(100% - 32px);font:15px system-ui,sans-serif;display:grid;gap:8px;box-shadow:0 20px 60px rgba(0,0,0,.35)";
+  d.querySelector("div").style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin-top:6px";
+  d.querySelectorAll("button").forEach((b, i) => b.style.cssText = `flex:1;min-height:44px;border-radius:12px;border:${i ? "1.5px solid #ccc" : "0"};background:${i ? "transparent" : "#FFD100"};color:inherit;font:700 15px system-ui,sans-serif;cursor:pointer`);
+  document.body.appendChild(d); d.showModal(); d.addEventListener("close", () => d.remove());
+  d.onclick = async ev => { const a = ev.target.dataset?.a; if (!a) return;
+    if (a === "share") { try { await navigator.share({ files: [file], title: fname }); d.close(); } catch (e) { if (e.name !== "AbortError") { dl(); d.close(); } } }
+    if (a === "dl") { dl(); d.close(); } if (a === "x") d.close(); };
 }
 
 function diagramEditor(host, dg, onChange, opts = {}) {
@@ -429,6 +458,6 @@ const dgRot = (o, x0) => o.r ?? ((o.t === "goal" || o.t === "mini") ? ((x0 ?? o.
 function dgPng(dg, name = "veldtekening") {
   const svg = diagramSVG(dg, { size: 1600 }), img = new Image();
   img.onload = () => { const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; c.getContext("2d").drawImage(img, 0, 0);
-    c.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }, "image/png"); };
+    c.toBlob(b => dgOffer(b, name.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() + ".png"), "image/png"); };
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }

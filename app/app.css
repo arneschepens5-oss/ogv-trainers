@@ -507,6 +507,18 @@ dialog.xl{width:min(1200px,100% - 20px)}
   .ptxt h2{font-size:12.5pt;margin:0 0 6px}.ptxt h3{font-size:10pt;margin:8px 0 2px}.ptxt p{margin:0 0 4px}
   .pimg img{width:100%;border:1px solid #ddd;border-radius:6px}
   .pfiche footer{margin-top:10px;font-size:8pt;color:#777;text-align:right}
+  .ptxt ul{margin:0 0 4px;padding-left:16px}.ptxt li{margin:0 0 2px}
+  .pex.steps{grid-template-columns:1fr 1.15fr}
+  .pfiche .ptxt{display:block}
+  .pfsteps{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pfsteps figure{margin:0}.pfsteps svg{display:block;width:100%;height:auto;border-radius:6px}
+  .pfsteps figcaption{font-size:8pt;font-weight:700;margin-top:2px}
+  .pk-pause{padding:5px 8px;margin:6px 0;border:1px dashed #bbb;border-radius:6px;font-size:9pt;color:#444;break-inside:avoid}
+  .pfiche.kaart .pk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kaart .pk-pause{margin:0 0 5px;padding:3px 6px;font-size:8pt}
+  .pk{border:1px solid #ccc;border-radius:8px;padding:7px;break-inside:avoid;font-size:9pt}
+  .pk-h{display:flex;align-items:center;gap:6px;margin-bottom:5px}.pk-h b{flex:1;font-size:10.5pt;line-height:1.2}.pk-h span:last-child{font-weight:700;white-space:nowrap}
+  .pk-no{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#FFD100;font-weight:800;font-size:9pt;flex:none}
+  .pk-pic svg,.pk-pic img{display:block;width:100%;height:auto;border-radius:6px}
+  .pk-meta{margin:4px 0 2px;color:#555}.pk ul{margin:0;padding-left:15px}
 }
 
 /* ---------- kalender: weekoverzicht ---------- */
@@ -2551,3 +2563,11 @@ html.big .hint,html.big small{font-size:max(1em,13px)}
 .updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:9999;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;border-radius:14px;background:#121311;color:#fff;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 24px)}
 .updbar button{all:unset;cursor:pointer;padding:8px 14px;border-radius:10px;background:var(--yellow);color:#121311;font-weight:900}
 @media (min-width:900px){.updbar{bottom:24px}}
+
+/* ---------- delen en afdrukken ---------- */
+.shdlg{max-width:620px}.shsec{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px}.shsec h3{margin:0;font-size:15px}.shsec .hint{margin:0}
+.shopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.shopt{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:3px;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--card)}
+.shopt:hover{border-color:var(--yellow)}.shopt:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}.shopt small{color:var(--muted);line-height:1.35}
+.shlink{display:flex;gap:8px}.shlink input{flex:1;min-width:0;font-size:14px}
+.shvid{display:flex;flex-wrap:wrap;gap:6px}

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#111111">
+<title>Training bekijken</title>
+<link rel="icon" href="../icons/ogv-192.png">
+<style>
+:root{--ink:#111;--muted:#6B6B63;--line:#E4E4DA;--bg:#F4F4EE;--card:#fff;--yellow:#FFD100}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button{font:inherit;color:inherit}
+.top{background:var(--ink);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 18px 22px}
+.top .in{max-width:880px;margin:0 auto;display:flex;gap:14px;align-items:center}
+.top img{width:52px;height:52px;object-fit:contain;flex:none}
+.top h1{margin:0;font-size:clamp(22px,5.5vw,32px);line-height:1.15;font-weight:900;letter-spacing:-.01em}
+.top p{margin:4px 0 0;color:#C9C9C0;font-size:14.5px}
+main{max-width:880px;margin:0 auto;padding:16px 14px 60px;display:grid;gap:14px}
+.sum{background:var(--card);border-radius:18px;padding:14px 16px;display:grid;gap:10px;border:1px solid var(--line)}
+.sum .nums{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14.5px;color:var(--muted)}.sum .nums b{color:var(--ink);font-size:18px;margin-right:4px}
+.bar{display:flex;height:10px;border-radius:99px;overflow:hidden;gap:2px;background:var(--line)}.bar span{display:block}
+.goal{margin:0;font-size:15px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 16px;border-radius:12px;border:0;background:var(--yellow);font-weight:800;cursor:pointer;text-decoration:none;color:var(--ink)}
+.btn.g{background:transparent;border:1.5px solid #CFCFC4}.btn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.btn.sm{min-height:38px;padding:0 12px;font-size:14px}
+.ex{background:var(--card);border-radius:18px;border:1px solid var(--line);overflow:hidden}
+.ex header{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
+.no{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--yellow);font-weight:900}
+.ex h2{margin:0;font-size:18px;line-height:1.25;flex:1}.ex .min{font-weight:800;white-space:nowrap;color:var(--muted)}
+.tag{display:inline-block;font-size:12.5px;font-weight:700;padding:2px 9px;border-radius:99px;background:#F0F0E8;margin:0 16px 10px}
+.pic{position:relative;padding:0 12px}.pic svg,.pic img{display:block;width:100%;height:auto;border-radius:12px}
+.play{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 0}
+.stp{display:flex;gap:4px}.stp i{width:22px;height:6px;border-radius:9px;background:var(--line)}.stp i.on{background:var(--ink)}
+.bd{padding:12px 16px 16px;display:grid;gap:8px}
+.facts{display:flex;flex-wrap:wrap;gap:6px}.facts span{font-size:13.5px;padding:4px 10px;border-radius:10px;background:#F4F4EE}
+.bd h3{margin:4px 0 0;font-size:14px;text-transform:none}.bd p{margin:0;white-space:pre-line}.bd ul{margin:0;padding-left:20px}
+.pause{background:transparent;border:1.5px dashed #CFCFC4;border-radius:14px;padding:10px 16px;color:var(--muted);font-weight:700}
+.foot{text-align:center;color:var(--muted);font-size:13px}
+.msg{background:var(--card);border-radius:18px;padding:28px 20px;text-align:center}
+.steps{display:none}
+@media (min-width:760px){.ex .grid{display:grid;grid-template-columns:1.1fr 1fr;align-items:start}.ex .pic{padding:0 0 16px 16px}}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff;font-size:10.5pt}.top{background:#fff;color:#000;padding:0 0 8px;border-bottom:3px solid var(--yellow)}.top p{color:#444}
+  main{padding:10px 0;gap:8px}.acts,.play,.noprint{display:none!important}
+  .sum,.ex{border:0;border-radius:0;break-inside:avoid;border-top:1px solid #ccc}
+  .ex .grid{display:grid;grid-template-columns:1fr 1.1fr}.ex .pic{padding:0 0 8px 8px}
+  .ex.anim .live{display:none}.ex.anim .steps{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .steps figure{margin:0}.steps figcaption{font-size:8pt;font-weight:700}
+}
+@media (prefers-reduced-motion:reduce){.stp i{transition:none}}
+</style>
+</head>
+<body>
+<div class="top"><div class="in"><img src="../icons/logo.png" alt=""><div><h1 id="tt">Laden…</h1><p id="ts"></p></div></div></div>
+<main id="m"><div class="msg">Training wordt geladen…</div></main>
+<script>
+"use strict";
+const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const IC = new Proxy({}, { get: () => "" });
+let CLUB_NAME = "";
+const clubName = () => CLUB_NAME;
+const toast = t => { let el = $("#toast"); if (!el) { el = document.createElement("div"); el.id = "toast"; el.style.cssText = "position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;max-width:calc(100% - 28px);z-index:9;box-shadow:0 10px 30px rgba(0,0,0,.3)"; document.body.appendChild(el); }
+  el.textContent = t; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => el.hidden = true, 3500); };
+</script>
+<script src="../app/teken.js?v=180"></script>
+<script>
+"use strict";
+const COL = { Opwarming: "#38BDF8", Kern: "#FFD100", Wedstrijdvorm: "#22C55E", Afsluiting: "#A78BFA" }, PAL = ["#38BDF8", "#FFD100", "#22C55E", "#A78BFA", "#FB7185", "#F97316", "#14B8A6", "#E879F9"];
+const colOfT = l => !l ? "#CFCFC4" : COL[l] || PAL[[...l.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % PAL.length];
+const lines = s => String(s || "").split(/\n+/).map(t => t.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+const fail = (h, t) => { $("#tt").textContent = h; $("#m").innerHTML = `<div class="msg"><b>${esc(h)}</b><p>${esc(t)}</p></div>`; };
+
+(async () => {
+  const t = new URLSearchParams(location.search).get("t");
+  if (!t) return fail("Geen training gevonden", "De link is niet volledig. Vraag de trainer om de link opnieuw te sturen.");
+  let r;
+  try { const res = await fetch(SB_URL + "/rest/v1/rpc/get_shared", { method: "POST", headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ t }) }); r = await res.json(); }
+  catch (e) { return fail("Geen verbinding", "Controleer je internet en probeer opnieuw."); }
+  if (!r || !r.payload) return fail("Deze link werkt niet meer", "De trainer heeft de link misschien ingetrokken. Vraag een nieuwe link.");
+  CLUB_NAME = r.club || "";
+  const P = r.payload, pl = P.pl || { items: [] }, list = pl.items || [], one = r.kind === "oefening";
+  const title = r.title || pl.theme || (one ? "Oefening" : "Training");
+  document.title = title + (CLUB_NAME ? " · " + CLUB_NAME : "");
+  $("#tt").textContent = title;
+  $("#ts").textContent = [P.sub, !P.sub && P.team ? P.team : "", CLUB_NAME].filter(Boolean).join(" · ");
+  const total = list.reduce((s, x) => s + (+x._min || 0), 0), exs = list.filter(x => !x.pause), anim = exs.filter(x => x.diagram && dgFrames(x.diagram).length > 1);
+  let t0 = 0;
+  const card = (x, k) => { const m = +x._min || 0, from = t0; t0 += m;
+    if (x.pause) return `<div class="pause">☕ ${esc(x.name || "Drinkpauze")}${m ? " · " + m + " min" : ""}</div>`;
+    const F = x.diagram ? dgFrames(x.diagram) : [], many = F.length > 1;
+    const pic = x.diagram ? diagramSVG(x.diagram) : x.img ? `<img src="${esc(x.img)}" alt="">` : "";
+    const facts = [x.players ? x.players + " spelers" : "", x.size, x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? ", " + x.rest + " s rust" : ""}` : "", x.material ? "Materiaal: " + x.material : ""].filter(Boolean);
+    const pts = lines(x.criteria);
+    return `<article class="ex${many ? " anim" : ""}" data-i="${k}"><header><span class="no">${one ? "▶" : exs.indexOf(x) + 1}</span><h2>${esc(x.name || "Oefening")}</h2><span class="min">${m ? (one ? m + " min" : `${from}′–${t0}′`) : ""}</span></header>
+      ${x._type ? `<span class="tag" style="box-shadow:inset 3px 0 0 ${colOfT(x._type)}">${esc(x._type)}</span>` : ""}
+      <div class="grid"><div><div class="pic"><div class="live">${pic}</div>${many ? `<div class="steps">${F.map((o, i) => `<figure>${diagramSVG(x.diagram, { objs: o })}<figcaption>Stap ${i + 1}</figcaption></figure>`).join("")}</div>` : ""}</div>
+        ${many ? `<div class="play"><button class="btn sm" type="button" data-play="${k}">▶ Afspelen</button><span class="stp" aria-hidden="true">${F.map((_, i) => `<i${i ? "" : ' class="on"'}></i>`).join("")}</span><button class="btn g sm" type="button" data-vid="${k}">Filmpje bewaren</button></div>` : ""}</div>
+      <div class="bd">${facts.length ? `<div class="facts">${facts.map(f => `<span>${esc(f)}</span>`).join("")}</div>` : ""}
+        ${x.goal ? `<p><b>Doel:</b> ${esc(x.goal)}</p>` : ""}${x.org ? `<h3>Organisatie en verloop</h3><p>${esc(x.org)}</p>` : ""}
+        ${pts.length ? `<h3>Aandachtspunten</h3><ul>${pts.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}</div></div></article>`; };
+  const segs = list.map(x => +x._min ? `<span style="flex:${+x._min};background:${x.pause ? "#CFCFC4" : colOfT(x._type)}"></span>` : "").join("");
+  $("#m").innerHTML = `${!one || pl.goal ? `<section class="sum">${!one ? `<div class="nums"><span><b>${total}</b>min</span><span><b>${exs.length}</b>${exs.length === 1 ? "oefening" : "oefeningen"}</span>${pl.players ? `<span><b>${esc(pl.players)}</b>spelers</span>` : ""}</div>${segs ? `<div class="bar">${segs}</div>` : ""}` : ""}
+      ${pl.goal ? `<p class="goal"><b>Doel:</b> ${esc(pl.goal)}</p>` : ""}${pl.material ? `<p class="goal"><b>Materiaal:</b> ${esc(pl.material)}</p>` : ""}</section>` : ""}
+    <div class="acts noprint"><button class="btn" type="button" id="prt">Afdrukken of PDF</button>${anim.length > 1 ? `<button class="btn g" type="button" id="all">▶ Alle filmpjes afspelen</button>` : ""}</div>
+    ${list.map(card).join("")}
+    <p class="foot">${P.by ? "Gedeeld door " + esc(P.by) + " · " : ""}${esc(CLUB_NAME)}</p>`;
+  $("#prt").onclick = () => { stopAll(); print(); };
+  const stops = new Map(), stopAll = () => { [...stops.keys()].forEach(k => toggle(k, false)); };
+  const toggle = (k, want) => { const el = $(`.ex[data-i="${k}"]`), x = list[k], live = $(".live", el), b = $("[data-play]", el), dots = $$(".stp i", el), playing = stops.has(k), on = want ?? !playing;
+    if (playing && !on) { stops.get(k)(); stops.delete(k); live.innerHTML = diagramSVG(x.diagram); b.textContent = "▶ Afspelen"; dots.forEach((d, i) => d.classList.toggle("on", !i)); }
+    if (!playing && on) { stops.set(k, dgPlay(live, x.diagram, { onStep: i => dots.forEach((d, j) => d.classList.toggle("on", j <= i)) })); b.textContent = "■ Stoppen"; } };
+  $$("[data-play]").forEach(b => b.onclick = () => toggle(+b.dataset.play));
+  $$("[data-vid]").forEach(b => b.onclick = () => { const x = list[+b.dataset.vid]; dgVideo(x.diagram, x.name || "Oefening"); });
+  const all = $("#all"); if (all) all.onclick = () => { anim.forEach(x => toggle(list.indexOf(x), true)); };
+  /* één oefening: filmpje meteen laten lopen, tenzij de gebruiker minder beweging wil */
+  if (one && anim.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) toggle(list.indexOf(anim[0]), true);
+  addEventListener("beforeprint", stopAll);
+})();
+</script>
+</body>
+</html>
