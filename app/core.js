@@ -287,13 +287,13 @@ function setTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} 
 matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => { if (getTheme() === "system") applyTheme("system"); });
 applyTheme();
 const THEME_OPTS = [["light", "Licht"], ["dark", "Donker"], ["system", "Automatisch"]];
-/* lettergrootte: schuifbalk van -2 (klein) tot +4 (groot), 0 = standaard; onthouden op dit toestel (oude "grote letters"-keuze wordt stand 2) */
-const SZ_ZOOM = { "-2": .84, "-1": .92, 0: 1, 1: 1.07, 2: 1.15, 3: 1.25, 4: 1.36 };
-const getSz = () => { try { const v = localStorage.getItem("ogv-sz"); if (v != null && v !== "") return Math.min(4, Math.max(-2, +v | 0)); return localStorage.getItem("ogv-big") === "1" ? 2 : 0; } catch (e) { return 0; } };
+/* lettergrootte: schuifbalk van -3 (klein) tot +4 (groot), 0 = standaard; onthouden op dit toestel (oude "grote letters"-keuze wordt stand 2) */
+const SZ_ZOOM = { "-3": .76, "-2": .84, "-1": .92, 0: 1, 1: 1.07, 2: 1.15, 3: 1.25, 4: 1.36 };
+const getSz = () => { try { const v = localStorage.getItem("ogv-sz"); if (v != null && v !== "") return Math.min(4, Math.max(-3, +v | 0)); return localStorage.getItem("ogv-big") === "1" ? 2 : 0; } catch (e) { return 0; } };
 const applyBig = () => { const n = getSz(), r = document.documentElement; r.classList.toggle("big", n > 0); r.dataset.sz = n; r.style.setProperty("--zs", SZ_ZOOM[n]); };
 applyBig();
 const szLabel = n => n === 0 ? "standaard" : n < 0 ? "kleiner (" + n + ")" : "groter (+" + n + ")";
-const bigSwitch = () => `<label class="szctl" title="Lettergrootte"><span class="a1" aria-hidden="true">A</span><input type="range" min="-2" max="4" step="1" value="${getSz()}" data-sz-range aria-label="Lettergrootte" aria-valuetext="${szLabel(getSz())}"><span class="a2" aria-hidden="true">A</span></label>`;
+const bigSwitch = () => `<label class="szctl" title="Lettergrootte"><span class="a1" aria-hidden="true">A</span><input type="range" min="-3" max="4" step="1" value="${getSz()}" data-sz-range aria-label="Lettergrootte" aria-valuetext="${szLabel(getSz())}"><span class="a2" aria-hidden="true">A</span></label>`;
 const themeSwitch = labels => { const cur = getTheme(), i = Math.max(0, THEME_OPTS.findIndex(o => o[0] === cur));
   return `<div class="themesw${labels ? " lbl" : ""}" role="radiogroup" aria-label="Weergave" style="--i:${i}"><span class="thumb" aria-hidden="true"></span>${THEME_OPTS.map(([k, l], j) =>
     `<button type="button" role="radio" data-theme-set="${k}" data-ti="${j}" aria-checked="${cur === k}" title="${l}${k === "system" ? " (volgt je toestel)" : ""}" aria-label="${l}">${IC["th_" + k]}${labels ? `<span>${l}</span>` : ""}</button>`).join("")}</div>`; };
@@ -528,6 +528,29 @@ function route(name, def) { ROUTES[name] = def; }
 const NAV_TEAM = ["live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
 const SIDE_OPEN = new Set(), SIDE_SHUT = new Set();
 const navHidden = () => { try { const x = JSON.parse(localStorage.getItem("ogv-nav-hidden")); return Array.isArray(x) ? x : []; } catch (e) { return []; } };
+/* onderaan het menu staat nog maar één knop; alles voor jezelf (weergave, lettergrootte, menu, account, hulp) zit in "Mijn instellingen" */
+function footLinks() {
+  return `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-settings>${IC.gear}<span>Mijn instellingen</span></button></div>`;
+}
+function settingsDialog() {
+  const lnk = (ic, label, sub, attrs) => `<${attrs.href ? "a" : "button type=\"button\""} class="setitem" ${attrs.href ? `href="${attrs.href}" target="_blank" rel="noopener"` : attrs.data}>${ic}<span><b>${label}</b>${sub ? `<small>${sub}</small>` : ""}</span></${attrs.href ? "a" : "button"}>`;
+  const d = dialog(`<div class="dlg setdlg"><h2>Mijn instellingen</h2><p class="hint" style="margin:-8px 0 0">Geldt enkel voor jou, op dit toestel. De instellingen van de hele club vind je bij Beheer.</p>
+    <section><h3>Weergave</h3>
+      <div class="setrow"><span>Kleur</span>${themeSwitch(true)}</div>
+      <div class="setrow col"><span>Lettergrootte: <b data-szl>${szLabel(getSz())}</b></span>${bigSwitch()}<button class="link" type="button" data-szreset>Terug naar standaard</button></div></section>
+    <section><h3>Menu</h3>${lnk(IC.gear, "Menu aanpassen", "Verberg onderdelen die je nooit gebruikt", { data: "data-s-menu" })}</section>
+    ${user && mode !== "demo" ? `<section><h3>Account</h3>${lnk(IC.ppl || IC.gear, "Mijn account", "Naam, wachtwoord en account verwijderen", { data: "data-s-acct" })}</section>` : ""}
+    <section><h3>Hulp</h3>${CLUB.id === "platform" ? "" : lnk(IC.star, "Startgids", "Korte rondleiding door de app", { data: "data-s-gids" })}${lnk(IC.book, "Handleiding", "", { href: "handleiding/uitgebreid.html" })}${lnk(IC.note || IC.eye, "Probleem melden", "Iets werkt niet of staat verkeerd", { data: "data-s-report" })}${isOGV() ? lnk(IC.eye, "Privacy", "", { href: "privacy.html" }) : ""}</section>
+    <div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-close>Klaar</button></div></div>`, "setd");
+  bindThemeSwitch();
+  const rng = $("[data-sz-range]", d), lab = $("[data-szl]", d);
+  const setSz = v => { try { localStorage.setItem("ogv-sz", v); } catch (e) {} applyBig(); rng.value = v; rng.setAttribute("aria-valuetext", szLabel(+v)); lab.textContent = szLabel(+v); $$(".frow [data-sz-range]").forEach(x => x.value = v); };
+  rng.oninput = () => setSz(rng.value); $("[data-szreset]", d).onclick = () => setSz(0);
+  $("[data-s-menu]", d).onclick = () => { d.close(); menuEdit(); };
+  $("[data-s-acct]", d)?.addEventListener("click", () => { d.close(); accountDialog(); });
+  $("[data-s-gids]", d)?.addEventListener("click", () => { d.close(); startGids(); });
+  $("[data-s-report]", d).onclick = () => { d.close(); reportProblem(); };
+}
 function menuEdit() {
   const hid = new Set(navHidden()), groups = NAV.filter(g => g.g).map(g => [g.g, g.items.filter(([k]) => (!["scouting", "betalingen"].includes(k) || mag(k)) && (k !== "intscouting" || S.admin || S.intscout !== false))]).filter(([, xs]) => xs.length);
   const d = dialog(`<form><h2>Menu aanpassen</h2><p class="hint" style="margin-top:0">Haal weg wat je nooit gebruikt. Dit geldt enkel voor jou, op dit toestel. Je kan alles altijd terugzetten.</p>
@@ -590,7 +613,7 @@ function shell(fresh) {
     <a class="brand" href="#/start">${ogvBrand() ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? LOGO("mini") + "Jeugdwerking " + esc(clubName()) : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
     <nav class="nav">${sideHtml}</nav>
-    <div class="foot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<button class="navbtn" type="button" data-menued>${IC.gear}<span>Menu aanpassen</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>${isOGV() ? `<a class="navbtn" href="privacy.html" target="_blank" rel="noopener">${IC.eye}<span>Privacy</span></a>` : ""}</div>` : ""}${acct}<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div></div>
+    <div class="foot">${logged ? footLinks() : ""}${acct}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div>`}</div>
   </aside>
   <main>
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -602,7 +625,7 @@ function shell(fresh) {
     <button type="button" data-sheet>${IC.menu}<span>Meer</span><i class="tdot" data-unread-dot${S.unread ? "" : " hidden"}></i></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}</nav>
-    <div class="sheetfoot">${logged ? `<div class="footlinks">${S.platform && !ADMIN_APP && mode === "cloud" ? `<a class="navbtn wide" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button class="navbtn" type="button" data-report>${IC.note || IC.eye}<span>Probleem melden</span></button>${CLUB.id === "platform" ? "" : `<button class="navbtn" type="button" data-gids>${IC.star}<span>Startgids</span></button>`}<button class="navbtn" type="button" data-menued>${IC.gear}<span>Menu aanpassen</span></button><a class="navbtn" href="handleiding/uitgebreid.html" target="_blank" rel="noopener">${IC.book}<span>Handleiding</span></a>${isOGV() ? `<a class="navbtn" href="privacy.html" target="_blank" rel="noopener">${IC.eye}<span>Privacy</span></a>` : ""}</div>` : ""}<div class="frow"><span>Weergave</span>${themeSwitch(true)}${bigSwitch()}</div>${acct}</div></div></div>
+    <div class="sheetfoot">${logged ? footLinks() : ""}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch(true)}${bigSwitch()}</div>`}${acct}</div></div></div>
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
@@ -611,8 +634,7 @@ function shell(fresh) {
   $$(".side a.secl[data-sec]").forEach(a => a.onclick = e => { e.preventDefault(); const g = a.dataset.sec, o = !a.classList.contains("open");
     a.classList.toggle("open", o); a.nextElementSibling?.classList.toggle("open", o); a.setAttribute("aria-expanded", o);
     if (o) { SIDE_OPEN.add(g); SIDE_SHUT.delete(g); } else { SIDE_OPEN.delete(g); SIDE_SHUT.add(g); } });
-  $$("[data-gids]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); startGids(); });
-  $$("[data-menued]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); menuEdit(); });
+  $$("[data-settings]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); settingsDialog(); });
   if (logged && !gidsSeen()) setTimeout(() => { if (!$("#dlg")?.open) startGids(); }, 600);
   bindThemeSwitch();
   $$("[data-sz-range]").forEach(b => b.oninput = () => { try { localStorage.setItem("ogv-sz", b.value); } catch (e) {} applyBig(); $$("[data-sz-range]").forEach(x => { x.value = b.value; x.setAttribute("aria-valuetext", szLabel(+b.value)); }); });
