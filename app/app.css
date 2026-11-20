@@ -2544,3 +2544,7 @@ html.big .hint,html.big small{font-size:max(1em,13px)}
 .scleer .segs.zk{align-items:center;margin-top:8px}.scleer .segs.zk span{font-size:12.5px;color:var(--muted);font-weight:700;margin-right:2px}
 .scleer .segs.lv button.on.l2,.scleer .segs.lv button.on.l4{background:hsl(20,72%,46%);border-color:hsl(20,72%,46%);color:#fff}
 .scleer .segs.lv button.on.l6{background:var(--yellow)}.scleer .segs.lv button.on.l8,.scleer .segs.lv button.on.l10{background:hsl(120,55%,38%);border-color:hsl(120,55%,38%);color:#fff}
+.scdisp{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}.scdisp>span{font-size:12.5px;font-weight:700;color:var(--muted);margin-right:2px}
+.scdisp .scchip small{font-weight:600;opacity:.7;margin-left:4px}.scdisp.off .scchip{opacity:.45;cursor:not-allowed}
+.scdtag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:800;border:1px dashed var(--line2);color:var(--muted)}
+.scpanel{overflow-anchor:none}

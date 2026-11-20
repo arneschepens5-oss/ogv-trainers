@@ -72,7 +72,7 @@ const scStats = (st = CLUB.settings) => { const c = st?.scout?.stat; return Arra
 const scAvg = p => { const k = scComp().map(c => p[c.k]).filter(scNum); return k.length ? k.reduce((a, b) => a + b, 0) / k.length : null; };
 const scNiv = a => a == null ? "" : a >= 8 ? "Top talent" : a >= 7 ? "Interessant" : a >= 6 ? "Opvolgen" : "Onder niveau";
 const scCol = v => `hsl(${Math.round((v - 1) * 13.3)},72%,46%)`;
-let scTab = "db", scF = { q: "", pos: [], stat: [], niv: [], voet: [], cat: [], amin: "", amax: "", min: {}, sort: "score", open: false, view: "lijst", fcat: "", fpos: 0 };
+let scTab = "db", scF = { q: "", pos: [], stat: [], niv: [], voet: [], cat: [], dOud: false, dJong: false, min: {}, sort: "score", open: false, view: "lijst", fcat: "", fpos: 0 };
 const SC_NIV = ["Top talent", "Interessant", "Opvolgen", "Onder niveau"];
 const SC_CATS = Array.from({ length: 16 }, (_, i) => "U" + (i + 6));
 /* in welke U hoort de speler? zelf gekozen, anders afgeleid uit het geboortejaar en het seizoen */
@@ -81,16 +81,22 @@ const scPosNums = p => [p.p1, p.p2, p.p3].filter(Boolean).map(n => (POS_BY_NAME[
 const scAge = p => p.geb ? Math.floor((Date.now() - new Date(p.geb)) / 31557600000) : null;
 /* hoeveel filters staan aan (voor de knop en de lijst met actieve filters) */
 const scActive = () => [...scF.pos.map(x => ["pos", x, (SC_POS[x] || [x])[0]]), ...scF.stat.map(x => ["stat", x, x]), ...scF.niv.map(x => ["niv", x, x]), ...scF.voet.map(x => ["voet", x, x + " voet"]), ...scF.cat.map(x => ["cat", x, x]),
-  ...(scF.amin || scF.amax ? [["age", "", scF.amin && scF.amax ? `${scF.amin}–${scF.amax} jaar` : scF.amin ? `vanaf ${scF.amin} jaar` : `tot ${scF.amax} jaar`]] : []),
+  ...(scF.cat.length && scF.dOud ? [["dOud", "", "+ jaar ouder"]] : []), ...(scF.cat.length && scF.dJong ? [["dJong", "", "+ jaar jonger"]] : []),
   ...Object.entries(scF.min).filter(([, v]) => v).map(([k, v]) => ["min", k, `${(scComp().find(c => c.k === k) || {}).s || k} ${v}+`])];
+/* U-filter: de gekozen U's, eventueel met spelers die een jaar ouder zijn (dispensatie) of een jaar jonger (spelen hoger) */
+const scUn = c => parseInt(String(c || "").slice(1)) || 0;
+const scCatRel = p => { const n = scUn(scCatOf(p)); if (!scF.cat.length || !n) return ""; const sel = scF.cat.map(scUn); return sel.includes(n) ? "in" : scF.dOud && sel.includes(n - 1) ? "oud" : scF.dJong && sel.includes(n + 1) ? "jong" : ""; };
+const scCatOk = p => !scF.cat.length || !!scCatRel(p);
+let SC_ROWS = null;
 route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
   if (!mag("scouting")) { v.innerHTML = head("Externe scouting", "") + `<div class="empty"><b>Geen toegang</b>De externe scouting is enkel voor wie daar het recht voor kreeg. Vraag het aan de beheerder van de club.</div>`; return; }
-  v.innerHTML = head("Externe scouting", "Laden…"); const rows = await db.list("scouting"); const all = rows.map(r => ({ id: r.id, created_by: r.created_by, ...r.data }));
+  /* filters en sorteren: hergebruik de geladen lijst, zodat de pagina niet eerst leeg wordt en verspringt */
+  let rows; if (!id && SC_ROWS && scF.soft) rows = SC_ROWS; else { v.innerHTML = head("Externe scouting", "Laden…"); rows = SC_ROWS = await db.list("scouting"); } scF.soft = false; const all = rows.map(r => ({ id: r.id, created_by: r.created_by, ...r.data }));
   if (id) { scoutForm(v, all.find(x => x.id === id) || null, all); return; }
   const list = all.filter(p => { const a = scAvg(p), age = scAge(p), pos = [p.p1, p.p2, p.p3];
     return (!scF.q || [p.naam, p.club, p.sterk, p.werk, p.ctx, p.bron, p.scout].join(" ").toLowerCase().includes(scF.q.toLowerCase()))
       && (!scF.pos.length || scF.pos.some(x => pos.includes(x))) && (!scF.stat.length || scF.stat.includes(p.stat || "Nieuw")) && (!scF.niv.length || scF.niv.includes(scNiv(a)))
-      && (!scF.voet.length || scF.voet.includes(p.voet)) && (!scF.cat.length || scF.cat.includes(scCatOf(p))) && (!scF.amin || (age != null && age >= +scF.amin)) && (!scF.amax || (age != null && age <= +scF.amax))
+      && (!scF.voet.length || scF.voet.includes(p.voet)) && scCatOk(p)
       && Object.entries(scF.min).every(([k, v]) => !v || (scNum(p[k]) && p[k] >= +v)); })
     .sort(scF.sort === "naam" ? (a, b) => String(a.naam).localeCompare(String(b.naam), "nl") : scF.sort === "nieuw" ? (a, b) => String(b.dat || "").localeCompare(String(a.dat || "")) || (b.ts || 0) - (a.ts || 0)
       : scF.sort === "jong" ? (a, b) => (scAge(a) ?? 99) - (scAge(b) ?? 99) : scF.sort.startsWith("k") ? (a, b) => (b[scF.sort] ?? -1) - (a[scF.sort] ?? -1) : (a, b) => (scAvg(b) ?? -1) - (scAvg(a) ?? -1) || (b.ts || 0) - (a.ts || 0));
@@ -102,11 +108,11 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
     <button class="btn ${scF.open ? "" : "ghost"}" type="button" id="fo" aria-expanded="${scF.open}">Filters${act.length ? ` <span class="scn">${act.length}</span>` : ""}</button>
     <select id="fsort" aria-label="Sorteren">${[["score", "Hoogste cijfer"], ["nieuw", "Laatst gescout"], ["naam", "Naam"], ["jong", "Jongste eerst"], ...scComp().map(c => [c.k, "Beste " + (c.s || c.n).toLowerCase()])].map(([k, l]) => `<option value="${k}"${scF.sort === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
   ${scF.open ? `<div class="scpanel panel">
-    <div class="scgrp"><h4>Categorie <small>meerdere mogelijk</small></h4><div class="scchips">${SC_CATS.filter(c => all.some(p => scCatOf(p) === c)).map(x => chip("cat", x, x, scF.cat.includes(x))).join("") || '<span class="hint">Vul bij een speler zijn geboortedatum of U in.</span>'}</div></div>
+    <div class="scgrp"><h4>Categorie <small>meerdere mogelijk</small></h4><div class="scchips">${(() => { const ns = all.map(p => scUn(scCatOf(p))).filter(Boolean); if (!ns.length) return '<span class="hint">Vul bij een speler zijn geboortedatum of U in.</span>'; const lo = Math.max(6, Math.min(...ns) - 1), hi = Math.min(21, Math.max(...ns) + 1); return SC_CATS.filter(c => scUn(c) >= lo && scUn(c) <= hi).map(x => chip("cat", x, x, scF.cat.includes(x))).join(""); })()}</div>
+      <div class="scdisp${scF.cat.length ? "" : " off"}"><span>Ook meenemen</span><button type="button" class="scchip" data-disp="dOud" aria-pressed="${!!scF.dOud}"${scF.cat.length ? "" : " disabled"}>Jaar ouder <small>dispensatie</small></button><button type="button" class="scchip" data-disp="dJong" aria-pressed="${!!scF.dJong}"${scF.cat.length ? "" : " disabled"}>Jaar jonger <small>speelt hoger</small></button>${scF.cat.length ? "" : '<small class="hint">Kies eerst een U.</small>'}</div></div>
     <div class="scgrp"><h4>Positie <small>meerdere mogelijk</small></h4><div class="scchips">${Object.keys(SC_POS).map(x => chip("pos", x, (SC_POS[x] || [x])[0] + " · " + x, scF.pos.includes(x))).join("")}</div></div>
     <div class="scgrp"><h4>Minimum per criterium</h4><div class="scmins">${scComp().map(c => `<div class="scmin"><span>${esc(c.n)}</span><span class="scseg" role="group" aria-label="${esc(c.n)}">${["", 6, 7, 8, 9].map(v => `<button type="button" data-min="${c.k}" data-v="${v}" aria-pressed="${String(scF.min[c.k] || "") === String(v)}">${v ? v + "+" : "alle"}</button>`).join("")}</span></div>`).join("")}</div></div>
     <div class="scrow3">
-      <div class="scgrp"><h4>Leeftijd</h4><div class="scage"><input id="famin" type="number" min="5" max="25" inputmode="numeric" placeholder="van" value="${esc(scF.amin)}" aria-label="Leeftijd vanaf"><span>tot</span><input id="famax" type="number" min="5" max="25" inputmode="numeric" placeholder="tot" value="${esc(scF.amax)}" aria-label="Leeftijd tot"><span>jaar</span></div></div>
       <div class="scgrp"><h4>Niveau</h4><div class="scchips">${SC_NIV.map(x => chip("niv", x, x, scF.niv.includes(x))).join("")}</div></div>
       <div class="scgrp"><h4>Voorkeursvoet</h4><div class="scchips">${["Rechts", "Links", "Beide"].map(x => chip("voet", x, x, scF.voet.includes(x))).join("")}</div></div></div>
     <div class="scgrp"><h4>Status</h4><div class="scchips">${scStats().map(x => chip("stat", x, x, scF.stat.includes(x))).join("")}</div></div>
@@ -117,20 +123,20 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
     const vals = Object.fromEntries(CO.map(c => [c.s || c.n, scNum(p[c.k]) ? p[c.k] : null])), rad = CO.length >= 3 && CO.some(c => scNum(p[c.k])) ? radarSvg(CO.map(c => c.s || c.n), vals, null, { mini: true, size: 76, max: 10 }) : "";
     return `<a class="sc-card2" href="#/scouting/${esc(p.id)}"><div class="hd"><span class="bg${a == null ? " none" : ""}">${a == null ? "–" : f1(a)}</span>
       <span class="scmain"><b>${esc(p.naam)}</b><small>${esc([p.club, cat, age != null ? age + " jaar" : "", p.voet ? p.voet.toLowerCase() + " voet" : ""].filter(Boolean).join(" · "))}</small>
-        <span class="sctags">${[p.p1, p.p2, p.p3].filter(Boolean).map((x, i) => `<em${i ? ' class="soft"' : ""} title="${esc(x)}">${esc((SC_POS[x] || [x])[0])}</em>`).join("")}${a != null ? `<span class="scniv n${SC_NIV.indexOf(scNiv(a))}">${scNiv(a)}</span>` : ""}</span></span>
+        <span class="sctags">${[p.p1, p.p2, p.p3].filter(Boolean).map((x, i) => `<em${i ? ' class="soft"' : ""} title="${esc(x)}">${esc((SC_POS[x] || [x])[0])}</em>`).join("")}${a != null ? `<span class="scniv n${SC_NIV.indexOf(scNiv(a))}">${scNiv(a)}</span>` : ""}${(r => r === "oud" ? '<span class="scdtag">jaar ouder</span>' : r === "jong" ? '<span class="scdtag">jaar jonger</span>' : "")(scCatRel(p))}</span></span>
       ${rad ? `<span class="isc-rad sc-rad" title="Spelersprofiel">${rad}</span>` : ""}</div>
       <div class="sck n${CO.length}">${CO.map(c => { const val = p[c.k]; return `<span title="${esc(c.n)}"><small>${esc(c.s || c.n)}</small><b style="${scNum(val) ? `color:${scCol(val)}` : ""}">${scNum(val) ? f1(val) : "–"}</b></span>`; }).join("")}</div>
       <div class="scfoot"><span class="pill w">${esc(p.stat || "Nieuw")}</span>${scNum(p[SC_LEER]) && !CO.some(c => c.k === SC_LEER) ? `<span class="pill scleerp${p[SC_LEERZ] ? "" : " est"}" title="${p[SC_LEERZ] ? "Leervermogen, goed kunnen beoordelen" : "Leervermogen, geschat"}">Leervermogen ${scLvTxt(p[SC_LEER]).toLowerCase()}${p[SC_LEERZ] ? "" : " (schatting)"}</span>` : ""}<span class="spacer"></span><small>${esc([p.scout, p.dat].filter(Boolean).join(" · "))}</small></div></a>`; }).join("")}</div>`
     : all.length ? `<div class="empty"><b>Geen spelers met deze filters</b>Haal een filter weg of verlaag een minimum.</div>` : `<div class="empty"><b>Nog geen spelers</b>Voeg de eerste gescoute speler toe.<br><a class="btn" href="#/scouting/nieuw">Nieuwe speler</a></div>`}`;
-  const qi = $("#fq"); qi.oninput = debounce(() => { scF.q = qi.value; scF.typing = true; render(); }, 250);
+  const qi = $("#fq"); qi.oninput = debounce(() => { scF.q = qi.value; scF.typing = true; scF.soft = true; render(); }, 250);
   if (scF.typing) { scF.typing = false; qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
-  $("#fo").onclick = () => { scF.open = !scF.open; render(); };
-  $("#fsort").onchange = e => { scF.sort = e.target.value; render(); };
-  $$("[data-tg]", v).forEach(b => b.onclick = () => { const k = b.dataset.tg, x = b.dataset.val; scF[k] = scF[k].includes(x) ? scF[k].filter(y => y !== x) : [...scF[k], x]; render(); });
-  $$("[data-min]", v).forEach(b => b.onclick = () => { scF.min = { ...scF.min, [b.dataset.min]: b.dataset.v }; render(); });
-  ["amin", "amax"].forEach(k => { const el = $("#f" + k); if (el) el.onchange = () => { scF[k] = el.value; render(); }; });
-  $$("[data-rm]", v).forEach(b => b.onclick = () => { const k = b.dataset.rm, x = b.dataset.val; if (k === "age") { scF.amin = scF.amax = ""; } else if (k === "min") { scF.min = { ...scF.min, [x]: "" }; } else scF[k] = scF[k].filter(y => y !== x); render(); });
-  const clr = $("#fclr"); if (clr) clr.onclick = () => { Object.assign(scF, { q: "", pos: [], stat: [], niv: [], voet: [], cat: [], amin: "", amax: "", min: {} }); render(); };
+  $("#fo").onclick = () => { scF.open = !scF.open; scF.soft = true; render(); };
+  $("#fsort").onchange = e => { scF.sort = e.target.value; scF.soft = true; render(); };
+  $$("[data-tg]", v).forEach(b => b.onclick = () => { const k = b.dataset.tg, x = b.dataset.val; scF[k] = scF[k].includes(x) ? scF[k].filter(y => y !== x) : [...scF[k], x]; scF.soft = true; render(); });
+  $$("[data-disp]", v).forEach(b => b.onclick = () => { scF[b.dataset.disp] = !scF[b.dataset.disp]; scF.soft = true; render(); });
+  $$("[data-min]", v).forEach(b => b.onclick = () => { scF.min = { ...scF.min, [b.dataset.min]: b.dataset.v }; scF.soft = true; render(); });
+  $$("[data-rm]", v).forEach(b => b.onclick = () => { const k = b.dataset.rm, x = b.dataset.val; if (k === "dOud" || k === "dJong") { scF[k] = false; } else if (k === "min") { scF.min = { ...scF.min, [x]: "" }; } else scF[k] = scF[k].filter(y => y !== x); scF.soft = true; render(); });
+  const clr = $("#fclr"); if (clr) clr.onclick = () => { Object.assign(scF, { q: "", pos: [], stat: [], niv: [], voet: [], cat: [], dOud: false, dJong: false, min: {} }); scF.soft = true; render(); };
   $("#exp").onclick = () => { const h = ["Naam", "Club", "Geboortedatum", "Voorkeursvoet", "Lengte (cm)", "Hoofdpositie", "Alternatieve positie 2", "Alternatieve positie 3", ...scComp().map(c => c.n), "Algemeen cijfer", "Niveau", "Sterktes / spelbeschrijving", "Werkpunten", "Situatie & context", "Status", "Gescout op", "Wedstrijd / bron", "Scout"];
     download("Externe_scouting_" + String(clubName()).replace(/\W+/g, "_") + ".csv", "﻿" + [h.map(csvCell).join(";"), ...all.map(p => [p.naam, p.club, p.geb, p.voet, p.len, p.p1, p.p2, p.p3, ...scComp().map(c => scNum(p[c.k]) ? String(p[c.k]).replace(".", ",") : ""), scAvg(p) == null ? "" : f1(scAvg(p)), scNiv(scAvg(p)), p.sterk, p.werk, p.ctx, p.stat, p.dat, p.bron, p.scout].map(csvCell).join(";"))].join("\r\n")); };
 } });
