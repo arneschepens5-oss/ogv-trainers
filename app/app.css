@@ -2541,3 +2541,6 @@ html.big .hint,html.big small{font-size:max(1em,13px)}
 .scleer .segs button.on{background:var(--yellow);color:var(--onY);border-color:var(--yellow)}.scleer .segs button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .scleer .rng{margin-top:10px}
 .pill.scleerp{background:color-mix(in srgb,var(--blue,#2b6de0) 14%,transparent);color:var(--ink)}.pill.scleerp.est{border:1px dashed var(--line2);background:transparent}
+.scleer .segs.zk{align-items:center;margin-top:8px}.scleer .segs.zk span{font-size:12.5px;color:var(--muted);font-weight:700;margin-right:2px}
+.scleer .segs.lv button.on.l2,.scleer .segs.lv button.on.l4{background:hsl(20,72%,46%);border-color:hsl(20,72%,46%);color:#fff}
+.scleer .segs.lv button.on.l6{background:var(--yellow)}.scleer .segs.lv button.on.l8,.scleer .segs.lv button.on.l10{background:hsl(120,55%,38%);border-color:hsl(120,55%,38%);color:#fff}
