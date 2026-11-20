@@ -287,12 +287,13 @@ function setTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} 
 matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => { if (getTheme() === "system") applyTheme("system"); });
 applyTheme();
 const THEME_OPTS = [["light", "Licht"], ["dark", "Donker"], ["system", "Automatisch"]];
-/* lettergrootte: schuifbalk met 5 standen, onthouden op dit toestel (oude "grote letters"-keuze wordt stand 3) */
-const SZ_ZOOM = [1, 1.07, 1.15, 1.25, 1.36];
-const getSz = () => { try { const v = localStorage.getItem("ogv-sz"); if (v != null && v !== "") return Math.min(4, Math.max(0, +v | 0)); return localStorage.getItem("ogv-big") === "1" ? 2 : 0; } catch (e) { return 0; } };
+/* lettergrootte: schuifbalk van -2 (klein) tot +4 (groot), 0 = standaard; onthouden op dit toestel (oude "grote letters"-keuze wordt stand 2) */
+const SZ_ZOOM = { "-2": .84, "-1": .92, 0: 1, 1: 1.07, 2: 1.15, 3: 1.25, 4: 1.36 };
+const getSz = () => { try { const v = localStorage.getItem("ogv-sz"); if (v != null && v !== "") return Math.min(4, Math.max(-2, +v | 0)); return localStorage.getItem("ogv-big") === "1" ? 2 : 0; } catch (e) { return 0; } };
 const applyBig = () => { const n = getSz(), r = document.documentElement; r.classList.toggle("big", n > 0); r.dataset.sz = n; r.style.setProperty("--zs", SZ_ZOOM[n]); };
 applyBig();
-const bigSwitch = () => `<label class="szctl" title="Lettergrootte"><span class="a1" aria-hidden="true">A</span><input type="range" min="0" max="4" step="1" value="${getSz()}" data-sz-range aria-label="Lettergrootte" aria-valuetext="stand ${getSz() + 1} van 5"><span class="a2" aria-hidden="true">A</span></label>`;
+const szLabel = n => n === 0 ? "standaard" : n < 0 ? "kleiner (" + n + ")" : "groter (+" + n + ")";
+const bigSwitch = () => `<label class="szctl" title="Lettergrootte"><span class="a1" aria-hidden="true">A</span><input type="range" min="-2" max="4" step="1" value="${getSz()}" data-sz-range aria-label="Lettergrootte" aria-valuetext="${szLabel(getSz())}"><span class="a2" aria-hidden="true">A</span></label>`;
 const themeSwitch = labels => { const cur = getTheme(), i = Math.max(0, THEME_OPTS.findIndex(o => o[0] === cur));
   return `<div class="themesw${labels ? " lbl" : ""}" role="radiogroup" aria-label="Weergave" style="--i:${i}"><span class="thumb" aria-hidden="true"></span>${THEME_OPTS.map(([k, l], j) =>
     `<button type="button" role="radio" data-theme-set="${k}" data-ti="${j}" aria-checked="${cur === k}" title="${l}${k === "system" ? " (volgt je toestel)" : ""}" aria-label="${l}">${IC["th_" + k]}${labels ? `<span>${l}</span>` : ""}</button>`).join("")}</div>`; };
@@ -614,7 +615,7 @@ function shell(fresh) {
   $$("[data-menued]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); menuEdit(); });
   if (logged && !gidsSeen()) setTimeout(() => { if (!$("#dlg")?.open) startGids(); }, 600);
   bindThemeSwitch();
-  $$("[data-sz-range]").forEach(b => b.oninput = () => { try { localStorage.setItem("ogv-sz", b.value); } catch (e) {} applyBig(); $$("[data-sz-range]").forEach(x => { x.value = b.value; x.setAttribute("aria-valuetext", "stand " + (+b.value + 1) + " van 5"); }); });
+  $$("[data-sz-range]").forEach(b => b.oninput = () => { try { localStorage.setItem("ogv-sz", b.value); } catch (e) {} applyBig(); $$("[data-sz-range]").forEach(x => { x.value = b.value; x.setAttribute("aria-valuetext", szLabel(+b.value)); }); });
   $$("[data-logout]").forEach(b => b.onclick = logout); $$("[data-clubsw]").forEach(b => b.onclick = clubSwitch);
   $$("[data-setname], .acct .who b").forEach(b => b.onclick = () => mode !== "demo" && nameForm());
   $$("[data-account]").forEach(b => b.onclick = accountDialog);

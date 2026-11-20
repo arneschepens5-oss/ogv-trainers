@@ -2491,8 +2491,8 @@ h1.pg{position:relative;padding-bottom:10px}h1.pg::after{content:"";position:abs
 .szctl{flex:1 0 100%;display:flex;align-items:center;gap:10px;margin-top:2px;cursor:pointer;color:var(--ink);font-weight:800}
 .szctl .a1{font-size:12px}.szctl .a2{font-size:21px;line-height:1}
 .szctl input{flex:1;min-width:0;height:26px;margin:0;accent-color:var(--sc,var(--ink));cursor:pointer;touch-action:pan-y}
-/* lettergrootte (stand 1-4): pagina en zijbalk groter, met meer contrast */
-html.big .page{zoom:var(--zs,1.15)}html.big .side .nav a{font-size:calc(14.5px * var(--zs,1.15))}html.big .side .subside a{font-size:calc(14px * var(--zs,1.15))}
+/* lettergrootte (-2 tot +4): pagina en zijbalk schalen mee; vanaf +1 ook meer contrast */
+html:not([data-sz="0"]) .page{zoom:var(--zs,1)}html:not([data-sz="0"]) .side .nav a{font-size:calc(14.5px * var(--zs,1))}html:not([data-sz="0"]) .side .subside a{font-size:calc(14px * var(--zs,1))}
 html.big{--muted:#3A3C36;--dim:#55574F}
 html.big .hint,html.big small{font-size:max(1em,13px)}
 /* v167: duidelijke onderverdelingen (tabbladen) en spelers op het veld */
