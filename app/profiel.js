@@ -20,12 +20,19 @@ function pfGroupMap(extra = []) {
   return { tpls, m: all, order, keep };
 }
 /* gemiddelde per groep van één evaluatie, gelezen met de best passende fiche */
+const PF_ALIAS = { "techniek": "techniek aan de bal", "met de bal": "techniek aan de bal", "zonder de bal": "verdedigen", "mentaal en team": "mentaal", "plezier en inzet": "mentaal" };
 function pfVals(scores, gm) {
-  const keys = Object.keys(scores || {}); if (!keys.length) return {};
-  let best = null, bn = 0; for (const t of gm.tpls) { const n = keys.filter(k => t.m.has(k)).length; if (n > bn) { bn = n; best = t; } }
-  const acc = {}; for (const [k, v] of Object.entries(scores)) { const n = +v, g0 = best?.m.get(k) || gm.m.get(k), g = best && !best.m.has(k) && !best.order.includes(g0) ? null : g0; if (!g || PF_SKIP.test(g) || v == null || v === "" || isNaN(n)) continue; (acc[g] = acc[g] || []).push(n); }
+  const keys = Object.keys(scores || {}); if (!keys.length || !gm.tpls.length) return {};
+  /* de huidige fiche (eerste sjabloon) telt altijd; oudere onderdelen vullen enkel groepen aan die in deze evaluatie nog geen score hebben */
+  let M = gm.tpls[0]; if (!keys.some(k => M.m.has(k))) { let bn = 0; for (const t of gm.tpls) { const n = keys.filter(k => t.m.has(k)).length; if (n > bn) { bn = n; M = t; } } }
+  const lc = s => String(s || "").toLowerCase(), toM = g => M.order.find(x => lc(x) === lc(g)) || M.order.find(x => lc(x) === PF_ALIAS[lc(g)]) || null;
+  const acc = {}, leg = {};
+  for (const [k, v] of Object.entries(scores)) { const n = +v; if (v == null || v === "" || isNaN(n)) continue;
+    if (M.m.has(k)) { const g = M.m.get(k); if (!PF_SKIP.test(g)) (acc[g] = acc[g] || []).push(n); continue; }
+    const t = gm.tpls.find(t => t.m.has(k)), g = t ? toM(t.m.get(k)) : null; if (g && !PF_SKIP.test(g)) (leg[g] = leg[g] || []).push(n); }
+  for (const g in leg) if (!acc[g]) acc[g] = leg[g];
   const out = Object.fromEntries(Object.entries(acc).map(([g, xs]) => [g, xs.reduce((a, b) => a + b, 0) / xs.length]));
-  Object.defineProperty(out, "_order", { value: best ? best.order : gm.order, enumerable: false }); return out;
+  Object.defineProperty(out, "_order", { value: M.order, enumerable: false }); return out;
 }
 /* de hoeken van de radar: de groepen met een score, in de volgorde van de fiche; keeper enkel bij doelmannen of als er keeperscores zijn */
 function pfAxes(vals, gm) { const ord = [...(vals._order || []), ...gm.order.filter(g => !(vals._order || []).includes(g))]; return ord.filter(g => vals[g] != null && !PF_SKIP.test(g)); }
