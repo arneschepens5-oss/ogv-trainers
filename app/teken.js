@@ -162,6 +162,17 @@ const DG_PRESETS = [
   ["5v5: tegenstander", () => [["k", 96, 50, "K"], ["p", 82, 50, ""], ["p", 68, 20, ""], ["p", 68, 80, ""], ["p", 56, 50, ""]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "zwart" : undefined }))],
   ["8v8: eigen ploeg (1-3-3-1)", () => [["k", 4, 50, "K"], ["p", 17, 82, "2"], ["p", 15, 50, "4"], ["p", 17, 18, "3"], ["p", 32, 84, "7"], ["p", 30, 50, "8"], ["p", 32, 16, "11"], ["p", 45, 50, "9"]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "geel" : undefined }))],
   ["8v8: tegenstander", () => [["k", 96, 50, "K"], ["p", 83, 18, ""], ["p", 85, 50, ""], ["p", 83, 82, ""], ["p", 68, 16, ""], ["p", 70, 50, ""], ["p", 68, 84, ""], ["p", 55, 50, ""]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "zwart" : undefined }))],
+  /* organisaties: liggend veld, eigen ploeg (geel) speelt naar rechts */
+  ["Organisatie: rondo 5 tegen 2", () => [...[[34, 22], [66, 22], [34, 78], [66, 78]].map(([x, y]) => ({ t: "cone", x, y })), ...[[50, 22], [34, 50], [66, 50], [42, 78], [58, 78]].map(([x, y], i) => ({ t: "p", x, y, n: String(i + 1), c: "geel" })), { t: "p", x: 46, y: 46, n: "", c: "zwart" }, { t: "p", x: 55, y: 55, n: "", c: "zwart" }, { t: "ball", x: 52, y: 25 }]],
+  ["Organisatie: passdriehoek", () => [...[[30, 75], [50, 25], [70, 75]].map(([x, y]) => ({ t: "cone", x, y })), ...[[27, 79, "1"], [50, 20, "2"], [73, 79, "3"]].map(([x, y, n]) => ({ t: "p", x, y, n, c: "geel" })), { t: "ball", x: 30, y: 74 }, { t: "pass", x: 31, y: 72, x2: 48, y2: 29 }, { t: "pass", x: 52, y: 29, x2: 69, y2: 72 }, { t: "run", x: 29, y: 68, x2: 46, y2: 33, cx: 33, cy: 47 }]],
+  ["Organisatie: Y-vorm passen", () => [...[[20, 50], [45, 50], [70, 25], [70, 75]].map(([x, y]) => ({ t: "cone", x, y })), ...[[16, 50, "1"], [45, 45, "2"], [74, 22, "3"], [74, 78, "4"]].map(([x, y, n]) => ({ t: "p", x, y, n, c: "geel" })), { t: "ball", x: 19, y: 54 }, { t: "pass", x: 21, y: 50, x2: 42, y2: 50 }, { t: "pass", x: 47, y: 47, x2: 68, y2: 28 }, { t: "run", x: 16, y: 46, x2: 42, y2: 42, cx: 30, cy: 38 }]],
+  ["Organisatie: 1 tegen 1 naar minidoel", () => [{ t: "mini", x: 98.8, y: 50, r: 180 }, { t: "cone", x: 20, y: 30 }, { t: "cone", x: 20, y: 70 }, { t: "cone", x: 85, y: 30 }, { t: "cone", x: 85, y: 70 }, { t: "p", x: 24, y: 50, n: "1", c: "geel" }, { t: "ball", x: 27, y: 52 }, { t: "p", x: 70, y: 50, n: "", c: "zwart" }, { t: "drib", x: 28, y: 50, x2: 62, y2: 42 }, { t: "shot", x: 66, y: 40, x2: 96, y2: 50 }]],
+  ["Organisatie: 2 tegen 1 naar doel", () => [{ t: "goal", x: 98.8, y: 50, r: 180 }, { t: "k", x: 95, y: 50, n: "K" }, { t: "p", x: 40, y: 35, n: "1", c: "geel" }, { t: "p", x: 40, y: 65, n: "2", c: "geel" }, { t: "ball", x: 43, y: 37 }, { t: "p", x: 70, y: 50, n: "", c: "zwart" }, { t: "drib", x: 44, y: 36, x2: 60, y2: 40 }, { t: "run", x: 42, y: 66, x2: 78, y2: 68 }, { t: "pass", x: 62, y: 42, x2: 77, y2: 64 }]],
+  ["Organisatie: 3 tegen 3 met 4 minidoelen", () => [...[[1.2, 25, 0], [1.2, 75, 0], [98.8, 25, 180], [98.8, 75, 180]].map(([x, y, r]) => ({ t: "mini", x, y, r })), ...[[22, 30], [22, 70], [42, 50]].map(([x, y], i) => ({ t: "p", x, y, n: String(i + 1), c: "geel" })), ...[[78, 30], [78, 70], [58, 50]].map(([x, y]) => ({ t: "p", x, y, n: "", c: "zwart" })), { t: "ball", x: 50, y: 50 }]],
+  ["Organisatie: 4 tegen 4 met twee doelen", () => [{ t: "goal", x: 1.2, y: 50 }, { t: "goal", x: 98.8, y: 50, r: 180 }, { t: "k", x: 4, y: 50, n: "K" }, { t: "k", x: 96, y: 50, n: "K", c: "zwart" }, ...[[20, 50], [34, 22], [34, 78], [45, 50]].map(([x, y], i) => ({ t: "p", x, y, n: String(i + 1), c: "geel" })), ...[[80, 50], [66, 22], [66, 78], [55, 50]].map(([x, y]) => ({ t: "p", x, y, n: "", c: "zwart" })), { t: "ball", x: 50, y: 42 }]],
+  ["Organisatie: positiespel 4 + 1 tegen 3", () => [{ t: "zone", x: 25, y: 18, x2: 75, y2: 82 }, ...[[50, 18], [25, 50], [75, 50], [50, 82]].map(([x, y], i) => ({ t: "p", x, y, n: String(i + 1), c: "geel" })), { t: "p", x: 50, y: 50, n: "5", c: "blauw" }, ...[[40, 38], [60, 38], [50, 64]].map(([x, y]) => ({ t: "p", x, y, n: "", c: "zwart" })), { t: "ball", x: 28, y: 53 }]],
+  ["Organisatie: afwerken na pass", () => [{ t: "goal", x: 98.8, y: 50, r: 180 }, { t: "k", x: 95, y: 50, n: "K" }, { t: "cone", x: 55, y: 30 }, { t: "cone", x: 40, y: 70 }, ...[[36, 74], [32, 77], [28, 80]].map(([x, y], i) => ({ t: "p", x, y, n: String(i + 1), c: "geel" })), { t: "p", x: 58, y: 26, n: "A", c: "blauw" }, { t: "net", x: 30, y: 88 }, { t: "pass", x: 40, y: 72, x2: 56, y2: 32 }, { t: "run", x: 41, y: 66, x2: 70, y2: 46 }, { t: "pass", x: 59, y: 31, x2: 70, y2: 45 }, { t: "shot", x: 72, y: 46, x2: 96, y2: 46 }]],
+  ["Organisatie: dribbelparcours", () => [...[25, 37, 49, 61, 73].map((x, i) => ({ t: "pot", x, y: 50 + (i % 2 ? 8 : -8) })), { t: "cone", x: 12, y: 50 }, { t: "cone", x: 86, y: 50 }, { t: "p", x: 8, y: 50, n: "1", c: "geel" }, { t: "ball", x: 11, y: 54 }, { t: "drib", x: 14, y: 50, x2: 84, y2: 50 }]],
   ["Rondo 4 tegen 1", () => [...[[38, 28], [62, 28], [38, 72], [62, 72]].map(([x, y]) => ({ t: "cone", x, y })), ...[[50, 28, "1"], [50, 72, "3"], [38, 50, "4"], [62, 50, "2"]].map(([x, y, n]) => ({ t: "p", x, y, n, c: "geel" })), { t: "p", x: 50, y: 50, n: "", c: "zwart" }, { t: "ball", x: 52.5, y: 31 }]],
   ["Vierkant met 4 kegels", () => [[30, 22], [70, 22], [30, 78], [70, 78]].map(([x, y]) => ({ t: "cone", x, y }))],
   ["Twee grote doelen", () => [{ t: "goal", x: 1.2, y: 50 }, { t: "goal", x: 98.8, y: 50 }]],
@@ -273,7 +284,7 @@ function dgOffer(blob, fname, note = "") {
 
 function diagramEditor(host, dg, onChange, opts = {}) {
   dg.objs = dg.objs || []; dg.field = dg.field || "5v5";
-  let group = 0, tool = "select", sel = -1, drag = null, draft = null, pcol = "geel", lastHint = "", cur = 0, stopPlay = null;
+  let ms = [], band = null, group = 0, tool = "select", sel = -1, drag = null, draft = null, pcol = "geel", lastHint = "", cur = 0, stopPlay = null;
   /* stappen: dg.frames bevat alle stappen; dg.objs is altijd de stap waaraan je werkt */
   if (Array.isArray(dg.frames) && dg.frames.length > 1) dg.objs = dg.frames[0]; else delete dg.frames;
   const ensureK = () => (dg.frames || [dg.objs]).forEach(f => f.forEach(o => { if (!o.k) o.k = dgRid(); }));
@@ -283,7 +294,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
   const commit = () => { ensureK(); const s = snap(); if (s === hist[hi]) return; hist = hist.slice(0, hi + 1); hist.push(s); if (hist.length > 80) hist.shift(); hi = hist.length - 1; onChange(); bar(); steps(); };
   const restore = s => { const o = JSON.parse(s); dg.field = o.field; dg.vert = o.vert || undefined; dg.bg = o.bg || undefined;
     if (o.frames && o.frames.length > 1) { dg.frames = o.frames; cur = Math.min(o.cur || 0, o.frames.length - 1); dg.objs = dg.frames[cur]; } else { delete dg.frames; cur = 0; dg.objs = o.objs; }
-    sel = -1; onChange(); bar(); draw(); top(); steps(); };
+    sel = -1, ms = []; onChange(); bar(); draw(); top(); steps(); };
   const undo = () => { if (hi > 0) restore(hist[--hi]); }, redo = () => { if (hi < hist.length - 1) restore(hist[++hi]); };
   const nextStep = () => String(dg.objs.filter(o => o.t === "step").length + 1);
   const roster = () => (typeof S !== "undefined" && S.players ? active() : []).map(p => p.first_name || pname(p)).filter(Boolean);
@@ -294,7 +305,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     <div class="dgtop"><select id="dgf" aria-label="Soort veld">${fieldOpts()}</select>
       <button class="dgb" type="button" id="dgrot" title="Veld kantelen">${IC.rotate}<span>Kantelen</span></button>
       <button class="dgb" type="button" id="dgbg" title="Grasveld of wit blad"><span class="sw" aria-hidden="true"></span><span id="dgbgl"></span></button>
-      <select id="dgpre" aria-label="Snel plaatsen"><option value="">Snel plaatsen…</option>${DG_PRESETS.map(([l], k) => `<option value="${k}">${esc(l)}</option>`).join("")}</select>
+      <select id="dgpre" aria-label="Snel plaatsen"><option value="">Snel plaatsen…</option>${[["Opstellingen", l => /^\d+v\d+:/.test(l)], ["Organisaties", l => /^Organisatie:|^Rondo/.test(l)], ["Materiaal", l => !/^\d+v\d+:|^Organisatie:|^Rondo/.test(l)]].map(([g, f]) => `<optgroup label="${g}">${DG_PRESETS.map(([l], k) => f(l) ? `<option value="${k}">${esc(l.replace(/^Organisatie: /, ""))}</option>` : "").join("")}</optgroup>`).join("")}</select>
       <span class="spacer"></span>
       <button class="dgb ic" type="button" id="dgun" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken">↶</button><button class="dgb ic" type="button" id="dgre" title="Opnieuw (Ctrl+Y)" aria-label="Opnieuw">↷</button>
       <button class="dgb ic" type="button" id="dgfs" title="Groot scherm" aria-label="Groot scherm">⤢</button></div>
@@ -313,10 +324,10 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     $$("[data-tool]", host).forEach(b => b.onclick = () => setTool(b.dataset.tool));
     $$("[data-pc]", host).forEach(b => b.onclick = () => { pcol = b.dataset.pc; if (tool !== "p") setTool("p"); else tools(); });
   };
-  const hints = { select: "Tik op een voorwerp om het te kiezen en te verslepen. Bij een lijn versleep je de gele bolletjes; met het witte bolletje maak je een bocht.",
+  const hints = { select: "Tik op een voorwerp om het te kiezen en te verslepen. Sleep een kader over het veld (of Shift + tik) om meerdere voorwerpen samen te verplaatsen, kopiëren of een kleur te geven.",
     line: "Trek een lijn: druk, sleep en laat los. Je kan meteen de volgende trekken.", place: "Tik op het veld om te plaatsen. Je kan er meteen meer plaatsen. Tik op een bestaand voorwerp om het te verplaatsen.",
     zone: "Sleep om een vlak te tekenen.", pen: "Teken vrij met je vinger of de muis. Bij een gekozen lijn kan je een pijlpunt aanzetten.", meas: "Trek een lijn om een afstand aan te duiden, bv. 20 m." };
-  const setTool = t => { tool = t; $("#dgselb", host).setAttribute("aria-pressed", t === "select"); if (t !== "select") sel = -1; tools(); draw(); bar();
+  const setTool = t => { tool = t; $("#dgselb", host).setAttribute("aria-pressed", t === "select"); if (t !== "select") sel = -1, ms = []; tools(); draw(); bar();
     $("#dgh", host).textContent = t === "select" ? hints.select : t === "zone" || t === "oval" ? hints.zone : t === "pen" ? hints.pen : t === "meas" ? hints.meas : ARROWS.has(t) ? hints.line : t === "txt" ? "Tik op het veld waar de tekst moet komen." : hints.place; };
   const top = () => { $("#dgf", host).innerHTML = fieldOpts(); const F = FIELDS[dg.field]; $("#dgrot", host).hidden = !!F.fixed; $("#dgrot", host).setAttribute("aria-pressed", !!dg.vert);
     $("#dgbgl", host).textContent = dg.bg === "wit" ? "Wit blad" : "Grasveld"; $("#dgbg", host).classList.toggle("wit", dg.bg === "wit");
@@ -326,27 +337,33 @@ function diagramEditor(host, dg, onChange, opts = {}) {
   const MOVERS = new Set(["p", "k", "tr", "ball"]);
   const draw = () => { if (stopPlay) return; const objs = draft ? [...dg.objs, draft] : dg.objs;
     const ghost = dg.frames && cur > 0 ? dg.frames[cur - 1].filter(o => MOVERS.has(LEGACY_P[o.t] ? "p" : o.t)) : null;
-    wrap.innerHTML = diagramSVG(dg, { objs, ghost, sel: draft ? -1 : sel }); wrap.dataset.tool = tool; };
+    ms = ms.filter(i => dg.objs[i]);
+    wrap.innerHTML = diagramSVG(dg, { objs, ghost, sel: draft ? -1 : sel }); wrap.dataset.tool = tool;
+    if (band || ms.length > 1) { const { W, H } = dgDims(dg), svg = $("svg", wrap); let ov = "";
+      if (band) { const x = Math.min(band.x0, band.x1) * W / 100, y = Math.min(band.y0, band.y1) * H / 100; ov += `<rect x="${x}" y="${y}" width="${Math.abs(band.x1 - band.x0) * W / 100}" height="${Math.abs(band.y1 - band.y0) * H / 100}" fill="rgba(255,209,0,.12)" stroke="#FFD100" stroke-width=".4" stroke-dasharray="1.2 .8" pointer-events="none"/>`; }
+      ms.forEach(i => { const [x, y] = ctr(dg.objs[i]); ov += `<circle cx="${x * W / 100}" cy="${y * H / 100}" r="${3.6 * (dg.objs[i].s || 1)}" fill="none" stroke="#FFD100" stroke-width=".55" stroke-dasharray="1 .6" pointer-events="none"/>`; });
+      svg.insertAdjacentHTML("beforeend", ov); } };
   /* stappenbalk: stap kiezen, toevoegen, verwijderen, afspelen en filmpje */
   const steps = () => { const el = $("#dgs", host), F = dgFrames(dg), many = F.length > 1;
     el.innerHTML = `<span class="dgsl">Stappen</span>${F.map((_, i) => `<button type="button" class="dgstep" data-st="${i}" aria-pressed="${i === cur}"${stopPlay ? " disabled" : ""}>${i + 1}</button>`).join("")}
       <button type="button" class="dgb" id="dgadd" title="Nieuwe stap: kopie van deze stap, daarna verschuif je spelers en bal"${stopPlay ? " disabled" : ""}>${IC.plus}<span>Stap</span></button>
       ${many ? `<button type="button" class="dgb" id="dgplay">${stopPlay ? "■<span>Stoppen</span>" : "▶<span>Afspelen</span>"}</button><button type="button" class="dgb" id="dgvid"${stopPlay ? " disabled" : ""}>${IC.dl}<span>Filmpje</span></button><button type="button" class="dgb danger" id="dgsdel"${stopPlay ? " disabled" : ""}>Stap ${cur + 1} weg</button>`
         : `<span class="hint dgsh">Maak een tweede stap om de oefening te laten bewegen.</span>`}`;
-    $$("[data-st]", el).forEach(b => b.onclick = () => { cur = +b.dataset.st; dg.objs = dg.frames[cur]; sel = -1; draw(); bar(); steps(); });
-    $("#dgadd", el).onclick = () => { const copy = JSON.parse(JSON.stringify(dg.objs)); if (!dg.frames) dg.frames = [dg.objs]; dg.frames.splice(cur + 1, 0, copy); cur++; dg.objs = dg.frames[cur]; sel = -1; commit(); draw(); steps();
+    $$("[data-st]", el).forEach(b => b.onclick = () => { cur = +b.dataset.st; dg.objs = dg.frames[cur]; sel = -1, ms = []; draw(); bar(); steps(); });
+    $("#dgadd", el).onclick = () => { const copy = JSON.parse(JSON.stringify(dg.objs)); if (!dg.frames) dg.frames = [dg.objs]; dg.frames.splice(cur + 1, 0, copy); cur++; dg.objs = dg.frames[cur]; sel = -1, ms = []; commit(); draw(); steps();
       toast(`Stap ${cur + 1} gemaakt. Versleep nu spelers en bal naar hun nieuwe plaats.`); };
     const pl = $("#dgplay", el); if (pl) pl.onclick = () => { if (stopPlay) { stopPlay(); stopPlay = null; wrap.classList.remove("playing"); draw(); steps(); return; }
-      sel = -1; wrap.classList.add("playing"); stopPlay = dgPlay(wrap, dg, { onStep: i => $$("[data-st]", el).forEach(b => b.setAttribute("aria-pressed", +b.dataset.st === i)) }); steps(); };
+      sel = -1, ms = []; wrap.classList.add("playing"); stopPlay = dgPlay(wrap, dg, { onStep: i => $$("[data-st]", el).forEach(b => b.setAttribute("aria-pressed", +b.dataset.st === i)) }); steps(); };
     const vd = $("#dgvid", el); if (vd) vd.onclick = () => dgVideo(dg, opts.name || "oefening");
     const sd = $("#dgsdel", el); if (sd) sd.onclick = () => { if (!confirm(`Stap ${cur + 1} verwijderen?`)) return; dg.frames.splice(cur, 1); cur = Math.max(0, cur - 1);
-      if (dg.frames.length < 2) { dg.objs = dg.frames[0]; delete dg.frames; cur = 0; } else dg.objs = dg.frames[cur]; sel = -1; commit(); draw(); steps(); };
+      if (dg.frames.length < 2) { dg.objs = dg.frames[0]; delete dg.frames; cur = 0; } else dg.objs = dg.frames[cur]; sel = -1, ms = []; commit(); draw(); steps(); };
   };
   /* contextbalk voor het gekozen voorwerp */
-  const bar = () => { const c = $("#dgc", host); top(); const o = dg.objs[sel];
-    if (!o) { c.innerHTML = dg.objs.length ? `<span class="hint">${dg.objs.length} ${dg.objs.length === 1 ? "voorwerp" : "voorwerpen"} op het veld</span><span class="spacer"></span><button class="dgb" type="button" id="dgpng">${IC.dl}<span>Afbeelding</span></button><button class="dgb danger" type="button" id="dgclr">Alles wissen</button>` : `<span class="hint">Het veld is nog leeg. Kies hierboven wat je wil plaatsen of gebruik "Snel plaatsen".</span>`;
-      const clr = $("#dgclr", c); if (clr) clr.onclick = () => { if (!confirm("Alles van het veld halen? Je kan dit ongedaan maken.")) return; dg.objs.splice(0); sel = -1; commit(); draw(); };
-      const png = $("#dgpng", c); if (png) png.onclick = () => dgPng(dg); return; }
+  const bar = () => { const c = $("#dgc", host); top(); if (ms.length > 1) return multiBar(c); const o = dg.objs[sel];
+    if (!o) { c.innerHTML = dg.objs.length ? `<span class="hint">${dg.objs.length} ${dg.objs.length === 1 ? "voorwerp" : "voorwerpen"} op het veld</span><span class="spacer"></span>${clip() ? `<button class="dgb" type="button" id="dgpst" title="Plakken (Ctrl+V)">${IC.copy}<span>Plakken</span></button>` : ""}<button class="dgb" type="button" id="dgall" title="Alles kiezen (Ctrl+A)"><span>Alles kiezen</span></button><button class="dgb" type="button" id="dgpng">${IC.dl}<span>Afbeelding</span></button><button class="dgb danger" type="button" id="dgclr">Alles wissen</button>` : `<span class="hint">Het veld is nog leeg. Kies hierboven wat je wil plaatsen of gebruik "Snel plaatsen".</span>`;
+      const clr = $("#dgclr", c); if (clr) clr.onclick = () => { if (!confirm("Alles van het veld halen? Je kan dit ongedaan maken.")) return; dg.objs.splice(0); sel = -1, ms = []; commit(); draw(); };
+      const png = $("#dgpng", c); if (png) png.onclick = () => dgPng(dg);
+      const ps = $("#dgpst", c); if (ps) ps.onclick = paste; const al = $("#dgall", c); if (al) al.onclick = () => { setMs(dg.objs.map((_, i) => i)); draw(); bar(); }; return; }
     const t = LEGACY_P[o.t] ? "p" : o.t, lbl = { p: "Nr.", k: "Nr.", tr: "Label", step: "Nr.", txt: " ", meas: " ", zone: "Tekst", oval: "Tekst" }[t];
     const noCol = new Set(["ball", "goal", "net"]), palette = noCol.has(t) ? [] : t === "p" || t === "k" || t === "tr" ? ["geel", "zwart", "blauw", "rood", "wit", "oranje", "groen", "paars"] : ["zwart", "wit", "geel", "oranje", "rood", "blauw", "groen", "paars"];
     const curC = colOf(o, dg.bg), named = t === "p" || t === "k" || t === "tr", wide = t === "txt" || t === "zone" || t === "oval";
@@ -361,7 +378,8 @@ function diagramEditor(host, dg, onChange, opts = {}) {
       ${t === "pen" || t === "line" || t === "pass" ? `<button class="dgb" type="button" id="dgda" aria-pressed="${!!o.dash}">Stippellijn</button>` : ""}
       ${t === "zone" || t === "oval" ? `<button class="dgb" type="button" id="dgso" aria-pressed="${!!o.solid}">Gevuld</button>` : ""}
       <span class="spacer"></span><button class="dgb ic" type="button" id="dgfw" title="Naar voren" aria-label="Naar voren">⇡</button><button class="dgb ic" type="button" id="dgbw" title="Naar achteren" aria-label="Naar achteren">⇣</button>
-      <button class="dgb" type="button" id="dgdup" title="Kopie (Ctrl+D)">${IC.copy}<span>Kopie</span></button><button class="dgb danger" type="button" id="dgdel" title="Verwijderen (Delete)">${IC.trash}<span>Weg</span></button>`;
+      <button class="dgb ic" type="button" id="dgcp1" title="Kopiëren (Ctrl+C)" aria-label="Kopiëren">⧉</button><button class="dgb" type="button" id="dgdup" title="Kopie (Ctrl+D)">${IC.copy}<span>Kopie</span></button><button class="dgb danger" type="button" id="dgdel" title="Verwijderen (Delete)">${IC.trash}<span>Weg</span></button>`;
+    $("#dgcp1", c).onclick = copySel;
     const n = $("#dgn", c); if (n) { n.oninput = () => { o.n = n.value; draw(); }; n.onchange = commit; n.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); n.blur(); } }; }
     const nm = $("#dgnm", c); if (nm) { nm.oninput = () => { o.nm = nm.value.trim() || undefined; draw(); }; nm.onchange = commit; nm.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); nm.blur(); } }; }
     $$("[data-cc]", c).forEach(b => b.onclick = () => { o.c = b.dataset.cc; if (t === "p") pcol = o.c; commit(); draw(); });
@@ -377,15 +395,35 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     $("#dgdup", c).onclick = dup; $("#dgdel", c).onclick = del; };
   const dup = () => { const o = dg.objs[sel]; if (!o) return; const k = JSON.parse(JSON.stringify(o)); k.k = dgRid(); dgShift(k, o, 4, 4); if (k.t === "step") k.n = nextStep();
     if (k.t === "p" && /^\d+$/.test(k.n || "")) k.n = nextNum(k.c || "geel"); dg.objs.push(k); sel = dg.objs.length - 1; commit(); draw(); };
-  const del = () => { if (sel < 0) return; dg.objs.splice(sel, 1); sel = -1; commit(); draw(); };
+  const del = () => { const g = grp(); if (!g.length) return; g.sort((a, b) => b - a).forEach(i => dg.objs.splice(i, 1)); sel = -1, ms = []; commit(); draw(); bar(); };
+  /* meerdere voorwerpen: sleep een kader over het veld, of Shift + tik */
+  const grp = () => ms.length ? ms.slice() : sel >= 0 ? [sel] : [];
+  const setMs = a => { a = [...new Set(a)].filter(i => dg.objs[i]); if (a.length === 1) { sel = a[0]; ms = []; } else { ms = a; sel = -1; } };
+  const ctr = o => o.pts ? [o.pts.reduce((s2, q) => s2 + q[0], 0) / o.pts.length, o.pts.reduce((s2, q) => s2 + q[1], 0) / o.pts.length] : o.x2 != null ? [(o.x + o.x2) / 2, (o.y + o.y2) / 2] : [o.x, o.y];
+  const CLIP = "ogv-dg-clip";
+  const copySel = () => { const g = grp(); if (!g.length) return; try { localStorage.setItem(CLIP, JSON.stringify(g.sort((a, b) => a - b).map(i => dg.objs[i]))); } catch (e) {} toast(g.length === 1 ? "Gekopieerd. Plak het in een andere stap of oefening (Ctrl+V)." : `${g.length} voorwerpen gekopieerd. Plak ze in een andere stap of oefening (Ctrl+V).`); bar(); };
+  const clip = () => { try { return JSON.parse(localStorage.getItem(CLIP) || "null"); } catch (e) { return null; } };
+  const paste = () => { const c = clip(); if (!c || !c.length) return; const same = c.every(o => dg.objs.some(z => z.k === o.k)), off = same ? 3 : 0, start = dg.objs.length;
+    c.forEach(o => { const k = JSON.parse(JSON.stringify(o)); k.k = dgRid(); if (off) dgShift(k, o, off, off); dg.objs.push(k); });
+    setMs(c.map((_, i) => start + i)); commit(); draw(); bar(); };
+  const dupG = () => { const g = grp().sort((a, b) => a - b); if (g.length < 2) return dup(); const start = dg.objs.length;
+    g.forEach(i => { const o = dg.objs[i], k = JSON.parse(JSON.stringify(o)); k.k = dgRid(); dgShift(k, o, 4, 4); dg.objs.push(k); }); setMs(g.map((_, j) => start + j)); commit(); draw(); bar(); };
+  const multiBar = c => { const objs = ms.map(i => dg.objs[i]), noCol = new Set(["ball", "goal", "net"]);
+    c.innerHTML = `<b class="dgname">${ms.length} voorwerpen gekozen</b><span class="dgcols">${["geel", "zwart", "blauw", "rood", "wit", "oranje", "groen", "paars"].map(k => `<button type="button" data-mc="${k}" title="${cap(k)}" style="--c:${COLS[k]}"></button>`).join("")}</span>
+      <span class="spacer"></span><button class="dgb" type="button" id="dgcp" title="Kopiëren (Ctrl+C)">${IC.copy}<span>Kopiëren</span></button><button class="dgb" type="button" id="dgdup" title="Kopie (Ctrl+D)">${IC.copy}<span>Kopie</span></button><button class="dgb danger" type="button" id="dgdel" title="Verwijderen (Delete)">${IC.trash}<span>Weg</span></button>`;
+    $$("[data-mc]", c).forEach(b => b.onclick = () => { objs.forEach(o => { if (!noCol.has(LEGACY_P[o.t] ? "p" : o.t)) { if (LEGACY_P[o.t]) o.t = "p"; o.c = b.dataset.mc; } }); commit(); draw(); });
+    $("#dgcp", c).onclick = copySel; $("#dgdup", c).onclick = dupG; $("#dgdel", c).onclick = del; };
 
   wrap.style.touchAction = "none";
   wrap.onpointerdown = ev => {
     if (ev.button > 0 || stopPlay) return; const p = svgPt(ev), h = ev.target.closest("[data-h]"), hit = ev.target.closest("[data-i]");
     if (h && sel >= 0) { drag = { h: h.dataset.h, p, o: JSON.parse(JSON.stringify(dg.objs[sel])) }; wrap.setPointerCapture(ev.pointerId); return; }
     if (tool === "select" || (hit && !LINEISH.has(tool) && tool !== "pen")) {
-      if (hit) { sel = +hit.dataset.i; drag = { p, o: JSON.parse(JSON.stringify(dg.objs[sel])), moved: false }; wrap.setPointerCapture(ev.pointerId); }
-      else sel = -1;
+      if (hit) { const i = +hit.dataset.i;
+        if (ev.shiftKey || ev.ctrlKey || ev.metaKey) { const g = new Set(grp()); g.has(i) ? g.delete(i) : g.add(i); setMs([...g]); draw(); bar(); return; }
+        if (ms.length > 1 && ms.includes(i)) { drag = { multi: true, p, base: ms.map(k => JSON.parse(JSON.stringify(dg.objs[k]))) }; wrap.setPointerCapture(ev.pointerId); return; }
+        ms = []; sel = i; drag = { p, o: JSON.parse(JSON.stringify(dg.objs[sel])), moved: false }; wrap.setPointerCapture(ev.pointerId); }
+      else { sel = -1, ms = []; if (tool === "select") { band = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; wrap.setPointerCapture(ev.pointerId); } }
       draw(); bar(); return; }
     if (tool === "pen") { draft = { t: "pen", pts: [[p.x, p.y]] }; if (dg.bg !== "wit" && false) draft.c = "wit"; wrap.setPointerCapture(ev.pointerId); draw(); return; }
     if (LINEISH.has(tool)) { draft = { t: tool, x: p.x, y: p.y, x2: p.x, y2: p.y }; if (tool === "meas") draft.n = "10 m"; if (tool !== "zone" && tool !== "oval" && defCol(tool, dg.bg) !== defCol(tool, "")) draft.c = defCol(tool, dg.bg); wrap.setPointerCapture(ev.pointerId); draw(); return; }
@@ -400,7 +438,9 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     if (tool === "txt") { setTool("select"); sel = dg.objs.length - 1; draw(); bar(); setTimeout(() => { const n = $("#dgn", host); if (n) { n.focus(); n.select(); } }, 30); }
   };
   wrap.onpointermove = ev => {
-    if (!draft && !drag) return; const p = svgPt(ev);
+    if (!draft && !drag && !band) return; const p = svgPt(ev);
+    if (band) { band.x1 = p.x; band.y1 = p.y; draw(); return; }
+    if (drag && drag.multi) { const dx = p.x - drag.p.x, dy = p.y - drag.p.y; ms.forEach((k, j) => dgShift(dg.objs[k], drag.base[j], dx, dy)); draw(); return; }
     if (draft && draft.t === "pen") { const L = draft.pts[draft.pts.length - 1]; if (Math.hypot(p.x - L[0], p.y - L[1]) > .7) { draft.pts.push([p.x, p.y]); draw(); } return; }
     if (draft) { draft.x2 = p.x; draft.y2 = p.y; if (draft.t === "lob") { const dx = draft.x2 - draft.x, dy = draft.y2 - draft.y; draft.cx = (draft.x + draft.x2) / 2 - dy * .35; draft.cy = (draft.y + draft.y2) / 2 + dx * .35; } draw(); return; }
     const o = dg.objs[sel]; if (!o) return; const dx = p.x - drag.p.x, dy = p.y - drag.p.y;
@@ -411,7 +451,10 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     else dgShift(o, drag.o, dx, dy);
     draw();
   };
-  const up = () => { if (draft && draft.t === "pen") { if (draft.pts.length > 2) { dg.objs.push(draft); sel = dg.objs.length - 1; commit(); } draft = null; draw(); bar(); return; }
+  const up = () => { if (band) { const b = band; band = null; const [x0, x1] = [Math.min(b.x0, b.x1), Math.max(b.x0, b.x1)], [y0, y1] = [Math.min(b.y0, b.y1), Math.max(b.y0, b.y1)];
+      if (x1 - x0 > 1.5 || y1 - y0 > 1.5) setMs(dg.objs.map((o, i) => [o, i]).filter(([o]) => { const [x, y] = ctr(o); return x >= x0 && x <= x1 && y >= y0 && y <= y1; }).map(([, i]) => i));
+      draw(); bar(); return; }
+    if (draft && draft.t === "pen") { if (draft.pts.length > 2) { dg.objs.push(draft); sel = dg.objs.length - 1; commit(); } draft = null; draw(); bar(); return; }
     if (draft) { const big = Math.hypot(draft.x2 - draft.x, draft.y2 - draft.y) > 2.5; if (big) { dg.objs.push(draft); sel = dg.objs.length - 1; commit(); } draft = null; draw(); bar(); return; }
     if (drag) { drag = null; commit(); bar(); } };
   wrap.onpointerup = up; wrap.onpointercancel = up;
@@ -428,7 +471,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
   $("#dgpre", host).onchange = e => { const k = e.target.value; e.target.value = ""; if (k === "") return; const add = DG_PRESETS[+k][1](), turn = dg.vert || FIELDS[dg.field].fixed && dg.field !== "square1";
     add.forEach(o => { if (turn) { const x0 = o.x; [o.x, o.y] = dgTurn(o.x, o.y, true); if (TURNS.has(o.t)) o.r = (dgRot(o, x0) + 270) % 360; }
       Object.keys(o).forEach(key => o[key] === undefined && delete o[key]); dg.objs.push(o); });
-    sel = -1; commit(); draw(); toast("Geplaatst. Versleep wat je anders wil."); };
+    sel = -1, ms = []; commit(); draw(); toast("Geplaatst. Versleep wat je anders wil."); };
   $("#dgun", host).onclick = undo; $("#dgre", host).onclick = redo;
   $("#dgfs", host).onclick = () => { const on = !host.classList.contains("dgfull"); host.classList.toggle("dgfull", on); $("#dgfs", host).textContent = on ? "✕" : "⤢"; $("#dgfs", host).title = on ? "Klein scherm" : "Groot scherm"; draw(); };
   const key = ev => {
@@ -436,12 +479,16 @@ function diagramEditor(host, dg, onChange, opts = {}) {
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !typing) { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "y" && !typing) { ev.preventDefault(); redo(); return; }
     if (typing) return;
-    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "d" && sel >= 0) { ev.preventDefault(); dup(); return; }
-    if ((ev.key === "Delete" || ev.key === "Backspace") && sel >= 0) { ev.preventDefault(); del(); return; }
+    const mod = ev.ctrlKey || ev.metaKey, kk = ev.key.toLowerCase();
+    if (mod && kk === "d" && grp().length) { ev.preventDefault(); dupG(); return; }
+    if (mod && kk === "a") { ev.preventDefault(); setMs(dg.objs.map((_, i) => i)); draw(); bar(); return; }
+    if (mod && kk === "c" && grp().length && !String(getSelection())) { ev.preventDefault(); copySel(); return; }
+    if (mod && kk === "v" && clip()) { ev.preventDefault(); paste(); return; }
+    if ((ev.key === "Delete" || ev.key === "Backspace") && grp().length) { ev.preventDefault(); del(); return; }
     if (ev.key.toLowerCase() === "r" && sel >= 0 && ROTATABLE.has(dg.objs[sel].t)) { ev.preventDefault(); const o = dg.objs[sel]; o.r = (dgRot(o) + (ev.shiftKey ? 345 : 15)) % 360; commit(); draw(); return; }
-    if (ev.key === "Escape" && (tool !== "select" || sel >= 0)) { ev.preventDefault(); ev.stopPropagation(); sel = -1; setTool("select"); return; }
+    if (ev.key === "Escape" && (tool !== "select" || sel >= 0 || ms.length)) { ev.preventDefault(); ev.stopPropagation(); sel = -1, ms = []; setTool("select"); return; }
     const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[ev.key];
-    if (mv && sel >= 0) { ev.preventDefault(); const o = dg.objs[sel], f = ev.shiftKey ? 3 : .6; dgShift(o, JSON.parse(JSON.stringify(o)), mv[0] * f, mv[1] * f); draw(); clearTimeout(key.t); key.t = setTimeout(commit, 400); }
+    if (mv && grp().length) { ev.preventDefault(); const f = ev.shiftKey ? 3 : .6; grp().forEach(i => { const o = dg.objs[i]; dgShift(o, JSON.parse(JSON.stringify(o)), mv[0] * f, mv[1] * f); }); draw(); clearTimeout(key.t); key.t = setTimeout(commit, 400); }
   };
   document.addEventListener("keydown", key, true);
   tools(); setTool("select"); draw(); bar(); steps();

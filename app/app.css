@@ -2572,3 +2572,4 @@ html.big .hint,html.big small{font-size:max(1em,13px)}
 .shopt:hover{border-color:var(--yellow)}.shopt:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}.shopt small{color:var(--muted);line-height:1.35}
 .shlink{display:flex;gap:8px}.shlink input{flex:1;min-width:0;font-size:14px}
 .shvid{display:flex;flex-wrap:wrap;gap:6px}
+.exfill{font-size:12.5px;margin-top:4px;text-align:left}

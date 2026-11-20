@@ -199,7 +199,7 @@ function exEditor(x, onSave, saveLabel) {
         <div class="f full"><span>Duur</span><div class="exdur">${[5, 10, 15, 20, 25, 30].map(n => `<button type="button" class="chip" data-min="${n}" aria-pressed="${curMin === n}">${n}′</button>`).join("")}<label class="exmin"><input name="minutes" type="number" min="0" inputmode="numeric" value="${x.minutes ?? ""}" placeholder="${curMin || "min"}" aria-label="Duur in minuten"> min</label></div></div>
         <div class="f full"><span>Soort oefening</span><input type="hidden" name="phase" value="${esc(exType(x))}">
           <span class="chips exlabs" role="radiogroup">${EX_TYPES.map(l => `<button type="button" class="tag" role="radio" data-lab="${l}" aria-checked="${exType(x) === l}" style="--pc:${labelCol(l)}">${l}</button>`).join("")}</span></div>
-        <div class="fields"><label class="f">Aantal spelers<input name="players" value="${esc(x.players || "")}" placeholder="bv. 8-12"></label>
+        <div class="fields"><label class="f">Aantal spelers<input name="players" value="${esc(x.players || "")}" placeholder="bv. 8-12"><button class="link exfill" type="button" id="cntP" hidden></button></label>
           <label class="f">Afmetingen<input name="size" value="${esc(x.size || "")}" placeholder="bv. 30 × 20 m"></label></div>
         <label class="f full">Organisatie en verloop<textarea name="org" rows="6" placeholder="Hoe zet je de oefening op en hoe verloopt ze? Welke varianten zijn er?">${esc(x.org || "")}</textarea></label>
         <label class="f full">Aandachtspunten<textarea name="criteria" rows="4" placeholder="Eén aandachtspunt per regel, bv.&#10;Open lichaamshouding&#10;Pass in de juiste voet">${esc(x.criteria || "")}</textarea></label>
@@ -230,6 +230,14 @@ function exEditor(x, onSave, saveLabel) {
   $$("[data-min]", d).forEach(b => b.onclick = () => { f.minutes.value = b.dataset.min; mark(); dh(); });
   ["reps", "work", "rest", "minutes"].forEach(k => f[k].addEventListener("input", dh)); dh();
   f.addEventListener("input", mark);
+  /* aantal spelers en afmetingen voorstellen vanuit de tekening */
+  const cnt = () => { const o = dgFrames(x.diagram || { objs: [] })[0] || [], k = o.filter(z => z.t === "k").length, pl = o.filter(z => z.t === "p" || z.t === "p1" || z.t === "p2" || z.t === "p3").length; return { pl, k, txt: pl + k ? `${pl}${k ? " + " + k + "K" : ""}` : "" }; };
+  const cb = $("#cntP", d); const cbu = () => { const c = cnt(); cb.hidden = !c.txt || f.players.value.trim() === c.txt; cb.textContent = `Op de tekening: ${c.txt} – overnemen`; };
+  cb.onclick = () => { f.players.value = cnt().txt; mark(); cbu(); };
+  const FS = { "5v5": "35 × 25 m", "8v8": "60 × 40 m", "11v11": "105 × 68 m", half: "52 × 68 m", small: "20 × 15 m" };
+  const szU = () => { if (!f.size.value.trim() && x.diagram && FS[x.diagram.field]) f.size.placeholder = FS[x.diagram.field] + " (veld van de tekening)"; };
+  const pl0 = setInterval(() => { if (!d.open) { clearInterval(pl0); return; } cbu(); szU(); }, 900); cbu(); szU();
+  f.players.addEventListener("input", cbu);
   const drawCats = () => { $("#cats", d).innerHTML = x.cats.map(c => `<button type="button" class="tag" aria-pressed="true" data-cat="${esc(c)}">${esc(c)} ✕</button>`).join(""); $$("[data-cat]", d).forEach(b => b.onclick = () => { x.cats = x.cats.filter(c => c !== b.dataset.cat); mark(); drawCats(); }); };
   const addCat = el => { const val = el.value.trim(); if (val && !x.cats.includes(val)) { x.cats.push(val); mark(); drawCats(); } el.value = ""; };
   drawCats(); $("#catin", d).onchange = ev => addCat(ev.target); $("#catin", d).onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); addCat(ev.target); } };
