@@ -652,6 +652,8 @@ async function renderPage(seq) {
   if (mode === "cloud" && S.member === false && S.platform) { if (!["platform", "platformclub", "aanmelden"].includes(r.page)) { location.replace("#/platform"); return; } }
   else if (r.page !== "aanmelden" && mode === "cloud" && S.member === false) { viewJoin(v); return; }
   if (clubOff(r.page)) { v.innerHTML = `<div class="empty"><b>Dit onderdeel staat uit voor ${esc(clubName())}</b>${S.admin ? `Zet het aan in <a class="link" href="#/clubinstellingen/onderdelen">Beheer › Instellingen</a>.` : "Vraag je clubbeheerder als je het wil gebruiken."}</div>`; return; }
+  /* scouts (via de scoutapp) zien in de trainersapp enkel de externe scouting */
+  if (mode === "cloud" && S.functie === "Scout" && !S.admin && !S.myTeamIds?.length && !["scouting", "aanmelden"].includes(r.page)) { location.replace("#/scouting"); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   /* nooit meer een leeg scherm: na een halve seconde "Laden…", na 12 seconden een knop om opnieuw te laden */
   let settled = false;

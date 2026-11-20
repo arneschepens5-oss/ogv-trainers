@@ -844,8 +844,15 @@ async function csPage(v, id, ctx) {
       <div id="scc" class="scrows"></div><button class="btn ghost small" type="button" id="scadd" style="margin-top:8px">${IC.plus}Criterium toevoegen</button>
       <h2>Status van een speler</h2><p class="hint" style="margin-top:0">De stappen in jullie opvolging, één per regel.</p>
       <textarea id="scst" rows="6" style="max-width:420px">${esc(scStats(st).join("\n"))}</textarea>
+      <h2>Scoutapp voor scouts zonder trainersaccount</h2><p class="hint" style="margin-top:0">Scouts openen de scoutapp, maken zelf een account aan met deze scoutcode en kunnen enkel spelers toevoegen aan en bekijken in de externe scouting. Ze zien niets van ploegen, spelers of evaluaties.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><code id="scode" style="font-size:18px;font-weight:900;padding:8px 12px;border-radius:10px;background:var(--card2)">…</code><button class="btn ghost small" type="button" id="scodeNew">Nieuwe code</button><button class="btn ghost small" type="button" id="scodeCp">Link en code kopiëren</button></div>
+      <p class="hint">Link: <a class="link" id="slink" target="_blank" rel="noopener"></a> · Een nieuwe code maakt de oude ongeldig; wie al scout is, blijft scout.</p>
       <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de externe scouting en de interne scouting ziet, kies je per persoon bij <a class="link" href="${ctx.base}/toegang">Wie ziet wat</a>.</p>${foot()}</form>`;
     draw();
+    { const url = new URL("scout/", location.href.split("#")[0].split("?")[0]).href, el = $("#scode"), lk = $("#slink"); lk.href = url; lk.textContent = url;
+      const get = async nieuw => { if (mode === "demo") { el.textContent = "SDEMO123"; return; } const r = await sb.rpc("scout_code", { nieuw }); el.textContent = r.error ? "niet beschikbaar" : r.data; };
+      get(false); $("#scodeNew").onclick = async () => { if (confirm("Een nieuwe scoutcode maken? De oude werkt dan niet meer voor nieuwe scouts.")) await get(true); };
+      $("#scodeCp").onclick = async () => { const t = `Scoutapp ${clubName()}: ${url}\nScoutcode: ${el.textContent}`; try { await navigator.clipboard.writeText(t); toast("Link en code gekopieerd."); } catch (e) { toast(t); } }; }
     $("#scadd").onclick = () => { comp.push({ k: nextK(), n: "", s: "" }); draw(); $$("[data-n]", host).pop().focus(); };
     $("#scp0").onclick = () => { comp = SC_DEF.map(c => ({ ...c })); draw(); };
     $("#scp1").onclick = () => { comp = SC_OLD5.map(c => ({ ...c })); draw(); };

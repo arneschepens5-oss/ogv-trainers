@@ -61,7 +61,7 @@ textarea{min-height:76px;resize:vertical}
 <script>
 const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
 /* zelfde aanmelding als de trainersapp (zelfde opslagsleutel): wie daar al aangemeld is, kan hier meteen scouten */
-const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tb_auth", lock: async (_n, _t, fn) => await fn() } });
+const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: "tb_auth", lock: async (_n, _t, fn) => await fn() } });
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], app = $("#app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const f1 = n => (Math.round(n * 10) / 10).toString().replace(".", ",");
@@ -82,23 +82,44 @@ async function start() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return login();
   $("#out").hidden = false;
-  const r = await sb.rpc("club_status");
-  const d = r.data || {}; const st = (d.club && d.club.settings) || {};
+  let d = (await sb.rpc("club_status")).data || {};
+  const pend = ls.get("ogv-scoutcode", ""); if (pend && !(d.member && (d.admin || (d.rechten || []).includes("scouting")))) { const j = await sb.rpc("join_scout", { code: pend }); if (j.data) { ls.set("ogv-scoutcode", ""); d = (await sb.rpc("club_status")).data || {}; } }
+  const st = (d.club && d.club.settings) || {};
   CLUBN = (d.club && (d.club.short || d.club.name)) || ""; $("#hclub").textContent = CLUBN ? "Speler toevoegen · " + CLUBN : "Speler toevoegen";
   if (!d.member || !(d.admin || (d.rechten || []).includes("scouting"))) {
-    app.innerHTML = `<div class="card center"><h2>Nog geen toegang</h2><p>Je bent aangemeld als <b>${esc(session.user.email)}</b>, maar je hebt nog geen recht om te scouten.</p><p class="hint">Vraag de beheerder van de club om je toegang te geven tot de externe scouting (Instellingen › Wie ziet wat).</p></div>`; return; }
+    app.innerHTML = `<form class="card center" id="jf"><h2>Nog geen toegang</h2><p>Je bent aangemeld als <b>${esc(session.user.email)}</b>. Vul de scoutcode in die je van de club kreeg.</p>
+      <label>Scoutcode<input name="code" required autocomplete="off" placeholder="bv. S1A2B3C4" style="text-transform:uppercase"></label><div id="jerr"></div><button class="btn" type="submit">Toegang krijgen</button></form>`;
+    $("#jf").onsubmit = async e => { e.preventDefault(); const j = await sb.rpc("join_scout", { code: e.target.code.value.trim() }); if (j.data) start(); else $("#jerr").innerHTML = '<div class="msg">Deze scoutcode klopt niet.</div>'; }; return; }
   if (Array.isArray(st.scout?.comp) && st.scout.comp.length) COMP = st.scout.comp;
   blank(); form();
 }
 
-function login(err) {
+const HERE = location.origin + location.pathname;
+function login(err, tab = "in", ok) {
   $("#out").hidden = true;
-  app.innerHTML = `<form class="card center" id="lf"><h2>Aanmelden</h2><p class="hint" style="margin:-4px 0 14px">Met hetzelfde account als de trainersapp.</p>${err ? `<div class="msg">${esc(err)}</div>` : ""}
+  const tabs = `<div class="chips" style="margin-bottom:14px">${[["in", "Aanmelden"], ["nieuw", "Account aanmaken"]].map(([k, l]) => `<button type="button" class="chip${tab === k ? " on" : ""}" data-tab="${k}">${l}</button>`).join("")}</div>`;
+  const msg = (err ? `<div class="msg">${esc(err)}</div>` : "") + (ok ? `<div class="msg" style="background:#DCF5E3;color:var(--ok)">${esc(ok)}</div>` : "");
+  if (tab === "nieuw") app.innerHTML = `<form class="card center" id="rf">${tabs}<h2>Account aanmaken</h2><p class="hint" style="margin:-4px 0 14px">Je hebt de scoutcode nodig die je van de club kreeg.</p>${msg}
+    <label>Voornaam en naam<input name="nm" required maxlength="60" autocomplete="name"></label><label>E-mailadres<input name="email" type="email" required autocomplete="email"></label>
+    <label>Wachtwoord <span class="hint">minstens 8 tekens</span><input name="pw" type="password" required minlength="8" autocomplete="new-password"></label>
+    <label>Scoutcode<input name="code" required autocomplete="off" placeholder="bv. S1A2B3C4" style="text-transform:uppercase"></label><button class="btn" type="submit">Account aanmaken</button></form>`;
+  else if (tab === "reset") app.innerHTML = `<form class="card center" id="pf"><h2>Nieuw wachtwoord</h2>${msg}<label>Nieuw wachtwoord <span class="hint">minstens 8 tekens</span><input name="pw" type="password" required minlength="8" autocomplete="new-password"></label><button class="btn" type="submit">Opslaan</button></form>`;
+  else app.innerHTML = `<form class="card center" id="lf">${tabs}<h2>Aanmelden</h2>${msg}
     <label>E-mailadres<input name="email" type="email" autocomplete="email" required></label><label>Wachtwoord<input name="pw" type="password" autocomplete="current-password" required></label>
-    <button class="btn" type="submit">Aanmelden</button><p class="hint" style="text-align:center;margin-top:14px">Nog geen account of wachtwoord vergeten? Doe dat in de <a href="../">trainersapp</a>.</p></form>`;
-  $("#lf").onsubmit = async e => { e.preventDefault(); const b = e.target.querySelector("button"); b.textContent = "Even geduld…";
-    const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
-    if (error) login("Aanmelden lukt niet. Controleer je e-mailadres en wachtwoord."); else start(); };
+    <button class="btn" type="submit">Aanmelden</button><p class="hint" style="text-align:center;margin-top:14px"><a href="#" id="forgot">Wachtwoord vergeten?</a></p></form>`;
+  $$("[data-tab]").forEach(b => b.onclick = () => login("", b.dataset.tab));
+  const lf = $("#lf"); if (lf) { lf.onsubmit = async e => { e.preventDefault(); e.target.querySelector("button[type=submit]").textContent = "Even geduld…";
+      const { error } = await sb.auth.signInWithPassword({ email: e.target.email.value.trim(), password: e.target.pw.value });
+      if (error) login(/confirm/i.test(error.message) ? "Bevestig eerst je e-mailadres via de link in de mail die je kreeg." : "Aanmelden lukt niet. Controleer je e-mailadres en wachtwoord."); else start(); };
+    $("#forgot").onclick = async e => { e.preventDefault(); const m = lf.email.value.trim(); if (!m) { login("Vul eerst je e-mailadres in."); return; }
+      await sb.auth.resetPasswordForEmail(m, { redirectTo: HERE }); login("", "in", "Als dit adres een account heeft, staat er nu een mail met een link om een nieuw wachtwoord te kiezen."); }; }
+  const rf = $("#rf"); if (rf) rf.onsubmit = async e => { e.preventDefault(); const f = e.target, code = f.code.value.trim().toUpperCase(); f.querySelector("button[type=submit]").textContent = "Even geduld…";
+    ls.set("ogv-scoutcode", code);
+    const { data, error } = await sb.auth.signUp({ email: f.email.value.trim(), password: f.pw.value, options: { data: { full_name: f.nm.value.trim(), scoutcode: code }, emailRedirectTo: HERE } });
+    if (error) { const ex = /already|exists/i.test(error.message); login(ex ? "Er bestaat al een account met dit e-mailadres. Meld je aan." : /password/i.test(error.message) ? "Kies een sterker wachtwoord (minstens 8 tekens)." : "Account aanmaken lukt niet: " + error.message, ex ? "in" : "nieuw"); return; }
+    ls.set("ogv-scout-naam", f.nm.value.trim());
+    if (data.session) start(); else login("", "in", "Bijna klaar: klik op de link in de mail die we je stuurden en meld je daarna hier aan."); };
+  const pf = $("#pf"); if (pf) pf.onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.updateUser({ password: e.target.pw.value }); if (error) login("Dat lukte niet: " + error.message, "reset"); else start(); };
 }
 
 function keep() { ["naam", "club", "geb", "voet", "sterk", "werk", "ctx", "bron", "dat", "scout", "cat"].forEach(k => { const el = $("#" + k); if (el) P[k] = el.value.trim(); }); }
@@ -166,7 +187,9 @@ async function save() {
 }
 
 $("#out").onclick = async () => { await sb.auth.signOut(); login(); };
-start().catch(() => login("Er ging iets mis bij het laden. Probeer opnieuw."));
+let RECOVERY = /type=recovery/.test(location.hash);
+sb.auth.onAuthStateChange(ev => { if (ev === "PASSWORD_RECOVERY") { RECOVERY = true; setTimeout(() => login("", "reset"), 0); } });
+(RECOVERY ? Promise.resolve(setTimeout(() => login("", "reset"), 300)) : start()).catch(() => login("Er ging iets mis bij het laden. Probeer opnieuw."));
 </script>
 </body>
 </html>
