@@ -77,7 +77,9 @@ const SC_NIV = ["Top talent", "Interessant", "Opvolgen", "Onder niveau"];
 const SC_CATS = Array.from({ length: 16 }, (_, i) => "U" + (i + 6));
 /* in welke U hoort de speler? zelf gekozen, anders afgeleid uit het geboortejaar en het seizoen */
 const scCatOf = p => { if (p.cat) return p.cat; if (!p.geb) return ""; const u = +seasonNow().slice(5) - +String(p.geb).slice(0, 4); return u >= 6 && u <= 21 ? "U" + u : ""; };
-const scPosNums = p => [p.p1, p.p2, p.p3].filter(Boolean).map(n => (POS_BY_NAME[n] || [])).filter(x => x.length);
+/* posities van een gescoute speler: p1 = hoofdpositie, p2/p3 en pn[] = andere posities (onbeperkt) */
+const scPosList = p => [p.p1, p.p2, p.p3, ...(Array.isArray(p.pn) ? p.pn : [])].filter(Boolean);
+const scPosNums = p => scPosList(p).map(n => (POS_BY_NAME[n] || [])).filter(x => x.length);
 const scAge = p => p.geb ? Math.floor((Date.now() - new Date(p.geb)) / 31557600000) : null;
 /* hoeveel filters staan aan (voor de knop en de lijst met actieve filters) */
 const scActive = () => [...scF.pos.map(x => ["pos", x, (SC_POS[x] || [x])[0]]), ...scF.stat.map(x => ["stat", x, x]), ...scF.niv.map(x => ["niv", x, x]), ...scF.voet.map(x => ["voet", x, x + " voet"]), ...scF.cat.map(x => ["cat", x, x]),
@@ -93,7 +95,7 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
   /* filters en sorteren: hergebruik de geladen lijst, zodat de pagina niet eerst leeg wordt en verspringt */
   let rows; if (!id && SC_ROWS && scF.soft) rows = SC_ROWS; else { v.innerHTML = head("Externe scouting", "Laden…"); rows = SC_ROWS = await db.list("scouting"); } scF.soft = false; const all = rows.map(r => ({ id: r.id, created_by: r.created_by, ...r.data }));
   if (id) { scoutForm(v, all.find(x => x.id === id) || null, all); return; }
-  const list = all.filter(p => { const a = scAvg(p), age = scAge(p), pos = [p.p1, p.p2, p.p3];
+  const list = all.filter(p => { const a = scAvg(p), age = scAge(p), pos = scPosList(p);
     return (!scF.q || [p.naam, p.club, p.sterk, p.werk, p.ctx, p.bron, p.scout].join(" ").toLowerCase().includes(scF.q.toLowerCase()))
       && (!scF.pos.length || scF.pos.some(x => pos.includes(x))) && (!scF.stat.length || scF.stat.includes(p.stat || "Nieuw")) && (!scF.niv.length || scF.niv.includes(scNiv(a)))
       && (!scF.voet.length || scF.voet.includes(p.voet)) && scCatOk(p)
@@ -123,7 +125,7 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
     const vals = Object.fromEntries(CO.map(c => [c.s || c.n, scNum(p[c.k]) ? p[c.k] : null])), rad = CO.length >= 3 && CO.some(c => scNum(p[c.k])) ? radarSvg(CO.map(c => c.s || c.n), vals, null, { mini: true, size: 76, max: 10 }) : "";
     return `<a class="sc-card2" href="#/scouting/${esc(p.id)}"><div class="hd"><span class="bg${a == null ? " none" : ""}">${a == null ? "–" : f1(a)}</span>
       <span class="scmain"><b>${esc(p.naam)}</b><small>${esc([p.club, cat, age != null ? age + " jaar" : "", p.voet ? p.voet.toLowerCase() + " voet" : ""].filter(Boolean).join(" · "))}</small>
-        <span class="sctags">${[p.p1, p.p2, p.p3].filter(Boolean).map((x, i) => `<em${i ? ' class="soft"' : ""} title="${esc(x)}">${esc((SC_POS[x] || [x])[0])}</em>`).join("")}${a != null ? `<span class="scniv n${SC_NIV.indexOf(scNiv(a))}">${scNiv(a)}</span>` : ""}${(r => r === "oud" ? '<span class="scdtag">jaar ouder</span>' : r === "jong" ? '<span class="scdtag">jaar jonger</span>' : "")(scCatRel(p))}</span></span>
+        <span class="sctags">${scPosList(p).map((x, i) => `<em${i ? ' class="soft"' : ""} title="${esc(x)}">${esc((SC_POS[x] || [x])[0])}</em>`).join("")}${a != null ? `<span class="scniv n${SC_NIV.indexOf(scNiv(a))}">${scNiv(a)}</span>` : ""}${(r => r === "oud" ? '<span class="scdtag">jaar ouder</span>' : r === "jong" ? '<span class="scdtag">jaar jonger</span>' : "")(scCatRel(p))}</span></span>
       ${rad ? `<span class="isc-rad sc-rad" title="Spelersprofiel">${rad}</span>` : ""}</div>
       <div class="sck n${CO.length}">${CO.map(c => { const val = p[c.k]; return `<span title="${esc(c.n)}"><small>${esc(c.s || c.n)}</small><b style="${scNum(val) ? `color:${scCol(val)}` : ""}">${scNum(val) ? f1(val) : "–"}</b></span>`; }).join("")}</div>
       <div class="scfoot"><span class="pill w">${esc(p.stat || "Nieuw")}</span>${scNum(p[SC_LEER]) && !CO.some(c => c.k === SC_LEER) ? `<span class="pill scleerp${p[SC_LEERZ] ? "" : " est"}" title="${p[SC_LEERZ] ? "Leervermogen, goed kunnen beoordelen" : "Leervermogen, geschat"}">Leervermogen ${scLvTxt(p[SC_LEER]).toLowerCase()}${p[SC_LEERZ] ? "" : " (schatting)"}</span>` : ""}<span class="spacer"></span><small>${esc([p.scout, p.dat].filter(Boolean).join(" · "))}</small></div></a>`; }).join("")}</div>`
@@ -142,12 +144,12 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
       <p class="hint">Open de link op de gsm en kies <b>Zet op beginscherm</b>. Zo staat de app tussen de andere apps.</p>
       <input readonly value="${esc(url)}" style="width:100%" onclick="this.select()"><div class="row" style="margin-top:12px;gap:8px"><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">Openen</a><button class="btn ghost" type="button" data-close>Sluiten</button><span class="spacer"></span><button class="btn" type="button" id="sccp">Link kopiëren</button></div></div>`);
     const c = $("#sccp"); if (c) c.onclick = async () => { try { await navigator.clipboard.writeText(url); toast("Link gekopieerd."); } catch (e) { toast(url); } }; };
-  $("#exp").onclick = () => { const h = ["Naam", "Club", "Geboortedatum", "Voorkeursvoet", "Lengte (cm)", "Hoofdpositie", "Alternatieve positie 2", "Alternatieve positie 3", ...scComp().map(c => c.n), "Algemeen cijfer", "Niveau", "Sterktes / spelbeschrijving", "Werkpunten", "Situatie & context", "Status", "Gescout op", "Wedstrijd / bron", "Scout"];
-    download("Externe_scouting_" + String(clubName()).replace(/\W+/g, "_") + ".csv", "﻿" + [h.map(csvCell).join(";"), ...all.map(p => [p.naam, p.club, p.geb, p.voet, p.len, p.p1, p.p2, p.p3, ...scComp().map(c => scNum(p[c.k]) ? String(p[c.k]).replace(".", ",") : ""), scAvg(p) == null ? "" : f1(scAvg(p)), scNiv(scAvg(p)), p.sterk, p.werk, p.ctx, p.stat, p.dat, p.bron, p.scout].map(csvCell).join(";"))].join("\r\n")); };
+  $("#exp").onclick = () => { const h = ["Naam", "Club", "Geboortedatum", "Voorkeursvoet", "Lengte (cm)", "Hoofdpositie", "Andere posities", ...scComp().map(c => c.n), "Algemeen cijfer", "Niveau", "Sterktes / spelbeschrijving", "Werkpunten", "Situatie & context", "Status", "Gescout op", "Wedstrijd / bron", "Scout"];
+    download("Externe_scouting_" + String(clubName()).replace(/\W+/g, "_") + ".csv", "﻿" + [h.map(csvCell).join(";"), ...all.map(p => [p.naam, p.club, p.geb, p.voet, p.len, p.p1, scPosList(p).slice(1).join(", "), ...scComp().map(c => scNum(p[c.k]) ? String(p[c.k]).replace(".", ",") : ""), scAvg(p) == null ? "" : f1(scAvg(p)), scNiv(scAvg(p)), p.sterk, p.werk, p.ctx, p.stat, p.dat, p.bron, p.scout].map(csvCell).join(";"))].join("\r\n")); };
 } });
 function scoutForm(v, p, all) {
   const isNew = !p; p = p ? { ...p } : { stat: "Nieuw", dat: todayIso(), scout: (() => { try { return localStorage.getItem("scout") || ""; } catch (e) { return ""; } })() };
-  let sel = [p.p1, p.p2, p.p3].filter(Boolean); const CO = scComp(), sc = CO.map(c => scNum(p[c.k]) ? p[c.k] : null);
+  let sel = scPosList(p); const CO = scComp(), sc = CO.map(c => scNum(p[c.k]) ? p[c.k] : null);
   let leer = scLv(p[SC_LEER]), leerZ = p[SC_LEERZ] ? "z" : "s";
   const draw = () => {
     const fil = sc.filter(x => x != null), a = fil.length ? fil.reduce((x, y) => x + y, 0) / fil.length : null;
@@ -155,8 +157,8 @@ function scoutForm(v, p, all) {
     `<div class="grid2"><div class="panel"><h2>Speler</h2><div class="fields"><label class="f full">Naam<input id="naam" value="${esc(p.naam || "")}" autocomplete="off"></label><label class="f">Club<input id="club" value="${esc(p.club || "")}"></label>
       <label class="f">Geboortedatum<input id="geb" type="date" value="${esc(p.geb || "")}"></label><label class="f">Categorie (U)<select id="cat"><option value="">${(() => { const c = scCatOf({ geb: p.geb }); return c ? "Volgens geboortejaar: " + c : "Kies de U"; })()}</option>${SC_CATS.map(c => `<option${p.cat === c ? " selected" : ""}>${c}</option>`).join("")}</select></label><label class="f">Voorkeursvoet<select id="voet">${["", "Rechts", "Links", "Beide"].map(x => `<option${(p.voet || "") === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>
       <label class="f">Lengte (cm)<input id="len" type="number" min="100" max="220" value="${esc(p.len || "")}"></label></div></div>
-    <div class="panel"><h2>Positie op het veld</h2><div class="pitchpick">${Object.entries(SC_POS).map(([n, [ab, x, y]]) => { const i = sel.indexOf(n); return `<button type="button" class="${i >= 0 ? "s" + (i + 1) : ""}" style="left:${x}%;top:${y}%" data-pos="${n}" title="${n}">${ab}</button>`; }).join("")}</div>
-      <p class="hint" style="text-align:center">${sel.length ? sel.map((s, i) => (i + 1) + ". " + s).join(" · ") : "Tik: 1 = hoofdpositie, daarna maximaal 2 alternatieven"}</p></div></div>
+    <div class="panel"><h2>Positie op het veld</h2><div class="pitchpick">${Object.entries(SC_POS).map(([n, [ab, x, y]]) => { const i = sel.indexOf(n); return `<button type="button" class="${i === 0 ? "s1" : i > 0 ? "s2" : ""}" style="left:${x}%;top:${y}%" data-pos="${n}" title="${n}">${ab}</button>`; }).join("")}</div>
+      <p class="hint" style="text-align:center">${sel.length ? sel.map((s, i) => (i + 1) + ". " + s).join(" · ") : "Tik eerst de hoofdpositie (1), daarna alle andere posities die hij kan spelen"}</p></div></div>
     <div class="grid2 sec"><div class="panel"><h2>Beoordeling</h2>${CO.length >= 3 ? `<div class="scrad">${radarSvg(CO.map(c => c.s || c.n), Object.fromEntries(CO.map((c, i) => [c.s || c.n, sc[i]])), null, { size: 250, max: 10 })}</div>` : ""}${CO.map((c0, i) => { const c = esc(c0.n); return `<div class="rng" style="margin-bottom:10px"><div class="t"><span>${c}</span><span class="v" style="${sc[i] != null ? `background:${scCol(sc[i])};color:#fff` : ""}">${sc[i] != null ? f1(sc[i]) : "–"}</span></div><input type="range" min="1" max="10" step="0.5" value="${sc[i] ?? 5}" data-k="${i}" aria-label="${c}"></div>`; }).join("")}
       ${CO.some(c => c.k === SC_LEER) ? "" : `<div class="scleer"><div class="t"><b>Leervermogen</b><small>Apart: telt niet mee in de zeshoek en het algemeen cijfer. Laat leeg als je het niet kon zien.</small></div>
       <div class="segs lv" role="radiogroup" aria-label="Leervermogen">${[[0, "Niet ingevuld"], ...SC_LV].map(([k, l]) => `<button type="button" role="radio" aria-checked="${(leer || 0) === k}" class="${(leer || 0) === k ? "on" : ""}${k ? " l" + k : ""}" data-lv="${k}">${l}</button>`).join("")}</div>
@@ -170,13 +172,13 @@ function scoutForm(v, p, all) {
     const keep = () => ["naam", "club", "geb", "cat", "voet", "len", "sterk", "werk", "ctx", "stat", "dat", "bron", "scout"].forEach(k => p[k] = $("#" + k).value.trim());
     $("#geb", v).onchange = () => { keep(); draw(); };
     const cg = $("#cmpgo", v); if (cg) cg.onclick = () => { scF.fpick = { cat: scCatOf(p), pos: (POS_BY_NAME[p.p1] || [])[0] || 0, id: p.id }; go("#/scoutveld"); };
-    $$("[data-pos]", v).forEach(b => b.onclick = () => { keep(); const n = b.dataset.pos, i = sel.indexOf(n); if (i >= 0) sel.splice(i, 1); else if (sel.length < 3) sel.push(n); draw(); });
+    $$("[data-pos]", v).forEach(b => b.onclick = () => { keep(); const n = b.dataset.pos, i = sel.indexOf(n); if (i >= 0) sel.splice(i, 1); else sel.push(n); draw(); });
     $$("[data-k]", v).forEach(r => { r.oninput = () => { sc[+r.dataset.k] = +r.value; const s = r.previousElementSibling.querySelector(".v"); s.textContent = f1(+r.value); s.style.background = scCol(+r.value); s.style.color = "#fff"; }; r.onchange = () => { keep(); draw(); }; });
     $$("[data-lv]", v).forEach(b => b.onclick = () => { keep(); leer = +b.dataset.lv || null; draw(); });
     $$("[data-lz]", v).forEach(b => b.onclick = () => { keep(); leerZ = b.dataset.lz; draw(); });
     $("#save").onclick = async () => { keep(); if (!p.naam || !sel[0] || !p.scout) { toast("Vul minstens naam, hoofdpositie en jouw naam als scout in."); return; }
       if (isNew && all.some(x => x.naam.toLowerCase() === p.naam.toLowerCase() && (x.geb || "") === (p.geb || "")) && !confirm("Deze speler staat al in de database. Toch nog eens toevoegen?")) return;
-      const data = { ...p, p1: sel[0] || "", p2: sel[1] || "", p3: sel[2] || "", ts: Date.now() }; delete data.id; delete data.created_by; CO.forEach((c, i) => { if (sc[i] != null) data[c.k] = sc[i]; else delete data[c.k]; }); if (!CO.some(c => c.k === SC_LEER)) { if (leer) { data[SC_LEER] = leer; if (leerZ === "z") data[SC_LEERZ] = true; else delete data[SC_LEERZ]; } else { delete data[SC_LEER]; delete data[SC_LEERZ]; } }
+      const data = { ...p, p1: sel[0] || "", p2: sel[1] || "", p3: sel[2] || "", pn: sel.slice(3), ts: Date.now() }; if (!data.pn.length) delete data.pn; delete data.id; delete data.created_by; CO.forEach((c, i) => { if (sc[i] != null) data[c.k] = sc[i]; else delete data[c.k]; }); if (!CO.some(c => c.k === SC_LEER)) { if (leer) { data[SC_LEER] = leer; if (leerZ === "z") data[SC_LEERZ] = true; else delete data[SC_LEERZ]; } else { delete data[SC_LEER]; delete data[SC_LEERZ]; } }
       try { localStorage.setItem("scout", p.scout); } catch (e) {}
       await safe(async () => { SC_OWN = null; await db.save("scouting", { id: p.id || "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data, updated_at: new Date().toISOString() }); go("#/scouting"); }, p.naam + " is opgeslagen."); };
     const del = $("#del"); if (del) del.onclick = async () => { if (!confirm("Deze speler definitief verwijderen?")) return; await safe(async () => { await db.del("scouting", { id: p.id }); go("#/scouting"); }, "Speler verwijderd."); };
