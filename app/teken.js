@@ -14,6 +14,19 @@ const FIELDS = {
   "square": { l: "Vrij vlak", r: .7 },
   "square1": { l: "Vrij vlak, vierkant", r: 1, fixed: true }
 };
+/* echte afmetingen (lengte × breedte in meter, liggend gedacht): organisaties behouden zo hun maat op elk veld */
+const FIELD_M = { "5v5": [35, 25], "8v8": [60, 40], "11v11": [105, 68], half: [68, 52.5], box: [25, 40], small: [20, 15], square: [30, 21], square1: [20, 20] };
+/* de organisaties zijn getekend voor een 35 × 25 m veld; hier worden ze naar het gekozen veld omgerekend */
+function dgFit(objs, field, formation) {
+  if (formation) return objs;
+  const [L, Wd] = FIELD_M[field] || FIELD_M["5v5"], fx = Math.min(1, Math.sqrt(35 / L)), fy = Math.min(1, Math.sqrt(25 / Wd));/* wortel: spelers blijven even groot getekend, dus niet volledig op meter-schaal */
+  if (fx === 1 && fy === 1) return objs;
+  const gl = objs.filter(o => o.t === "goal" || o.t === "mini"), right = gl.some(o => o.x > 90), left = gl.some(o => o.x < 10);
+  const ax = right && !left ? 100 : left && !right ? 0 : 50;
+  const mx = x => Math.max(0, Math.min(100, ax + (x - ax) * fx)), my = y => Math.max(0, Math.min(100, 50 + (y - 50) * fy));
+  objs.forEach(o => { ["", "2", "c"].forEach(q => { if (o["x" + q] != null) o["x" + q] = +mx(o["x" + q]).toFixed(1); if (o["y" + q] != null) o["y" + q] = +my(o["y" + q]).toFixed(1); }); });
+  return objs;
+}
 const PCOL = { geel: ["#FFD100", "#000"], zwart: ["#161616", "#fff"], blauw: ["#2563EB", "#fff"], rood: ["#E11D48", "#fff"], wit: ["#F5F5F0", "#000"], oranje: ["#FF7A1A", "#000"], groen: ["#16A34A", "#fff"], paars: ["#7C3AED", "#fff"] };
 const COLS = Object.fromEntries(Object.entries(PCOL).map(([k, v]) => [k, v[0]]));
 const ARROWS = new Set(["pass", "run", "drib", "shot", "line", "lob"]);
@@ -162,6 +175,8 @@ const DG_PRESETS = [
   ["5v5: tegenstander", () => [["k", 96, 50, "K"], ["p", 82, 50, ""], ["p", 68, 20, ""], ["p", 68, 80, ""], ["p", 56, 50, ""]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "zwart" : undefined }))],
   ["8v8: eigen ploeg (1-3-3-1)", () => [["k", 4, 50, "K"], ["p", 17, 82, "2"], ["p", 15, 50, "4"], ["p", 17, 18, "3"], ["p", 32, 84, "7"], ["p", 30, 50, "8"], ["p", 32, 16, "11"], ["p", 45, 50, "9"]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "geel" : undefined }))],
   ["8v8: tegenstander", () => [["k", 96, 50, "K"], ["p", 83, 18, ""], ["p", 85, 50, ""], ["p", 83, 82, ""], ["p", 68, 16, ""], ["p", 70, 50, ""], ["p", 68, 84, ""], ["p", 55, 50, ""]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "zwart" : undefined }))],
+  ["11v11: eigen ploeg (1-4-3-3)", () => [["k", 3, 50, "K"], ["p", 16, 85, "2"], ["p", 14, 62, "4"], ["p", 14, 38, "5"], ["p", 16, 15, "3"], ["p", 30, 50, "6"], ["p", 34, 72, "8"], ["p", 34, 28, "10"], ["p", 46, 86, "7"], ["p", 48, 50, "9"], ["p", 46, 14, "11"]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "geel" : undefined }))],
+  ["11v11: tegenstander (1-4-4-2)", () => [["k", 97, 50, "K"], ["p", 84, 85, ""], ["p", 84, 62, ""], ["p", 84, 38, ""], ["p", 84, 15, ""], ["p", 68, 85, ""], ["p", 68, 62, ""], ["p", 68, 38, ""], ["p", 68, 15, ""], ["p", 55, 62, ""], ["p", 55, 38, ""]].map(([t, x, y, n]) => ({ t, x, y, n, c: t === "p" ? "zwart" : undefined }))],
   /* organisaties: liggend veld, eigen ploeg (geel) speelt naar rechts */
   ["Organisatie: rondo 5 tegen 2", () => [...[[34, 22], [66, 22], [34, 78], [66, 78]].map(([x, y]) => ({ t: "cone", x, y })), ...[[50, 22], [34, 50], [66, 50], [42, 78], [58, 78]].map(([x, y], i) => ({ t: "p", x, y, n: String(i + 1), c: "geel" })), { t: "p", x: 46, y: 46, n: "", c: "zwart" }, { t: "p", x: 55, y: 55, n: "", c: "zwart" }, { t: "ball", x: 52, y: 25 }]],
   ["Organisatie: passdriehoek", () => [...[[30, 75], [50, 25], [70, 75]].map(([x, y]) => ({ t: "cone", x, y })), ...[[27, 79, "1"], [50, 20, "2"], [73, 79, "3"]].map(([x, y, n]) => ({ t: "p", x, y, n, c: "geel" })), { t: "ball", x: 30, y: 74 }, { t: "pass", x: 31, y: 72, x2: 48, y2: 29 }, { t: "pass", x: 52, y: 29, x2: 69, y2: 72 }, { t: "run", x: 29, y: 68, x2: 46, y2: 33, cx: 33, cy: 47 }]],
@@ -468,7 +483,7 @@ function diagramEditor(host, dg, onChange, opts = {}) {
       if (TURNS.has(o.t)) o.r = ((dgRot(o, x0)) + (to ? -90 : 90) + 360) % 360; });
     dg.vert = to || undefined; commit(); draw(); };
   $("#dgbg", host).onclick = () => { dg.bg = dg.bg === "wit" ? undefined : "wit"; commit(); draw(); };
-  $("#dgpre", host).onchange = e => { const k = e.target.value; e.target.value = ""; if (k === "") return; const add = DG_PRESETS[+k][1](), turn = dg.vert || FIELDS[dg.field].fixed && dg.field !== "square1";
+  $("#dgpre", host).onchange = e => { const k = e.target.value; e.target.value = ""; if (k === "") return; const add = dgFit(DG_PRESETS[+k][1](), dg.field, /^\d+v\d+:/.test(DG_PRESETS[+k][0])), turn = dg.vert || FIELDS[dg.field].fixed && dg.field !== "square1";
     add.forEach(o => { if (turn) { const x0 = o.x; [o.x, o.y] = dgTurn(o.x, o.y, true); if (TURNS.has(o.t)) o.r = (dgRot(o, x0) + 270) % 360; }
       Object.keys(o).forEach(key => o[key] === undefined && delete o[key]); dg.objs.push(o); });
     sel = -1, ms = []; commit(); draw(); toast("Geplaatst. Versleep wat je anders wil."); };
