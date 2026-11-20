@@ -6,8 +6,8 @@
 <title>Scouting · OG Vorselaar</title>
 <meta name="theme-color" content="#121311">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="../icons/icon-192.png">
-<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<link rel="icon" href="../icons/ogv-192.png">
+<link rel="apple-touch-icon" href="../icons/ogv-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght,wdth@400..900,100..125&display=swap" rel="stylesheet">
@@ -17,18 +17,24 @@
 body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Archivo",system-ui,-apple-system,sans-serif;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 button,input,select,textarea{font:inherit;color:inherit}
 header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:12px 16px calc(12px);padding-top:calc(12px + env(safe-area-inset-top,0px));background:var(--ink);color:#fff}
-header img{width:34px;height:34px;border-radius:9px;background:#fff}
+header img{width:38px;height:38px;object-fit:contain}
 header b{font-weight:900;font-size:18px;font-stretch:110%}header small{display:block;color:#bdbdb4;font-size:12.5px}
 header .sp{flex:1}header button{all:unset;cursor:pointer;font-size:13px;color:#d8d8cf;padding:6px 8px}
 main{max-width:620px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
-h2{margin:0 0 12px;font-size:19px;font-weight:900;font-stretch:108%}
-label{display:block;font-size:13.5px;font-weight:700;color:var(--muted);margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 16px 6px;margin-bottom:12px;box-shadow:0 1px 2px rgba(18,19,17,.04)}
+h2{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:18px;font-weight:900;font-stretch:108%}
+h2 .no{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--yellow);font-size:14px;flex:none}
+label{display:block;font-size:14px;font-weight:700;color:#3D3F38;margin-bottom:14px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.seg button{all:unset;cursor:pointer;text-align:center;padding:12px 6px;border-radius:12px;border:1.5px solid #D9D9D0;background:#fff;font-weight:700;font-size:15px}.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg button:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
 label .req{color:var(--bad)}
-input,select,textarea{display:block;width:100%;margin-top:5px;padding:12px 13px;border:1.5px solid var(--line);border-radius:12px;background:var(--card2);font-size:16px;color:var(--ink)}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);background:#fff}
+input,select,textarea{display:block;width:100%;min-width:0;margin-top:6px;padding:12px 14px;min-height:50px;border:1.5px solid #D9D9D0;border-radius:12px;background:#fff;font-size:16px;font-weight:500;color:var(--ink);-webkit-appearance:none;appearance:none}
+input::placeholder,textarea::placeholder{color:#A3A49A;font-weight:400}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(255,209,0,.45)}
+input[type=date]{text-align:left;line-height:24px}input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}input[type=date]::-webkit-calendar-picker-indicator{opacity:.55}
+select{padding-right:40px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1.5l6 6 6-6' fill='none' stroke='%23121311' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 15px center}
 textarea{min-height:76px;resize:vertical}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.two label{margin-bottom:12px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card>:last-child{margin-bottom:14px}.two label{margin-bottom:12px}
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chip{all:unset;cursor:pointer;padding:9px 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px}
 .chip.on{background:var(--yellow);border-color:var(--yellow)}.chip i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:11.5px}
@@ -51,7 +57,8 @@ textarea{min-height:76px;resize:vertical}
 .leer b{display:block}.leer .chips{margin-top:9px}
 .btn{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 18px;border-radius:14px;background:var(--yellow);color:#121311;font-weight:900;font-size:16.5px;text-align:center}
 .btn.dark{background:var(--ink);color:#fff}.btn.ghost{background:transparent;border:1.5px solid var(--line)}
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(243,243,238,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:14px 16px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(rgba(243,243,238,0),var(--bg) 30%)}
+.bar .btn{box-shadow:0 6px 18px rgba(18,19,17,.18)}
 .bar .btn{max-width:588px;margin:0 auto}
 .msg{padding:12px 14px;border-radius:12px;background:#FDE2E0;color:var(--bad);font-weight:700;font-size:14px;margin-bottom:12px}
 .done{text-align:center;padding:28px 16px}.done .ok{width:64px;height:64px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;background:var(--ok);color:#fff;font-size:34px;font-weight:900}
@@ -61,7 +68,7 @@ textarea{min-height:76px;resize:vertical}
 </style>
 </head>
 <body>
-<header><img src="../icons/icon-192.png" alt=""><div><b>Scouting</b><small id="hclub">Speler toevoegen</small></div><span class="sp"></span><button id="out" hidden>Afmelden</button></header>
+<header><img src="../icons/ogv-192.png" alt=""><div><b>Scouting</b><small id="hclub">Speler toevoegen</small></div><span class="sp"></span><button id="out" hidden>Afmelden</button></header>
 <main id="app"><p class="hint" style="text-align:center;margin-top:30vh">Laden…</p></main>
 <script src="../tactiekbord/vendor/supabase-2.118.0.js"></script>
 <script>
@@ -129,7 +136,7 @@ function login(err, tab = "in", ok) {
   const pf = $("#pf"); if (pf) pf.onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.updateUser({ password: e.target.pw.value }); if (error) login("Dat lukte niet: " + error.message, "reset"); else start(); };
 }
 
-function keep() { ["naam", "club", "geb", "voet", "sterk", "werk", "ctx", "bron", "dat", "scout", "cat"].forEach(k => { const el = $("#" + k); if (el) P[k] = el.value.trim(); }); }
+function keep() { ["naam", "club", "geb", "sterk", "werk", "ctx", "bron", "dat", "scout", "cat"].forEach(k => { const el = $("#" + k); if (el) P[k] = el.value.trim(); }); }
 
 function totHtml() { const xs = COMP.map(c => SC[c.k]).filter(v => v != null); if (!xs.length) return `<div class="tot" id="tot"><span>Het algemeen cijfer verschijnt zodra je een eerste score geeft.</span></div>`;
   const a = xs.reduce((x, y) => x + y, 0) / xs.length; return `<div class="tot" id="tot"><b style="color:${col(a)}">${f1(a)}</b><span>${niv(a)}${xs.length < COMP.length ? ` · ${xs.length} van ${COMP.length} gescoord` : ""}</span></div>`; }
@@ -137,16 +144,16 @@ function totHtml() { const xs = COMP.map(c => SC[c.k]).filter(v => v != null); i
 function form(err) {
   const leerApart = !COMP.some(c => c.k === "k4"), auto = catOf(P.geb);
   app.innerHTML = `${err ? `<div class="msg">${esc(err)}</div>` : ""}
-  <section class="card"><h2>Speler</h2>
+  <section class="card"><h2><span class="no">1</span>Speler</h2>
     <label>Naam <span class="req">*</span><input id="naam" value="${esc(P.naam)}" autocomplete="off" placeholder="Voornaam en achternaam"></label>
     <label>Club<input id="club" value="${esc(P.club)}" autocomplete="off"></label>
     <div class="two"><label>Geboortedatum<input id="geb" type="date" value="${esc(P.geb)}"></label>
       <label>Categorie<select id="cat"><option value="">${auto ? "Volgens geboortejaar: " + auto : "Kies de U"}</option>${Array.from({ length: 16 }, (_, i) => "U" + (i + 6)).map(c => `<option${P.cat === c ? " selected" : ""}>${c}</option>`).join("")}</select></label></div>
-    <label>Voorkeursvoet<select id="voet">${["", "Rechts", "Links", "Beide"].map(x => `<option${P.voet === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>
+    <label>Voorkeursvoet</label><div class="seg" role="radiogroup" aria-label="Voorkeursvoet" style="margin:-8px 0 14px">${["Rechts", "Links", "Beide"].map(x => `<button type="button" role="radio" aria-checked="${P.voet === x}" class="${P.voet === x ? "on" : ""}" data-voet="${x}">${x}</button>`).join("")}</div>
   </section>
-  <section class="card"><h2>Positie <span class="req">*</span></h2><div class="pitch">${POS.map(([ab, n, x, y]) => { const i = P.pos.indexOf(n); return `<button type="button" class="${i === 0 ? "h" : i > 0 ? "n" : ""}" style="left:${x}%;top:${y}%" data-pos="${esc(n)}" aria-pressed="${i >= 0}" aria-label="${esc(n)}">${ab}${i >= 0 ? `<i>${i + 1}</i>` : ""}</button>`; }).join("")}</div>
+  <section class="card"><h2><span class="no">2</span><span>Positie <span class="req">*</span></span></h2><div class="pitch">${POS.map(([ab, n, x, y]) => { const i = P.pos.indexOf(n); return `<button type="button" class="${i === 0 ? "h" : i > 0 ? "n" : ""}" style="left:${x}%;top:${y}%" data-pos="${esc(n)}" aria-pressed="${i >= 0}" aria-label="${esc(n)}">${ab}${i >= 0 ? `<i>${i + 1}</i>` : ""}</button>`; }).join("")}</div>
     <p class="hint" style="text-align:center">${P.pos.length ? `<b>Hoofdpositie:</b> ${esc(P.pos[0])}${P.pos.length > 1 ? `<br><b>Kan ook:</b> ${esc(P.pos.slice(1).join(", "))}` : ""}` : "Tik eerst de hoofdpositie, daarna alle andere posities die hij kan spelen."}</p></section>
-  <section class="card"><h2>Beoordeling</h2><p class="hint" style="margin:-6px 0 6px">Score van 1 tot 10. Raak een onderdeel enkel aan als je het kon zien.</p>
+  <section class="card"><h2><span class="no">3</span>Beoordeling</h2><p class="hint" style="margin:-6px 0 6px">Score van 1 tot 10. Raak een onderdeel enkel aan als je het kon zien.</p>
     ${COMP.map(c => { const v = SC[c.k]; return `<div class="crit${v == null ? " off" : ""}"><div class="t"><span>${esc(c.n)}</span><span class="v" id="v_${c.k}" style="${v != null ? `background:${col(v)};color:#fff` : ""}">${v != null ? f1(v) : "–"}</span></div>
       <input type="range" min="1" max="10" step="0.5" value="${v ?? 5}" data-k="${c.k}" aria-label="${esc(c.n)}">${v != null ? `<button type="button" class="clr" data-clr="${c.k}">Niet gezien</button>` : ""}</div>`; }).join("")}
     ${totHtml()}
@@ -154,18 +161,19 @@ function form(err) {
       <div class="chips">${[[0, "Niet ingevuld"], ...LV].map(([k, l]) => `<button type="button" class="chip${P.leer === k ? " on" : ""}" data-lv="${k}" aria-pressed="${P.leer === k}">${l}</button>`).join("")}</div>
       ${P.leer ? `<div class="chips"><span class="hint" style="align-self:center;margin:0 4px 0 0">Hoe zeker?</span>${[["s", "Schatting"], ["z", "Goed kunnen beoordelen"]].map(([k, l]) => `<button type="button" class="chip${P.leerZ === k ? " on" : ""}" data-lz="${k}" aria-pressed="${P.leerZ === k}">${l}</button>`).join("")}</div>` : ""}</div>` : ""}
   </section>
-  <section class="card"><h2>Notities</h2>
+  <section class="card"><h2><span class="no">4</span>Notities</h2>
     <label>Sterktes en spelbeschrijving<textarea id="sterk">${esc(P.sterk)}</textarea></label>
     <label>Werkpunten<textarea id="werk">${esc(P.werk)}</textarea></label>
     <label>Situatie en context<textarea id="ctx" placeholder="Rugnummer, matuur, speelminuten…">${esc(P.ctx)}</textarea></label>
   </section>
-  <section class="card"><h2>Wedstrijd</h2>
+  <section class="card"><h2><span class="no">5</span>Wedstrijd</h2>
     <label>Wedstrijd of bron<input id="bron" value="${esc(P.bron)}" placeholder="Club A U14 – Club B U14"></label>
     <div class="two"><label>Gescout op<input id="dat" type="date" value="${esc(P.dat)}"></label><label>Scout <span class="req">*</span><input id="scout" value="${esc(P.scout)}" placeholder="Jouw naam"></label></div>
     <p class="hint">Wedstrijd, datum en jouw naam blijven staan voor de volgende speler.</p>
   </section>
   <div class="bar"><button class="btn" type="button" id="save">Speler opslaan</button></div>`;
-  $("#geb").onchange = () => { keep(); form(); };
+  $("#geb").onchange = () => { keep(); const y = scrollY; form(); scrollTo(0, y); };
+  $$("[data-voet]").forEach(b => b.onclick = () => { keep(); P.voet = P.voet === b.dataset.voet ? "" : b.dataset.voet; const y = scrollY; form(); scrollTo(0, y); });
   $$("[data-pos]").forEach(b => b.onclick = () => { keep(); const n = b.dataset.pos, i = P.pos.indexOf(n); if (i >= 0) P.pos.splice(i, 1); else P.pos.push(n); const y = scrollY; form(); scrollTo(0, y); });
   $$("[data-k]").forEach(r => { r.oninput = () => { const k = r.dataset.k, v = +r.value; SC[k] = v; const s = $("#v_" + k); s.textContent = f1(v); s.style.background = col(v); s.style.color = "#fff"; r.parentElement.classList.remove("off"); $("#tot").outerHTML = totHtml(); };
     r.onchange = () => { keep(); const y = scrollY; form(); scrollTo(0, y); }; });
