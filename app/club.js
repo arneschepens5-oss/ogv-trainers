@@ -831,7 +831,7 @@ async function csPage(v, id, ctx) {
   /* scouting: waarop beoordelen de scouts in de externe scouting (extern)? */
   if (step === "scouting") {
     const sc = st.scout || {}; let comp = scComp(st).map(c => ({ ...c }));
-    const nextK = () => { let n = 0; const used = new Set([...comp.map(c => c.k), ...(sc.used || []), ...SC_DEF.map(c => c.k), ...scComp(st).map(c => c.k)]); while (used.has("k" + n)) n++; return "k" + n; };
+    const nextK = () => { let n = 0; const used = new Set([...comp.map(c => c.k), ...(sc.used || []), ...SC_DEF.map(c => c.k), ...SC_OLD5.map(c => c.k), ...scComp(st).map(c => c.k)]); while (used.has("k" + n)) n++; return "k" + n; };
     const draw = () => { $("#scc", host).innerHTML = comp.map((c, i) => `<div class="scrow"><span class="scnr">${i + 1}</span><input data-n="${i}" value="${esc(c.n)}" placeholder="Criterium" aria-label="Criterium ${i + 1}"><input data-s="${i}" value="${esc(c.s || "")}" placeholder="Kort" maxlength="12" aria-label="Korte naam ${i + 1}">
       <button class="btn ghost small ic" type="button" data-up="${i}" aria-label="Hoger"${i ? "" : " disabled"}>↑</button><button class="btn ghost small ic" type="button" data-rm="${i}" aria-label="Verwijderen">✕</button></div>`).join("");
       $$("[data-n]", host).forEach(x => x.oninput = () => { comp[+x.dataset.n].n = x.value; });
@@ -839,8 +839,8 @@ async function csPage(v, id, ctx) {
       $$("[data-up]", host).forEach(b => b.onclick = () => { const i = +b.dataset.up; [comp[i - 1], comp[i]] = [comp[i], comp[i - 1]]; draw(); });
       $$("[data-rm]", host).forEach(b => b.onclick = () => { comp.splice(+b.dataset.rm, 1); draw(); }); };
     host.innerHTML = `<form class="panel" id="csc" style="max-width:820px"><h2 style="margin-top:0">Externe scouting: waarop beoordelen jullie?</h2>
-      <p class="hint" style="margin-top:0">Scouts geven op elk criterium een cijfer van 1 tot 10. Met drie of meer criteria krijgt elke speler een spelersprofiel, net zoals bij de interne scouting. Een criterium weghalen wist geen scores: zet je het later terug, dan staan ze er weer.</p>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn ghost small" type="button" id="scp1">Zes hoeken van de interne fiche</button><button class="btn ghost small" type="button" id="scp0">Standaard (5 criteria)</button></div>
+      <p class="hint" style="margin-top:0">Scouts geven op elk criterium een cijfer van 1 tot 10. Standaard zijn dat dezelfde zes hoeken als de interne scouting, zodat je gescoute en eigen spelers rechtstreeks kan vergelijken. Leervermogen staat apart onder de zeshoek. Met drie of meer criteria krijgt elke speler een spelersprofiel, net zoals bij de interne scouting. Een criterium weghalen wist geen scores: zet je het later terug, dan staan ze er weer.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn ghost small" type="button" id="scp0">Zes hoeken, zoals de interne scouting</button><button class="btn ghost small" type="button" id="scp1">Vroegere 5 criteria</button></div>
       <div id="scc" class="scrows"></div><button class="btn ghost small" type="button" id="scadd" style="margin-top:8px">${IC.plus}Criterium toevoegen</button>
       <h2>Status van een speler</h2><p class="hint" style="margin-top:0">De stappen in jullie opvolging, één per regel.</p>
       <textarea id="scst" rows="6" style="max-width:420px">${esc(scStats(st).join("\n"))}</textarea>
@@ -848,7 +848,7 @@ async function csPage(v, id, ctx) {
     draw();
     $("#scadd").onclick = () => { comp.push({ k: nextK(), n: "", s: "" }); draw(); $$("[data-n]", host).pop().focus(); };
     $("#scp0").onclick = () => { comp = SC_DEF.map(c => ({ ...c })); draw(); };
-    $("#scp1").onclick = () => { comp = []; SC_HOEKEN.forEach(([n, sh]) => comp.push({ k: nextK(), n, s: sh })); draw(); };
+    $("#scp1").onclick = () => { comp = SC_OLD5.map(c => ({ ...c })); draw(); };
     $("#csc").onsubmit = async e => { e.preventDefault(); const c = comp.map(x => ({ k: x.k, n: x.n.trim(), s: (x.s || "").trim() || x.n.trim().split(" ")[0] })).filter(x => x.n);
       if (!c.length) { toast("Geef minstens één criterium."); return; }
       const stat = $("#scst").value.split("\n").map(x => x.trim()).filter(Boolean);

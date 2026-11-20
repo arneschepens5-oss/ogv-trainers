@@ -52,7 +52,7 @@ function pfList(p, evals, season) {
 
 /* de radar zelf: ringen per punt, één gevulde vorm (de gekozen evaluatie) en een stippellijn om mee te vergelijken */
 function radarSvg(axes, main, cmp, o = {}) {
-  const S0 = o.size || 340, mini = !!o.mini, n = axes.length, c = S0 / 2, R = mini ? S0 / 2 - 3 : S0 / 2 - 62, max = o.max || 5, RS = max === 10 ? [4, 6, 8, 10] : [2, 3, 4, 5];
+  const S0 = o.size || 340, mini = !!o.mini, n = axes.length, c = S0 / 2, R = mini ? S0 / 2 - 3 : S0 / 2 - 62, max = o.max || 5, F = max === 10 ? f1 : evF, RS = max === 10 ? [4, 6, 8, 10] : [2, 3, 4, 5];
   /* het midden is 1 (de laagste score), de buitenste ring 5: zo zie je de verschillen beter */
   const ang = i => -Math.PI / 2 + i * 2 * Math.PI / n, fr = v => Math.max(0, Math.min(max, v ?? 1) - 1) / (max - 1), pt = (i, v) => [c + Math.cos(ang(i)) * R * fr(v), c + Math.sin(ang(i)) * R * fr(v)], at = (i, r) => [c + Math.cos(ang(i)) * r, c + Math.sin(ang(i)) * r];
   const poly = vs => vs.map((v, i) => pt(i, v).map(x => x.toFixed(1)).join(",")).join(" ");
@@ -62,15 +62,15 @@ function radarSvg(axes, main, cmp, o = {}) {
   if (mini) return `<svg class="pfmini" viewBox="0 0 ${S0} ${S0}" aria-hidden="true"><polygon points="${ring(max)}" class="pfg"/><polygon points="${ring(RS[1])}" class="pfg"/>${mv.some(v => v != null) ? `<polygon points="${poly(mv)}" class="pfm"/>` : ""}</svg>`;
   const lab = (i, t, v) => { const [x, y] = at(i, R + 16), cos = Math.cos(ang(i)), anchor = Math.abs(cos) < 0.2 ? "middle" : cos > 0 ? "start" : "end", ls = wrap(t), dy = Math.sin(ang(i)) < -0.5 ? -(ls.length - 1) * 13 : Math.sin(ang(i)) > 0.5 ? 6 : -(ls.length - 1) * 6.5;
     return `<text x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}" class="pfl">${ls.map((l, k) => `<tspan x="${x.toFixed(1)}" dy="${k ? 13 : 0}">${esc(l)}</tspan>`).join("")}</text>`; };
-  return `<svg class="pfradar" viewBox="0 0 ${S0} ${S0}" role="img" aria-label="Spelersprofiel: ${esc(axes.map((a, i) => a + " " + (mv[i] == null ? "geen score" : evF(mv[i]))).join(", "))}">
+  return `<svg class="pfradar" viewBox="0 0 ${S0} ${S0}" role="img" aria-label="Spelersprofiel: ${esc(axes.map((a, i) => a + " " + (mv[i] == null ? "geen score" : F(mv[i]))).join(", "))}">
     ${RS.map(k => `<polygon points="${ring(k)}" class="pfg${k === max ? " out" : ""}"/>`).join("")}
     ${axes.map((_, i) => { const [x, y] = pt(i, max); return `<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="pfg"/>`; }).join("")}
     ${RS.map(k => { const a = -Math.PI / 2 + Math.PI / n, rr = R * fr(k); return `<text x="${(c + Math.cos(a) * rr + 3).toFixed(1)}" y="${(c + Math.sin(a) * rr - 2).toFixed(1)}" class="pfr">${EV_DISP === 2 ? k * 2 : k}</text>`; }).join("")}
-    ${cv && cv.some(v => v != null) ? `<polygon points="${poly(cv)}" class="pfc"/>${cv.map((v, i) => v == null ? "" : `<circle cx="${pt(i, v)[0].toFixed(1)}" cy="${pt(i, v)[1].toFixed(1)}" r="3" class="pfcd"><title>${esc(axes[i])}: ${evF(v)}</title></circle>`).join("")}` : ""}
+    ${cv && cv.some(v => v != null) ? `<polygon points="${poly(cv)}" class="pfc"/>${cv.map((v, i) => v == null ? "" : `<circle cx="${pt(i, v)[0].toFixed(1)}" cy="${pt(i, v)[1].toFixed(1)}" r="3" class="pfcd"><title>${esc(axes[i])}: ${F(v)}</title></circle>`).join("")}` : ""}
     <polygon points="${poly(mv)}" class="pfm"/>
     ${mv.map((v, i) => { if (v == null) return ""; const [x, y] = pt(i, v), rv = R * fr(v), [tx, ty] = at(i, rv > R * 0.78 ? rv - 15 : rv + 13);
-      return `<g><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" class="pfmd"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="13" class="pfhit"><title>${esc(axes[i])}: ${evF(v)}${cv && cv[i] != null ? " · vergelijking " + evF(cv[i]) : ""}</title></circle>
-        <text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="middle" class="pfv">${evF(v)}</text></g>`; }).join("")}
+      return `<g><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" class="pfmd"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="13" class="pfhit"><title>${esc(axes[i])}: ${F(v)}${cv && cv[i] != null ? " · vergelijking " + F(cv[i]) : ""}</title></circle>
+        <text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="middle" class="pfv">${F(v)}</text></g>`; }).join("")}
     ${axes.map((a, i) => lab(i, a)).join("")}</svg>`;
 }
 

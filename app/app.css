@@ -2533,3 +2533,11 @@ html.big .hint,html.big small{font-size:max(1em,13px)}
 .mpbar{display:flex;gap:10px;align-items:center;margin:0 0 12px;padding:10px 14px;border-radius:14px;background:var(--ybg);color:var(--ytext);font-size:14px}
 .mpbar svg{width:20px;height:20px;flex:none}.mpbar b{margin-right:8px}
 @media (max-width:620px){.startblad .pos11.sm{width:100%;max-width:250px;margin:0 auto}}
+/* v173: externe scouting met zes hoeken + leervermogen apart */
+.sck.n6{display:grid;grid-template-columns:repeat(3,1fr)}.sck.n6 span{flex-direction:row;justify-content:space-between;align-items:baseline;min-width:0;padding:6px 10px}.sck.n6 b{font-size:15px}
+.scleer{margin:14px 0 12px;padding:12px 14px;border-radius:14px;background:var(--card2);border:1px dashed var(--line2)}
+.scleer>.t{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}.scleer>.t small{color:var(--muted);font-size:12.5px}
+.scleer .segs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}.scleer .segs button{all:unset;cursor:pointer;padding:7px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line2);font-size:13px;font-weight:700}
+.scleer .segs button.on{background:var(--yellow);color:var(--onY);border-color:var(--yellow)}.scleer .segs button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.scleer .rng{margin-top:10px}
+.pill.scleerp{background:color-mix(in srgb,var(--blue,#2b6de0) 14%,transparent);color:var(--ink)}.pill.scleerp.est{border:1px dashed var(--line2);background:transparent}

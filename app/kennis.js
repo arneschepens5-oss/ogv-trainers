@@ -58,7 +58,11 @@ const SC_STAT = ["Nieuw", "Blijven volgen", "Opnieuw bekijken", "Uitnodigen", "C
 const SC_COMP = ["Winning mindset", "Toekomstig fysiek potentieel", "Spelinzicht", "Bal- en lichaamscontrole", "Leervermogen"], SC_SH = ["Mindset", "Fysiek", "Inzicht", "Balcontrole", "Leren"];
 const scNum = v => typeof v === "number" && !isNaN(v);
 /* de beheerder kiest zelf waarop de scouts beoordelen (Instellingen › Scouting); elk criterium houdt zijn eigen sleutel zodat oude scores blijven kloppen */
-const SC_DEF = SC_COMP.map((n, i) => ({ k: "k" + i, n, s: SC_SH[i] }));
+/* standaard: dezelfde zes hoeken als de interne scouting. De oude sleutels blijven (k3 balcontrole → techniek, k2 inzicht, k1 fysiek, k0 mindset → mentaal),
+   zodat bestaande scores meteen in de juiste hoek staan. k4 (leervermogen) staat apart: niet in de zeshoek en niet in het gemiddelde. */
+const SC_DEF = [["k3", "Techniek aan de bal", "Techniek"], ["k5", "Pas- en traptechniek", "Passing"], ["k2", "Spelinzicht", "Inzicht"], ["k6", "Verdedigen", "Verdedigen"], ["k1", "Fysiek", "Fysiek"], ["k0", "Mentaal", "Mentaal"]].map(([k, n, s]) => ({ k, n, s }));
+const SC_OLD5 = SC_COMP.map((n, i) => ({ k: "k" + i, n, s: SC_SH[i] }));
+const SC_LEER = "k4", SC_LEERZ = "k4z";
 const SC_HOEKEN = [["Techniek aan de bal", "Techniek"], ["Pas- en traptechniek", "Passing"], ["Spelinzicht", "Inzicht"], ["Verdedigen", "Verdedigen"], ["Fysiek", "Fysiek"], ["Mentaal", "Mentaal"]];
 const scComp = (st = CLUB.settings) => { const c = st?.scout?.comp; return Array.isArray(c) && c.length ? c : SC_DEF; };
 const scStats = (st = CLUB.settings) => { const c = st?.scout?.stat; return Array.isArray(c) && c.length ? c : SC_STAT; };
@@ -112,8 +116,8 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
       <span class="scmain"><b>${esc(p.naam)}</b><small>${esc([p.club, cat, age != null ? age + " jaar" : "", p.voet ? p.voet.toLowerCase() + " voet" : ""].filter(Boolean).join(" · "))}</small>
         <span class="sctags">${[p.p1, p.p2, p.p3].filter(Boolean).map((x, i) => `<em${i ? ' class="soft"' : ""} title="${esc(x)}">${esc((SC_POS[x] || [x])[0])}</em>`).join("")}${a != null ? `<span class="scniv n${SC_NIV.indexOf(scNiv(a))}">${scNiv(a)}</span>` : ""}</span></span>
       ${rad ? `<span class="isc-rad sc-rad" title="Spelersprofiel">${rad}</span>` : ""}</div>
-      <div class="sck">${CO.map(c => { const val = p[c.k]; return `<span title="${esc(c.n)}"><small>${esc(c.s || c.n)}</small><b style="${scNum(val) ? `color:${scCol(val)}` : ""}">${scNum(val) ? f1(val) : "–"}</b></span>`; }).join("")}</div>
-      <div class="scfoot"><span class="pill w">${esc(p.stat || "Nieuw")}</span><span class="spacer"></span><small>${esc([p.scout, p.dat].filter(Boolean).join(" · "))}</small></div></a>`; }).join("")}</div>`
+      <div class="sck n${CO.length}">${CO.map(c => { const val = p[c.k]; return `<span title="${esc(c.n)}"><small>${esc(c.s || c.n)}</small><b style="${scNum(val) ? `color:${scCol(val)}` : ""}">${scNum(val) ? f1(val) : "–"}</b></span>`; }).join("")}</div>
+      <div class="scfoot"><span class="pill w">${esc(p.stat || "Nieuw")}</span>${scNum(p[SC_LEER]) && !CO.some(c => c.k === SC_LEER) ? `<span class="pill scleerp${p[SC_LEERZ] ? "" : " est"}" title="${p[SC_LEERZ] ? "Leervermogen, goed kunnen beoordelen" : "Leervermogen, geschat"}">Leren ${f1(p[SC_LEER])}${p[SC_LEERZ] ? "" : " · schatting"}</span>` : ""}<span class="spacer"></span><small>${esc([p.scout, p.dat].filter(Boolean).join(" · "))}</small></div></a>`; }).join("")}</div>`
     : all.length ? `<div class="empty"><b>Geen spelers met deze filters</b>Haal een filter weg of verlaag een minimum.</div>` : `<div class="empty"><b>Nog geen spelers</b>Voeg de eerste gescoute speler toe.<br><a class="btn" href="#/scouting/nieuw">Nieuwe speler</a></div>`}`;
   const qi = $("#fq"); qi.oninput = debounce(() => { scF.q = qi.value; scF.typing = true; render(); }, 250);
   if (scF.typing) { scF.typing = false; qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
@@ -130,6 +134,7 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
 function scoutForm(v, p, all) {
   const isNew = !p; p = p ? { ...p } : { stat: "Nieuw", dat: todayIso(), scout: (() => { try { return localStorage.getItem("scout") || ""; } catch (e) { return ""; } })() };
   let sel = [p.p1, p.p2, p.p3].filter(Boolean); const CO = scComp(), sc = CO.map(c => scNum(p[c.k]) ? p[c.k] : null);
+  let leer = scNum(p[SC_LEER]) ? p[SC_LEER] : 5, leerM = scNum(p[SC_LEER]) ? (p[SC_LEERZ] ? "z" : "s") : "";
   const draw = () => {
     const fil = sc.filter(x => x != null), a = fil.length ? fil.reduce((x, y) => x + y, 0) / fil.length : null;
     v.innerHTML = backLink("#/scouting", "Externe scouting") + head(isNew ? "Nieuwe speler" : esc(p.naam), isNew ? "Vul minstens de naam, de hoofdpositie en je eigen naam in." : esc([p.club, p.bron].filter(Boolean).join(" · "))) +
@@ -139,6 +144,9 @@ function scoutForm(v, p, all) {
     <div class="panel"><h2>Positie op het veld</h2><div class="pitchpick">${Object.entries(SC_POS).map(([n, [ab, x, y]]) => { const i = sel.indexOf(n); return `<button type="button" class="${i >= 0 ? "s" + (i + 1) : ""}" style="left:${x}%;top:${y}%" data-pos="${n}" title="${n}">${ab}</button>`; }).join("")}</div>
       <p class="hint" style="text-align:center">${sel.length ? sel.map((s, i) => (i + 1) + ". " + s).join(" · ") : "Tik: 1 = hoofdpositie, daarna maximaal 2 alternatieven"}</p></div></div>
     <div class="grid2 sec"><div class="panel"><h2>Beoordeling</h2>${CO.length >= 3 ? `<div class="scrad">${radarSvg(CO.map(c => c.s || c.n), Object.fromEntries(CO.map((c, i) => [c.s || c.n, sc[i]])), null, { size: 250, max: 10 })}</div>` : ""}${CO.map((c0, i) => { const c = esc(c0.n); return `<div class="rng" style="margin-bottom:10px"><div class="t"><span>${c}</span><span class="v" style="${sc[i] != null ? `background:${scCol(sc[i])};color:#fff` : ""}">${sc[i] != null ? f1(sc[i]) : "–"}</span></div><input type="range" min="1" max="10" step="0.5" value="${sc[i] ?? 5}" data-k="${i}" aria-label="${c}"></div>`; }).join("")}
+      ${CO.some(c => c.k === SC_LEER) ? "" : `<div class="scleer"><div class="t"><b>Leervermogen</b><small>Apart, niet in de zeshoek en niet in het algemeen cijfer. Vul het enkel in als je het kon zien.</small></div>
+      <div class="segs" role="radiogroup" aria-label="Leervermogen">${[["", "Niet ingevuld"], ["s", "Schatting"], ["z", "Goed kunnen beoordelen"]].map(([k, l]) => `<button type="button" role="radio" aria-checked="${leerM === k}" class="${leerM === k ? "on" : ""}" data-leer="${k}">${l}</button>`).join("")}</div>
+      ${leerM ? `<div class="rng"><div class="t"><span>${leerM === "s" ? "Geschat leervermogen" : "Leervermogen"}</span><span class="v" style="background:${scCol(leer)};color:#fff">${f1(leer)}</span></div><input type="range" min="1" max="10" step="0.5" value="${leer}" id="leerR" aria-label="Leervermogen"></div>` : ""}</div>`}
       <div class="kpi" style="border-color:var(--yellow)"><small>Algemeen cijfer</small><b style="color:var(--ytext)">${f1(a)}</b><span>${a == null ? "Verschijnt zodra je een eerste score geeft" : scNiv(a) + (fil.length < CO.length ? ` · ${fil.length} van ${CO.length} gescoord` : "")}</span></div></div>
     <div class="panel"><h2>Notities en opvolging</h2><div class="fields"><label class="f full">Sterktes en spelbeschrijving<textarea id="sterk">${esc(p.sterk || "")}</textarea></label><label class="f full">Werkpunten<textarea id="werk">${esc(p.werk || "")}</textarea></label>
       <label class="f full">Situatie en context<textarea id="ctx" placeholder="Rugnummer, matuur, speelminuten…">${esc(p.ctx || "")}</textarea></label>
@@ -150,9 +158,11 @@ function scoutForm(v, p, all) {
     const cg = $("#cmpgo", v); if (cg) cg.onclick = () => { scF.fpick = { cat: scCatOf(p), pos: (POS_BY_NAME[p.p1] || [])[0] || 0, id: p.id }; go("#/scoutveld"); };
     $$("[data-pos]", v).forEach(b => b.onclick = () => { keep(); const n = b.dataset.pos, i = sel.indexOf(n); if (i >= 0) sel.splice(i, 1); else if (sel.length < 3) sel.push(n); draw(); });
     $$("[data-k]", v).forEach(r => { r.oninput = () => { sc[+r.dataset.k] = +r.value; const s = r.previousElementSibling.querySelector(".v"); s.textContent = f1(+r.value); s.style.background = scCol(+r.value); s.style.color = "#fff"; }; r.onchange = () => { keep(); draw(); }; });
+    $$("[data-leer]", v).forEach(b => b.onclick = () => { keep(); leerM = b.dataset.leer; draw(); });
+    const lr = $("#leerR", v); if (lr) { lr.oninput = () => { leer = +lr.value; const s = lr.previousElementSibling.querySelector(".v"); s.textContent = f1(leer); s.style.background = scCol(leer); }; }
     $("#save").onclick = async () => { keep(); if (!p.naam || !sel[0] || !p.scout) { toast("Vul minstens naam, hoofdpositie en jouw naam als scout in."); return; }
       if (isNew && all.some(x => x.naam.toLowerCase() === p.naam.toLowerCase() && (x.geb || "") === (p.geb || "")) && !confirm("Deze speler staat al in de database. Toch nog eens toevoegen?")) return;
-      const data = { ...p, p1: sel[0] || "", p2: sel[1] || "", p3: sel[2] || "", ts: Date.now() }; delete data.id; delete data.created_by; CO.forEach((c, i) => { if (sc[i] != null) data[c.k] = sc[i]; else delete data[c.k]; });
+      const data = { ...p, p1: sel[0] || "", p2: sel[1] || "", p3: sel[2] || "", ts: Date.now() }; delete data.id; delete data.created_by; CO.forEach((c, i) => { if (sc[i] != null) data[c.k] = sc[i]; else delete data[c.k]; }); if (!CO.some(c => c.k === SC_LEER)) { if (leerM) { data[SC_LEER] = leer; if (leerM === "z") data[SC_LEERZ] = true; else delete data[SC_LEERZ]; } else { delete data[SC_LEER]; delete data[SC_LEERZ]; } }
       try { localStorage.setItem("scout", p.scout); } catch (e) {}
       await safe(async () => { SC_OWN = null; await db.save("scouting", { id: p.id || "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data, updated_at: new Date().toISOString() }); go("#/scouting"); }, p.naam + " is opgeslagen."); };
     const del = $("#del"); if (del) del.onclick = async () => { if (!confirm("Deze speler definitief verwijderen?")) return; await safe(async () => { await db.del("scouting", { id: p.id }); go("#/scouting"); }, "Speler verwijderd."); };
