@@ -2487,10 +2487,12 @@ body[data-sec="Scouting"]{--sc:#0891B2}body[data-sec="Club"]{--sc:#DC2626}body[d
 h1.pg{position:relative;padding-bottom:10px}h1.pg::after{content:"";position:absolute;left:0;bottom:0;width:56px;height:5px;border-radius:3px;background:var(--sc)}
 .btn.ghost{border:1.5px solid var(--line2)}
 :focus-visible{outline:3px solid var(--sc);outline-offset:2px}
-.bigsw{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:10px;height:34px;min-width:44px;margin-left:6px;font:inherit;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:0 8px}
-.bigsw b{font-size:17px}.bigsw[aria-pressed=true]{background:var(--ink);color:var(--card);border-color:var(--ink)}
-/* grote letters: alles in de pagina en de zijbalk een stuk groter, met meer contrast */
-html.big .page{zoom:1.15}html.big .side .nav a{font-size:17px}html.big .side .subside a{font-size:16px}
+.frow{flex-wrap:wrap}
+.szctl{flex:1 0 100%;display:flex;align-items:center;gap:10px;margin-top:2px;cursor:pointer;color:var(--ink);font-weight:800}
+.szctl .a1{font-size:12px}.szctl .a2{font-size:21px;line-height:1}
+.szctl input{flex:1;min-width:0;height:26px;margin:0;accent-color:var(--sc,var(--ink));cursor:pointer;touch-action:pan-y}
+/* lettergrootte (stand 1-4): pagina en zijbalk groter, met meer contrast */
+html.big .page{zoom:var(--zs,1.15)}html.big .side .nav a{font-size:calc(14.5px * var(--zs,1.15))}html.big .side .subside a{font-size:calc(14px * var(--zs,1.15))}
 html.big{--muted:#3A3C36;--dim:#55574F}
 html.big .hint,html.big small{font-size:max(1em,13px)}
 /* v167: duidelijke onderverdelingen (tabbladen) en spelers op het veld */
