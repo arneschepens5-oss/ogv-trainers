@@ -9,24 +9,28 @@ const dlSteps = x => { if (!x.diagram) return exPic(x, ""); const F = dgFrames(x
   return `<div class="pfsteps">${F.map((o, i) => `<figure>${diagramSVG(x.diagram, { objs: o })}<figcaption>Stap ${i + 1}</figcaption></figure>`).join("")}</div>`; };
 const dlLines = s => String(s || "").split(/\n+/).map(t => t.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
 
+/* verloop van de training met tijden, drinkpauzes inbegrepen */
+const dlFlow = pl => { let t = 0, n = 0; return (pl.items || []).map(x => { const m = exMinutes(x), a = t; t += m;
+  return x.pause ? `☕ ${x.name || "Drinkpauze"} (${m} min)` : `${++n}. ${x.name || "Oefening"}${m ? ` (${a}′–${t}′)` : ""}`; }); };
 function ficheHtml(pl, meta, layout = "vol") {
   const list = pl.items || [], nr = x => list.filter(z => !z.pause).indexOf(x) + 1;
+  const flow = list.length > 1 && list.some(x => x.pause) ? `<p class="pflow"><b>Verloop:</b> ${dlFlow(pl).map(esc).join(" → ")}</p>` : "";
   const headH = `<header><div><h1>${esc(meta.title || pl.theme || "Training")}</h1><p>${esc(meta.sub || "")}</p></div><img src="icons/logo.png" alt=""></header>`;
   if (layout === "kaart") {
     let t = 0, pause = "";
-    return `<div class="pfiche kaart">${headH}${pl.goal ? `<p class="pgoal"><b>Doel:</b> ${esc(pl.goal)}</p>` : ""}
+    return `<div class="pfiche kaart">${headH}${flow}${pl.goal ? `<p class="pgoal"><b>Doel:</b> ${esc(pl.goal)}</p>` : ""}
       <div class="pk-grid">${list.map((x, k) => { const m = exMinutes(x), from = t; t += m;
         if (x.pause) { pause = `<div class="pk-pause">☕ Eerst ${esc((x.name || "drinkpauze").toLowerCase())}, ${m} min</div>`; return ""; }
         const pb = pause; pause = ""; const pts = dlLines(x.criteria).slice(0, 4);
         return `<section class="pk">${pb}<div class="pk-h"><span class="pk-no">${nr(x)}</span><b>${esc(x.name || "Oefening")}</b><span>${from}′–${t}′</span></div>
           <div class="pk-pic">${x.diagram ? diagramSVG(x.diagram, { objs: dgFrames(x.diagram)[0] }) : exPic(x, "")}</div>
           <p class="pk-meta">${esc([exType(x), x.players ? x.players + " sp." : "", x.size, x.reps ? `${x.reps} × ${x.work || "?"}` : ""].filter(Boolean).join(" · "))}</p>
-          ${pts.length ? `<ul>${pts.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}</section>`; }).join("")}</div>
+          ${pts.length ? `<ul>${pts.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}</section>`; }).join("")}${pause}</div>
       <footer>${esc(APPNAME())} · ${esc(clubName())} · ${planMinutes(pl)} min</footer></div>`;
   }
   return `<div class="pfiche">${headH}
     <dl class="pmeta"><div><dt>Thema</dt><dd>${esc(pl.theme || "–")}</dd></div><div><dt>Aantal spelers</dt><dd>${esc(pl.players || "–")}</dd></div><div><dt>Materiaal</dt><dd>${esc(pl.material || "–")}</dd></div><div><dt>Intensiteit</dt><dd>${pl.intensity ? pl.intensity + " – " + INTENS[pl.intensity] : "–"}</dd></div><div><dt>Totale duur</dt><dd>${planMinutes(pl)} min</dd></div></dl>
-    ${pl.goal ? `<p class="pgoal"><b>Doel:</b> ${esc(pl.goal)}</p>` : ""}
+    ${pl.goal ? `<p class="pgoal"><b>Doel:</b> ${esc(pl.goal)}</p>` : ""}${flow}
     ${list.map((x, k) => x.pause ? `<div class="pk-pause">☕ ${esc(x.name || "Drinkpauze")} · ${exMinutes(x)} min</div>` : `<section class="pex${x.diagram && dgFrames(x.diagram).length > 1 ? " steps" : ""}"><div class="ptxt"><h2>${nr(x)}. ${x.phase ? esc(exType(x)) + ": " : ""}${esc(x.name || "Oefening")}</h2>
       <p>${[["Duur", exMinutes(x) ? exMinutes(x) + " min" : ""], ["Spelers", x.players], ["Afmetingen", x.size], ["Intensiteit", x.intensity ? x.intensity + " – " + INTENS[x.intensity] : ""], ["Inspanning", x.reps ? `${x.reps} × ${x.work || "?"}${x.rest ? ", " + x.rest + " s rust" : ""}` : ""]].filter(([, v]) => v).map(([k2, v]) => `<b>${k2}:</b> ${esc(v)}`).join(" · ")}</p>
       ${x.goal ? `<p><b>Doel:</b> ${esc(x.goal)}</p>` : ""}
@@ -47,24 +51,26 @@ async function printFiche(pl, meta, layout = "vol") {
 
 /* ---------- deelbare link ---------- */
 const dlToken = () => { const b = crypto.getRandomValues(new Uint8Array(16)); return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
-const dlUrl = t => location.origin + location.pathname.replace(/[^/]*$/, "") + "bekijk/?t=" + t;
+/* korte link via de databank: zonder de naam van de website (en dus zonder je GitHub-naam) in het bericht */
+const dlUrl = t => SB_URL + "/functions/v1/t/" + t;
 async function dlInlineImg(x) { /* foto's uit de privé-opslag meesturen als kleine jpg, anders ziet de ontvanger ze niet */
   if (!x.img_path || x.img) return; try { const u = await files.url(x.img_path); const bl = await (await fetch(u)).blob();
     const im = await createImageBitmap(bl), k = Math.min(1, 1100 / Math.max(im.width, im.height)), c = document.createElement("canvas");
     c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
     x.img = c.toDataURL("image/jpeg", .82); delete x.img_path; } catch (e) { delete x.img_path; } }
 async function dlMakeLink(o) {
-  const pl = JSON.parse(JSON.stringify(normPlan(o.pl))); for (const x of pl.items) { await dlInlineImg(x); x._type = x.pause ? "" : exType(x); x._min = exMinutes(x); }
-  const payload = { pl, sub: o.sub || "", team: S.team?.name || "", by: user?.user_metadata?.name || user?.user_metadata?.full_name || "" };
+  const pl = JSON.parse(JSON.stringify(normPlan(o.pl))); const noMail = v => (v && !/@/.test(v) ? v : "");
+  for (const x of pl.items) { delete x.shared_by; x.author = noMail(x.author); if (!x.author) delete x.author; await dlInlineImg(x); x._type = x.pause ? "" : exType(x); x._min = exMinutes(x); }
+  const payload = { pl, sub: o.sub || "", team: S.team?.name || "", by: noMail(user?.user_metadata?.name) || noMail(user?.user_metadata?.full_name) };
   const { data: old } = await sb.from("shared_items").select("token").eq("item_id", String(o.id)).eq("created_by", user.id).maybeSingle();
   const token = old?.token || dlToken();
   const { error } = await sb.from("shared_items").upsert({ token, item_id: String(o.id), kind: o.kind, title: o.title || "", payload, club_name: clubName(), updated_at: new Date().toISOString() }, { onConflict: "token" });
   if (error) throw new Error(/relation|does not exist|schema/i.test(error.message) ? "Voer eerst het databasescript supabase-delen-v60.sql uit." : error.message);
   return dlUrl(token);
 }
-const dlWaText = (o, url) => { const pl = normPlan(o.pl), n = pl.items.filter(x => !x.pause);
+const dlWaText = (o, url) => { const pl = normPlan(o.pl);
   return `*${o.kind === "oefening" ? "Oefening" : "Training"}: ${o.title || pl.theme || ""}*${o.sub ? "\n" + o.sub : ""}\n` +
-    (o.kind === "training" ? n.map((x, k) => `${k + 1}. ${x.name || "Oefening"}${exMinutes(x) ? ` (${exMinutes(x)}′)` : ""}`).join("\n") + `\nTotaal ${planMinutes(pl)} min\n` : "") +
+    (o.kind === "training" ? dlFlow(pl).join("\n") + `\nTotaal ${planMinutes(pl)} min\n` : "") +
     `\nTekeningen, uitleg en filmpjes: ${url}`; };
 
 /* ---------- het deelvenster ---------- */
