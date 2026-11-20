@@ -2548,3 +2548,6 @@ html.big .hint,html.big small{font-size:max(1em,13px)}
 .scdisp .scchip small{font-weight:600;opacity:.7;margin-left:4px}.scdisp.off .scchip{opacity:.45;cursor:not-allowed}
 .scdtag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:800;border:1px dashed var(--line2);color:var(--muted)}
 .scpanel{overflow-anchor:none}
+.updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:9999;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;border-radius:14px;background:#121311;color:#fff;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 24px)}
+.updbar button{all:unset;cursor:pointer;padding:8px 14px;border-radius:10px;background:var(--yellow);color:#121311;font-weight:900}
+@media (min-width:900px){.updbar{bottom:24px}}

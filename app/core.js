@@ -623,8 +623,10 @@ function shell(fresh) {
 let renderSeq = 0, rendering = 0;
 async function render() {
   const seq = ++renderSeq; rendering++;
-  try { await renderPage(seq); } finally { rendering--; requestAnimationFrame(() => { if (!rendering) document.body.style.minHeight = ""; }); }
+  try { await renderPage(seq); } finally { rendering--; requestAnimationFrame(() => { if (!rendering) keepMinH(); }); }
 }
+/* minHeight weghalen, behalve als de pagina daardoor korter wordt dan waar je staat: dan zou het scherm verspringen */
+function keepMinH() { const k = document.body.style.minHeight; if (!k) return; document.body.style.minHeight = ""; if (document.documentElement.scrollHeight < scrollY + innerHeight - 1) document.body.style.minHeight = k; }
 /* vangnet: staat er ooit toch een lege pagina (zonder dat er iets aan het laden is), dan wordt ze opnieuw opgebouwd */
 setInterval(() => { const v = $("#view"); if (v && !rendering && !v.children.length && !v.textContent.trim() && !document.hidden) { console.warn("Lege pagina hersteld"); render(); } }, 1500);
 let PREV_HASH = null, DOS_PREV = null;
@@ -662,7 +664,7 @@ async function renderPage(seq) {
   catch (e) { settled = true; console.error(e); v.innerHTML = `<div class="empty"><b>Er liep iets mis</b>${esc(e.message || e)}<br><button class="btn" type="button" onclick="location.reload()">Opnieuw laden</button></div>`; }
   clearTimeout(tLoad); clearTimeout(tSlow); $(".slowload", v)?.remove(); compactHead(v);
   document.title = (def.title ? def.title + " | " : "") + APPNAME();
-  if (seq === renderSeq) { PREV_HASH = h0; if (same) { scrollTo(0, y0); requestAnimationFrame(() => { document.body.style.minHeight = ""; }); } else { document.body.style.minHeight = ""; if (!def.keepScroll) scrollTo(0, 0); } }
+  if (seq === renderSeq) { PREV_HASH = h0; if (same) { scrollTo(0, y0); requestAnimationFrame(keepMinH); } else { document.body.style.minHeight = ""; if (!def.keepScroll) scrollTo(0, 0); } }
 }
 addEventListener("hashchange", () => { const d = $("#dlg"); if (d?.open) d.close(); render(); }); /* terugknop op gsm sluit ook een open venster */
 
@@ -920,3 +922,14 @@ function boot() {
 /* onthoud welke menugroepen dicht staan */
 document.addEventListener("toggle", e => { const d = e.target; if (!d.classList?.contains("navg")) return; let c; try { c = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (x) {} if (!Array.isArray(c)) c = ["Mijn map", "Club"];
   const g = d.dataset.g; c = c.filter(x => x !== g); if (!d.open) c.push(g); try { localStorage.setItem("ogv-nav-closed", JSON.stringify(c)); } catch (x) {} }, true);
+
+/* nieuwe versie online? Een app die op de gsm openblijft, laadt nooit vanzelf opnieuw. Bij terugkeren naar de app (en elk kwartier) kijken we
+   of index.html een hoger versienummer heeft; dan verschijnt een balk om te vernieuwen (geen automatische herlading: dat zou een half ingevuld formulier wissen). */
+(() => {
+  const cur = +((document.querySelector('script[src*="core.js?v="]') || {}).src || "").replace(/.*v=(\d+).*/, "$1") || 0; if (!cur) return;
+  let shown = false;
+  const check = async () => { if (shown || document.hidden) return;
+    try { const t = await (await fetch("index.html", { cache: "no-store" })).text(), v = +((t.match(/core\.js\?v=(\d+)/) || [])[1] || 0);
+      if (v > cur) { shown = true; const b = document.createElement("div"); b.className = "updbar"; b.innerHTML = `<span>Er is een nieuwe versie van de app.</span><button type="button">Vernieuwen</button>`; b.querySelector("button").onclick = () => location.reload(); document.body.appendChild(b); } } catch (e) {} };
+  document.addEventListener("visibilitychange", check); setInterval(check, 15 * 60 * 1000); setTimeout(check, 20000);
+})();
