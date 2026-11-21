@@ -29,6 +29,13 @@ function viewRegister(v) {
 /* account bestaat maar is nog geen lid van de club */
 function viewJoin(v) {
   document.body.classList.add("authpage");
+  if (S.pending) { /* clubcode is gekend, maar een beheerder moet de toegang nog goedkeuren: tot dan kan dit account niets */
+    v.innerHTML = `<div class="authbox">${AUTHHEAD()}<h2 style="margin:0 0 8px">Je aanvraag wacht op goedkeuring</h2><p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b> en de clubcode klopt. Een beheerder van ${esc(clubName() || "de club")} moet je toegang nog goedkeuren en bepalen wat je mag zien en doen. Tot dan kan je niets openen.</p>
+    <p class="muted">Je hoeft niets te doen. Kom later terug, of vraag het aan de jeugdcoördinator.</p>
+    <div class="row"><button class="btn" type="button" id="recheck">Opnieuw controleren</button><button class="link" type="button" data-logout>Afmelden</button></div></div>`;
+    $("[data-logout]", v).onclick = logout;
+    $("#recheck").onclick = async e => { e.target.disabled = true; await clubStatus(); if (S.member) { toast("Welkom bij " + APPNAME() + "."); startCloud(); } else { toast(S.pending ? "Nog niet goedgekeurd." : "Geen toegang gevonden."); render(); } };
+    return; }
   let saved = ""; try { saved = localStorage.getItem("ogv-invite") || ""; } catch (x) {}
   v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">Je bent aangemeld als <b style="color:var(--ink)">${esc(user?.email || "")}</b>, maar je account heeft nog geen toegang tot de club. Vul de clubcode in die je van de jeugdcoördinator kreeg.</p>
   <form id="jf" class="authcard"><label class="f">Clubcode<input name="code" required autocomplete="off" value="${esc(saved)}" placeholder="bv. ABCD1234" style="text-transform:uppercase"></label><div class="err" id="jerr"></div><button class="btn">Toegang krijgen</button></form>
@@ -38,17 +45,17 @@ function viewJoin(v) {
     const { data, error } = await sb.rpc("join_club", { code: e.target.code.value.trim() });
     if (error || !data) { $("#jerr").textContent = error ? error.message : "Deze clubcode klopt niet."; btn.disabled = false; return; }
     try { localStorage.removeItem("ogv-invite"); } catch (x) {}
-    S.member = true; toast("Welkom bij " + APPNAME() + "."); startCloud(); };
+    await clubStatus(); if (S.member) { toast("Welkom bij " + APPNAME() + "."); startCloud(); } else render(); };
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; S.intscout = true; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.super = !!data.super; S.support = data.support || null; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club && !ADMIN_APP) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.pending = !!data.pending; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.super = !!data.super; S.support = data.support || null; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club && !ADMIN_APP) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
     Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); }
     else if (data.platform) { Object.assign(CLUB, { id: "platform", name: PRODUCT, short: "FCH", settings: { color: "#F5C542", color2: "#0F4A33" } }); /* huisstijl van het platform */ applyClubTheme(); } /* account van het platform zonder club */
     S.rechten = Array.isArray(data.rechten) ? data.rechten : []; S.intscout = !S.rechten.includes("intscout_uit");
     if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
-      if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
+      if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { try { localStorage.removeItem("ogv-invite"); } catch (x) {} return clubStatus(); } } } }
   catch (e) { /* geen verbinding: de opgeslagen gegevens van dit toestel blijven bruikbaar; online met een fout: niemand doorlaten, eerst nog eens proberen */
     if (typeof navigator !== "undefined" && navigator.onLine === false) { S.member = true; S.admin = false; }
     else if (!clubStatus._retry) { clubStatus._retry = true; await new Promise(r => setTimeout(r, 1200)); try { return await clubStatus(); } finally { clubStatus._retry = false; } }
@@ -99,7 +106,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) =>
   const rfIds = CLUB.settings?.access?.refused || [], refusedL = (info.waiting || []).filter(w => rfIds.includes(w.user_id)); info.waiting = (info.waiting || []).filter(w => !rfIds.includes(w.user_id));
   const nw = info.waiting.length; if (nw !== S.waitN) S.waitN = nw;
   const setRefused = async (list, msg) => { const A = JSON.parse(JSON.stringify(CLUB.settings?.access || {})); A.refused = list; const ctx = csCtxOwn(); if (await ctx.saveAll(CLUB.name, CLUB.short, { ...(CLUB.settings || {}), access: A }, msg)) render(); };
-  host.innerHTML = `${nw ? `<div class="waitbox" role="status"><h2>${IC.ppl}${nw} ${nw === 1 ? "persoon wacht" : "personen wachten"} op toegang</h2><p class="hint" style="margin:0 0 10px">Iemand maakte een account aan maar zit nog niet in de club. Kies een functie, dan weet de app meteen wat die persoon mag zien en doen.</p><div class="list">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="link danger" type="button" data-ref="${w.user_id}">Weigeren</button><button class="btn small" type="button" data-adm="${w.user_id}">Toelaten en functie kiezen</button></div>`).join("")}</div></div>` : ""}
+  host.innerHTML = `${nw ? `<div class="waitbox" role="status"><h2>${IC.ppl}${nw} ${nw === 1 ? "persoon wacht" : "personen wachten"} op toegang</h2><p class="hint" style="margin:0 0 10px">Deze personen vulden de clubcode in of maakten een account aan. Tot jij ze toelaat, kunnen ze niets zien of doen. Kies een functie, dan weet de app meteen wat die persoon mag.</p><div class="list">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="link danger" type="button" data-ref="${w.user_id}">Weigeren</button><button class="btn small" type="button" data-adm="${w.user_id}">Toelaten en functie kiezen</button></div>`).join("")}</div></div>` : ""}
     ${refusedL.length ? `<details class="refd"><summary>Geweigerd (${refusedL.length})</summary><div class="list">${refusedL.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}geen toegang</small></span><button class="btn ghost small" type="button" data-unref="${w.user_id}">Terugzetten</button></div>`).join("")}</div></details>` : ""}
     <div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan met deze code. Deel ze alleen met trainers van de club.</p>
       <div class="codebox"><b id="code" translate="no">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
