@@ -42,7 +42,8 @@ route("start", { title: "Vandaag", render: async v => {
   const evr = t && !clubOff("evaluaties") ? evReminder() : "";
   const noTeam = `<section class="nextcard empty"><p class="nk">${logged ? "Nog geen ploeg gekozen" : "Welkom"}</p><h2 class="ntitle">${logged ? "Kies je ploeg om te beginnen" : "Meld je aan om te beginnen"}</h2>
     <p class="nmeta">Daarna zie je hier je volgende training of wedstrijd, wat je nog moet invullen en de uitslagen van de club.</p><div class="nact">${logged ? `<button class="btn" type="button" data-pick>${IC.ppl}Ploeg kiezen</button>` : `<a class="btn" href="#/aanmelden">Aanmelden</a>`}</div></section>`;
-  v.innerHTML = `${setup}${typeof pushInvite === "function" ? pushInvite() : ""}<header class="today-h"><p>${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
+  const waitCard = S.admin && S.waitN ? `<a class="actcard" href="#/clubbeheer/toegang"><span class="aci">${IC.ppl}</span><span><b>${S.waitN} ${S.waitN === 1 ? "persoon wacht" : "personen wachten"} op toegang</b><small>Laat ze toe en geef ze een functie.</small></span><span class="btn small">Bekijken</span></a>` : "";
+  v.innerHTML = `${setup}${waitCard}${typeof pushInvite === "function" ? pushInvite() : ""}<header class="today-h"><p>${cap(now.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" }))}${t ? " · " + esc(t.name) : ""}</p>
       <h1>${greet}${logged && mode !== "demo" && first ? ", " + esc(first) : ""}</h1></header>
     <div class="vdgrid">
       <div class="vdcol">${t ? (next ? nextCard(next) : `<section class="nextcard empty"><p class="nk">Niets gepland</p><h2 class="ntitle">Geen trainingen of wedstrijden in de kalender</h2><div class="nact"><a class="btn" href="#/kalender">${IC.plus}Activiteit toevoegen</a></div></section>`) : noTeam}

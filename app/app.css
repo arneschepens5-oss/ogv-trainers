@@ -2603,3 +2603,16 @@ dialog.setd{width:min(480px,94vw)}
 .shlink{display:flex;gap:8px}.shlink input{flex:1;min-width:0;font-size:14px}
 .shvid{display:flex;flex-wrap:wrap;gap:6px}
 .exfill{font-size:12.5px;margin-top:4px;text-align:left}
+
+/* actie vereist: nieuwe accounts die op toegang wachten */
+.actcard{display:flex;align-items:center;gap:14px;padding:14px 16px;margin:0 0 16px;border-radius:16px;background:var(--ybg);border:1.5px solid var(--yellow);text-decoration:none;color:var(--ink)}
+.actcard .aci{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--yellow);color:var(--onY,#111);flex:none}
+.actcard .aci svg{width:22px;height:22px}.actcard>span:nth-child(2){flex:1;min-width:0}.actcard b{display:block}.actcard small{color:var(--muted)}
+.actcard.sm{padding:10px 14px;margin:-6px 0 14px}.actcard.sm .aci{width:32px;height:32px;border-radius:10px}
+.waitbox{padding:16px;margin:0 0 18px;border-radius:16px;background:var(--ybg);border:1.5px solid var(--yellow)}
+.waitbox h2{display:flex;align-items:center;gap:10px;margin:0 0 6px;font-size:18px}.waitbox h2 svg{width:22px;height:22px}
+.admsub{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 16px}.admsub a{padding:7px 14px;border-radius:99px;border:1px solid var(--line);text-decoration:none;color:var(--muted);font-weight:700;font-size:14px}
+.admsub a[aria-current=page]{background:var(--yellow);color:var(--onY,#111);border-color:var(--yellow)}
+.fnsum{margin:6px 0 10px;font-size:14px;font-weight:700;color:var(--ytext)}
+details.fnadv{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:0 12px}details.fnadv summary{cursor:pointer;padding:11px 0;font-weight:800}details.fnadv[open] summary{border-bottom:1px solid var(--line);margin-bottom:8px}
+.accsh{margin:12px 4px 4px;font-size:12.5px;font-weight:800;color:var(--muted)}.accp #accfn{width:100%;margin:6px 0 2px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--input,var(--card2));color:var(--ink);font:inherit}

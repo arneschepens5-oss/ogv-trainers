@@ -55,14 +55,18 @@ async function clubStatus() {
 /* ============ clubbeheer ============ */
 /* ============ beheer: aparte pagina's voor meldingen, toegang, ploegen en systeem ============ */
 const ADM_TABS = [["meldingen", "Meldingen"], ["instellingen", "Instellingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["planning", "Trainingen"], ["systeem", "Systeem"]];
-async function fbCount() { if (!S.admin || mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
-route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
+/* nieuwe accounts die op toegang wachten: zichtbaar in het menu, op Vandaag en in Beheer */
+async function waitCount() { if (!S.admin) return; let n = 0; try { if (mode === "demo") n = S.waitN ?? 1; else { const { data } = await sb.rpc("club_admin_info"); n = (data?.waiting || []).length; } } catch (e) { return; }
+  if (n !== S.waitN) { S.waitN = n; const pg = cur().page; if (pg === "start") render(); else if (pg !== "clubbeheer") shell(); } }
+async function fbCount() { if (!S.admin) return; await waitCount(); if (mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
+route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
   const TABS = ADM_TABS.concat([["club", "Club"]]);
   if (id === "instellingen") { location.replace("#/clubinstellingen"); return; }
   const tab = TABS.some(t => t[0] === id) ? id : "meldingen";
   v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", club: "Club", platform: "Alle clubs" }[tab]}${helpLink("clubbeheer")}</h1></div></div>
-    <nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}</a>`).join("")}</nav><div id="admv"><p class="hint">Laden…</p></div>`;
+    <nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}${k === "toegang" && S.waitN ? `<span class="bdgn" title="Wachten op toegang">${S.waitN}</span>` : ""}</a>`).join("")}</nav>
+    ${tab === "toegang" ? `<nav class="admsub" aria-label="Toegang"><a href="#/clubbeheer/toegang"${sub !== "functies" ? ' aria-current="page"' : ""}>Leden</a><a href="#/clubbeheer/toegang/functies"${sub === "functies" ? ' aria-current="page"' : ""}>Functies en rechten</a></nav>` : S.waitN ? `<a class="actcard sm" href="#/clubbeheer/toegang"><span class="aci">${IC.ppl}</span><span><b>${S.waitN} ${S.waitN === 1 ? "persoon wacht" : "personen wachten"} op toegang</b></span><span class="btn small">Bekijken</span></a>` : ""}<div id="admv"><p class="hint">Laden…</p></div>`;
   const host = $("#admv"); try { $(".admtabs a[aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" }); } catch (x) {}
   const getInfo = async () => { if (mode === "demo") return { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
     const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
@@ -81,6 +85,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
       const r = await sb.rpc("club_backup"); if (r.error) { toast(/club_backup|function/i.test(r.error.message) ? "Voer eerst ogv-database.sql uit (versie 14)." : r.error.message); return; }
       download("ogv-backup-" + todayIso() + ".json", JSON.stringify(r.data), "application/json"); try { localStorage.setItem("ogv-last-backup", new Date().toISOString()); } catch (x) {} toast("Back-up gedownload."); };
     return dbCheck($("#adm-db")); }
+  if (tab === "toegang" && sub === "functies") { const ctx = csCtxOwn(); return csAccess(host, CLUB.settings || {}, (patch, msg) => ctx.saveAll(CLUB.name, CLUB.short, { ...(CLUB.settings || {}), ...patch }, msg), () => ""); }
   let info; try { info = await getInfo(); } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message)}</div>`; return; }
   if (tab === "ploegen") {
     host.innerHTML = `<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ploegen van de club aanmaken</h2><p class="hint" style="margin:4px 0 0">Haal alle ploegen van ${esc(clubName())} op bij RBFA en maak ze in één keer aan, gekoppeld aan hun wedstrijdkalender. Trainers hoeven dan zelf geen ploeg meer te maken.</p></div><button class="btn" type="button" id="rbfaTeams">${IC.rotate}Ploegen ophalen van RBFA</button></div></div>
@@ -88,12 +93,13 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
       <div class="sec" id="adm-teams"><p class="hint">Laden…</p></div>`;
     $("#rbfaTeams").onclick = () => rbfaCreateTeams(() => render()); const ia = $("#impAll"); if (ia) ia.onclick = () => importPlayers(true); return adminTeams($("#adm-teams"), info); }
   const link = location.origin + location.pathname + "#/aanmelden";
-  host.innerHTML = `<div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan met deze code. Deel ze alleen met trainers van de club.</p>
+  const nw = (info.waiting || []).length; if (nw !== S.waitN) S.waitN = nw;
+  host.innerHTML = `${nw ? `<div class="waitbox" role="status"><h2>${IC.ppl}${nw} ${nw === 1 ? "persoon wacht" : "personen wachten"} op toegang</h2><p class="hint" style="margin:0 0 10px">Iemand maakte een account aan maar zit nog niet in de club. Kies een functie, dan weet de app meteen wat die persoon mag zien en doen.</p><div class="list">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-adm="${w.user_id}">Toelaten en functie kiezen</button></div>`).join("")}</div></div>` : ""}
+    <div class="grid2"><div class="panel"><h2>Clubcode</h2><p class="hint" style="margin-top:0">Nieuwe trainers maken zelf een account aan met deze code. Deel ze alleen met trainers van de club.</p>
       <div class="codebox"><b id="code" translate="no">${esc(info.code || "–")}</b><button class="btn ghost small" type="button" id="cpy">${IC.copy}Kopiëren</button></div>
       <div class="row" style="margin-top:12px"><a class="btn small" id="wa" target="_blank" rel="noopener">${IC.wa}Delen via WhatsApp</a><button class="btn ghost small" type="button" id="share">${IC.out}Anders delen</button><button class="link" type="button" id="newcode">Nieuwe code maken</button><a class="link" href="handleiding/" target="_blank" rel="noopener">Handleiding</a></div>
       <p class="hint">Een nieuwe code maken stopt de oude. Wie al lid is, blijft lid.</p></div>
-    <div class="panel"><div class="row"><h2 style="margin:0">Wachten op toegang</h2>${info.waiting?.length ? `<span class="pill w">${info.waiting.length}</span>` : ""}</div>${info.waiting?.length ? `<div class="list" style="margin-top:10px">${info.waiting.map(w => `<div class="item static"><span class="main"><b>${esc(w.name || w.email)}</b><small>${w.name ? esc(w.email) + " · " : ""}account sinds ${new Date(w.created_at).toLocaleDateString("nl-BE")}</small></span><button class="btn small" type="button" data-ok="${w.user_id}">Toelaten</button></div>`).join("")}</div>`
-      : `<p class="hint" style="margin:8px 0 0">Niemand. Accounts zonder clubcode verschijnen hier, zodat je ze kan toelaten.</p>`}</div></div>
+</div>
     <div class="sec"><div class="memhead"><h2>Leden <span class="cnt">${info.members.length}</span></h2>
       <div class="memtools"><input type="search" id="memq" placeholder="Zoek op naam, e-mail of ploeg" autocomplete="off"><div class="chips" id="memf"><button class="chip" type="button" data-mf="" aria-pressed="true">Alle</button><button class="chip" type="button" data-mf="admin" aria-pressed="false">Beheerders</button><button class="chip" type="button" data-mf="fn" aria-pressed="false">Met functie</button><button class="chip" type="button" data-mf="geen" aria-pressed="false">Zonder ploeg</button></div></div></div>
       <p class="hint" style="margin:6px 0 12px">Geef iemand een functie (bv. TVJO, scout) en de rechten die nodig zijn. Iemand hoeft geen trainer van een ploeg te zijn.</p>
@@ -123,7 +129,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id) => {
   $("#share").onclick = () => {
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else { navigator.clipboard?.writeText(txt); toast("Uitnodiging gekopieerd."); } };
   $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 6 tekens):", String(clubShort()).replace(/\W/g, "").toUpperCase().slice(0, 4) + "-" + Math.random().toString(36).slice(2, 8).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
-  $$("[data-ok]", v).forEach(b => b.onclick = () => rpc("club_set_member", { uid: b.dataset.ok, r: "trainer" }, "Toegelaten."));
+  $$("[data-adm]", v).forEach(b => b.onclick = () => { const w = info.waiting.find(x => x.user_id === b.dataset.adm); memberForm({ user_id: w.user_id, email: w.email, name: w.name, role: "", admit: true, rechten: [] }, rpc); });
   $$("[data-edm]", v).forEach(b => b.onclick = () => memberForm(info.members.find(m => m.user_id === b.dataset.edm), rpc));
   let mf = ""; const mfilt = () => { const q = ($("#memq").value || "").toLowerCase().trim(); let n = 0;
     $$(".memcard", v).forEach(c => { const ok = (!q || c.dataset.m.includes(q)) && (!mf || c.dataset[mf] === "true"); c.hidden = !ok; if (ok) n++; }); $("#memnone").hidden = n > 0; };
@@ -135,21 +141,36 @@ const FUNCTIES = ["Trainer", "Penningmeester", "TVJO", "AVJO", "Jeugdcoördinato
 const RECHTEN = [["scouting", "Externe scouting", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
 function memberForm(m, rpc) {
   const me = m.user_id === user?.id;
-  const d = dialog(`<form><h2>${esc(m.name || m.email)}</h2><p class="muted" style="margin:0">${esc(m.email || "")}${m.teams ? " · trainer van " + esc(m.teams) : ""}</p>
-    <label class="f">Functie in de club<input name="fn" list="fnl" value="${esc(m.functie || "")}" placeholder="bv. TVJO, ICT, Coördinator onderbouw"><datalist id="fnl">${FUNCTIES.map(f => `<option value="${f}">`).join("")}</datalist></label>
-    <label class="check"><input type="checkbox" name="all"${m.all_teams ? " checked" : ""}> <span><b>Toegang tot alle ploegen</b><br><small class="muted">Voor de TVJO of coördinatoren: alle spelers, evaluaties, trainingen en verslagen van elke ploeg bekijken en aanpassen, zonder trainer van een ploeg te zijn.</small></span></label>
+  const prof = fn => { const c = (CLUB.settings?.access?.fn || {})[fn], p = FN_PRESETS[fn] || {}; return c ? { all: !!c.all, rechten: c.rechten || [], bouw: p.bouw || "" } : { all: !!p.all, rechten: p.rechten || ["intscout"], bouw: p.bouw || "" }; };
+  const fnNames = [...new Set(["Trainer", ...FUNCTIES, ...Object.keys(CLUB.settings?.access?.fn || {}), ...(m.functie ? [m.functie] : [])])];
+  const d = dialog(`<form class="mform"><h2>${m.admit ? "Toelaten: " : ""}${esc(m.name || m.email)}</h2><p class="muted" style="margin:0">${esc(m.email || "")}${m.teams ? " · trainer van " + esc(m.teams) : ""}</p>
+    <div class="f full"><span><b>Functie in de club</b> <small class="muted" style="font-weight:400">— bepaalt wat iemand standaard mag zien en doen</small></span>
+      <div class="chips fnchips" style="margin:6px 0">${fnNames.map(x => `<button class="chip" type="button" data-fn="${esc(x)}" aria-pressed="${x === (m.functie || "")}">${esc(x)}</button>`).join("")}</div>
+      <input name="fn" list="fnl" value="${esc(m.functie || "")}" placeholder="Of typ een andere functie"><datalist id="fnl">${FUNCTIES.map(f => `<option value="${f}">`).join("")}</datalist></div>
+    <p class="fnsum" id="fnsum" aria-live="polite"></p>
+    <details class="fnadv"><summary>Aanpassen voor deze persoon</summary>
+    <label class="check"><input type="checkbox" name="all"${m.all_teams ? " checked" : ""}> <span><b>Toegang tot alle ploegen</b><br><small class="muted">Alle spelers, evaluaties, trainingen en verslagen van elke ploeg bekijken en aanpassen, zonder trainer van een ploeg te zijn.</small></span></label>
     ${V14() ? `<div class="f full" id="taw"${m.all_teams ? " hidden" : ""}><span>Of toegang tot bepaalde ploegen <small class="muted" style="font-weight:400">— bv. de coördinator onderbouw</small></span>
       <div class="chips" style="margin:6px 0">${BOUW.slice(1).map(([k, l]) => `<button class="chip" type="button" data-bw="${k}">${l}</button>`).join("")}<button class="chip" type="button" data-bw="none">Geen</button></div>
       <div class="plteams">${S.teams.map(t => `<button type="button" class="chip" data-ta="${t.id}" aria-pressed="${(m.team_access || []).includes(t.id)}">${esc(t.name)}</button>`).join("")}</div></div>` : ""}
     <div class="f full"><span>Rechten <small class="muted" style="font-weight:400">— een beheerder heeft altijd alle rechten</small></span>${RECHTEN.map(([k, l, t]) => `<label class="check" style="margin-top:6px"><input type="checkbox" name="r_${k}"${(m.rechten || []).includes(k) ? " checked" : ""}> <span><b>${l}</b><br><small class="muted">${t}</small></span></label>`).join("")}</div>
-    <label class="check"><input type="checkbox" name="r_is"${(m.rechten || []).includes("intscout_uit") ? "" : " checked"}> <span><b>Interne scouting van de hele club</b><br><small class="muted">Alle spelers van de club zien in Interne scouting: scoutingprofiel, maturiteit, groei en rapporten. Zonder contactgegevens of foto's van andere ploegen. Staat standaard aan.</small></span></label>
-    <label class="check"><input type="checkbox" name="adm"${m.role === "admin" ? " checked" : ""}${me ? " disabled" : ""}> <span><b>Beheerder</b><br><small class="muted">Toegang tot Beheer: meldingen, leden, ploegen, trainers koppelen en contactpersonen. Bv. voor het ICT-team.</small></span></label>
-    <div class="row">${me ? "" : `<button class="link danger" type="button" id="rmm">Toegang intrekken</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">Opslaan</button></div></form>`);
+    <label class="check"><input type="checkbox" name="r_is"${(m.rechten || []).includes("intscout_uit") ? "" : " checked"}> <span><b>Interne scouting van de hele club</b><br><small class="muted">Alle spelers van de club zien in Interne scouting: scoutingprofiel, maturiteit, groei en rapporten. Zonder contactgegevens of foto's van andere ploegen.</small></span></label></details>
+    <label class="check"><input type="checkbox" name="adm"${m.role === "admin" ? " checked" : ""}${me ? " disabled" : ""}> <span><b>Beheerder</b><br><small class="muted">Toegang tot Beheer: meldingen, leden, ploegen en instellingen. Bv. voor het ICT-team.</small></span></label>
+    <p class="hint" style="margin:0 0 8px">Welke onderdelen van het menu deze functie ziet, stel je in bij <a class="link" href="#/clubbeheer/toegang/functies" data-close>Functies en rechten</a>.</p>
+    <div class="row">${me || m.admit ? "" : `<button class="link danger" type="button" id="rmm">Toegang intrekken</button>`}<span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn">${m.admit ? "Toelaten" : "Opslaan"}</button></div></form>`);
   const rm = $("#rmm", d); if (rm) rm.onclick = () => { if (confirm(`Toegang intrekken voor ${m.name || m.email}? Die persoon is dan ook geen trainer meer van zijn ploegen.`)) { d.close(); rpc("club_set_member", { uid: m.user_id, r: null }, "Toegang ingetrokken."); } };
   const ta = new Set(m.team_access || []), tap = () => $$("[data-ta]", d).forEach(b => b.setAttribute("aria-pressed", ta.has(b.dataset.ta)));
   $$("[data-ta]", d).forEach(b => b.onclick = () => { ta.has(b.dataset.ta) ? ta.delete(b.dataset.ta) : ta.add(b.dataset.ta); tap(); });
   $$("[data-bw]", d).forEach(b => b.onclick = () => { if (b.dataset.bw === "none") ta.clear(); else S.teams.filter(t => bouwOf(t) === b.dataset.bw).forEach(t => ta.add(t.id)); tap(); });
   const allBox = $("[name=all]", d), taw = $("#taw", d); if (allBox && taw) allBox.onchange = () => taw.hidden = allBox.checked;
+  const fm = $("form", d), sum = () => { const p = []; p.push(fm.all.checked ? "alle ploegen" : ta.size ? ta.size + " extra ploegen" : "enkel eigen ploeg(en)"); RECHTEN.forEach(([k, l]) => { if (fm["r_" + k].checked) p.push(l.toLowerCase()); }); if (fm.r_is.checked) p.push("interne scouting"); if (fm.adm.checked) p.unshift("beheerder"); $("#fnsum", d).textContent = (fm.fn.value.trim() ? fm.fn.value.trim() + ": " : "") + "ziet en doet " + p.join(" · "); };
+  const fnPick = name => { fm.fn.value = name; $$("[data-fn]", d).forEach(b => b.setAttribute("aria-pressed", b.dataset.fn === name)); const pr = prof(name);
+    fm.all.checked = pr.all; if (taw) taw.hidden = pr.all; ta.clear(); if (pr.bouw) S.teams.filter(t => bouwOf(t) === pr.bouw).forEach(t => ta.add(t.id)); tap();
+    RECHTEN.forEach(([k]) => fm["r_" + k].checked = pr.rechten.includes(k)); fm.r_is.checked = pr.rechten.includes("intscout"); sum(); };
+  $$("[data-fn]", d).forEach(b => b.onclick = () => fnPick(b.dataset.fn));
+  fm.fn.onchange = () => { const n = fm.fn.value.trim(); $$("[data-fn]", d).forEach(b => b.setAttribute("aria-pressed", b.dataset.fn === n)); if (fnNames.includes(n)) fnPick(n); else sum(); };
+  d.addEventListener("change", sum); d.addEventListener("click", e => { if (e.target.closest("[data-ta],[data-bw]")) sum(); });
+  if (m.admit) fnPick("Trainer"); else sum();
   $("form", d).onsubmit = async ev => { ev.preventDefault(); const f = ev.target; if (mode === "demo") { d.close(); toast("In de demo wordt dit niet bewaard."); return; }
     const role = me ? m.role : (f.adm.checked ? "admin" : "trainer");
     if (role !== m.role) { const r = await sb.rpc("club_set_member", { uid: m.user_id, r: role }); if (r.error) { toast(r.error.message); return; } }
@@ -775,7 +796,7 @@ const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste mom
   ["scouting", "Externe scouting", "Spelers van andere clubs volgen"], ["clubdashboard", "Clubdashboard", "Overzicht voor de jeugdcoördinator"]];
 const CS_CATS = [["U6", "2v2"], ["U7", "3v3"], ["U8", "5v5"], ["U9", "5v5"], ["U10", "8v8"], ["U11", "8v8"], ["U12", "8v8"], ["U13", "8v8"], ["U14", "11v11"], ["U15", "11v11"], ["U16", "11v11"], ["U17", "11v11"], ["U19", "11v11"], ["U21", "11v11"]];
 /* opslaan: de eigen club via club_save_settings, een andere club (platformbeheer) via platform_update_club */
-function csCtxOwn() { return { club: CLUB, base: "#/clubinstellingen", steps: CS_STEPS, platform: false, done: "#/start",
+function csCtxOwn() { return { club: CLUB, base: "#/clubinstellingen", steps: CS_STEPS.filter(x => x[0] !== "toegang"), platform: false, done: "#/start",
   async saveAll(nm, sh, s, msg) { if (mode !== "demo") { const { error } = await sb.rpc("club_save_settings", { nm, sh, s }); if (error) { toast(error.message); return false; } }
     Object.assign(CLUB, { name: (nm || "").trim() || CLUB.name, short: (sh || "").trim() || CLUB.short, settings: s }); rememberClub(); applyClubTheme(); shell(); if (msg) toast(msg + (mode === "demo" ? " (in de demo enkel op dit toestel)" : "")); return true; } }; }
 function csCtxPlatform(c) { return { club: c, base: "#/platformclub/" + c.id, steps: CS_STEPS.filter(x => !["ploegen", "toegang"].includes(x[0])), platform: true, done: "#/platform",
@@ -783,6 +804,7 @@ function csCtxPlatform(c) { return { club: c, base: "#/platformclub/" + c.id, st
     Object.assign(c, { name: (nm || "").trim() || c.name, short: (sh || "").trim() || c.short, settings: s }); if (msg) toast(msg); return true; } }; }
 route("clubinstellingen", { title: "Instellingen van de club", auth: true, render: async (v, id) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
+  if (id === "toegang") { location.replace("#/clubbeheer/toegang/functies"); return; }
   return csPage(v, id, csCtxOwn()); } });
 /* platformbeheer: dezelfde instellingen voor elke club, zonder toegang tot spelers of verslagen */
 route("platformclub", { title: "Club instellen", auth: true, render: async (v, cid, step) => {
@@ -880,7 +902,7 @@ async function csPage(v, id, ctx) {
       <h2>Scoutapp voor scouts zonder trainersaccount</h2><p class="hint" style="margin-top:0">Scouts openen de scoutapp, maken zelf een account aan met deze scoutcode en kunnen enkel spelers toevoegen aan en bekijken in de externe scouting. Ze zien niets van ploegen, spelers of evaluaties.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><code id="scode" style="font-size:18px;font-weight:900;padding:8px 12px;border-radius:10px;background:var(--card2)">…</code><button class="btn ghost small" type="button" id="scodeNew">Nieuwe code</button><button class="btn ghost small" type="button" id="scodeCp">Link en code kopiëren</button></div>
       <p class="hint">Link: <a class="link" id="slink" target="_blank" rel="noopener"></a> · Een nieuwe code maakt de oude ongeldig; wie al scout is, blijft scout.</p>
-      <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de externe scouting en de interne scouting ziet, kies je per persoon bij <a class="link" href="${ctx.base}/toegang">Wie ziet wat</a>.</p>${foot()}</form>`;
+      <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de externe scouting en de interne scouting ziet, kies je per persoon bij <a class="link" href="#/clubbeheer/toegang/functies">Beheer › Toegang</a>.</p>${foot()}</form>`;
     draw();
     { const url = new URL("scout/", location.href.split("#")[0].split("?")[0]).href, el = $("#scode"), lk = $("#slink"); lk.href = url; lk.textContent = url;
       const get = async nieuw => { if (mode === "demo") { el.textContent = "SDEMO123"; return; } const r = await sb.rpc("scout_code", { nieuw }); el.textContent = r.error ? "niet beschikbaar" : r.data; };
@@ -941,32 +963,49 @@ async function csAccess(host, st, csSave, foot) {
   const RIGHTS = [["intscout", "Interne scouting", "Spelers van alle ploegen van de club opzoeken en hun profiel bekijken."], ...RECHTEN];
   const acc = () => JSON.parse(JSON.stringify((CLUB.settings || st).access || {}));
   const draw = () => {
-    const A = acc(), all = A.all || { hide: [] }, m = mem.find(x => x.user_id === ACC_SEL), u = m ? ((A.users || {})[m.user_id] || {}) : null, adm = m?.role === "admin";
-    const modOn = k => !m ? !(all.hide || []).includes(k) : (u.on || []).includes(k) ? true : (u.off || []).includes(k) ? false : !(all.hide || []).includes(k);
+    const A = acc(), all = A.all || { hide: [] }, isFn = ACC_SEL.startsWith("fn:"), fname = isFn ? ACC_SEL.slice(3) : "", m = isFn ? null : mem.find(x => x.user_id === ACC_SEL), u = m ? ((A.users || {})[m.user_id] || {}) : null, adm = m?.role === "admin";
+    const fnCfg = f => (A.fn || {})[f], fnPr = f => { const c = fnCfg(f), p = FN_PRESETS[f] || {}; return c ? { all: !!c.all, rechten: c.rechten || [] } : { all: !!p.all, rechten: p.rechten || ["intscout"] }; };
+    const baseHide = isFn ? (fnCfg(fname)?.hide || all.hide || []) : ((m && m.functie && fnCfg(m.functie)?.hide) || all.hide || []);
+    const modOn = k => isFn ? !baseHide.includes(k) : !m ? !(all.hide || []).includes(k) : (u.on || []).includes(k) ? true : (u.off || []).includes(k) ? false : !baseHide.includes(k);
     const own = k => m && ((u.on || []).includes(k) || (u.off || []).includes(k));
     const rOn = k => k === "intscout" ? !(m.rechten || []).includes("intscout_uit") : (m.rechten || []).includes(k);
     const q = ($("#accq", host)?.value || "").toLowerCase();
     host.innerHTML = `<div class="acc">
       <aside class="accp"><input type="search" id="accq" placeholder="Zoek een persoon" value="${esc(q)}" autocomplete="off">
         <button type="button" data-acc="" aria-pressed="${!m}"><span class="av">★</span><span><b>Alle trainers</b><small>wat iedereen standaard ziet</small></span></button>
+        ${(() => { const used = {}; mem.forEach(x => { if (x.functie) used[x.functie] = (used[x.functie] || 0) + 1; }); const names = [...new Set([...Object.keys(used), ...Object.keys(A.fn || {})])].sort((a, b) => a.localeCompare(b, "nl")), rest = [...new Set(["Trainer", ...FUNCTIES])].filter(f => !names.includes(f));
+          return `<h4 class="accsh">Functies</h4>${names.map(f => `<button type="button" data-acc="fn:${esc(f)}" aria-pressed="${ACC_SEL === "fn:" + f}"><span class="av">${esc(f[0].toUpperCase())}</span><span><b>${esc(f)}</b><small>${used[f] || 0} ${used[f] === 1 ? "persoon" : "personen"}${fnCfg(f) ? " · ingesteld" : ""}</small></span></button>`).join("")}${rest.length ? `<select id="accfn" aria-label="Functie instellen"><option value="">+ Andere functie instellen…</option>${rest.map(f => `<option>${esc(f)}</option>`).join("")}</select>` : ""}<h4 class="accsh">Personen</h4>`; })()}
         ${mem.filter(x => !q || (x.name + " " + x.email + " " + (x.functie || "") + " " + (x.teams || "")).toLowerCase().includes(q)).map(x => { const o = (A.users || {})[x.user_id], n = o ? (o.on || []).length + (o.off || []).length : 0;
           return `<button type="button" data-acc="${x.user_id}" aria-pressed="${x.user_id === ACC_SEL}"><span class="av">${esc(String(x.name || x.email || "?").replace(/[^a-z]/gi, "")[0] || "?").toUpperCase()}</span><span><b>${esc(x.name || x.email)}</b><small>${x.role === "admin" ? "beheerder · ziet alles" : esc([x.functie, x.teams].filter(Boolean).join(" · ") || "trainer")}${n ? ` · ${n} eigen` : ""}</small></span></button>`; }).join("")}
       </aside>
       <div class="accl panel">
-        <h2 style="margin-top:0">${m ? esc(m.name || m.email) : "Alle trainers"}</h2>
-        <p class="hint" style="margin-top:-6px">${!m ? "Wat hier uit staat, zien trainers niet in hun menu. Per persoon kan je een uitzondering maken. Beheerders zien altijd alles." : adm ? "Beheerders zien altijd alles. Maak iemand gewone trainer in Beheer › Toegang en leden om dit te beperken." : "Een bolletje naast een onderdeel betekent: eigen keuze voor deze persoon, anders dan bij Alle trainers."}</p>
+        <h2 style="margin-top:0">${isFn ? esc(fname) : m ? esc(m.name || m.email) : "Alle trainers"}</h2>
+        <p class="hint" style="margin-top:-6px">${isFn ? "Wat iedereen met deze functie standaard ziet en mag. Een persoon kan hier nog van afwijken. Beheerders zien altijd alles." : !m ? "Wat hier uit staat, zien trainers niet in hun menu. Per persoon kan je een uitzondering maken. Beheerders zien altijd alles." : adm ? "Beheerders zien altijd alles. Maak iemand gewone trainer in Beheer › Toegang en leden om dit te beperken." : "Een bolletje naast een onderdeel betekent: eigen keuze voor deze persoon, anders dan bij Alle trainers."}</p>
+        ${isFn ? `<h3>Standaard bij deze functie</h3><div class="acclist"><label class="accrow"><span><b>Toegang tot alle ploegen</b><small>Alle spelers, evaluaties en verslagen van elke ploeg.</small></span><span class="tgl"><input type="checkbox" data-fall${fnPr(fname).all ? " checked" : ""}><span></span></span></label>${RIGHTS.map(([k, l, d]) => `<label class="accrow"><span><b>${esc(l)}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" data-fr="${k}"${fnPr(fname).rechten.includes(k) ? " checked" : ""}><span></span></span></label>`).join("")}</div>
+          <div class="row" style="gap:8px;flex-wrap:wrap;margin:8px 0 4px"><button class="btn ghost small" type="button" data-fapply>Toepassen op ${mem.filter(x => x.functie === fname && x.role !== "admin").length} personen met deze functie</button>${FN_PRESETS[fname]?.hide && !fnCfg(fname) ? `<button class="btn ghost small" type="button" data-fpre>Voorstel voor ${esc(fname)} gebruiken</button>` : ""}</div><p class="hint" style="margin-top:0">Rechten en toegang gelden voor wie deze functie krijgt. Voor wie ze al heeft, kies je Toepassen. Het menu hieronder geldt meteen voor iedereen met deze functie.</p>` : ""}
         ${adm ? "" : `${m ? `<h3>Rechten</h3><div class="acclist">${RIGHTS.map(([k, l, d]) => `<label class="accrow"><span><b>${esc(l)}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" data-ar="${k}"${rOn(k) ? " checked" : ""}><span></span></span></label>`).join("")}</div>`
-          : `<h3>Scouting voor iedereen</h3><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="btn ghost small" type="button" data-bulk="on">Interne scouting voor alle trainers aan</button><button class="btn ghost small" type="button" data-bulk="off">Interne scouting voor alle trainers uit</button></div><p class="hint" style="margin-top:0">De externe scouting (extern) geef je per persoon.</p>`}
+          : isFn ? "" : `<h3>Scouting voor iedereen</h3><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="btn ghost small" type="button" data-bulk="on">Interne scouting voor alle trainers aan</button><button class="btn ghost small" type="button" data-bulk="off">Interne scouting voor alle trainers uit</button></div><p class="hint" style="margin-top:0">De externe scouting (extern) geef je per persoon.</p>`}
         <h3>Onderdelen in het menu</h3><div class="acclist">${mods.map(([k, l, d]) => `<label class="accrow"><span><b>${esc(l)}${own(k) ? ' <i class="accown" title="Eigen keuze voor deze persoon"></i>' : ""}</b><small>${esc(d)}</small></span><span class="tgl"><input type="checkbox" data-am="${k}"${modOn(k) ? " checked" : ""}><span></span></span></label>`).join("")}</div>
-        ${m && Object.keys(u).length ? `<button class="link" type="button" id="accreset" style="margin-top:10px">Zelfde als Alle trainers</button>` : ""}`}
+        ${m && Object.keys(u).length ? `<button class="link" type="button" id="accreset" style="margin-top:10px">Zelfde als ${esc(m.functie && fnCfg(m.functie) ? m.functie : "Alle trainers")}</button>` : ""}`}
         <p class="hint" style="margin-bottom:0">Onderdelen die de hele club niet gebruikt, zet je uit bij <a class="link" href="#/clubinstellingen/onderdelen">Onderdelen</a>. Elke wijziging wordt meteen bewaard.</p>
       </div></div>`;
     const qi = $("#accq", host); qi.oninput = () => { const pos = qi.selectionStart; draw(); const n = $("#accq", host); n.focus(); n.setSelectionRange(pos, pos); };
     $$("[data-acc]", host).forEach(b => b.onclick = () => { ACC_SEL = b.dataset.acc; draw(); });
     const saveA = async (A, msg) => { if (await csSave({ access: A }, msg)) draw(); };
+    const fnEnsure = A => { A.fn = A.fn || {}; if (!A.fn[fname]) A.fn[fname] = { hide: [...baseHide], ...fnPr(fname), rechten: [...fnPr(fname).rechten] }; return A.fn[fname]; };
+    const afn = $("#accfn", host); if (afn) afn.onchange = () => { if (afn.value) { ACC_SEL = "fn:" + afn.value; draw(); } };
+    $$("[data-fall]", host).forEach(x => x.onchange = () => { const A = acc(), o = fnEnsure(A); o.all = x.checked; saveA(A, "Bewaard."); });
+    $$("[data-fr]", host).forEach(x => x.onchange = () => { const A = acc(), o = fnEnsure(A), r = new Set(o.rechten || []); x.checked ? r.add(x.dataset.fr) : r.delete(x.dataset.fr); o.rechten = [...r]; saveA(A, "Bewaard."); });
+    const fp = $("[data-fpre]", host); if (fp) fp.onclick = () => { const A = acc(), p = FN_PRESETS[fname]; A.fn = A.fn || {}; A.fn[fname] = { hide: [...(p.hide || [])], all: !!p.all, rechten: [...(p.rechten || ["intscout"])] }; saveA(A, "Voorstel toegepast."); };
+    const fa = $("[data-fapply]", host); if (fa) fa.onclick = async () => { const pr = fnPr(fname), who = mem.filter(x => x.functie === fname && x.role !== "admin"); if (!who.length) { toast("Niemand heeft deze functie."); return; }
+      if (!confirm(`Rechten en toegang van ${who.length} personen met de functie ${fname} aanpassen?`)) return; if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
+      fa.disabled = true; let n = 0; for (const x of who) { const keep = (x.rechten || []).filter(r => !["scouting", "betalingen", "terreinen", "intscout_uit"].includes(r)), r = [...keep, ...["scouting", "betalingen", "terreinen"].filter(k => pr.rechten.includes(k)), ...(pr.rechten.includes("intscout") ? [] : ["intscout_uit"])];
+        const a = await sb.rpc("club_set_access", { uid: x.user_id, alle: pr.all, fn: fname }), b = await sb.rpc("club_set_rechten", { uid: x.user_id, r }); if (!a.error && !b.error) { n++; x.all_teams = pr.all; x.rechten = r; } }
+      fa.disabled = false; toast(`Aangepast voor ${n} personen.`); draw(); };
     $$("[data-am]", host).forEach(x => x.onchange = () => { const A = acc(), k = x.dataset.am;
-      if (!m) { A.all = A.all || { hide: [] }; const h = new Set(A.all.hide || []); x.checked ? h.delete(k) : h.add(k); A.all.hide = [...h]; }
-      else { A.users = A.users || {}; const o = A.users[m.user_id] || { on: [], off: [] }, def = !(A.all?.hide || []).includes(k);
+      if (isFn) { const o = fnEnsure(A); const h = new Set(o.hide); x.checked ? h.delete(k) : h.add(k); o.hide = [...h]; }
+      else if (!m) { A.all = A.all || { hide: [] }; const h = new Set(A.all.hide || []); x.checked ? h.delete(k) : h.add(k); A.all.hide = [...h]; }
+      else { A.users = A.users || {}; const o = A.users[m.user_id] || { on: [], off: [] }, def = !baseHide.includes(k);
         o.on = (o.on || []).filter(y => y !== k); o.off = (o.off || []).filter(y => y !== k); if (x.checked !== def) (x.checked ? o.on : o.off).push(k);
         if (o.on.length || o.off.length) A.users[m.user_id] = o; else delete A.users[m.user_id]; }
       saveA(A, "Bewaard."); });

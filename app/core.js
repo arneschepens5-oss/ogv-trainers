@@ -9,8 +9,14 @@ const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 /* huisstijl van OG Vorselaar enkel als we weten dat dit toestel bij OGV hoort; anders die van het platform */
 /* onderdelen die de club heeft uitgezet (Beheer > Instellingen) */
 /* een onderdeel staat uit voor de hele club, of enkel voor deze trainer (Instellingen › Wie ziet wat) */
+/* functies: wat iemand standaard krijgt bij een functie. Rechten en toegang worden bij het toekennen van de functie overgenomen (en kan je per persoon aanpassen); onderdelen van het menu kan de club per functie instellen (settings.access.fn) */
+const FN_ALLMODS = ["evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "berichten", "terreinen", "contacten", "clubdashboard"];
+const FN_PRESETS = { TVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, AVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, "Jeugdcoördinator": { all: true, rechten: ["scouting", "terreinen", "intscout"] },
+  "Coördinator onderbouw": { bouw: "onder", rechten: ["intscout"] }, "Coördinator middenbouw": { bouw: "midden", rechten: ["intscout"] }, "Coördinator bovenbouw": { bouw: "boven", rechten: ["intscout"] },
+  Scout: { rechten: ["scouting", "intscout"], hide: ["evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "terreinen", "clubdashboard"] },
+  Penningmeester: { rechten: ["betalingen"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) }, Terreinverantwoordelijke: { rechten: ["terreinen", "intscout"] } };
 const accOff = page => { if (S.admin || typeof user === "undefined" || !user) return false; const A = CLUB.settings?.access || {}, u = (A.users || {})[user.id] || {};
-  if ((u.on || []).includes(page)) return false; if ((u.off || []).includes(page)) return true; return (A.all?.hide || []).includes(page); };
+  if ((u.on || []).includes(page)) return false; if ((u.off || []).includes(page)) return true; const fh = S.functie && (A.fn || {})[S.functie]?.hide; return (fh || A.all?.hide || []).includes(page); };
 const clubOff = page => (CLUB.settings?.hidden || []).includes(page) || accOff(page);
 const ogvBrand = () => isOGV() && (CLUB_KNOWN || mode === "demo" || !!user);
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
@@ -538,6 +544,7 @@ function settingsDialog() {
     <section><h3>Weergave</h3>
       <div class="setrow"><span>Kleur</span>${themeSwitch(true)}</div>
       <div class="setrow col"><span>Lettergrootte: <b data-szl>${szLabel(getSz())}</b></span>${bigSwitch()}<button class="link" type="button" data-szreset>Terug naar standaard</button></div></section>
+    <section><h3>Meldingen</h3>${lnk(IC.bell, "Meldingen op je gsm", "Een melding bij afgelastingen en afmeldingen, ook als de app dicht is", { data: "data-s-mld" })}</section>
     <section><h3>Menu</h3>${lnk(IC.gear, "Menu aanpassen", "Verberg onderdelen die je nooit gebruikt", { data: "data-s-menu" })}</section>
     ${user && mode !== "demo" ? `<section><h3>Account</h3>${lnk(IC.ppl || IC.gear, "Mijn account", "Naam, wachtwoord en account verwijderen", { data: "data-s-acct" })}</section>` : ""}
     <section><h3>Hulp</h3>${CLUB.id === "platform" ? "" : lnk(IC.star, "Startgids", "Korte rondleiding door de app", { data: "data-s-gids" })}${lnk(IC.book, "Handleiding", "", { href: "handleiding/uitgebreid.html" })}${lnk(IC.note || IC.eye, "Probleem melden", "Iets werkt niet of staat verkeerd", { data: "data-s-report" })}${isOGV() ? lnk(IC.eye, "Privacy", "", { href: "privacy.html" }) : ""}</section>
@@ -547,6 +554,7 @@ function settingsDialog() {
   const setSz = v => { try { localStorage.setItem("ogv-sz", v); } catch (e) {} applyBig(); rng.value = v; rng.setAttribute("aria-valuetext", szLabel(+v)); lab.textContent = szLabel(+v); $$(".frow [data-sz-range]").forEach(x => x.value = v); };
   rng.oninput = () => setSz(rng.value); $("[data-szreset]", d).onclick = () => setSz(0);
   $("[data-s-menu]", d).onclick = () => { d.close(); menuEdit(); };
+  $("[data-s-mld]", d).onclick = () => { d.close(); location.hash = "#/meldingen"; };
   $("[data-s-acct]", d)?.addEventListener("click", () => { d.close(); accountDialog(); });
   $("[data-s-gids]", d)?.addEventListener("click", () => { d.close(); startGids(); });
   $("[data-s-report]", d).onclick = () => { d.close(); reportProblem(); };
@@ -568,7 +576,7 @@ const NAV = [
   { g: "Tactiek", icon: "board", items: [["animatiebord", "Tactiekbord", "board"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Scouting", icon: "scout", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Externe scouting", "scout"], ["scoutveld", "Posities vergelijken", "field"]] },
   { g: "Club", icon: "club", items: [["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
-  { g: "Mijn map", icon: "folder", items: [["meldingen", "Meldingen", "bell"], ["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] }
+  { g: "Mijn map", icon: "folder", items: [["opslag", "Mijn opslag", "folder"], ["principes", "Mijn spelprincipes", "video"], ["mixschema", "Mixschema", "rotate"]] }
 ];
 /* het onderdeel van een pagina (voor de tabbladen en het actieve menu-item) */
 const SUBNAV = Object.fromEntries(NAV.filter(g => g.g).map(g => [g.g, g.items.map(([k, l]) => [k, l])]));
@@ -593,7 +601,7 @@ function shell(fresh) {
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>
-    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && S.fbOpen ? `<span class="bdgn" title="${S.fbOpen} open meldingen">${S.fbOpen}</span>` : ""}${k === "berichten" ? `<span class="bdgn" data-unread${S.unread ? "" : " hidden"} title="Nieuwe berichten">${S.unread || ""}</span>` : ""}</a>`).join("");
+    `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span>${k === "clubbeheer" && (S.fbOpen || S.waitN) ? `<span class="bdgn" title="${S.waitN ? S.waitN + " wachten op toegang" : ""}${S.waitN && S.fbOpen ? " · " : ""}${S.fbOpen ? S.fbOpen + " open meldingen" : ""}">${(S.fbOpen || 0) + (S.waitN || 0)}</span>` : ""}${k === "berichten" ? `<span class="bdgn" data-unread${S.unread ? "" : " hidden"} title="Nieuwe berichten">${S.unread || ""}</span>` : ""}</a>`).join("");
   /* zijbalk: één regel per onderdeel; de gsm (Meer) toont per onderdeel alle tegels */
   const curSec = secs.find(sec => sec.g && sec.items.some(([k]) => k === active));
   /* het onderdeel waar je in zit klapt open in de zijbalk en toont zijn pagina's eronder */
@@ -838,7 +846,7 @@ async function startCloud() {
   if (cur().page === "aanmelden") location.hash = "#/start"; else render();
 }
 async function startDemo() { mode = "demo"; db = DEMODB; user = { id: "demo", email: "demo" }; S.member = true; S.admin = true; S.v14 = true; try { sessionStorage.setItem("ogv-mode", "demo"); } catch (e) {}
-  await loadTeams(); await loadTeam(myTeams()[0].id); if (cur().page === "aanmelden") location.hash = "#/start"; else render(); }
+  await loadTeams(); await loadTeam(myTeams()[0].id); if (cur().page === "aanmelden") location.hash = "#/start"; else render(); setTimeout(() => typeof waitCount === "function" && waitCount(), 600); }
 async function logout() { if (mode === "demo") { try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } else if (sb) await sb.auth.signOut();
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
