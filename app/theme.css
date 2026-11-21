@@ -155,3 +155,9 @@ html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-st
 }
 /* uitgeklapt onderdeel compact houden zodat het menu op het scherm past */
 @media (min-width:901px){.side .nav>a{min-height:34px}.side .subside a{padding-top:6px;padding-bottom:6px}}
+
+/* toegangsaanvragen: accepteren / afwijzen */
+.btn.ok{background:#22C55E;color:#04210f;box-shadow:0 6px 18px -8px #22C55E}
+.btn.ok:hover{filter:brightness(1.08)}
+.btn.ghost.bad{color:var(--s-bad,#FB7185);border-color:color-mix(in srgb,var(--s-bad,#FB7185) 45%,transparent)}
+.btn.ghost.bad:hover{background:color-mix(in srgb,var(--s-bad,#FB7185) 14%,transparent)}

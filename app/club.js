@@ -399,6 +399,7 @@ function editClubDialog(c, done) {
 async function adminFeedback(host) {
   let data = [];
   if (mode === "demo") data = [{ id: "1", kind: "Er werkt iets niet", name: "Jelle Lauwers", email: "jelle@voorbeeld.be", page: "#/trainingen", message: "Als ik op Bewaren tik bij een oefening, gebeurt er niets.", info: { versie: "38", toestel: "iPhone Safari", scherm: "390×844" }, status: "nieuw", created_at: new Date(Date.now() - 36e5).toISOString() },
+    { id: "3", kind: "Toegang tot ploeg", name: "Sofie Maes", email: "sofie@voorbeeld.be", user_id: "u-demo", page: "#/clubbeheer/ploegen", message: "Sofie Maes vraagt toegang tot Demoploeg U9.\nik ben de nieuwe trainer", info: { ploeg: (S.teams?.[0] || {}).id || null, ploegnaam: (S.teams?.[0] || {}).name || "Demoploeg U9" }, status: "nieuw", created_at: new Date(Date.now() - 6e4).toISOString() },
     { id: "2", kind: "Idee of wens", name: "Steven Deneef", email: "steven@voorbeeld.be", page: "#/bibliotheek", message: "Kunnen we oefeningen ook per seizoen markeren?", info: {}, status: "afgehandeld", created_at: new Date(Date.now() - 864e5 * 3).toISOString() }];
   else { const r = await sb.from("feedback").select("*").order("created_at", { ascending: false }).limit(200);
     if (r.error) { host.innerHTML = `<div class="share">${IC.eye}<div>${/feedback|relation|schema/i.test(r.error.message) ? "Meldingen staan nog niet klaar in de database. Voer <b>ogv-database.sql</b> uit in Supabase (zie Systeem)." : esc(r.error.message)}</div></div>`; return; } data = r.data; }
@@ -412,19 +413,56 @@ async function adminFeedback(host) {
         <header><span class="fbkind">${esc(x.kind || "Melding")}</span><span class="hint">${ago(x.created_at)}</span></header>
         <p class="fbmsg">${esc(x.message)}</p>
         <div class="fbmeta"><span class="av sm" aria-hidden="true">${esc((x.name || x.email || "?")[0].toUpperCase())}</span><span><b>${esc(x.name || x.email || "Trainer")}</b>${x.name && x.email ? `<small>${esc(x.email)}</small>` : ""}</span></div>
-        <div class="fbacts">${x.kind === "Toegang tot ploeg" && x.info?.ploeg && x.user_id && x.status !== "afgehandeld" ? `<button class="btn small" type="button" data-link="${x.id}">Koppelen aan ${esc(x.info.ploegnaam || "ploeg")}</button>` : ""}${x.page ? `<a class="btn ghost small" href="${esc(x.page)}">${x.kind === "Toegang tot ploeg" ? "Ploegen en trainers" : "Open pagina"}</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Je melding in " + APPNAME())}&body=${encodeURIComponent("Dag " + (x.name || "") + ",\n\nBedankt voor je melding:\n\"" + x.message + "\"\n\n")}">Antwoorden</a>` : ""}
-          ${Object.keys(x.info || {}).length ? `<button class="link" type="button" data-inf="${x.id}">Technische info</button>` : ""}<span class="spacer"></span><button class="btn small${x.status === "afgehandeld" ? " ghost" : ""}" type="button" data-st="${x.id}">${x.status === "afgehandeld" ? "Heropenen" : "Afgehandeld"}</button></div></article>`).join("")}</div>`
+        <div class="fbacts">${x.kind === "Toegang tot ploeg" && x.user_id ? (x.status !== "afgehandeld" ? `<button class="btn small ok" type="button" data-acc="${x.id}">Accepteren</button><button class="btn ghost small bad" type="button" data-rej="${x.id}">Afwijzen</button>` : (x.info?.besluit ? `<span class="pill ${x.info.besluit === "geaccepteerd" ? "w" : "loss"}">${x.info.besluit === "geaccepteerd" ? "Geaccepteerd" : "Afgewezen"}</span>` : "")) : ""}${x.page && !(x.kind === "Toegang tot ploeg" && x.user_id) ? `<a class="btn ghost small" href="${esc(x.page)}">${x.kind === "Toegang tot ploeg" ? "Ploegen en trainers" : "Open pagina"}</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Je melding in " + APPNAME())}&body=${encodeURIComponent("Dag " + (x.name || "") + ",\n\nBedankt voor je melding:\n\"" + x.message + "\"\n\n")}">Antwoorden</a>` : ""}
+          ${Object.keys(x.info || {}).length ? `<button class="link" type="button" data-inf="${x.id}">Technische info</button>` : ""}<span class="spacer"></span>${x.kind === "Toegang tot ploeg" && x.user_id && x.status !== "afgehandeld" ? "" : `<button class="btn small${x.status === "afgehandeld" ? " ghost" : ""}" type="button" data-st="${x.id}">${x.status === "afgehandeld" ? "Heropenen" : "Afgehandeld"}</button>`}</div></article>`).join("")}</div>`
       : `<div class="empty"><b>${FB_F === "open" ? "Geen open meldingen" : "Niets gevonden"}</b>${FB_F === "open" ? "Alles is afgehandeld. Nieuwe meldingen verschijnen hier en als getal in het menu." : ""}</div>`}`;
   $$("[data-fbf]", host).forEach(b => b.onclick = () => { FB_F = b.dataset.fbf; adminFeedback(host); });
   $$("[data-st]", host).forEach(b => b.onclick = async () => { const x = data.find(z => z.id === b.dataset.st), st = x.status === "afgehandeld" ? "nieuw" : "afgehandeld";
     if (mode === "demo") { x.status = st; toast("In de demo wordt dit niet bewaard."); return; }
     const { error } = await sb.from("feedback").update({ status: st }).eq("id", x.id); if (error) toast(error.message); else { await adminFeedback(host); shell(); render(); } });
-  $$("[data-link]", host).forEach(b => b.onclick = async () => { const x = data.find(z => z.id === b.dataset.link);
+  $$("[data-acc]", host).forEach(b => b.onclick = () => accessRequest(data.find(z => z.id === b.dataset.acc), async () => { await adminFeedback(host); shell(); render(); }));
+  $$("[data-rej]", host).forEach(b => b.onclick = async () => { const x = data.find(z => z.id === b.dataset.rej), who = x.name || x.email || "deze trainer";
     if (mode === "demo") { toast("In de demo wordt dit niet bewaard."); return; }
-    const r = await sb.rpc("admin_set_trainer", { t: x.info.ploeg, uid: x.user_id, on_team: true }); if (r.error) { toast(r.error.message); return; }
-    await sb.from("feedback").update({ status: "afgehandeld" }).eq("id", x.id); toast(`${x.name || x.email} is nu trainer van ${x.info.ploegnaam}.`); await adminFeedback(host); shell(); render(); });
+    if (!confirm(`De aanvraag van ${who} afwijzen? Er verandert niets aan zijn of haar toegang.`)) return;
+    let r = await sb.from("feedback").update({ status: "afgehandeld", info: { ...(x.info || {}), besluit: "afgewezen" } }).eq("id", x.id);
+    if (r.error) r = await sb.from("feedback").update({ status: "afgehandeld" }).eq("id", x.id);
+    if (r.error) { toast(r.error.message); return; } toast("Aanvraag afgewezen."); await adminFeedback(host); shell(); render(); });
   $$("[data-inf]", host).forEach(b => b.onclick = () => { const x = data.find(z => z.id === b.dataset.inf);
     dialog(`<div class="dlg"><h2>Technische info</h2><dl class="fbinfo">${Object.entries(x.info || {}).map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(val) ? (val.join(" · ") || "–") : String(val))}</dd>`).join("")}</dl><div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`); });
+}
+/* toegangsaanvraag van een trainer: accepteren met ploeg, functie en bevoegdheden */
+async function accessRequest(x, done) {
+  let m = {}; try { if (mode === "demo") throw 0; const r = await sb.rpc("club_admin_info"); m = (r.data?.members || []).find(z => z.user_id === x.user_id) || {}; } catch (e) {}
+  const who = x.name || x.email || "Trainer", me = x.user_id === user?.id, fnNames = [...new Set(["Trainer", ...FUNCTIES, ...Object.keys(CLUB.settings?.access?.fn || {}), ...(m.functie ? [m.functie] : [])])];
+  const prof = fn => { const c = (CLUB.settings?.access?.fn || {})[fn], p = FN_PRESETS[fn] || {}; return c ? { all: !!c.all, rechten: c.rechten || [] } : { all: !!p.all, rechten: p.rechten || ["intscout"] }; };
+  const teams = new Set(x.info?.ploeg ? [x.info.ploeg] : []), had = m.rechten || [];
+  const d = dialog(`<form class="mform"><h2>Toegang geven aan ${esc(who)}</h2><p class="muted" style="margin:0">${esc(x.email || "")}${x.message ? " · " + esc(String(x.message).split("\n").slice(1).join(" ") || "") : ""}</p>
+    <div class="f full"><span><b>Trainer van welke ploeg?</b> <small class="muted" style="font-weight:400">— je kan er meerdere kiezen</small></span>
+      <div class="plteams">${(S.teams || []).map(t => `<button type="button" class="chip" data-t="${t.id}" aria-pressed="${teams.has(t.id)}">${esc(t.name)}</button>`).join("") || '<small class="muted">Er staan nog geen ploegen in de app.</small>'}</div></div>
+    <div class="f full"><span><b>Functie</b></span><div class="chips fnchips" style="margin:6px 0">${fnNames.map(n => `<button class="chip" type="button" data-fn="${esc(n)}" aria-pressed="${n === (m.functie || "Trainer")}">${esc(n)}</button>`).join("")}</div></div>
+    <div class="f full"><span><b>Bevoegdheden</b> <small class="muted" style="font-weight:400">— vink aan wat deze persoon mag</small></span>
+      <label class="check" style="margin-top:6px"><input type="checkbox" name="all"${m.all_teams ? " checked" : ""}> <span><b>Alle ploegen</b><br><small class="muted">Spelers, evaluaties en trainingen van elke ploeg bekijken en aanpassen.</small></span></label>
+      ${RECHTEN.map(([k, l, t]) => `<label class="check" style="margin-top:6px"><input type="checkbox" name="r_${k}"${had.includes(k) ? " checked" : ""}> <span><b>${l}</b><br><small class="muted">${t}</small></span></label>`).join("")}
+      <label class="check" style="margin-top:6px"><input type="checkbox" name="r_is"${had.includes("intscout_uit") ? "" : " checked"}> <span><b>Interne scouting van de hele club</b><br><small class="muted">Alle spelers van de club zien in Interne scouting, zonder contactgegevens of foto's van andere ploegen.</small></span></label>
+      <label class="check" style="margin-top:6px"><input type="checkbox" name="adm"${m.role === "admin" ? " checked" : ""}${me ? " disabled" : ""}> <span><b>Beheerder</b><br><small class="muted">Toegang tot Beheer: meldingen, leden, ploegen en instellingen.</small></span></label></div>
+    <p class="fnsum" id="fnsum" aria-live="polite"></p>
+    <div class="row"><span class="spacer"></span><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn ok">Accepteren</button></div></form>`);
+  const fm = $("form", d), sum = () => { const p = []; if (fm.adm.checked) p.push("beheerder"); p.push(teams.size ? "trainer van " + [...teams].map(id => (S.teams.find(t => t.id === id) || {}).name).filter(Boolean).join(", ") : "geen eigen ploeg");
+    if (fm.all.checked) p.push("alle ploegen"); RECHTEN.forEach(([k, l]) => { if (fm["r_" + k].checked) p.push(l.toLowerCase()); }); if (fm.r_is.checked) p.push("interne scouting");
+    $("#fnsum", d).textContent = "Wordt: " + ($$("[data-fn][aria-pressed=true]", d)[0]?.dataset.fn || "Trainer") + " · " + p.join(" · "); };
+  $$("[data-t]", d).forEach(b => b.onclick = () => { teams.has(b.dataset.t) ? teams.delete(b.dataset.t) : teams.add(b.dataset.t); b.setAttribute("aria-pressed", teams.has(b.dataset.t)); sum(); });
+  $$("[data-fn]", d).forEach(b => b.onclick = () => { $$("[data-fn]", d).forEach(z => z.setAttribute("aria-pressed", z === b)); const pr = prof(b.dataset.fn);
+    fm.all.checked = pr.all; RECHTEN.forEach(([k]) => fm["r_" + k].checked = pr.rechten.includes(k)); fm.r_is.checked = pr.rechten.includes("intscout"); sum(); });
+  d.addEventListener("change", sum); if (!m.user_id) { const pr = prof("Trainer"); fm.all.checked = pr.all; RECHTEN.forEach(([k]) => fm["r_" + k].checked = pr.rechten.includes(k)); fm.r_is.checked = pr.rechten.includes("intscout"); } sum();
+  fm.onsubmit = async ev => { ev.preventDefault(); if (mode === "demo") { d.close(); toast("In de demo wordt dit niet bewaard."); return; } const btn = $(".btn.ok", d); btn.disabled = true; const fail = e => { btn.disabled = false; toast(e.message || String(e)); };
+    for (const t of teams) { const r = await sb.rpc("admin_set_trainer", { t, uid: x.user_id, on_team: true }); if (r.error) return fail(r.error); }
+    const fn = $$("[data-fn][aria-pressed=true]", d)[0]?.dataset.fn || "Trainer";
+    const r2 = await sb.rpc("club_set_access", { uid: x.user_id, alle: fm.all.checked, fn }); if (r2.error) return fail(r2.error);
+    const rr = [...RECHTEN.map(([k]) => k).filter(k => fm["r_" + k].checked), ...(fm.r_is.checked ? [] : ["intscout_uit"])];
+    if (rr.slice().sort().join() !== had.slice().sort().join()) { const r4 = await sb.rpc("club_set_rechten", { uid: x.user_id, r: rr }); if (r4.error) return fail(r4.error); }
+    if (!me && fm.adm.checked !== (m.role === "admin")) { const r5 = await sb.rpc("club_set_member", { uid: x.user_id, r: fm.adm.checked ? "admin" : "trainer" }); if (r5.error) return fail(r5.error); }
+    let r6 = await sb.from("feedback").update({ status: "afgehandeld", info: { ...(x.info || {}), besluit: "geaccepteerd" } }).eq("id", x.id); if (r6.error) await sb.from("feedback").update({ status: "afgehandeld" }).eq("id", x.id);
+    d.close(); toast(`${who} heeft nu toegang.`); done?.(); };
 }
 /* databasecontrole: welke onderdelen staan klaar in Supabase? */
 async function dbCheck(host) {
