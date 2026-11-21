@@ -30,6 +30,9 @@ const APPTITLE = () => ogvBrand() && !CLUB.settings?.app ? "OGV<span>Trainers</s
 let CLUB_KNOWN = false; /* weten we al bij welke club dit toestel hoort? Zo niet, dan tonen we het platform en niet OG Vorselaar */
 /* beheer-app: apart geïnstalleerd (?app=beheer), eigen aanmelding, enkel het platform */
 const ADMIN_APP = !!window.FCH_ADMIN;
+try { if (localStorage.getItem("fch-side-mini") === "1") document.documentElement.classList.add("sidemini"); } catch (e) {}
+document.addEventListener("click", e => { const b = e.target.closest("[data-sidetog]"); if (!b) return; const on = document.documentElement.classList.toggle("sidemini");
+  try { localStorage.setItem("fch-side-mini", on ? "1" : "0"); } catch (x) {} });
 if (!ADMIN_APP) try { const c = JSON.parse(localStorage.getItem("ogv-club") || "null"); if (c && c.id) { Object.assign(CLUB, c); CLUB_KNOWN = true; } } catch (e) {}
 function rememberClub() { CLUB_KNOWN = true; try { localStorage.setItem("ogv-club", JSON.stringify({ id: CLUB.id, name: CLUB.name, short: CLUB.short, settings: CLUB.settings || {} })); } catch (e) {} }
 /* ---------- kleuren van de club over de hele app ---------- */
@@ -619,6 +622,7 @@ function shell(fresh) {
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
     <a class="brand" href="#/start">${ogvBrand() || (CLUB.settings?.logo && CLUB.id !== "platform" && (CLUB_KNOWN || user)) ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? "Trainersplatform · " + PRODUCT : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
+    <button class="sidetog" type="button" data-sidetog aria-label="Zijbalk smaller of breder maken" title="Enkel iconen of volledige namen"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path class="ar" d="M15 10l-2 2 2 2"/></svg><span>Smaller menu</span></button>
     ${teamBtn}
     <nav class="nav">${sideHtml}</nav>
     <div class="foot">${logged ? footLinks() : ""}${acct}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div>`}</div>
@@ -637,9 +641,10 @@ function shell(fresh) {
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
+  $$(".side .nav a, .side .teampick, .side .foot a, .side .foot button").forEach(x => { const t = x.textContent.trim(); if (t && !x.title) x.title = t; });
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   /* onderdelen in de zijbalk klappen vloeiend open en dicht zonder de pagina te wisselen */
-  $$(".side a.secl[data-sec]").forEach(a => a.onclick = e => { e.preventDefault(); const g = a.dataset.sec, o = !a.classList.contains("open");
+  $$(".side a.secl[data-sec]").forEach(a => a.onclick = e => { if (document.documentElement.classList.contains("sidemini")) return; e.preventDefault(); const g = a.dataset.sec, o = !a.classList.contains("open");
     a.classList.toggle("open", o); a.nextElementSibling?.classList.toggle("open", o); a.setAttribute("aria-expanded", o);
     if (o) { SIDE_OPEN.add(g); SIDE_SHUT.delete(g); } else { SIDE_OPEN.delete(g); SIDE_SHUT.add(g); } });
   $$("[data-settings]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); settingsDialog(); });
