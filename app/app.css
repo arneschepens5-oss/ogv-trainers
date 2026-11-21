@@ -2620,3 +2620,22 @@ details.fnadv{margin:10px 0;border:1px solid var(--line);border-radius:12px;padd
 details.refd{margin:0 0 16px;border:1px solid var(--line);border-radius:12px;padding:0 12px}details.refd summary{cursor:pointer;padding:10px 0;font-weight:700;color:var(--muted)}details.refd .list{padding-bottom:10px}
 
 .supbar{display:flex;align-items:center;gap:12px;padding:10px 14px;margin:0 0 14px;border-radius:14px;background:#38BDF8;color:#04202d;font-size:14px}.supbar svg{width:20px;height:20px;flex:none}.supbar span{flex:1}.supbar .btn{background:#04202d;color:#fff;border-color:#04202d}
+/* v197: professionele afwerking — rustiger zijbalk, clubnaam leesbaar, strakkere titels, cijfers uitgelijnd */
+.side .brand>span{min-width:0}
+.side .brand b{overflow-wrap:normal;word-break:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-stretch:100%;font-weight:800;font-size:16px;letter-spacing:-.015em}
+.side .nav a.secl svg{background:transparent;color:var(--muted);padding:5px}
+.side .nav a.secl:hover svg{background:var(--card2);color:var(--ink)}
+.side .nav a.secl.open svg,.side .nav a.secl.cur svg{background:color-mix(in srgb,var(--c,var(--yellow)) 16%,transparent);color:var(--c,var(--ytext))}
+.side .nav a.secl{font-size:15px;font-weight:600}
+.side .subside{border-left-color:var(--line)}
+h1.pg{padding-bottom:0;font-weight:800;font-stretch:108%;letter-spacing:-.03em;font-size:clamp(28px,3.4vw,40px);line-height:1.05}
+h1.pg::after{display:none}
+:focus-visible{outline:2px solid var(--ytext);outline-offset:2px}
+.kpi b,.tbl td,.tbl th,.num,time{font-variant-numeric:tabular-nums}
+.btn,.chip,button{-webkit-tap-highlight-color:transparent}
+:root[data-theme="light"] .panel,:root[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,20,15,.05)}
+.authbox{padding-top:max(8px,env(safe-area-inset-top))}
+@media (max-width:640px){.authbox{margin-top:clamp(28px,6vh,56px)}}
+/* scorekleuren leesbaar op een lichte achtergrond */
+:root[data-theme="light"] b[style*="color:hsl"],:root[data-theme="light"] b[style*="color:#"]{filter:brightness(.72) saturate(1.15)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) b[style*="color:hsl"],:root:not([data-theme="dark"]) b[style*="color:#"]{filter:brightness(.72) saturate(1.15)}}
