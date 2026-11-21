@@ -928,6 +928,8 @@ function demoSeed() {
 /* ============ opstarten ============ */
 const LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
 function boot() {
+  /* vraag de browser om de aanmelding en gegevens van dit toestel niet vanzelf op te ruimen (blijft aangemeld) */
+  try { navigator.storage?.persist?.(); } catch (e) {}
   let demo = false; try { demo = sessionStorage.getItem("ogv-mode") === "demo"; } catch (e) {}
   if (new URLSearchParams(location.search).has("demo")) demo = true;
   if (!LOCAL) { demo = false; try { sessionStorage.removeItem("ogv-mode"); } catch (e) {} } /* demo alleen om lokaal te testen */
