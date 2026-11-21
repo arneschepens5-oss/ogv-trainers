@@ -24,7 +24,7 @@ const clubShort = () => CLUB.short || clubName();
 const PRODUCT = "FootballCoachHub";
 const CONTACT_MAIL = "footballcoachhub@gmail.com";
 const PRIVACY_URL = "https://footballcoachhub.app/privacy";   /* naam van het platform voor andere clubs dan OG Vorselaar */
-const APPNAME = () => CLUB.settings?.app || (ogvBrand() ? "OGV Trainers" : PRODUCT);
+const APPNAME = () => CLUB.settings?.app || (ogvBrand() ? "OGV Trainers" : CLUB.id && CLUB.id !== "platform" && (CLUB_KNOWN || user) ? clubName() : PRODUCT);
 const APPTITLE = () => ogvBrand() && !CLUB.settings?.app ? "OGV<span>Trainers</span>" : esc(APPNAME()).replace(/(hub)$/i, "<span>$1</span>");
 /* laatst gekende club van dit toestel: zo staan naam, logo en kleuren meteen goed, ook op het aanmeldscherm */
 let CLUB_KNOWN = false; /* weten we al bij welke club dit toestel hoort? Zo niet, dan tonen we het platform en niet OG Vorselaar */
@@ -618,7 +618,7 @@ function shell(fresh) {
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
-    <a class="brand" href="#/start">${ogvBrand() ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? LOGO("mini") + "Jeugdwerking " + esc(clubName()) : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
+    <a class="brand" href="#/start">${ogvBrand() || (CLUB.settings?.logo && CLUB.id !== "platform" && (CLUB_KNOWN || user)) ? LOGO("side") : PMARK("side")}<span><b>${esc(APPNAME())}</b><small>${ogvBrand() ? "Jeugdwerking " + esc(clubName()) : CLUB.id === "platform" ? "Platformbeheer" : CLUB_KNOWN || user ? "Trainersplatform · " + PRODUCT : "Voor jeugdvoetbalclubs"}</small></span></a>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap || "⇄"}<span>Andere club</span></button>` : ""}
     ${teamBtn}
     <nav class="nav">${sideHtml}</nav>
     <div class="foot">${logged ? footLinks() : ""}${acct}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div>`}</div>

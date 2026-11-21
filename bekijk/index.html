@@ -68,7 +68,7 @@ const clubName = () => CLUB_NAME;
 const toast = t => { let el = $("#toast"); if (!el) { el = document.createElement("div"); el.id = "toast"; el.style.cssText = "position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;max-width:calc(100% - 28px);z-index:9;box-shadow:0 10px 30px rgba(0,0,0,.3)"; document.body.appendChild(el); }
   el.textContent = t; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => el.hidden = true, 3500); };
 </script>
-<script src="../app/teken.js?v=195"></script>
+<script src="../app/teken.js?v=196"></script>
 <script>
 "use strict";
 const COL = { Opwarming: "#38BDF8", Kern: "#FFD100", Wedstrijdvorm: "#22C55E", Afsluiting: "#A78BFA" }, PAL = ["#38BDF8", "#FFD100", "#22C55E", "#A78BFA", "#FB7185", "#F97316", "#14B8A6", "#E879F9"];

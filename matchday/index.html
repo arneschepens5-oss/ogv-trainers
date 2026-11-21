@@ -12,7 +12,7 @@
 <style>
 /* Links het invulpaneel (alleen op scherm), rechts een echt A4-blad. Clubkleuren geel-zwart. */
 :root{
-  --geel:#FFD400; --zwart:#111111; --papier:#ffffff;
+  --geel:#FFD400; --zwart:#111111; --ongeel:#111111; --geeld:#FFD400; --papier:#ffffff;
   --ui-bg:#F2F1EA; --ui-panel:#ffffff; --ui-fg:#1b1b18; --ui-muted:#6b6a60; --ui-line:#dddbd0; --ui-accent:#111; --ui-warn:#c0392b;
   --display:"Bebas Neue","Arial Narrow",Impact,sans-serif;
   --body:"Barlow","Helvetica Neue",Arial,sans-serif;
@@ -25,7 +25,7 @@
 [hidden]{display:none!important}
 body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font-family:var(--body);font-size:14px}
 .topbar{position:sticky;top:0;z-index:20;background:#111110;color:#fff;display:flex;align-items:center;gap:12px;padding:calc(8px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
-.topbar a{color:var(--geel);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;min-height:36px}
+.topbar a{color:var(--geeld);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;min-height:36px}
 .topbar img{width:30px;height:30px;border-radius:7px;background:#fff}
 .topbar b{font-family:var(--display);font-size:22px;letter-spacing:.03em;font-weight:400;margin-left:auto}
 .app{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:24px;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));align-items:start}
@@ -34,7 +34,7 @@ body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font-family:var(--body)
 /* ---------- Invulpaneel ---------- */
 .panel{display:flex;flex-direction:column;gap:14px;min-width:0}
 .panel h1{font-family:var(--display);font-size:34px;letter-spacing:.02em;margin:0;line-height:1;font-weight:400}
-.panel h1 span{background:var(--geel);color:#111;padding:0 6px}
+.panel h1 span{background:var(--geel);color:var(--ongeel);padding:0 6px}
 .lead{color:var(--ui-muted);margin:4px 0 0;line-height:1.45}
 .card{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card h2{font-family:var(--cond);text-transform:uppercase;letter-spacing:.08em;font-size:13px;margin:0;color:var(--ui-muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -44,12 +44,12 @@ input,select,textarea{font:inherit;color:var(--ui-fg);background:var(--ui-bg);bo
 textarea{resize:vertical;min-height:90px}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--ui-accent);outline-offset:1px}
 button{font:inherit;font-weight:600;cursor:pointer;border-radius:6px;border:1px solid var(--ui-line);background:var(--ui-bg);color:var(--ui-fg);padding:7px 12px}
-button.primary{background:#111;color:var(--geel);border-color:#111}
+button.primary{background:var(--zwart);color:var(--geeld);border-color:var(--zwart)}
 button.small{padding:3px 8px;font-size:12px}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
 .seg{display:flex;flex-wrap:wrap;gap:4px}
 .seg button{padding:5px 10px}
-.seg button[aria-pressed=true]{background:var(--geel);color:#111;border-color:#111}
+.seg button[aria-pressed=true]{background:var(--geel);color:var(--ongeel);border-color:#111}
 .squad{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow:auto}
 .squad .p{display:grid;grid-template-columns:22px 1fr 54px auto;gap:6px;align-items:center}
 .squad input[type=checkbox]{width:18px;height:18px}
@@ -64,7 +64,7 @@ button.small{padding:3px 8px;font-size:12px}
 .hint{color:var(--ui-muted);font-size:12.5px;margin:0;line-height:1.4}
 .ms{display:flex;flex-direction:column;gap:12px}
 .mi{display:grid;grid-template-columns:26px 1fr;gap:6px 8px;align-items:start}
-.mi .n{font-family:var(--display);font-size:26px;line-height:1;background:var(--geel);color:#111;text-align:center;border-radius:4px}
+.mi .n{font-family:var(--display);font-size:26px;line-height:1;background:var(--geel);color:var(--ongeel);text-align:center;border-radius:4px}
 .mi .fields{display:flex;flex-direction:column;gap:6px;min-width:0}
 .icons{display:flex;gap:4px;flex-wrap:wrap}
 .icons button{padding:2px;width:34px;height:34px;display:grid;place-items:center;background:#fff}
@@ -88,12 +88,12 @@ dialog h3{margin:0;font-family:var(--display);font-size:26px;font-weight:400}
 .kicker{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9.5pt;text-transform:uppercase;margin:0 0 1mm}
 .vs{font-family:var(--display);font-weight:400;font-size:34pt;line-height:.92;margin:0;letter-spacing:.01em}
 .vs .them{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vs i{font-style:normal;font-size:20pt;background:var(--geel);padding:0 1.6mm;margin:0 1mm;vertical-align:.25em}
+.vs i{font-style:normal;font-size:20pt;background:var(--geel);color:var(--ongeel);padding:0 1.6mm;margin:0 1mm;vertical-align:.25em}
 .chev{width:30mm;height:30mm}
 .infobar{display:grid;grid-template-columns:repeat(4,1fr);background:var(--zwart);color:#fff;border-radius:2mm;overflow:hidden}
 .infobar div{padding:1.6mm 3mm;border-left:.3mm solid #333;min-width:0}
 .infobar div:first-child{border-left:0}
-.infobar b{display:block;font-family:var(--cond);font-size:7.5pt;letter-spacing:.12em;color:var(--geel);font-weight:600;text-transform:uppercase}
+.infobar b{display:block;font-family:var(--cond);font-size:7.5pt;letter-spacing:.12em;color:var(--geeld);font-weight:600;text-transform:uppercase}
 .infobar span{font-family:var(--cond);font-weight:700;font-size:13.5pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .start{display:grid;grid-template-columns:100mm 1fr;gap:7mm;align-items:start}
 .start svg{width:100mm;height:125mm;display:block}
@@ -106,12 +106,12 @@ dialog h3{margin:0;font-family:var(--display);font-size:26px;font-weight:400}
 .bench span i{font-style:normal;flex:none;width:7.5mm;height:7.5mm;border-radius:50%;border:.4mm solid #111;display:grid;place-items:center;font-family:var(--cond);font-size:9pt}
 .bench.dense span{font-size:11pt}
 .empty{color:#888;font-size:10pt}
-.capt{display:grid;grid-template-columns:11mm 1fr;gap:3mm;align-items:center;background:#111;color:#fff;border-radius:2.5mm;padding:2.5mm 3mm}
-.capt .sublbl{color:var(--geel);margin:0 0 .5mm}
+.capt{display:grid;grid-template-columns:11mm 1fr;gap:3mm;align-items:center;background:var(--zwart);color:#fff;border-radius:2.5mm;padding:2.5mm 3mm}
+.capt .sublbl{color:var(--geeld);margin:0 0 .5mm}
 .capt strong{font-family:var(--display);font-size:22pt;line-height:.95;font-weight:400;display:block}
 .capt .ctask{margin:1mm 0 0;font-family:var(--cond);font-weight:600;font-size:10.5pt;color:#fff}
-.capt .ctask b{color:var(--geel);font-weight:700}
-.capt .band{width:11mm;height:11mm;border-radius:50%;background:var(--geel);color:#111;display:grid;place-items:center;font-family:var(--display);font-size:20pt;line-height:1;padding-top:.6mm}
+.capt .ctask b{color:var(--geeld);font-weight:700}
+.capt .band{width:11mm;height:11mm;border-radius:50%;background:var(--geel);color:var(--ongeel);display:grid;place-items:center;font-family:var(--display);font-size:20pt;line-height:1;padding-top:.6mm}
 .tasks{display:flex;flex-direction:column;gap:3mm;flex:1 1 auto;min-height:0}
 .tasks h4{font-family:var(--cond);font-weight:700;letter-spacing:.14em;font-size:9pt;text-transform:uppercase;margin:0}
 #sTasks{display:flex;flex-direction:column;gap:3mm}
@@ -125,7 +125,7 @@ dialog h3{margin:0;font-family:var(--display);font-size:26px;font-weight:400}
 .task .ok{display:flex;flex-direction:column;align-items:center;gap:1mm;font-family:var(--cond);font-weight:600;font-size:8pt}
 .task .ok i{width:8mm;height:8mm;border:.5mm solid #111;border-radius:1.5mm;display:block}
 .foot{display:flex;justify-content:space-between;align-items:center;font-family:var(--cond);font-weight:600;font-size:8.5pt;color:#555;border-top:.3mm solid #ddd;padding-top:1.6mm;margin-top:auto}
-.foot .slogan{font-family:var(--display);font-size:18pt;color:#111;background:var(--geel);padding:.4mm 2.5mm 0;line-height:1;letter-spacing:.02em}
+.foot .slogan{font-family:var(--display);font-size:18pt;color:var(--ongeel);background:var(--geel);padding:.4mm 2.5mm 0;line-height:1;letter-spacing:.02em}
 
 @page{size:A4;margin:0}
 @media print{
@@ -214,14 +214,14 @@ html.in-platform a[href="../"]{display:none!important}
       <div class="sheet-wrap">
         <article class="sheet" id="sheet">
           <header class="hdr">
-            <img src="../icons/icon-512.png" alt="OG Vorselaar" crossorigin="anonymous">
+            <img id="sLogo" src="../icons/icon-512.png" alt="OG Vorselaar" crossorigin="anonymous">
             <div>
               <p class="kicker" id="sKicker">OG Vorselaar</p>
               <h2 class="vs" id="sVs"></h2>
             </div>
             <svg class="chev" viewBox="0 0 60 60" aria-hidden="true">
-              <rect width="60" height="60" fill="#111"/>
-              <g fill="#FFD400"><path d="M0 16 30 4 60 16v9L30 13 0 25z"/><path d="M0 33 30 21 60 33v9L30 30 0 42z"/><path d="M0 50 30 38 60 50v10H50L30 47 10 60H0z"/></g>
+              <rect id="chevBg" width="60" height="60" fill="#111"/>
+              <g id="chevFg" fill="#FFD400"><path d="M0 16 30 4 60 16v9L30 13 0 25z"/><path d="M0 33 30 21 60 33v9L30 30 0 42z"/><path d="M0 50 30 38 60 50v10H50L30 47 10 60H0z"/></g>
             </svg>
           </header>
           <div class="infobar">
@@ -245,7 +245,7 @@ html.in-platform a[href="../"]{display:none!important}
             <h4 id="sTasksH">Onze opdrachten vandaag</h4>
             <div id="sTasks"></div>
           </section>
-          <footer class="foot"><span>Samen spelen, samen winnen, samen verliezen</span><span class="slogan">Komoan OG!</span></footer>
+          <footer class="foot"><span>Samen spelen, samen winnen, samen verliezen</span><span class="slogan" id="sSlogan">Komoan OG!</span></footer>
         </article>
       </div>
     </div>
@@ -277,6 +277,18 @@ html.in-platform a[href="../"]{display:none!important}
 
 <script>
 (function(){
+/* Clubhuisstijl: het platform zet naam, kleuren en logo van de club klaar (fch-club-brand). Zonder: OG Vorselaar. */
+const BR=(()=>{try{return JSON.parse(localStorage.getItem('fch-club-brand')||'null')}catch(e){return null}})();
+const _rgb=h=>{h=String(h||'').replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16)||0;return[n>>16&255,n>>8&255,n&255]};
+const _lum=h=>{const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};const a=_rgb(h);return .2126*f(a[0])+.7152*f(a[1])+.0722*f(a[2])};
+const CN=BR&&BR.name?BR.name:'OG Vorselaar',ACC=BR&&BR.color?BR.color:'#FFD400',ONACC=_lum(ACC)>.38?'#111111':'#FFFFFF',
+  DARK=BR&&BR.color2&&_lum(BR.color2)<.12?BR.color2:(BR&&_lum(ACC)<.12?ACC:'#111111'),ACCD=_lum(ACC)>.2?ACC:'#FFFFFF',
+  HOMEPL=BR?(BR.place||'–'):'Vorselaar',PDFPRE=BR?String(BR.short||CN).replace(/[^\w]+/g,''):'OGV';
+if(BR){const r=document.documentElement.style;r.setProperty('--geel',ACC);r.setProperty('--ongeel',ONACC);r.setProperty('--zwart',DARK);r.setProperty('--geeld',ACCD);
+  document.title='Wedstrijdblad '+CN;
+  addEventListener('DOMContentLoaded',()=>{const L=document.getElementById('sLogo');if(L){if(BR.logo){L.src=BR.logo;L.alt=CN}else L.style.visibility='hidden'}
+    const b=document.getElementById('chevBg'),g=document.getElementById('chevFg');if(b)b.setAttribute('fill',DARK);if(g)g.setAttribute('fill',ACC);
+    const sl=document.getElementById('sSlogan');if(sl){if(BR.slogan)sl.textContent=BR.slogan;else sl.remove()}});}
 const KEY='ogv-matchday-v3';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -470,8 +482,8 @@ function pitchLines(stroke){
 function renderEditor(){
   const pos=T().pos,n=pos.length,r=n>8?4.2:5;
   $('editor').innerHTML=pitchLines('rgba(255,255,255,.7)')+pos.map((p,i)=>{const id=M().lineup[i];const lab=id?shortName(nm(id)):'';
-    return `<g><circle class="dot" data-i="${i}" cx="${p.x}" cy="${p.y}" r="${r}" fill="#FFD400" stroke="#111" stroke-width=".7"/>
-    <text x="${p.x}" y="${p.y+1.3}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${n>8?3.2:3.6}" fill="#111" pointer-events="none">${esc(p.l)}</text>
+    return `<g><circle class="dot" data-i="${i}" cx="${p.x}" cy="${p.y}" r="${r}" fill="${ACC}" stroke="#111" stroke-width=".7"/>
+    <text x="${p.x}" y="${p.y+1.3}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${n>8?3.2:3.6}" fill="${ONACC}" pointer-events="none">${esc(p.l)}</text>
     ${lab?`<text x="${p.x}" y="${p.y+r+4}" text-anchor="middle" font-family="Barlow,Arial,sans-serif" font-weight="600" font-size="3.6" fill="#fff" pointer-events="none">${esc(lab)}</text>`:''}</g>`}).join('');
 }
 (function drag(){
@@ -505,11 +517,11 @@ function fitText(el,maxPt,minPt){let s=maxPt;el.style.fontSize=s+'pt';while(el.s
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{try{renderSheet()}catch(e){}});
 function renderSheet(){
   const t=T(),m=M(),pos=t.pos,n=pos.length,F=FORMATS[t.format];
-  $('sKicker').textContent=`OG Vorselaar · ${t.name} · ${F.label}`;
+  $('sKicker').textContent=`${CN} · ${t.name} · ${F.label}`;
   const home=m.home!=='uit';const opp=esc(m.opp||'Tegenstander');
-  $('sVs').innerHTML=home?`OG Vorselaar<i>VS</i><span class="them">${opp}</span>`:`${opp}<i>VS</i><span class="them">OG Vorselaar</span>`;
+  $('sVs').innerHTML=home?`${esc(CN)}<i>VS</i><span class="them">${opp}</span>`:`${opp}<i>VS</i><span class="them">${esc(CN)}</span>`;
   $('sDate').textContent=fmtDate(m.date);$('sMeet').textContent=m.meet||'–';$('sKick').textContent=m.kick||'–';
-  $('sWhereLbl').textContent=home?'Thuis':'Uit';$('sWhere').textContent=m.venue||(home?'Vorselaar':'–');
+  $('sWhereLbl').textContent=home?'Thuis':'Uit';$('sWhere').textContent=m.venue||(home?HOMEPL:'–');
   $('sForm').textContent=t.form===EIGEN?F.label:`${t.form} · ${F.label}`;
   const r=n>8?5.2:n>5?6:7,fsN=n>8?3.5:n>5?3.9:4.2;
   const VH=pos.some(p=>p.y>108)?133:125; /* extra strook onder de doellijn voor de naam van de keeper */
@@ -517,10 +529,10 @@ function renderSheet(){
   ${pos.map((p,i)=>{const id=m.lineup[i],pl=P(id),cap=id&&id===m.cap;const inside=pl&&pl.nr?pl.nr:p.l;
     const name=pl?shortName(pl.name,n):'';
     const cy=p.y,ty=cy+r+4.4,tx=p.x;
-    return `<g><circle cx="${p.x}" cy="${cy}" r="${r}" fill="${pl?'#FFD400':'#fff'}" stroke="#111" stroke-width=".8"/>
-    <text x="${p.x}" y="${cy+1.6}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${String(inside).length>2?3.4:4.4}" fill="#111">${esc(inside)}</text>
-    ${cap?`<circle cx="${p.x+r*.8}" cy="${cy-r*.8}" r="2.6" fill="#111"/><text x="${p.x+r*.8}" y="${cy-r*.8+1.1}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="3.4" fill="#FFD400">C</text>`:''}
-    ${name?`<g class="nmtag"><rect rx="1.6" fill="#111"/><text x="${tx}" y="${ty}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${fsN}" letter-spacing=".15" fill="#fff">${esc(name.toUpperCase())}</text></g>`:''}</g>`}).join('')}</svg>`;
+    return `<g><circle cx="${p.x}" cy="${cy}" r="${r}" fill="${pl?ACC:'#fff'}" stroke="#111" stroke-width=".8"/>
+    <text x="${p.x}" y="${cy+1.6}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${String(inside).length>2?3.4:4.4}" fill="${pl?ONACC:'#111'}">${esc(inside)}</text>
+    ${cap?`<circle cx="${p.x+r*.8}" cy="${cy-r*.8}" r="2.6" fill="#111"/><text x="${p.x+r*.8}" y="${cy-r*.8+1.1}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" font-size="3.4" fill="${ACC}">C</text>`:''}
+    ${name?`<g class="nmtag"><rect rx="1.6" fill="${DARK}"/><text x="${tx}" y="${ty}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="${fsN}" letter-spacing=".15" fill="#fff">${esc(name.toUpperCase())}</text></g>`:''}</g>`}).join('')}</svg>`;
   /* naamlabels: donkere tag precies rond de naam, binnen het veld gehouden */
   $('sPitch').querySelectorAll('.nmtag').forEach(g=>{const t=g.querySelector('text'),rc=g.querySelector('rect');let b;try{b=t.getBBox()}catch(e){}if(!b||!b.width){const fs=+t.getAttribute('font-size'),wd=t.textContent.length*fs*.5;b={x:+t.getAttribute('x')-(t.getAttribute('text-anchor')==='start'?0:wd/2),y:+t.getAttribute('y')-fs*.8,width:wd,height:fs*.95}}
     const px=1.6,py=.7,w=b.width+px*2,h=b.height+py*2;let x=b.x-px;const dx=x<1?1-x:x+w>99?99-(x+w):0;x+=dx;
@@ -565,7 +577,7 @@ $('pdf').addEventListener('click',async()=>{
     sc.style.transform=old;
     const pdf=new jspdf.jsPDF({unit:'mm',format:'a4'});pdf.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,0,210,297);
     const slug=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'-').replace(/^-|-$/g,'');
-    pdf.save(['OGV',slug(T().name),slug(M().opp),M().date].filter(Boolean).join('-')+'.pdf');
+    pdf.save([PDFPRE,slug(T().name),slug(M().opp),M().date].filter(Boolean).join('-')+'.pdf');
     msg.textContent='PDF staat in je Downloads.';
   }catch(err){msg.textContent='De PDF lukte niet (geen internet?). Gebruik Afdrukken en kies "Opslaan als PDF".'}
 });

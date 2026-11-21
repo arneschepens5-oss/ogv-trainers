@@ -4,7 +4,7 @@
 
 /* ============ trainingsbibliotheek ============ */
 let LIB = null;
-async function loadLib() { if (LIB) return LIB; LIB = await fetch("trainingen/trainingen.json", { cache: "no-cache" }).then(r => r.json()); return LIB; }
+async function loadLib() { if (!isOGV()) return { bouwen: [], principes: [], items: [] }; if (LIB) return LIB; LIB = await fetch("trainingen/trainingen.json", { cache: "no-cache" }).then(r => r.json()); return LIB; }
 const LIB_MAPS = [["thema", "Thematrainingen", "Volledige trainingen per basisprincipe van het opleidingsplan."], ["oefenstof", "Oefenstof", "Losse oefeningen om je training mee op te bouwen."], ["opwarming", "Opwarming", "De vaste wedstrijdopwarming van de club."]];
 const LIB_THEMAS = ["Techniek", "Duel 1v1", "Passing en balaanname", "Handelingssnelheid", "Positiespel", "Wedstrijdvormen"];
 function libDetail(L, id) {
@@ -49,7 +49,9 @@ route("matchday", { title: "Wedstrijdblad", wide: true, render: (v, id) => {
     const sel = next ? selPlayers(next).map(p => p.id) : [];
     try { localStorage.setItem("ogv-matchday-import", JSON.stringify({ id: S.team.id, name: S.team.name, format: S.team.format || "5v5",
       squad: active().map(p => ({ id: p.id, name: pname(p), nr: p.number ?? "" })), sel, opp: next?.opponent || "", date: next?.date || "", kick: tm(next?.start_time), home: next ? (next.home === false ? "uit" : "thuis") : "" })); } catch (e) {} }
-  embed(v, "matchday/?v=67", "Wedstrijdblad");
+  try { const st = CLUB.settings || {}; localStorage.setItem("fch-club-brand", isOGV() ? "null" : JSON.stringify({ name: clubName(), short: CLUB.short || "", color: st.color || "", color2: st.color2 || "",
+    logo: st.logo ? logoSrc(st.logo) : "", place: st.place || "", slogan: st.slogan || "" })); } catch (e) {}
+  embed(v, "matchday/?v=68", "Wedstrijdblad");
 } });
 
 /* ============ scouting ============ */
