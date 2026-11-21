@@ -42,7 +42,7 @@ function viewJoin(v) {
 }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; S.intscout = true; return; }
-  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club && !ADMIN_APP) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
+  try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.super = !!data.super; S.support = data.support || null; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club && !ADMIN_APP) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
     Object.assign(CLUB, data.club, { settings: data.club.settings || {} }); KEYS.club_docs = ["club_id", "key"]; rememberClub(); applyClubTheme(); }
     else if (data.platform) { Object.assign(CLUB, { id: "platform", name: PRODUCT, short: "FCH", settings: { color: "#F5C542", color2: "#0F4A33" } }); /* huisstijl van het platform */ applyClubTheme(); } /* account van het platform zonder club */
     S.rechten = Array.isArray(data.rechten) ? data.rechten : []; S.intscout = !S.rechten.includes("intscout_uit");
@@ -73,7 +73,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) =>
   if (tab === "meldingen") return adminFeedback(host);
   if (tab === "planning") return adminPlanning(host);
   if (tab === "club") return adminClub(host);
-  if (tab === "systeem") { host.innerHTML = `<div class="panel" id="adm-db"></div>
+  if (tab === "systeem") { host.innerHTML = `<div class="panel sec" id="adm-sup"><h2>Platformsupport</h2><p class="hint" style="margin-top:0">FootballCoachHub kan voor onderhoud en ondersteuning jullie club openen. Elke keer dat dat gebeurt, staat het hieronder.</p><div id="supl" class="hint">Laden…</div></div><div class="panel" id="adm-db"></div>
     <div class="grid2 sec"><div class="panel"><h2>Back-up</h2><p class="hint" style="margin-top:0">Download alle gegevens van de club (ploegen, spelers, kalender, verslagen, evaluaties…) als één bestand. Doe dit minstens één keer per maand en bewaar het op een veilige plaats: het bevat gegevens van kinderen.</p>
       <button class="btn" type="button" id="bk">${IC.out}Back-up downloaden</button><p class="hint" id="bkl" style="margin-bottom:0"></p></div>
     <div class="panel"><h2>Gratis Supabase: aandachtspunten</h2><ul class="tight">
@@ -84,7 +84,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) =>
     $("#bk").onclick = async () => { if (mode === "demo") { download("ogv-backup-demo.json", JSON.stringify(DEMODB._load(), null, 1), "application/json"); return; }
       const r = await sb.rpc("club_backup"); if (r.error) { toast(/club_backup|function/i.test(r.error.message) ? "Voer eerst ogv-database.sql uit (versie 14)." : r.error.message); return; }
       download("ogv-backup-" + todayIso() + ".json", JSON.stringify(r.data), "application/json"); try { localStorage.setItem("ogv-last-backup", new Date().toISOString()); } catch (x) {} toast("Back-up gedownload."); };
-    return dbCheck($("#adm-db")); }
+    supportHistory($("#supl")); return dbCheck($("#adm-db")); }
   if (tab === "toegang" && sub === "functies") { const ctx = csCtxOwn(); return csAccess(host, CLUB.settings || {}, (patch, msg) => ctx.saveAll(CLUB.name, CLUB.short, { ...(CLUB.settings || {}), ...patch }, msg), () => ""); }
   let info; try { info = await getInfo(); } catch (e) { host.innerHTML = `<div class="empty"><b>Laden mislukt</b>${esc(e.message)}</div>`; return; }
   if (tab === "ploegen") {
@@ -334,13 +334,14 @@ route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
         <p class="hint" style="margin:0">Trainingen en wedstrijden van de laatste 30 dagen, evaluaties van dit seizoen. Laatst iemand ingelogd: ${agoTxt(c.last_login)}${c.matches_30 ? ` · ${Math.round((c.reports_30 || 0) / c.matches_30 * 100)}% wedstrijden met uitslag` : ""}</p>` : ""}
       <dl><div><dt>Beheerder</dt><dd>${(c.admins || []).length ? (c.admins || []).map(esc).join(", ") : c.pending_admin ? esc(c.pending_admin) + ` <span class="hint">(nog geen account)</span>` : `<button class="link" type="button" data-edit="${esc(c.id)}">Aanduiden</button>`}</dd></div>
         <div><dt>Clubcode</dt><dd><b translate="no">${esc(c.code || "–")}</b></dd></div></dl>
-      <div class="pact"><a class="btn small" href="#/platformclub/${esc(c.id)}/club">${IC.gear}Instellingen</a><button class="btn ghost small" type="button" data-edit="${esc(c.id)}">Beheerder en code</button><button class="ib" type="button" data-inv="${esc(c.id)}" title="Uitnodiging voor de beheerder kopiëren" aria-label="Uitnodiging kopiëren">${IC.copy}</button></div></article>`; }).join("")}</div></div>
+      <div class="pact"><a class="btn small" href="#/platformclub/${esc(c.id)}/club">${IC.gear}Instellingen</a><button class="btn ghost small" type="button" data-edit="${esc(c.id)}">Beheerder en code</button>${S.super ? `<button class="btn small" type="button" data-sup="${esc(c.id)}">${IC.eye}Club openen</button>` : ""}<button class="ib" type="button" data-inv="${esc(c.id)}" title="Uitnodiging voor de beheerder kopiëren" aria-label="Uitnodiging kopiëren">${IC.copy}</button></div></article>`; }).join("")}</div></div>
     <details class="sec pdet"><summary><h2 style="display:inline">Zo start een nieuwe club</h2></summary><ol class="psteps">
       <li><b>Club aanmaken</b><span>Met de naam en het e-mailadres van de beheerder (bv. de TVJO). Jij wordt geen lid.</span></li>
       <li><b>Uitnodiging sturen</b><span>Kopieer de uitnodiging en mail ze naar de beheerder. Daarin staan de link en de clubcode.</span></li>
       <li><b>De club zet zichzelf klaar</b><span>Na het aanmelden leidt de app de beheerder door vijf stappen: kleuren, evaluaties, onderdelen, ploegen en trainers uitnodigen.</span></li>
       <li><b>Trainers aan de slag</b><span>Trainers maken een account met de clubcode. Bij elke pagina staat een vraagteken dat naar de uitleg in de handleiding gaat.</span></li></ol></details>`;
   $("#pnew").onclick = () => newClubDialog(() => render());
+  $$("[data-sup]", v).forEach(b => b.onclick = () => supportEnter(data.find(x => x.id === b.dataset.sup)));
   $$("[data-inv]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.inv); navigator.clipboard?.writeText(inviteText(c.name, c.code, c.pending_admin || (c.admins || [])[0])).then(() => toast("Uitnodiging gekopieerd. Plak ze in een mail aan de beheerder.")); });
   $$("[data-edit]", v).forEach(b => b.onclick = () => editClubDialog(data.find(x => x.id === b.dataset.edit), () => render()));
 } });
@@ -1027,3 +1028,14 @@ async function csAccess(host, st, csSave, foot) {
   };
   draw();
 }
+
+/* ============ platformsupport: enkel footballcoachhub@gmail.com; elke sessie staat in het spoor van de club ============ */
+async function supportEnter(c) { if (!c || !S.super) return;
+  if (!confirm(`${c.name} openen als platformsupport?\n\nJe ziet alles wat een beheerder van de club ziet. De beheerders van ${c.name} zien in Beheer › Systeem dat platformsupport in de club was, met datum en uur.`)) return;
+  const { error } = await sb.rpc("support_enter", { c: c.id }); if (error) { toast(error.message); return; }
+  try { localStorage.removeItem("ogv-club"); localStorage.removeItem(TEAM_KEY); } catch (e) {} location.hash = "#/start"; location.reload(); }
+async function supportLeave() { await sb.rpc("support_leave"); try { localStorage.removeItem("ogv-club"); localStorage.removeItem(TEAM_KEY); } catch (e) {} location.hash = "#/platform"; location.reload(); }
+async function supportHistory(el) { if (mode === "demo") { el.textContent = "In de demo is er geen spoor."; return; }
+  const { data, error } = await sb.rpc("support_history"); if (error) { el.textContent = "Spoor laden mislukt."; return; }
+  const f = d => new Date(d).toLocaleString("nl-BE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  el.innerHTML = (data || []).length ? `<div class="list">${data.map(x => `<div class="item static"><span class="main"><b>${f(x.start)}</b><small>${x.einde ? "tot " + f(x.einde) : "nog bezig"}</small></span></div>`).join("")}</div>` : "Platformsupport was nog niet in jullie club."; }

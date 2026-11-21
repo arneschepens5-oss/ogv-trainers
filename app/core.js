@@ -623,7 +623,7 @@ function shell(fresh) {
     <nav class="nav">${sideHtml}</nav>
     <div class="foot">${logged ? footLinks() : ""}${acct}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div>`}</div>
   </aside>
-  <main>
+  <main>${S.support ? `<div class="supbar" role="status">${IC.eye}<span><b>Platformsupport</b> in ${esc(clubName())}. De beheerders zien dat je hier bent geweest.</span><button class="btn small" type="button" data-supleave>Club verlaten</button></div>` : ""}
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
     ${logged && !platOnly ? subHtml : ""}
     <div class="page" id="view"></div>
@@ -971,3 +971,4 @@ document.addEventListener("toggle", e => { const d = e.target; if (!d.classList?
       if (v > cur) { shown = true; const b = document.createElement("div"); b.className = "updbar"; b.innerHTML = `<span>Er is een nieuwe versie van de app.</span><button type="button">Vernieuwen</button>`; b.querySelector("button").onclick = () => location.reload(); document.body.appendChild(b); } } catch (e) {} };
   document.addEventListener("visibilitychange", check); setInterval(check, 15 * 60 * 1000); setTimeout(check, 20000);
 })();
+document.addEventListener("click", e => { if (e.target.closest("[data-supleave]") && typeof supportLeave === "function") supportLeave(); });
