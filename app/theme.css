@@ -70,7 +70,7 @@ h1.pg::after{display:none}
 
 /* ---------- gsm ---------- */
 @media (max-width:900px){
-  .tabbar{background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+  .tabbar{background:var(--card);border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
   .tabbar [aria-current="page"] svg{box-shadow:0 6px 14px -6px color-mix(in srgb,var(--yellow) 85%,#000)}
 }
 @media (prefers-reduced-motion:reduce){.trow,.kpi,.pcard,.btn{transition:none}.trow:hover,.pcard:hover,.btn:hover{transform:none}}

@@ -97,8 +97,17 @@ function outboxBanner() { const n = outbox.get().length; let b = document.getEle
   b.querySelector("button").onclick = () => outbox.flush(); }
 addEventListener("online", () => { outboxBanner(); outbox.flush(); }); addEventListener("offline", outboxBanner);
 setInterval(() => outbox.flush(), 30000);
+/* snelheid: dezelfde opvraging binnen 30 seconden komt uit het geheugen (en loopt nooit dubbel tegelijk).
+   Elke wijziging via de app maakt die tabel meteen weer vers; terug naar de app na een pauze = alles vers. */
+const QC = new Map(), QTTL = 30e3, qcClone = v => typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v));
+const qcKey = (t, m) => [CLUB.id || "", user?.id || "", t, JSON.stringify(m)].join("|");
+function qcDrop(t) { if (!t) { QC.clear(); return; } for (const k of [...QC.keys()]) if (k.split("|")[2] === t) QC.delete(k); }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") qcDrop(); });
 const SBDB = {
-  async list(t, m = {}) { let q = sb.from(t).select("*"); for (const k in m) q = q.eq(k, m[k]); const { data, error } = await q; if (error) throw error; return data || []; },
+  list(t, m = {}) { const k = qcKey(t, m), c = QC.get(k);
+    if (c && (c.p || Date.now() - c.at < QTTL)) return (c.p || Promise.resolve(c.v)).then(qcClone);
+    const p = (async () => { let q = sb.from(t).select("*"); for (const x in m) q = q.eq(x, m[x]); const { data, error } = await q; if (error) throw error; return data || []; })();
+    QC.set(k, { p }); return p.then(v => { QC.set(k, { v, at: Date.now() }); return qcClone(v); }, e => { QC.delete(k); throw e; }); },
   async save(t, row) { const op = { kind: "save", t, row: JSON.parse(JSON.stringify(row)), key: Object.fromEntries(KEYS[t].map(k => [k, row[k]])) };
     if (!navigator.onLine) { outbox.add(op); return; }
     const { error } = await sb.from(t).upsert(row, { onConflict: KEYS[t].join(",") }); if (error) { if (isNetErr(error)) { outbox.add(op); return; } throw error; } },
@@ -957,6 +966,10 @@ function boot() {
     sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: ADMIN_APP ? "fch_beheer_auth" : "tb_auth",
       /* geen browserslot rond het vernieuwen van de aanmelding: dat slot bleef soms hangen na slaapstand, waardoor elke opvraging bleef wachten (leeg scherm) */
       lock: async (_name, _timeout, fn) => await fn() } });
+    { const from = sb.from.bind(sb), rpc = sb.rpc.bind(sb);   /* elke schrijfactie of databasefunctie maakt het geheugen van die tabel leeg */
+      sb.from = t => { const q = from(t); for (const op of ["insert", "upsert", "update", "delete"]) { const f = q[op].bind(q); q[op] = (...a) => { qcDrop(t); return f(...a); }; } return q; };
+      sb.rpc = (...a) => { qcDrop(); return rpc(...a); };
+      sb.auth.onAuthStateChange(() => qcDrop()); }
     let started = false;
     sb.auth.onAuthStateChange((ev, session) => { if (mode === "demo") return;
       /* Supabase houdt tijdens deze melding een slot vast: databaseoproepen moeten erna gebeuren, anders blijft alles hangen. */
