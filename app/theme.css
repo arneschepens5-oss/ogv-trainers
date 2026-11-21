@@ -123,3 +123,10 @@ h1.pg::after{display:none}
 .tpimg{width:84px;height:84px;flex:none;border-radius:16px;overflow:hidden;display:grid;place-items:center;background:var(--yellow);color:var(--onY);font-weight:900;font-size:22px}
 .tpimg img{width:100%;height:100%;object-fit:cover}
 html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-start!important}
+
+/* zijbalk: geen grijze schuifbalk; een dunne balk verschijnt pas als je over de zijbalk gaat */
+.side{scrollbar-width:thin;scrollbar-color:transparent transparent;scrollbar-gutter:stable}
+.side:hover{scrollbar-color:color-mix(in srgb,var(--ink) 22%,transparent) transparent}
+.side::-webkit-scrollbar{width:6px}.side::-webkit-scrollbar-track{background:transparent}
+.side::-webkit-scrollbar-thumb{background:transparent;border-radius:6px}.side:hover::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 22%,transparent)}
+.side::-webkit-scrollbar-button{display:none;height:0}
