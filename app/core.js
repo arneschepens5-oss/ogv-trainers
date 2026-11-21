@@ -10,7 +10,7 @@ const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 /* onderdelen die de club heeft uitgezet (Beheer > Instellingen) */
 /* een onderdeel staat uit voor de hele club, of enkel voor deze trainer (Instellingen › Wie ziet wat) */
 /* functies: wat iemand standaard krijgt bij een functie. Rechten en toegang worden bij het toekennen van de functie overgenomen (en kan je per persoon aanpassen); onderdelen van het menu kan de club per functie instellen (settings.access.fn) */
-const FN_ALLMODS = ["evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "berichten", "terreinen", "contacten", "clubdashboard"];
+const FN_ALLMODS = ["kalender", "uitslagen", "spelers", "ploeg", "ploeg-instellingen", "trainingen", "bibliotheek", "scoutveld", "trainers", "opslag", "evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "berichten", "terreinen", "contacten", "clubdashboard"];
 const FN_PRESETS = { TVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, AVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, "Jeugdcoördinator": { all: true, rechten: ["scouting", "terreinen", "intscout"] },
   "Coördinator onderbouw": { bouw: "onder", rechten: ["intscout"] }, "Coördinator middenbouw": { bouw: "midden", rechten: ["intscout"] }, "Coördinator bovenbouw": { bouw: "boven", rechten: ["intscout"] },
   Scout: { rechten: ["scouting", "intscout"], hide: ["evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "terreinen", "clubdashboard"] },

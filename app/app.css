@@ -2616,3 +2616,5 @@ dialog.setd{width:min(480px,94vw)}
 .fnsum{margin:6px 0 10px;font-size:14px;font-weight:700;color:var(--ytext)}
 details.fnadv{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:0 12px}details.fnadv summary{cursor:pointer;padding:11px 0;font-weight:800}details.fnadv[open] summary{border-bottom:1px solid var(--line);margin-bottom:8px}
 .accsh{margin:12px 4px 4px;font-size:12.5px;font-weight:800;color:var(--muted)}.accp #accfn{width:100%;margin:6px 0 2px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--input,var(--card2));color:var(--ink);font:inherit}
+
+details.refd{margin:0 0 16px;border:1px solid var(--line);border-radius:12px;padding:0 12px}details.refd summary{cursor:pointer;padding:10px 0;font-weight:700;color:var(--muted)}details.refd .list{padding-bottom:10px}
