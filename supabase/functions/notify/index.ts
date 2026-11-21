@@ -5,7 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!, KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const APP = Deno.env.get("APP_URL") || "https://arneschepens5-oss.github.io/ogv-trainers/";
+const APP = Deno.env.get("APP_URL") || "https://trainers.footballcoachhub.be/";
 const db = createClient(URL_, KEY, { auth: { persistSession: false } });
 /* sleutels: de eerste keer zelf aanmaken en bewaren in push_keys (enkel leesbaar voor deze functie) */
 let KEYS: { public_key: string; private_key: string } | null = null;

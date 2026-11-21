@@ -1,6 +1,6 @@
 // Korte deellink voor trainingen: /functions/v1/t/<token> stuurt door naar de bekijkpagina.
 // Alleen een vaste bestemming, het token wordt gecontroleerd: geen open doorverwijzing, geen gegevens.
-const DEST = "https://arneschepens5-oss.github.io/ogv-trainers/bekijk/?t=";
+const DEST = "https://trainers.footballcoachhub.be/bekijk/?t=";
 Deno.serve((req) => {
   const u = new URL(req.url);
   const tok = u.pathname.split("/").filter(Boolean).pop() || u.searchParams.get("t") || "";
