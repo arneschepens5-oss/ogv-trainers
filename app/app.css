@@ -2514,6 +2514,15 @@ dialog.setd{width:min(480px,94vw)}
 .tk{border:1px solid var(--line);border-radius:14px;background:var(--card)}.tk>summary{list-style:none;cursor:pointer;padding:12px 14px}.tk>summary::-webkit-details-marker{display:none}
 .tk .tkbody{padding:0 14px 14px 44px}.tk .tkbody ol{margin:0 0 10px;padding-left:18px;display:flex;flex-direction:column;gap:6px;line-height:1.45}
 .tk.done{opacity:.6}.tk.done b{text-decoration:line-through}
+/* aanwezigheid van trainers: bovenaan de aanwezigheden, opvallend zolang het niet ingevuld is */
+.tapanel{margin-top:0;margin-bottom:16px}
+.tapanel .row{align-items:center;gap:10px}
+.tapanel .taic{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;flex:none;background:var(--yellow);color:#111}.tapanel .taic .i{width:17px;height:17px}
+.tapanel .tastate{font-size:13px;font-weight:800;padding:4px 10px;border-radius:99px;background:var(--yellow);color:#111;white-space:nowrap}
+.tapanel .tahint{margin:0 0 12px;font-size:14px;color:var(--muted);line-height:1.45}.tapanel .tahint b{color:var(--ink)}
+.tapanel.need{border:2px solid var(--yellow);background:color-mix(in srgb,var(--yellow) 12%,var(--card))}
+.tapanel.ok .taic{background:var(--ok,#2E9E5B);color:#fff}.tapanel.ok .tastate{background:transparent;color:var(--muted);padding:4px 0}
+.tapanel .tachip.me{border:1px solid var(--line2)}
 /* v167: duidelijke onderverdelingen (tabbladen) en spelers op het veld */
 .dtabs{position:sticky;top:0;z-index:6;gap:6px;padding:8px;margin:16px 0 8px;border:0;border-radius:16px;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(8px);box-shadow:0 2px 10px rgba(0,0,0,.06)}
 .dtabs button{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:0;font-size:14.5px;color:var(--muted);background:transparent}

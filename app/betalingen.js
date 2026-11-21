@@ -9,12 +9,13 @@ function taPanel(host, e) {
   if (!host) return;
   if (S.tattOk === false) { host.innerHTML = S.admin ? `<p class="hint" style="margin-top:14px">Aanwezigheid van trainers bijhouden kan zodra <b>supabase-trainers-v46.sql</b> uitgevoerd is.</p>` : ""; return; }
   const trs = (S.trainers || []).filter(r => tKey(r)); if (!trs.length) { host.innerHTML = ""; return; }
-  const done = trs.filter(r => taOf(e.id, tKey(r))).length;
-  host.innerHTML = `<div class="panel sec tapanel"><div class="row" style="margin-bottom:8px"><h2 style="margin:0;margin-right:auto">Trainers</h2><span class="hint">${done === trs.length ? "ingevuld" : done ? `${done} van ${trs.length} ingevuld` : "nog niet ingevuld"}</span></div>
-    <p class="hint" style="margin-top:0">Wie was er als trainer? Dit telt mee voor de vergoeding. Wie de aanwezigheden van de spelers invult, staat vanzelf op aanwezig.</p>
-    <div class="tarow">${trs.map(r => { const a = taOf(e.id, tKey(r)), k = tKey(r);
-      return `<div class="tachip" data-tk="${esc(k)}"><span class="tc-n">${esc(taName(r))}${r.user_id && r.user_id === user?.id ? ' <small>(jij)</small>' : ""}</span>
-        <span class="seg sm"><button type="button" data-tp="1" aria-pressed="${a?.present === true}">Aanwezig</button><button type="button" data-tp="0" aria-pressed="${a?.present === false}">Niet</button></span></div>`; }).join("")}</div></div>`;
+  const mine = r => r.user_id && r.user_id === user?.id, list = [...trs].sort((a, b) => (mine(b) ? 1 : 0) - (mine(a) ? 1 : 0));
+  const done = trs.filter(r => taOf(e.id, tKey(r))).length, all = done === trs.length;
+  host.innerHTML = `<div class="panel sec tapanel ${all ? "ok" : "need"}"><div class="row" style="margin-bottom:6px"><span class="taic" aria-hidden="true">${all ? IC.check : IC.note || IC.eye}</span><h2 style="margin:0;margin-right:auto">Aanwezigheid van de trainers</h2><span class="tastate">${all ? "Ingevuld" : done ? `${done} van ${trs.length} ingevuld` : "Nog niet ingevuld"}</span></div>
+    <p class="tahint">${all ? "Alle trainers staan erin. Pas aan als er iets niet klopt." : "<b>Vul dit altijd in.</b> Aan de hand hiervan wordt de vergoeding van elke trainer berekend. Wie de spelers invult, staat vanzelf op aanwezig."}</p>
+    <div class="tarow">${list.map(r => { const a = taOf(e.id, tKey(r)), k = tKey(r);
+      return `<div class="tachip${mine(r) ? " me" : ""}" data-tk="${esc(k)}"><span class="tc-n">${esc(taName(r))}${mine(r) ? ' <small>(jij)</small>' : ""}</span>
+        <span class="seg"><button type="button" data-tp="1" aria-pressed="${a?.present === true}">Aanwezig</button><button type="button" data-tp="0" aria-pressed="${a?.present === false}">Niet</button></span></div>`; }).join("")}</div></div>`;
   $$("[data-tk]", host).forEach(row => $$("[data-tp]", row).forEach(b => b.onclick = async () => {
     const k = row.dataset.tk, val = b.dataset.tp === "1", cur0 = taOf(e.id, k);
     const rec = { event_id: e.id, team_id: e.team_id || S.team.id, tkey: k, present: val, by_name: typeof myName === "function" ? myName() || null : null };

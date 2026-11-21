@@ -11,6 +11,9 @@ route("start", { title: "Vandaag", render: async v => {
   const recentOf = c => (c || []).filter(e => e.date <= today && e.score_for != null).slice(0, 4);
   const recentHtml = rs => rs.length ? `<section class="tsec"><div class="tsh"><h2>Uitslagen van de club</h2><a class="link" href="#/uitslagen">Alles</a></div><div class="list">${rs.map(clubItem).join("")}</div></section>` : "";
   const todo = t ? past().filter(e => !e.cancelled && !S.att.some(a => a.event_id === e.id)).slice(-3).reverse() : [];
+  /* de eigen aanwezigheid als trainer telt mee voor de vergoeding: ook die laten we niet vergeten */
+  const meT = typeof tKey === "function" && S.tattOk !== false && user ? (S.trainers || []).find(r => r.user_id === user.id) : null;
+  const todoT = t && meT ? past().filter(e => !e.cancelled && !todo.includes(e) && !taOf(e.id, tKey(meT))).slice(-3).reverse() : [];
   const setup = logged && S.admin && !isOGV() && !CLUB.settings?.setup_done ? `<a class="panel setupbar" href="#/clubinstellingen"><span class="bdg">${IC.gear}</span><span><b>Zet je club klaar</b><small>Kies in vijf stappen jullie kleuren, evaluaties, onderdelen en ploegen, en nodig trainers uit.</small></span><span class="btn small">Beginnen</span></a>` : "";
   const when = e => { const d = Math.round((parse(e.date) - parse(today)) / 864e5); return d === 0 ? "Vandaag" : d === 1 ? "Morgen" : cap(parse(e.date).toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" })); };
   const initials = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
@@ -34,7 +37,8 @@ route("start", { title: "Vandaag", render: async v => {
   const todoRows = [
     ...(outNow.length ? [`<a class="trow" href="#/spelers"><span class="ti bad">${IC.ppl}</span><span><b>${outNow.length} ${outNow.length === 1 ? "speler" : "spelers"} afwezig</b><small>${outNow.slice(0, 4).map(([p, a]) => esc(p.first_name) + " (" + esc(absL(a.kind).toLowerCase()) + ")").join(", ")}${outNow.length > 4 ? " …" : ""}</small></span>${IC.chev || "›"}</a>`] : []),
     ...(nrs && nrs.nee ? [`<a class="trow" href="#/activiteit/${next.id}"><span class="ti warn">${IC.x}</span><span><b>${nrs.nee} afgemeld voor ${next.type === "wedstrijd" ? "de wedstrijd" : "de training"}</b><small>${esc(dShort(next.date))} · ${nrs.ja} komen, ${nrs.open} nog geen antwoord</small></span>${IC.chev || "›"}</a>`] : []),
-    ...todo.map(e => `<a class="trow" href="#/activiteit/${e.id}"><span class="ti warn">${IC.check}</span><span><b>Aanwezigheden invullen</b><small>${e.type === "wedstrijd" ? "Wedstrijd" : "Training"} van ${esc(dShort(e.date))}</small></span>${IC.chev || "›"}</a>`)];
+    ...todo.map(e => `<a class="trow" href="#/activiteit/${e.id}"><span class="ti warn">${IC.check}</span><span><b>Aanwezigheden invullen</b><small>${e.type === "wedstrijd" ? "Wedstrijd" : "Training"} van ${esc(dShort(e.date))} · spelers en trainers</small></span>${IC.chev || "›"}</a>`),
+    ...todoT.map(e => `<a class="trow" href="#/activiteit/${e.id}"><span class="ti warn">${IC.check}</span><span><b>Jouw aanwezigheid als trainer</b><small>${e.type === "wedstrijd" ? "Wedstrijd" : "Training"} van ${esc(dShort(e.date))} · telt mee voor de vergoeding</small></span>${IC.chev || "›"}</a>`)];
   const evr = t && !clubOff("evaluaties") ? evReminder() : "";
   const noTeam = `<section class="nextcard empty"><p class="nk">${logged ? "Nog geen ploeg gekozen" : "Welkom"}</p><h2 class="ntitle">${logged ? "Kies je ploeg om te beginnen" : "Meld je aan om te beginnen"}</h2>
     <p class="nmeta">Daarna zie je hier je volgende training of wedstrijd, wat je nog moet invullen en de uitslagen van de club.</p><div class="nact">${logged ? `<button class="btn" type="button" data-pick>${IC.ppl}Ploeg kiezen</button>` : `<a class="btn" href="#/aanmelden">Aanmelden</a>`}</div></section>`;

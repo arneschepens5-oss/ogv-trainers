@@ -104,14 +104,14 @@ function attendanceView(tv, e) {
   const ps = sib.length ? active().filter(p => !sib.some(x => isIn(attOf(x.id, p.id)))) : active();
   const cntTxt = () => { const as = S.att.filter(a => a.event_id === e.id && ps.some(p => p.id === a.player_id)), c = s => as.filter(a => a.status === s).length;
     return `${c("aanwezig") + c("te laat")} aanwezig · ${c("verwittigd")} verwittigd · ${c("afwezig")} afwezig · ${c("geblesseerd")} geblesseerd · ${ps.length - as.length} nog niet ingevuld`; };
-  tv.innerHTML = (grp ? `<div id="grpv"></div>` : "") + `<div class="row" style="margin-bottom:12px"><span class="muted" style="margin-right:auto" id="cnts">${cntTxt()}</span>
+  tv.innerHTML = (grp ? `<div id="grpv"></div>` : "") + `<div id="tav"></div><div class="row" style="margin-bottom:12px"><span class="muted" style="margin-right:auto" id="cnts">${cntTxt()}</span>
     ${(rs => rs || ps.some(p => typeof absOf === "function" && absOf(p.id, e.date)) ? `<button class="btn ghost small" type="button" id="rsApply" title="Wie nog niet ingevuld is: komt = aanwezig, komt niet = verwittigd, blessure = geblesseerd">Afmeldingen overnemen</button>` : "")(rsvpSummary(e))}<button class="btn small" type="button" id="allIn">${sib.length ? "Iedereen hierboven aanwezig" : "Iedereen aanwezig"}</button></div>
     ${(rs => rs ? `<div class="rsvpbar"><b>Ouders:</b> <span class="rsvp ja">${rs.ja} komen</span> <span class="rsvp nee">${rs.nee} komen niet</span> <span class="rsvp none">${rs.open} geen antwoord</span></div>` : "")(rsvpSummary(e))}
     ${sib.length ? `<p class="hint" style="margin:0 0 10px">Spelers die in een ander groepje zitten, staan niet in deze lijst.</p>` : ""}
     ${ps.length ? `<div class="list">${ps.map(p => { const a = attOf(e.id, p.id);
       return `<div class="item static" data-p="${p.id}" style="flex-wrap:wrap"><span class="num">${p.number ?? ""}</span><span class="main" style="min-width:140px"><b>${esc(pname(p))}</b>${typeof absTag === "function" ? absTag(p.id, e.date) : ""}${rsvpSummary(e) ? rsvpBadge(e, p) : ""}</span>
       <div class="seg">${STATUS.map(s => `<button type="button" data-s="${s}" aria-pressed="${a?.status === s}">${STATUS_L[s]}</button>`).join("")}</div></div>`; }).join("")}</div>`
-     : `<div class="empty"><b>${sib.length ? "Iedereen zit in een groepje" : "Nog geen spelers"}</b>${sib.length ? "" : `<a class="link" href="#/spelers">Voeg eerst je spelers toe</a>`}</div>`}<div id="tav"></div>`;
+     : `<div class="empty"><b>${sib.length ? "Iedereen zit in een groepje" : "Nog geen spelers"}</b>${sib.length ? "" : `<a class="link" href="#/spelers">Voeg eerst je spelers toe</a>`}</div>`}`;
   if (grp) groupPanel($("#grpv", tv), e);
   if (typeof taPanel === "function") taPanel($("#tav", tv), e);
   const recount = () => { $("#cnts").textContent = cntTxt(); };
