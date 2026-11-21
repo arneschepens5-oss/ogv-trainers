@@ -41,7 +41,7 @@ function setAppIcon() { if (ADMIN_APP) return; const ogv = isOGV() && (CLUB_KNOW
 function applyClubTheme() { setAppIcon();
   if (typeof evApplyClub === "function") evApplyClub();
   /* nog geen club bekend op dit toestel (aanmelden): de huisstijl van het platform */
-  const product = ADMIN_APP || (!CLUB_KNOWN && !user && mode !== "demo");
+  const product = ADMIN_APP || document.body.classList.contains("authpage") || (!CLUB_KNOWN && !user && mode !== "demo");
   const st = product ? { color: "#F5C542", color2: "#0F4A33" } : CLUB.settings || {}, root = document.documentElement, el = root.style; CLUB_VARS.forEach(k => el.removeProperty(k));
   if ((!product && isOGV()) || (!st.color && !st.color2)) return;   /* OG Vorselaar houdt altijd de originele geel-zwarte kleuren */
   const light = root.dataset.theme === "light", W = [255, 255, 255], K = [0, 0, 0], set = (k, v) => el.setProperty(k, Array.isArray(v) ? rgbHex(v) : v);
@@ -659,7 +659,7 @@ async function renderPage(seq) {
   /* dezelfde pagina opnieuw opbouwen (na bewaren, een vinkje …) mag niet naar boven springen of verspringen */
   const h0 = location.hash, same = h0 === PREV_HASH, y0 = scrollY;
   if (same) document.body.style.minHeight = document.documentElement.scrollHeight + "px";
-  document.body.classList.remove("authpage");
+  const wasAuth = document.body.classList.contains("authpage"); document.body.classList.remove("authpage"); if (wasAuth) applyClubTheme();
   if (teardown) { try { teardown(); } catch (e) {} teardown = null; }
   const r = cur(), def = ROUTES[r.page] || ROUTES.start;
   /* even een dossier van een andere ploeg bekeken (via Interne scouting): daarna terug naar je eigen ploeg */
@@ -812,7 +812,7 @@ function teamForm(t) {
 /* ============ aanmelden ============ */
 route("aanmelden", { title: "Aanmelden", render: v => viewLogin(v) });
 function viewLogin(v, msg) {
-  document.body.classList.add("authpage");
+  document.body.classList.add("authpage"); applyClubTheme();
   v.innerHTML = `<div class="authbox">${AUTHHEAD()}<p class="muted">${esc(msg || "Meld je aan met je account.")}</p>
   <form id="lf" class="authcard"><label class="f">E-mailadres<input type="email" name="email" required autocomplete="username"></label>
    <label class="f">Wachtwoord<input type="password" name="pw" required autocomplete="current-password"></label><div class="err" id="lerr"></div><button class="btn">Aanmelden</button></form>
@@ -843,7 +843,8 @@ async function logout() { if (mode === "demo") { try { sessionStorage.removeItem
   mode = null; db = null; user = null; Object.assign(S, { teams: [], myTeamIds: [], team: null, club: null, member: null, admin: false }); go("#/start"); }
 
 /* aanmeldschermen: logo en naam van de club als we die kennen, anders van het platform */
-const AUTHHEAD = () => ADMIN_APP ? `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Beheer van het platform</p>` : CLUB_KNOWN && isOGV() ? `${LOGO("big")}<h1>${APPTITLE()}</h1>` : CLUB_KNOWN ? `${PMARK("big")}<h1>${APPTITLE()}</h1><p class="authclub">${LOGO("mini")}${esc(clubName())}</p>` : `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Het platform voor jeugdvoetbalclubs</p>`;
+/* aanmeldscherm is altijd van het platform, ook op een toestel dat al een club kent: zo is het bruikbaar voor elke club */
+const AUTHHEAD = () => ADMIN_APP ? `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Beheer van het platform</p>` : `${PMARK("big")}<h1>FootballCoach<span>Hub</span></h1><p class="authtag">Het platform voor jeugdvoetbalclubs</p>`;
 /* logo van het platform (zelfde voor alle clubs) */
 const PMARK = cls => `<span class="ogvlogo pmark ${cls || ""}"><svg viewBox="0 0 512 512" role="img" aria-label="FootballCoachHub"><rect width="512" height="512" rx="112" fill="#0F4A33"/><path d="M36 256H476" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><circle cx="256" cy="256" r="138" fill="none" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="12"/><path d="M208.8 126.3L385.7 303.2L150.3 344.7Z" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linejoin="round"/><circle cx="256" cy="256" r="13" fill="#FFFFFF" fill-opacity=".5"/><circle cx="208.8" cy="126.3" r="46" fill="#F5C542" stroke="#0F4A33" stroke-width="14"/><circle cx="385.7" cy="303.2" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/><circle cx="150.3" cy="344.7" r="40" fill="#FFFFFF" stroke="#0F4A33" stroke-width="14"/></svg></span>`;
 /* officieel clublogo (brand book): de witte/gele versie op donker, de primaire versie op licht */
