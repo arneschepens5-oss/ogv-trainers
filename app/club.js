@@ -235,9 +235,42 @@ function pbars(rows, key, unit) {
     return `<span class="pb" style="left:${i * W}%;width:${W}%" title="Week van ${d.toLocaleDateString("nl-BE", { day: "numeric", month: "short" })}: ${v} ${esc(unit)}"><i style="height:${Math.max(v ? 4 : 0, v / max * 100)}%"></i>${i === rows.length - 1 ? `<em>${v}</em>` : ""}</span>`; }).join("")}</div>
     <div class="pbx"><span>${new Date(rows[0].week).toLocaleDateString("nl-BE", { day: "numeric", month: "short" })}</span><span>deze week</span></div>`;
 }
+/* ============ Taken voor de beheerder: wat je zelf nog moet doen, stap voor stap; afgevinkt wordt onthouden op al je toestellen ============ */
+const SB_CLUB = "https://supabase.com/dashboard/project/intswyovpwiigdwmgjfz", SB_SAXO = "https://supabase.com/dashboard/project/uaslzsglcmzlmrttwipr";
+const TAKEN = [
+  { g: "Domein en inloggen", items: [
+    { id: "gh-https", t: "Beveiligde verbinding (https) afdwingen", why: "Zodat er nergens meer \"Niet beveiligd\" staat.", steps: ["Open <b>GitHub → repo ogv-trainers → Settings → Pages</b>.", "Staat onder <i>Custom domain</i> <b>DNS check successful</b>? Dan is het goed.", "Vink <b>Enforce HTTPS</b> aan. Is het grijs, wacht dan een uur en ververs de pagina.", "Test: open <b>https://trainers.footballcoachhub.be</b>. Er hoort een slotje te staan."], links: [["GitHub Pages openen", "https://github.com/arneschepens5-oss/ogv-trainers/settings/pages"]] },
+    { id: "sb-auth-url", t: "Aanmeldadres doorgeven aan Supabase", why: "Zodat de link in een mail (wachtwoord vergeten, bevestiging) op het nieuwe adres uitkomt.", steps: ["Open <b>Authentication → URL Configuration</b> van het clubproject.", "Zet <b>Site URL</b> op <b>https://trainers.footballcoachhub.be</b>.", "Klik bij <b>Redirect URLs</b> op <i>Add URL</i> en voeg <b>https://trainers.footballcoachhub.be/**</b> toe. Laat het oude adres er nog een tijd naast staan.", "Klik op <b>Save changes</b>."], links: [["URL Configuration openen", SB_CLUB + "/auth/url-configuration"]] },
+    { id: "ovh-redirect", t: "footballcoachhub.be doorsturen naar de app", why: "Zodat wie gewoon footballcoachhub.be intikt, in de app terechtkomt.", steps: ["Ga in OVH naar <b>Web Cloud → Domain names → footballcoachhub.be</b> en open het tabblad <b>Redirection</b>.", "Klik op <b>Add a redirection</b> en laat het subdomein leeg.", "Kies <b>Visible permanent redirection (301)</b> en vul <b>https://trainers.footballcoachhub.be</b> in.", "Vink aan dat ook <b>www</b> doorgestuurd wordt en bevestig.", "Let op: dit werkt enkel voor http. Geef trainers en ouders dus altijd <b>trainers.footballcoachhub.be</b>."], links: [["OVH openen", "https://manager.eu.ovhcloud.com/"]] },
+    { id: "reinstall", t: "De app opnieuw installeren op het nieuwe adres", why: "De oude installatie toont een adresbalk en je moet er opnieuw in loggen. Ook trainers die de app al hadden moeten dit één keer doen.", steps: ["Open de geïnstalleerde app, kies rechtsboven de drie puntjes en dan <b>Verwijderen</b>.", "Ga in Chrome naar <b>https://trainers.footballcoachhub.be</b>.", "Klik op het installatie-icoon in de adresbalk (of op de gsm: <i>Toevoegen aan startscherm</i>).", "Meld je één keer aan en laat de browser het wachtwoord bewaren.", "Laat de trainers weten dat ze hetzelfde moeten doen."], links: [] } ] },
+  { g: "Veiligheid", items: [
+    { id: "leaked-pw", t: "Controle op uitgelekte wachtwoorden aanzetten", why: "Weigert wachtwoorden die al bij een datalek bekend zijn. Mogelijk enkel in een betaald Supabase-plan.", steps: ["Open <b>Authentication → Sign In / Providers → Email</b> van het clubproject.", "Zoek <b>Prevent use of leaked passwords</b> en zet die aan.", "Staat er dat het enkel in het Pro-plan kan? Dan kun je dit overslaan en later beslissen."], links: [["Instellingen openen", SB_CLUB + "/auth/providers"]] } ] },
+  { g: "Saxo (privé)", items: [
+    { id: "saxo", t: "Saxo-koppeling afmaken", why: "De Saxo-gegevens staan in een apart Supabase-project, maar de sleutels moeten nog ingevuld worden.", steps: ["Open het project <b>saxo-portefeuille</b> in Supabase en ga naar <b>Edge Functions → Secrets</b>.", "Voeg <b>SAXO_APP_KEY</b> en <b>SAXO_APP_SECRET</b> toe met de waarden uit je Saxo-ontwikkelaarsaccount.", "Voeg in het Saxo Developer Portal bij je app dit <b>redirect-adres</b> toe: <b>https://uaslzsglcmzlmrttwipr.supabase.co/functions/v1/saxo-auth/callback</b>.", "Vraag mij in de chat om de startlink en de nieuwe connector-URL. Die zet ik bewust niet hier, want ze geven toegang tot je portefeuille.", "Let op: een gratis Supabase-project pauzeert na een week zonder activiteit. Open het af en toe, of laat mij de koppeling tijdelijk bijhouden."], links: [["Secrets openen", SB_SAXO + "/functions/secrets"]] } ] },
+  { g: "Testen", items: [
+    { id: "test-share", t: "Een deellink van begin tot einde testen", why: "Zodat je zeker weet dat ouders en trainers de link kunnen openen.", steps: ["Maak in de app een training en kies <b>Delen</b>.", "Open de korte link op je gsm, in een tabblad zonder aanmelding.", "Controleer dat de training verschijnt en dat de afbeeldingen laden."], links: [] },
+    { id: "gsc", t: "(Optioneel) Vindbaar worden in Google", why: "Pas zinvol als je een openbare startpagina hebt; zeg het me dan en ik bouw die.", steps: ["Open Google Search Console en kies <b>Domein</b>.", "Vul <b>footballcoachhub.be</b> in en voeg het TXT-record dat Google toont toe in de DNS zone bij OVH.", "Wacht tot Google bevestigt dat het domein van jou is."], links: [["Search Console openen", "https://search.google.com/search-console"]] } ] }
+];
+const takenDone = () => { try { return mode === "cloud" ? { ...(user?.user_metadata?.fch_taken || {}) } : JSON.parse(localStorage.getItem("fch-taken") || "{}"); } catch (e) { return {}; } };
+const takenOpen = () => { const d = takenDone(); return TAKEN.flatMap(g => g.items).filter(t => !d[t.id]).length; };
+async function takenSet(id, on) { const cur = takenDone(); if (on) cur[id] = 1; else delete cur[id];
+  if (mode === "cloud" && sb) { const { data, error } = await sb.auth.updateUser({ data: { fch_taken: cur } }); if (error) { toast("Bewaren mislukt: " + error.message); return false; } if (data?.user) user = data.user; }
+  else { try { localStorage.setItem("fch-taken", JSON.stringify(cur)); } catch (e) {} }
+  return true; }
+function takenView(v) {
+  const done = takenDone(), all = TAKEN.flatMap(g => g.items), n = all.filter(t => done[t.id]).length;
+  v.innerHTML = head("Taken", "Wat jij nog moet doen, stap voor stap. Vink af wat klaar is: dat wordt onthouden, ook op je andere toestellen.", `<a class="btn ghost" href="#/platform">Terug</a>`) +
+    `<div class="sec"><div class="tkbar" role="progressbar" aria-valuemin="0" aria-valuemax="${all.length}" aria-valuenow="${n}"><i style="width:${n / all.length * 100}%"></i></div><p class="hint" style="margin:6px 0 0" id="tkn">${n === all.length ? "Alles gedaan." : `${n} van ${all.length} gedaan`}</p></div>` +
+    TAKEN.map(g => `<section class="sec"><h2>${esc(g.g)}</h2><div class="tklist">${g.items.map(t => `<details class="tk${done[t.id] ? " done" : ""}" data-tk="${t.id}"${done[t.id] ? "" : " open"}><summary><label class="check"><input type="checkbox" data-tkc="${t.id}"${done[t.id] ? " checked" : ""} aria-label="Klaar: ${esc(t.t)}"><span><b>${esc(t.t)}</b></span></label></summary>
+      <div class="tkbody"><p class="hint" style="margin:0 0 8px">${esc(t.why)}</p><ol>${t.steps.map(x => `<li>${x}</li>`).join("")}</ol>${t.links.length ? `<div class="row" style="gap:8px;flex-wrap:wrap">${t.links.map(([l, u]) => `<a class="btn ghost small" href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join("")}</div>` : ""}</div></details>`).join("")}</div></section>`).join("");
+  $$("[data-tkc]", v).forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = async () => { const on = c.checked; c.disabled = true; const ok = await takenSet(c.dataset.tkc, on); c.disabled = false; if (!ok) { c.checked = !on; return; }
+    const d = c.closest("details"); d.classList.toggle("done", on); if (on) d.open = false;
+    const k = takenDone(), m = all.filter(t => k[t.id]).length; $("#tkn", v).textContent = m === all.length ? "Alles gedaan." : `${m} van ${all.length} gedaan`; $(".tkbar i", v).style.width = m / all.length * 100 + "%"; $(".tkbar", v).setAttribute("aria-valuenow", m); }; });
+}
 route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
   if (!S.platform && mode !== "demo") { v.innerHTML = `<div class="empty"><b>Alleen voor de beheerder van het platform</b></div>`; return; }
   if (sub === "meldingen") { v.innerHTML = head("Meldingen van alle clubs", "Problemen en vragen die trainers doorstuurden met de knop Probleem melden.", `<a class="btn ghost" href="#/platform">Terug</a>`) + `<div id="pfb"></div>`; return adminFeedback($("#pfb")); }
+  if (sub === "taken") return takenView(v);
   v.innerHTML = head("Platform", "Laden…");
   let data, st = null;
   if (mode === "demo") { data = PLATFORM_DEMO(); st = PLATFORM_STATS_DEMO(); }
@@ -254,7 +287,7 @@ route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
     : st && days(c.last_login) > 14 ? ["loss", "Stil sinds " + Math.round(days(c.last_login)) + " dagen"] : ["win", "Actief"];
   const mb = st ? st.db_bytes / 1e6 : 0, mbMax = 500, attention = data.filter(c => status(c)[0] !== "win");
   v.innerHTML = head("Platform", st ? `Overzicht van ${PRODUCT}, bijgewerkt om ${new Date(st.generated_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}. Enkel tellingen: spelers, ploegen en verslagen van een club zie je hier niet.` : "Clubs aanmaken en instellen.",
-      `<button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
+      `<a class="btn ghost" href="#/platform/taken">${takenOpen() ? `Taken (${takenOpen()} open)` : "Taken"}</a><button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
     (st ? "" : `<div class="share sec">${IC.eye}<div>Voer het databasescript <b>v36</b> uit in Supabase om hier ook het gebruik per club en per week te zien.</div></div>`) +
     `<div class="sec kpis">
       <div class="kpi"><small>Clubs</small><b>${data.length}</b><span>${data.filter(c => status(c)[0] === "win").length} actief</span></div>

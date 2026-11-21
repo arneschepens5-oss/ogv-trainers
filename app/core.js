@@ -581,13 +581,13 @@ let teardown = null;
 /* shell(true) = nieuwe lege pagina (enkel bij het openen van een pagina); shell() = enkel menu en zijbalk vernieuwen, de getoonde pagina blijft staan */
 function shell(fresh) {
   const oldView = fresh ? null : $("#view");
-  const r = cur(), active = r.page === "platform" && r.id === "meldingen" ? "platform/meldingen" : ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
+  const r = cur(), active = r.page === "platform" && ["meldingen", "taken"].includes(r.id) ? "platform/" + r.id : ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g)
     .map(g => ({ ...g, items: g.items.filter(([k]) => !clubOff(k)) })).filter(g => g.items.length);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
   const hasTeam = S.admin || S.allTeams || myTeams().length > 0;
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
-  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["clubinstellingen", "Instellingen", "star"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
+  const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/taken", "Taken", "plan"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["clubinstellingen", "Instellingen", "star"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
     .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "intscouting" || S.admin || S.intscout !== false) && (k !== "scoutveld" || S.admin || S.intscout !== false || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
@@ -621,7 +621,7 @@ function shell(fresh) {
     <div class="page" id="view"></div>
   </main>
   <nav class="tabbar${platOnly ? " t3" : ""}" aria-label="Snelmenu">
-    ${(platOnly ? [["platform","Overzicht","chart"],["platform/meldingen","Meldingen","mail"]] : [["start","Vandaag","home"],["kalender","Kalender","cal"],["spelers","Ploeg","ppl"],["trainingen","Training","plan"]]).map(([k,l,i]) => `<a href="#/${k}"${(k === "start" ? active === "start" : curSec && curSec.items.some(([x]) => x === k)) || (!curSec && active === k) ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
+    ${(platOnly ? [["platform","Overzicht","chart"],["platform/taken","Taken","plan"],["platform/meldingen","Meldingen","mail"]] : [["start","Vandaag","home"],["kalender","Kalender","cal"],["spelers","Ploeg","ppl"],["trainingen","Training","plan"]]).map(([k,l,i]) => `<a href="#/${k}"${(k === "start" ? active === "start" : curSec && curSec.items.some(([x]) => x === k)) || (!curSec && active === k) ? ' aria-current="page"' : ""}>${IC[i]}<span>${l}</span></a>`).join("")}
     <button type="button" data-sheet>${IC.menu}<span>Meer</span><i class="tdot" data-unread-dot${S.unread ? "" : " hidden"}></i></button>
   </nav>
   <div class="sheet" id="sheet"><div class="in"><div class="grab"></div>${false ? `<button class="clubsw" type="button" data-clubsw>${IC.swap}<span>${esc(clubName())} · andere club</span></button>` : ""}<nav class="nav">${navHtml}</nav>
