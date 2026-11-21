@@ -49,7 +49,10 @@ async function clubStatus() {
     if (!S.member) { try { const cl = await sb.rpc("claim_club_admin"); if (cl.data) return clubStatus(); } catch (x) {} }
     if (!S.member) { const code = (() => { try { return localStorage.getItem("ogv-invite"); } catch (x) {} })(); /* code die bij registreren werd ingevuld */
       if (code) { const r = await sb.rpc("join_club", { code }); if (r.data) { S.member = true; try { localStorage.removeItem("ogv-invite"); } catch (x) {} } } } }
-  catch (e) { S.member = true; S.admin = false; /* databaseversie 5 nog niet uitgevoerd: gedrag zoals vroeger */ }
+  catch (e) { /* geen verbinding: de opgeslagen gegevens van dit toestel blijven bruikbaar; online met een fout: niemand doorlaten, eerst nog eens proberen */
+    if (typeof navigator !== "undefined" && navigator.onLine === false) { S.member = true; S.admin = false; }
+    else if (!clubStatus._retry) { clubStatus._retry = true; await new Promise(r => setTimeout(r, 1200)); try { return await clubStatus(); } finally { clubStatus._retry = false; } }
+    else { S.member = false; S.admin = false; } }
 }
 
 /* ============ clubbeheer ============ */
