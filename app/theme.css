@@ -88,7 +88,7 @@ h1.pg::after{display:none}
   html.sidemini .side{padding:14px 10px;overflow-x:hidden}
   html.sidemini .sidetog span,html.sidemini .side .brand>span:not(.ogvlogo),html.sidemini .side .nav a>span,html.sidemini .side .nav a .car,
   html.sidemini .side .subside,html.sidemini .side .subwrap,html.sidemini .side .teampick>span:not(.bdg),html.sidemini .side .navgrp,
-  html.sidemini .side .foot .who,html.sidemini .side .foot a>span,html.sidemini .side .foot button>span,html.sidemini .side .foot small{display:none!important}
+  html.sidemini .side .foot .who{display:none!important}
   html.sidemini .sidetog{justify-content:center;padding:8px 0}
   html.sidemini .sidetog .ar{transform:rotate(180deg);transform-origin:14px 12px}
   html.sidemini .side .brand{justify-content:center;padding:4px 0 14px;margin:0 0 8px}
@@ -102,3 +102,24 @@ h1.pg::after{display:none}
   html.sidemini .subnav{display:flex!important}html.sidemini .subnav + .page{padding-top:22px}
 }
 @media (prefers-reduced-motion:reduce){.shell{transition:none}}
+
+/* ---------- account: één knop met een klein menu (in plaats van losse knoppen) ---------- */
+.side .foot{position:relative}
+.side .footlinks{display:none}
+.acct{position:relative}
+.acctbtn{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:transparent;padding:6px;border-radius:12px;cursor:pointer;text-align:left;color:inherit}
+.acctbtn:hover{background:color-mix(in srgb,var(--card2) 80%,transparent)}
+.acct .av{overflow:hidden}.acct .av img{width:100%;height:100%;object-fit:cover;display:block}
+.acctmenu{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:40;display:flex;flex-direction:column;padding:6px;border-radius:14px;background:var(--card);border:1px solid var(--line);box-shadow:var(--sh-hi)}
+.acctmenu[hidden]{display:none}
+.acctmenu button,.acctmenu a{display:flex;align-items:center;gap:10px;padding:9px 10px;border:0;background:none;border-radius:9px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;text-decoration:none}
+.acctmenu button:hover,.acctmenu a:hover{background:var(--card2)}
+.acctmenu svg{width:17px;height:17px;color:var(--muted)}
+.acctmenu [data-logout]{color:var(--bad)}.acctmenu [data-logout] svg{color:var(--bad)}
+@media (min-width:901px){html.sidemini .acctmenu{position:fixed;left:92px;right:auto;bottom:14px;width:230px}html.sidemini .acctbtn{justify-content:center;flex:none;padding:4px}html.sidemini .acct{justify-content:center}}
+/* ploegfoto */
+.teampick .bdg.img,.bdg.img{overflow:hidden;padding:0}.bdg.img img{width:100%;height:100%;object-fit:cover;display:block}
+.tphoto{display:flex;gap:16px;align-items:center}
+.tpimg{width:84px;height:84px;flex:none;border-radius:16px;overflow:hidden;display:grid;place-items:center;background:var(--yellow);color:var(--onY);font-weight:900;font-size:22px}
+.tpimg img{width:100%;height:100%;object-fit:cover}
+html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-start!important}

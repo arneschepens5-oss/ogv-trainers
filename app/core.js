@@ -615,9 +615,9 @@ function shell(fresh) {
   const navHtml = (loose.length ? `<div class="navg"><div class="navgrp">Algemeen</div>${navItems({ items: loose })}</div>` : "") + secs.filter(sec => sec.g).map(sec => `<div class="navg" data-g="${esc(sec.g)}"><div class="navgrp">${sec.g}</div>${navItems(sec)}</div>`).join("");
   const subHtml = curSec && curSec.items.length > 1 ? `<nav class="subnav" aria-label="${esc(curSec.g)}">${curSec.items.map(([k, l]) => `<a href="#/${k}"${active === k ? ' aria-current="page"' : ""}>${String(l).replace(/\u00AD/g, "")}</a>`).join("")}</nav>` : "";
   const nm = myName(), who = mode === "demo" ? "Demomodus" : (nm || user?.email || ""), ini = mode === "demo" ? "D" : (who.replace(/[^a-z]/gi, "")[0] || "T").toUpperCase();
-  const acct = logged ? `<div class="acct"><span class="av" aria-hidden="true">${ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? (CLUB.id === "platform" ? "Beheerder van het platform" : esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName())) : `<button class="link" type="button" data-setname>Je naam invullen</button>`}</small></span>${mode === "demo" ? "" : `<button class="ib" type="button" data-account title="Mijn account" aria-label="Mijn account">${IC.gear}</button>`}<button class="ib" type="button" data-logout title="${mode === "demo" ? "Demo verlaten" : "Afmelden"}" aria-label="${mode === "demo" ? "Demo verlaten" : "Afmelden"}">${IC.logout}</button></div>`
+  const acct = logged ? `<div class="acct"><button class="acctbtn" type="button" data-acctmenu aria-haspopup="menu" aria-label="Accountmenu"><span class="av" aria-hidden="true">${S.myPhoto ? `<img data-pp="${esc(S.myPhoto)}" alt="">` : ini}</span><span class="who"><b title="${esc(user?.email || who)}">${esc(who)}</b><small>${mode === "demo" ? "Voorbeeldgegevens" : nm ? (CLUB.id === "platform" ? "Beheerder van het platform" : esc(S.functie || (S.admin ? "Beheerder" : "Trainer")) + " · " + esc(clubName())) : `<span class="link" data-setname>Je naam invullen</span>`}</small></span></button><div class="acctmenu" role="menu" hidden>${mode === "demo" || !user ? "" : `<button type="button" role="menuitem" data-myprof>${IC.ppl}<span>Mijn profiel en foto</span></button>`}<button type="button" role="menuitem" data-settings>${IC.gear}<span>Mijn instellingen</span></button>${mode === "demo" ? "" : `<button type="button" role="menuitem" data-account>${IC.eye}<span>Mijn account</span></button>`}${S.platform && !ADMIN_APP && mode === "cloud" ? `<a role="menuitem" href="./?app=beheer#/platform" target="_blank" rel="noopener">${IC.gear}<span>Beheer-app openen</span></a>` : ""}<button type="button" role="menuitem" data-logout>${IC.logout}<span>${mode === "demo" ? "Demo verlaten" : "Afmelden"}</span></button></div></div>`
     : `<button class="btn small" type="button" data-login style="width:100%">Aanmelden</button>`;
-  const teamBtn = logged && !platOnly ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg${teamCode(t).length > 3 ? " sm" : ""}">${esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + (myTeams().length === 1 ? " ploeg" : " ploegen") : "Nog geen ploeg"}</small></span>`}</button>` : "";
+  const teamBtn = logged && !platOnly ? `<button class="teampick" type="button" data-pick>${t ? `<span class="bdg${teamCode(t).length > 3 ? " sm" : ""}${t.photo ? " img" : ""}">${t.photo ? `<img data-pp="${esc(t.photo)}" alt="">` : esc(teamCode(t))}</span><span><b>${esc(t.name)}</b><small>${esc([t.format, t.season].filter(Boolean).join(" · ")) || "Mijn ploeg"}</small></span>` : `<span class="bdg">+</span><span><b>Kies je ploeg</b><small>${myTeams().length ? myTeams().length + (myTeams().length === 1 ? " ploeg" : " ploegen") : "Nog geen ploeg"}</small></span>`}</button>` : "";
   const keep = $(".side")?.scrollTop || 0; /* zijbalk blijft staan waar je was */
   $("#app").innerHTML = `<div class="shell${logged ? "" : " out"}">
   <aside class="side" aria-label="Hoofdmenu">
@@ -625,7 +625,7 @@ function shell(fresh) {
     <button class="sidetog" type="button" data-sidetog aria-label="Zijbalk smaller of breder maken" title="Enkel iconen of volledige namen"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path class="ar" d="M15 10l-2 2 2 2"/></svg><span>Smaller menu</span></button>
     ${teamBtn}
     <nav class="nav">${sideHtml}</nav>
-    <div class="foot">${logged ? footLinks() : ""}${acct}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div>`}</div>
+    <div class="foot">${acct}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div>`}</div>
   </aside>
   <main>${S.support ? `<div class="supbar" role="status">${IC.eye}<span><b>Platformsupport</b> in ${esc(clubName())}. De beheerders zien dat je hier bent geweest.</span><button class="btn small" type="button" data-supleave>Club verlaten</button></div>` : ""}
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
@@ -652,8 +652,11 @@ function shell(fresh) {
   bindThemeSwitch();
   $$("[data-sz-range]").forEach(b => b.oninput = () => { try { localStorage.setItem("ogv-sz", b.value); } catch (e) {} applyBig(); $$("[data-sz-range]").forEach(x => { x.value = b.value; x.setAttribute("aria-valuetext", szLabel(+b.value)); }); });
   $$("[data-logout]").forEach(b => b.onclick = logout); $$("[data-clubsw]").forEach(b => b.onclick = clubSwitch);
-  $$("[data-setname], .acct .who b").forEach(b => b.onclick = () => mode !== "demo" && nameForm());
+  $$("[data-setname]").forEach(b => b.onclick = e => { e.stopPropagation(); mode !== "demo" && nameForm(); });
   $$("[data-account]").forEach(b => b.onclick = accountDialog);
+  $$("[data-acctmenu]").forEach(b => b.onclick = e => { e.stopPropagation(); const m = b.parentElement.querySelector(".acctmenu"); if (!m) return; const o = m.hidden; $$(".acctmenu").forEach(x => x.hidden = true); m.hidden = !o; });
+  $$("[data-myprof]").forEach(b => b.onclick = myProfile);
+  hydratePhotos($(".side") || document); hydratePhotos($(".sheet") || document); if (logged && mode === "cloud" && S.myPhoto === undefined) myPhotoLoad();
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
   $$("[data-report]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); reportProblem(); });
   const sh = $("#sheet"); $("[data-sheet]").onclick = () => sh.classList.add("open"); sh.onclick = e => { if (e.target === sh || e.target.closest("a")) sh.classList.remove("open"); };
@@ -977,3 +980,11 @@ document.addEventListener("toggle", e => { const d = e.target; if (!d.classList?
   document.addEventListener("visibilitychange", check); setInterval(check, 15 * 60 * 1000); setTimeout(check, 20000);
 })();
 document.addEventListener("click", e => { if (e.target.closest("[data-supleave]") && typeof supportLeave === "function") supportLeave(); });
+
+/* eigen foto (uit het trainersprofiel) voor de zijbalk; menu sluit bij een klik ernaast */
+async function myPhotoLoad() { S.myPhoto = null; try { const { data } = await sb.from("trainer_profiles").select("photo").eq("user_id", user.id).eq("club_id", CLUB.id).maybeSingle(); if (data?.photo) { S.myPhoto = data.photo; shell(); } } catch (e) {} }
+async function myProfile() { $$(".acctmenu").forEach(x => x.hidden = true);
+  if (typeof tpLoad !== "function") { location.hash = "#/trainer/" + encodeURIComponent(user.id); return; }
+  await tpLoad(); const pr = tpOf(user.id), nm = pr?.name || myName() || tNice(user.email);
+  trainerForm({ key: user.id, user_id: user.id, email: user.email, teams: [] }, pr, nm); }
+document.addEventListener("click", e => { if (!e.target.closest(".acct")) $$(".acctmenu").forEach(x => x.hidden = true); });

@@ -125,5 +125,5 @@ function trainerForm(t, pr, nm) {
       row.dipl = nd;
       await db.save("trainer_profiles", row).catch(err => { if (/dipl/.test(err.message || "")) throw new Error("Voer eerst supabase-diplomas-v45.sql uit in Supabase."); throw err; });
       if ((ph.blob || ph.remove) && pr?.photo) photos.remove(pr.photo); drop.forEach(x => docs.remove(x));
-      d.close(); render(); }, "Profiel opgeslagen."); };
+      if (t.user_id === user?.id) S.myPhoto = row.photo || null; d.close(); render(); shell(); }, "Profiel opgeslagen."); };
 }

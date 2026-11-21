@@ -253,6 +253,9 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
   v.innerHTML = head("Ploeg en trainers", `${esc(t.name)} · ${esc([t.category, t.format, t.season].filter(Boolean).join(" · "))} · ${mf.periods} × ${mf.minutes} minuten`, `<button class="btn ghost" type="button" id="editT">Ploeg bewerken</button>`) +
   `<div class="share" style="margin-bottom:14px">${IC.eye}<div><b style="color:var(--ink)">Wat zien andere trainers?</b><br>De uitslag en het wedstrijdverslag van elke wedstrijd zijn zichtbaar voor alle trainers van de club. Spelersfiches, trainingen, aanwezigheden en evaluaties blijven privé voor de trainers van deze ploeg.
     <p style="margin:8px 0 0">Ook de cijfers en notities per speler bij wedstrijden zijn zichtbaar voor alle trainers van de club. Ouders en leden zonder ploeg (bv. een scout) zien ze niet.</p></div></div>
+  <div class="panel tphoto" style="margin-bottom:14px"><span class="tpimg">${t.photo ? `<img data-pp="${esc(t.photo)}" alt="Ploegfoto">` : `<b>${esc(teamCode(t))}</b>`}</span>
+    <div><h2 style="margin:0 0 4px">Ploegfoto</h2><p class="hint" style="margin:0 0 10px">Verschijnt bij de ploegkeuze en bovenaan het menu. Vraag ouders om toestemming voor een groepsfoto.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><label class="btn ghost small" style="cursor:pointer">${t.photo ? "Andere foto" : "Foto toevoegen"}<input type="file" id="tpFile" accept="image/*" hidden></label>${t.photo ? `<button class="btn ghost small" type="button" id="tpDel">Foto weghalen</button>` : ""}</div></div></div>
   <div class="grid2"><div class="panel"><h2>Trainers van deze ploeg</h2><div class="list">${S.trainers.map(x => `<a class="item" href="#/trainer/${encodeURIComponent(x.user_id || x.email || "")}"><span class="main"><b>${esc((typeof tpOf === "function" && tpOf(x.user_id)?.name) || x.email || "Trainer")}</b><small>${x.user_id === user?.id ? "jij · " : ""}bekijk dossier</small></span></a>`).join("")}</div>
     ${S.admin ? `<form id="addTr" class="row" style="margin-top:12px"><input type="email" name="mail" required placeholder="e-mailadres co-trainer" style="flex:1;min-width:180px"><button class="btn">Toevoegen</button></form>
     <p class="hint">Als beheerder kan je ook alle ploegen beheren via <a href="#/clubbeheer/ploegen">Beheer → Ploegen en trainers</a>.</p>` : `<p class="hint" style="margin-bottom:0">Trainers toevoegen of weghalen doet de beheerder van de club. Stuur een melding via <b>Probleem melden</b> als er iemand bij moet of weg moet.</p>`}</div>
@@ -265,6 +268,10 @@ route("ploeg-instellingen", { title: "Ploeg en trainers", auth: true, team: true
   $("#editT").onclick = () => teamForm(t); const se = $("#season"); if (se) se.onclick = seasonForm; rbfaPanel($("#rbfaP"));
 
   $$("[data-agepick]", v).forEach(a => a.onclick = () => { window.EV_AGE_PICK = a.dataset.agepick; });
+  hydratePhotos(v);
+  const tpSet = async photo => { const old = t.photo; t.photo = photo; await db.save("teams", t); if (old && old !== photo) photos.remove(old); shell(); render(); };
+  $("#tpFile").onchange = e => { const f = e.target.files[0]; if (f) safe(async () => { const blob = await photos.shrink(f); await tpSet(await photos.save(t.id, "ploeg", blob)); }, "Ploegfoto bewaard."); };
+  const tpd = $("#tpDel"); if (tpd) tpd.onclick = () => safe(() => tpSet(null), "Ploegfoto weggehaald.");
   $("#saveLists").onclick = () => { t.worktags = $("#tags").value.split("\n").map(s => s.trim()).filter(Boolean); safe(() => db.save("teams", t), "Opgeslagen."); };
   const at = $("#addTr"); if (at) at.onsubmit = async e => { e.preventDefault(); const mail = e.target.mail.value.trim();
     await safe(async () => { const r = await db.addTrainer(t.id, mail); if (r === "geen_account") { toast(mode === "demo" ? "In de demo kan je geen trainers toevoegen." : "Geen account gevonden voor " + mail + ". Vraag de beheerder om er een aan te maken."); return; }
