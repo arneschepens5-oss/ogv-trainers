@@ -641,10 +641,11 @@ function shell(fresh) {
   </div>`;
   if (oldView) $("#view").replaceWith(oldView); /* nooit een leeg scherm omdat het menu ververst werd */
   const sd = $(".side"); if (sd && keep) sd.scrollTop = keep;
+  fitSide();
   $$(".side .nav a, .side .teampick, .side .foot a, .side .foot button").forEach(x => { const t = x.textContent.trim(); if (t && !x.title) x.title = t; });
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   /* onderdelen in de zijbalk klappen vloeiend open en dicht zonder de pagina te wisselen */
-  $$(".side a.secl[data-sec]").forEach(a => a.onclick = e => { if (document.documentElement.classList.contains("sidemini")) return; e.preventDefault(); const g = a.dataset.sec, o = !a.classList.contains("open");
+  $$(".side a.secl[data-sec]").forEach(a => a.onclick = e => { if (document.documentElement.classList.contains("sidemini") || document.documentElement.classList.contains("sidefit")) return; e.preventDefault(); const g = a.dataset.sec, o = !a.classList.contains("open");
     a.classList.toggle("open", o); a.nextElementSibling?.classList.toggle("open", o); a.setAttribute("aria-expanded", o);
     if (o) { SIDE_OPEN.add(g); SIDE_SHUT.delete(g); } else { SIDE_OPEN.delete(g); SIDE_SHUT.add(g); } });
   $$("[data-settings]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); settingsDialog(); });
@@ -990,3 +991,7 @@ async function myProfile() { $$(".acctmenu").forEach(x => x.hidden = true);
   await tpLoad(); const pr = tpOf(user.id), nm = pr?.name || myName() || tNice(user.email);
   trainerForm({ key: user.id, user_id: user.id, email: user.email, teams: [] }, pr, nm); }
 document.addEventListener("click", e => { if (!e.target.closest("[data-acctmenu]")) $$(".acctmenu").forEach(x => x.hidden = true); });
+
+/* past de zijbalk niet op het scherm, dan klappen onderdelen niet open maar staan hun pagina's als tabbladen bovenaan */
+function fitSide() { const r = document.documentElement, d = $(".side"); r.classList.remove("sidefit"); if (d && innerWidth > 900 && d.scrollHeight > d.clientHeight + 2) r.classList.add("sidefit"); }
+addEventListener("resize", () => { clearTimeout(fitSide.t); fitSide.t = setTimeout(fitSide, 150); });

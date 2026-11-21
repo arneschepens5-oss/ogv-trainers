@@ -127,3 +127,21 @@ html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-st
 /* zijbalk: geen zichtbare schuifbalk (scrollen met muiswiel of touchpad werkt gewoon) */
 .side{scrollbar-width:none;-ms-overflow-style:none;scrollbar-gutter:auto}
 .side::-webkit-scrollbar{display:none;width:0;height:0}
+
+/* ---------- zijbalk zonder scrollen ---------- */
+@media (min-width:901px){
+  html:not(.sidemini) .sidetog{position:absolute;top:18px;right:6px;margin:0;padding:6px;z-index:2}
+  html:not(.sidemini) .sidetog span{display:none}
+  html:not(.sidemini) .side .brand{padding-right:40px}
+  .side .nav a.secl{padding-top:5px;padding-bottom:5px}
+  .side .nav a.secl svg{width:28px;height:28px;padding:5px}
+  .side .nav>a:not(.secl){padding-top:7px;padding-bottom:7px}
+  .side .teampick{padding-top:7px;padding-bottom:7px}
+  /* past het menu niet op het scherm: subpagina's als tabbladen bovenaan de pagina i.p.v. uitklappen */
+  html.sidefit .side .subwrap,html.sidefit .side .subside{display:none!important}
+  html.sidefit .side .nav a.secl .car{display:none}
+  html.sidefit .subnav{display:flex!important}html.sidefit .subnav + .page{padding-top:22px}
+}
+:root[data-theme="light"] .subnav{background:var(--card);border:1px solid color-mix(in srgb,var(--line) 75%,transparent);box-shadow:var(--sh)}
+:root[data-theme="light"] .subnav a{color:var(--muted)}:root[data-theme="light"] .subnav a:hover{color:var(--ink);background:var(--card2)}
+:root[data-theme="light"] .subnav a[aria-current="page"]{color:var(--onY)}
