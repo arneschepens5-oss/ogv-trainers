@@ -98,7 +98,7 @@ function brandIcons(id) { try { localStorage.setItem("fch-scout-club", id); } ca
   L("manifest", BFN + q + "&app=scout"); L("icon", BFN + q + "&icon=1"); L("apple-touch-icon", BFN + q + "&icon=1"); }
 (function () { const p = new URLSearchParams(location.search).get("c"); let id = p; try { id = p || localStorage.getItem("fch-scout-club"); } catch (e) {}
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return; brandIcons(id);
-  fetch(BFN + "?club=" + id + "&info=1").then(r => r.ok ? r.json() : null).then(c => { if (!c) return; const lg = document.getElementById("hlogo"), R = document.documentElement.style;
+  fetch(BFN + "?club=" + id + "&info=1").then(r => r.ok ? r.json() : null).then(c => { if (!c) return; window.LINKC = c; const lg = document.getElementById("hlogo"), R = document.documentElement.style;
     if (lg && c.logo) lg.src = c.logo; document.title = "Scouting · " + (c.short || c.name);
     const hc = document.getElementById("hclub"); if (hc && hc.textContent === "Speler toevoegen") hc.textContent = "Speler toevoegen · " + (c.short || c.name);
     if (c.color && c.id !== "00000000-0000-4000-8000-000000000001") { const h = c.color.replace("#", ""), [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255); R.setProperty("--yellow", c.color); R.setProperty("--onY", .2126 * r + .7152 * g + .0722 * b > .5 ? "#111" : "#fff"); } }).catch(() => {}); })();
@@ -129,12 +129,20 @@ async function start() {
   $("#out").hidden = false;
   let d = (await sb.rpc("club_status")).data || {};
   const pend = ls.get("ogv-scoutcode", ""); if (pend && !(d.member && (d.admin || (d.rechten || []).includes("scouting")))) { const j = await sb.rpc("join_scout", { code: pend }); if (j.data) { ls.set("ogv-scoutcode", ""); d = (await sb.rpc("club_status")).data || {}; } }
+  /* de club van de scoutlink gaat voor: hoort het account ook bij die club, dan werk je daar; anders eerst de scoutcode van die club */
+  let want = null, wrong = false; try { want = new URLSearchParams(location.search).get("c") || localStorage.getItem("fch-scout-club"); } catch (e) {}
+  if (want && /^[0-9a-f-]{36}$/i.test(want) && d.club && d.club.id !== want) { const sw = await sb.rpc("switch_club", { c: want }); if (sw.data) d = (await sb.rpc("club_status")).data || {}; else wrong = true; }
+  if (wrong) { const LN = (window.LINKC && (window.LINKC.short || window.LINKC.name)) || "deze club";
+    app.innerHTML = `<form class="card center" id="jf"><h2>Scoutcode van ${esc(LN)}</h2><p>Deze scoutlink is van <b>${esc(LN)}</b>. Je bent aangemeld als <b>${esc(session.user.email)}</b>, maar dat account hoort nog niet bij ${esc(LN)}. Vul de scoutcode in die je van ${esc(LN)} kreeg.</p>
+      <label>Scoutcode<input name="code" required autocomplete="off" placeholder="bv. S1A2B3C4" style="text-transform:uppercase"></label><div id="jerr"></div><button class="btn" type="submit">Toegang krijgen</button></form>`;
+    $("#jf").onsubmit = async e => { e.preventDefault(); const j = await sb.rpc("join_scout", { code: e.target.code.value.trim() }); if (j.data) start(); else $("#jerr").innerHTML = '<div class="msg">Deze scoutcode klopt niet.</div>'; }; return; }
   const st = (d.club && d.club.settings) || {};
   CLUBN = (d.club && (d.club.short || d.club.name)) || "";
   if (d.club && d.club.id) brandIcons(d.club.id);
   { const R = document.documentElement.style, lg = $("#hlogo"), ogv = d.club && d.club.id === "00000000-0000-4000-8000-000000000001";   /* logo en kleur van de club */
     if (lg) lg.src = st.logo && /^(https?:|data:|\.\.\/)/.test(st.logo) ? st.logo : ogv ? "../icons/ogv-192.png" : "../icons/icon-192.png";
     if (st.color && !ogv) { const h = st.color.replace("#", ""), [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255); R.setProperty("--yellow", st.color); R.setProperty("--onY", .2126 * r + .7152 * g + .0722 * b > .5 ? "#111" : "#fff"); }
+    else { R.removeProperty("--yellow"); R.removeProperty("--onY"); }
     if (CLUBN) document.title = "Scouting · " + CLUBN; } $("#hclub").textContent = CLUBN ? "Speler toevoegen · " + CLUBN : "Speler toevoegen";
   if (!d.member || !(d.admin || (d.rechten || []).includes("scouting"))) {
     app.innerHTML = `<form class="card center" id="jf"><h2>Nog geen toegang</h2><p>Je bent aangemeld als <b>${esc(session.user.email)}</b>. Vul de scoutcode in die je van de club kreeg.</p>
