@@ -13,9 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../fonts/fonts.css">
 <style>
 /* Layout: one-screen board app. Pitch is the hero; dock = step bar, contextual options, tool pane, tab bar (right column on desktop). */
 :root{
@@ -1044,7 +1042,7 @@ function exportPng(){const dim=exportDims();const s=1080/Math.min(dim.w,dim.h);c
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('load'));document.head.appendChild(s)})}
 async function exportPdf(){
   const st=$('#exStatus'); st.textContent='PDF maken…';
-  try{if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')}catch(e){st.textContent='De PDF-module kon niet laden. Controleer je verbinding.';return}
+  try{if(!window.jspdf)await loadScript('../app/vendor/jspdf.umd.min.js')}catch(e){st.textContent='De PDF-module kon niet laden. Controleer je verbinding.';return}
   const {jsPDF}=window.jspdf; const pdf=new jsPDF({unit:'mm',format:'a4'}); const f=F(), b=boundsFor(doc,f);
   const aspect=(b.x1-b.x0)/(b.y1-b.y0); const iw=182, ih=Math.min(105,iw*aspect); const pxW=1600, pxH=Math.round(pxW*ih/iw);
   pdf.setFont('helvetica','bold');pdf.setFontSize(17);pdf.text(doc.name||'Tactiek',14,16);
@@ -1653,7 +1651,7 @@ function renderExport(){
   $('#exOverlay').checked=prefs.exOverlay!==false; $('#exStatus').textContent='';
 }
 $('#exOverlay').onchange=e=>{prefs.exOverlay=e.target.checked;savePrefs()};
-$('#btnExport').onclick=()=>{renderExport();$('#dlgExport').showModal();if(!window.jspdf)loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').catch(()=>{})};
+$('#btnExport').onclick=()=>{renderExport();$('#dlgExport').showModal();if(!window.jspdf)loadScript('../app/vendor/jspdf.umd.min.js').catch(()=>{})};
 $('#exVideo').onclick=()=>{$('#dlgExport').close();record()};
 $('#exPng').onclick=()=>{$('#dlgExport').close();exportPng()};
 $('#exPdf').onclick=()=>exportPdf();

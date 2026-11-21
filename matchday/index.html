@@ -8,8 +8,7 @@
 <meta name="theme-color" content="#111110">
 <link rel="icon" type="image/png" href="../icons/favicon.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="../fonts/fonts.css">
 <style>
 /* Links het invulpaneel (alleen op scherm), rechts een echt A4-blad. Clubkleuren geel-zwart. */
 :root{
@@ -558,8 +557,8 @@ function loadScript(src){return new Promise((ok,ko)=>{const s=document.createEle
 $('pdf').addEventListener('click',async()=>{
   const msg=$('pdfMsg');msg.hidden=false;msg.textContent='PDF maken…';
   try{
-    if(!window.html2canvas)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-    if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    if(!window.html2canvas)await loadScript('../app/vendor/html2canvas.min.js');
+    if(!window.jspdf)await loadScript('../app/vendor/jspdf.umd.min.js');
     await document.fonts.ready;
     const sc=$('scaler'),old=sc.style.transform;sc.style.transform='none';
     const c=await html2canvas($('sheet'),{scale:2.5,backgroundColor:'#fff',useCORS:true});
