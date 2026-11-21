@@ -153,3 +153,5 @@ html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-st
   html.sidefit .side .nav a.secl.open:not(.cur) svg,html.sidemini .side .nav a.secl.open:not(.cur) svg{background:color-mix(in srgb,var(--c,#888) 15%,transparent);color:var(--c,var(--ink));box-shadow:none}
   html.sidefit .side .nav a.secl.open:not(.cur),html.sidemini .side .nav a.secl.open:not(.cur){font-weight:600}
 }
+/* uitgeklapt onderdeel compact houden zodat het menu op het scherm past */
+@media (min-width:901px){.side .nav>a{min-height:34px}.side .subside a{padding-top:6px;padding-bottom:6px}}

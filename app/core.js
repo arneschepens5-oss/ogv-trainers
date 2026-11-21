@@ -655,6 +655,7 @@ function shell(fresh) {
   $$("[data-pick]").forEach(b => b.onclick = pickTeam);
   /* onderdelen in de zijbalk klappen vloeiend open en dicht zonder de pagina te wisselen */
   $$(".side a.secl[data-sec]").forEach(a => a.onclick = e => { if (document.documentElement.classList.contains("sidemini") || document.documentElement.classList.contains("sidefit")) return; e.preventDefault(); const g = a.dataset.sec, o = !a.classList.contains("open");
+    if (o) $$(".side a.secl.open[data-sec]").forEach(x => { if (x === a) return; x.classList.remove("open"); x.nextElementSibling?.classList.remove("open"); x.setAttribute("aria-expanded", false); SIDE_OPEN.delete(x.dataset.sec); SIDE_SHUT.add(x.dataset.sec); });   /* één onderdeel tegelijk open */
     a.classList.toggle("open", o); a.nextElementSibling?.classList.toggle("open", o); a.setAttribute("aria-expanded", o);
     if (o) { SIDE_OPEN.add(g); SIDE_SHUT.delete(g); } else { SIDE_OPEN.delete(g); SIDE_SHUT.add(g); } });
   $$("[data-settings]").forEach(b => b.onclick = () => { $("#sheet")?.classList.remove("open"); settingsDialog(); });
@@ -1006,5 +1007,5 @@ async function myProfile() { $$(".acctmenu").forEach(x => x.hidden = true);
 document.addEventListener("click", e => { if (!e.target.closest("[data-acctmenu]")) $$(".acctmenu").forEach(x => x.hidden = true); });
 
 /* past de zijbalk niet op het scherm, dan klappen onderdelen niet open maar staan hun pagina's als tabbladen bovenaan */
-function fitSide() { const r = document.documentElement, d = $(".side"); r.classList.remove("sidefit"); if (d && innerWidth > 900 && d.scrollHeight > d.clientHeight + 2) r.classList.add("sidefit"); }
+function fitSide() { document.documentElement.classList.remove("sidefit"); }   /* onderdelen klappen altijd open in de zijbalk */
 addEventListener("resize", () => { clearTimeout(fitSide.t); fitSide.t = setTimeout(fitSide, 150); });
