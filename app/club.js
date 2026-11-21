@@ -1032,8 +1032,11 @@ async function csAccess(host, st, csSave, foot) {
 /* ============ platformsupport: enkel footballcoachhub@gmail.com; elke sessie staat in het spoor van de club ============ */
 async function supportEnter(c) { if (!c || !S.super) return;
   if (!confirm(`${c.name} openen als platformsupport?\n\nJe ziet alles wat een beheerder van de club ziet. De beheerders van ${c.name} zien in Beheer › Systeem dat platformsupport in de club was, met datum en uur.`)) return;
-  const { error } = await sb.rpc("support_enter", { c: c.id }); if (error) { toast(error.message); return; }
-  try { localStorage.removeItem("ogv-club"); localStorage.removeItem(TEAM_KEY); } catch (e) {} location.hash = "#/start"; location.reload(); }
+  const w = ADMIN_APP ? window.open("", "_blank") : null;   /* beheer-app: de club opent in de trainersapp, in een nieuw tabblad */
+  const { error } = await sb.rpc("support_enter", { c: c.id }); if (error) { w?.close(); toast(error.message); return; }
+  try { localStorage.removeItem("ogv-club"); localStorage.removeItem(TEAM_KEY); } catch (e) {}
+  if (ADMIN_APP) { const u = new URL("./#/start", location.href).href; if (w) w.location.href = u; else location.href = u; toast(c.name + " geopend in de trainersapp. Meld je daar aan met dit platformaccount als dat gevraagd wordt."); return; }
+  location.hash = "#/start"; location.reload(); }
 async function supportLeave() { await sb.rpc("support_leave"); try { localStorage.removeItem("ogv-club"); localStorage.removeItem(TEAM_KEY); } catch (e) {} location.hash = "#/platform"; location.reload(); }
 async function supportHistory(el) { if (mode === "demo") { el.textContent = "In de demo is er geen spoor."; return; }
   const { data, error } = await sb.rpc("support_history"); if (error) { el.textContent = "Spoor laden mislukt."; return; }

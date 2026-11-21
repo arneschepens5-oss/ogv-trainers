@@ -636,7 +636,7 @@ function shell(fresh) {
     <nav class="nav">${sideHtml}</nav>
     <div class="foot">${acct}${logged ? "" : `<div class="frow"><span>Weergave</span>${themeSwitch()}${bigSwitch()}</div>`}</div>
   </aside>
-  <main>${S.support ? `<div class="supbar" role="status">${IC.eye}<span><b>Platformsupport</b> in ${esc(clubName())}. De beheerders zien dat je hier bent geweest.</span><button class="btn small" type="button" data-supleave>Club verlaten</button></div>` : ""}
+  <main>${S.support && !ADMIN_APP ? `<div class="supbar" role="status">${IC.eye}<span><b>Platformsupport</b> in ${esc(clubName())}. De beheerders zien dat je hier bent geweest.</span><button class="btn small" type="button" data-supleave>Club verlaten</button></div>` : ""}
     <header class="topbar">${ogvBrand() ? LOGO("top") : PMARK("top")}${teamBtn || `<b style="flex:1;font-weight:900;font-stretch:118%">${esc(APPNAME())}</b>`}${mode === "demo" ? '<span class="pill" style="background:var(--info);color:#000">Demo</span>' : ""}</header>
     ${logged && !platOnly ? subHtml : ""}
     <div class="page" id="view"></div>
