@@ -145,3 +145,11 @@ html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-st
 :root[data-theme="light"] .subnav{background:var(--card);border:1px solid color-mix(in srgb,var(--line) 75%,transparent);box-shadow:var(--sh)}
 :root[data-theme="light"] .subnav a{color:var(--muted)}:root[data-theme="light"] .subnav a:hover{color:var(--ink);background:var(--card2)}
 :root[data-theme="light"] .subnav a[aria-current="page"]{color:var(--onY)}
+/* compact menu: items verdeeld over de volle hoogte, enkel het huidige onderdeel ingekleurd */
+@media (min-width:901px){
+  .side .nav{flex:1 1 auto}
+  .side .nav>a{flex:1 1 auto;max-height:62px;min-height:36px;align-items:center}
+  .side .nav>.subwrap{flex:none}
+  html.sidefit .side .nav a.secl.open:not(.cur) svg,html.sidemini .side .nav a.secl.open:not(.cur) svg{background:color-mix(in srgb,var(--c,#888) 15%,transparent);color:var(--c,var(--ink));box-shadow:none}
+  html.sidefit .side .nav a.secl.open:not(.cur),html.sidemini .side .nav a.secl.open:not(.cur){font-weight:600}
+}
