@@ -91,6 +91,18 @@ header img[hidden]{display:none}
 <main id="app"><p class="hint" style="text-align:center;margin-top:30vh">Laden…</p></main>
 <script src="../tactiekbord/vendor/supabase-2.118.0.js"></script>
 <script>
+/* club van de scoutlink (?c=...): logo, naam en kleur van die club, ook al voor het aanmelden en op het beginscherm */
+const BFN = "https://intswyovpwiigdwmgjfz.supabase.co/functions/v1/brand";
+function brandIcons(id) { try { localStorage.setItem("fch-scout-club", id); } catch (e) {} const q = "?club=" + id;
+  const L = (rel, href) => { let l = document.querySelector('link[rel="' + rel + '"]'); if (!l) { l = document.createElement("link"); l.rel = rel; document.head.appendChild(l); } if (l.getAttribute("href") !== href) l.href = href; };
+  L("manifest", BFN + q + "&app=scout"); L("icon", BFN + q + "&icon=1"); L("apple-touch-icon", BFN + q + "&icon=1"); }
+(function () { const p = new URLSearchParams(location.search).get("c"); let id = p; try { id = p || localStorage.getItem("fch-scout-club"); } catch (e) {}
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return; brandIcons(id);
+  fetch(BFN + "?club=" + id + "&info=1").then(r => r.ok ? r.json() : null).then(c => { if (!c) return; const lg = document.getElementById("hlogo"), R = document.documentElement.style;
+    if (lg && c.logo) lg.src = c.logo; document.title = "Scouting · " + (c.short || c.name);
+    const hc = document.getElementById("hclub"); if (hc && hc.textContent === "Speler toevoegen") hc.textContent = "Speler toevoegen · " + (c.short || c.name);
+    if (c.color && c.id !== "00000000-0000-4000-8000-000000000001") { const h = c.color.replace("#", ""), [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255); R.setProperty("--yellow", c.color); R.setProperty("--onY", .2126 * r + .7152 * g + .0722 * b > .5 ? "#111" : "#fff"); } }).catch(() => {}); })();
+
 const SB_URL = "https://intswyovpwiigdwmgjfz.supabase.co", SB_KEY = "sb_publishable_mGTwxXL1HjKgnJcgSATtxQ_6CvHJ-3W";
 /* zelfde aanmelding als de trainersapp (zelfde opslagsleutel): wie daar al aangemeld is, kan hier meteen scouten */
 const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit", storageKey: "tb_auth", lock: async (_n, _t, fn) => await fn() } });
@@ -119,6 +131,7 @@ async function start() {
   const pend = ls.get("ogv-scoutcode", ""); if (pend && !(d.member && (d.admin || (d.rechten || []).includes("scouting")))) { const j = await sb.rpc("join_scout", { code: pend }); if (j.data) { ls.set("ogv-scoutcode", ""); d = (await sb.rpc("club_status")).data || {}; } }
   const st = (d.club && d.club.settings) || {};
   CLUBN = (d.club && (d.club.short || d.club.name)) || "";
+  if (d.club && d.club.id) brandIcons(d.club.id);
   { const R = document.documentElement.style, lg = $("#hlogo"), ogv = d.club && d.club.id === "00000000-0000-4000-8000-000000000001";   /* logo en kleur van de club */
     if (lg) lg.src = st.logo && /^(https?:|data:|\.\.\/)/.test(st.logo) ? st.logo : ogv ? "../icons/ogv-192.png" : "../icons/icon-192.png";
     if (st.color && !ogv) { const h = st.color.replace("#", ""), [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255); R.setProperty("--yellow", st.color); R.setProperty("--onY", .2126 * r + .7152 * g + .0722 * b > .5 ? "#111" : "#fff"); }

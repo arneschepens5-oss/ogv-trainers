@@ -141,7 +141,7 @@ route("scouting", { title: "Scouting", auth: true, render: async (v, id) => {
   $$("[data-min]", v).forEach(b => b.onclick = () => { scF.min = { ...scF.min, [b.dataset.min]: b.dataset.v }; scF.soft = true; render(); });
   $$("[data-rm]", v).forEach(b => b.onclick = () => { const k = b.dataset.rm, x = b.dataset.val; if (k === "dOud" || k === "dJong") { scF[k] = false; } else if (k === "min") { scF.min = { ...scF.min, [x]: "" }; } else scF[k] = scF[k].filter(y => y !== x); scF.soft = true; render(); });
   const clr = $("#fclr"); if (clr) clr.onclick = () => { Object.assign(scF, { q: "", pos: [], stat: [], niv: [], voet: [], cat: [], dOud: false, dJong: false, min: {} }); scF.soft = true; render(); };
-  $("#scapp").onclick = () => { const url = new URL("scout/", location.href.split("#")[0].split("?")[0]).href;
+  $("#scapp").onclick = () => { const url = new URL("scout/?c=" + CLUB.id, location.href.split("#")[0].split("?")[0]).href;
     dialog(`<div class="dlg"><h2>Scoutapp</h2><p>Een aparte, eenvoudige app om tijdens of na een wedstrijd snel een gescoute speler toe te voegen. Scouts melden aan met hun gewone account en hebben het recht <b>Externe scouting</b> nodig.</p>
       <p class="hint">Open de link op de gsm en kies <b>Zet op beginscherm</b>. Zo staat de app tussen de andere apps.</p>
       <input readonly value="${esc(url)}" style="width:100%" onclick="this.select()"><div class="row" style="margin-top:12px;gap:8px"><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">Openen</a><button class="btn ghost" type="button" data-close>Sluiten</button><span class="spacer"></span><button class="btn" type="button" id="sccp">Link kopiëren</button></div></div>`);

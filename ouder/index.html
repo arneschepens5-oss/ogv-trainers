@@ -292,6 +292,8 @@ function allEvents() { const rows = []; for (const k of sel()) for (const e of (
 /* naam, logo en kleur van de club uit de gegevens */
 function clubOf() { for (const k of okKids()) { const c = data[k.tok]?.club; if (c) return c; } return null; }
 function brandClub() { const c = clubOf(); if (!c) return;
+  try { const k = okKids()[0], q = "https://intswyovpwiigdwmgjfz.supabase.co/functions/v1/brand?tok=" + k.tok, L = (sel, v) => { const l = document.querySelector(sel); if (l && l.getAttribute("href") !== v) l.href = v; };   /* beginscherm: naam en logo van de club */
+    L('link[rel="manifest"]', q + "&app=ouder"); if (!isOGVc(c)) { L('link[rel="icon"]', q + "&icon=1"); L('link[rel="apple-touch-icon"]', q + "&icon=1"); } } catch (e) {}
   const im = $(".brand img"); if (im) { im.src = c.logo || (isOGVc(c) ? "../icons/logo-dark.png" : "../icons/icon-192.png"); im.alt = cname(); }
   document.title = (cshort() || cname()) + " · ouders en spelers";
   if (c.color && !isOGVc(c)) { document.documentElement.style.setProperty("--yellow", c.color);

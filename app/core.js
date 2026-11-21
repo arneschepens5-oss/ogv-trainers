@@ -44,9 +44,11 @@ const CLUB_VARS = ["--yellow", "--yellow2", "--onY", "--ytext", "--ybg", "--bg",
 /* app op het beginscherm: bij OG Vorselaar het clublogo en de naam OGV Trainers in plaats van het algemene icoon */
 function setAppIcon() { if (ADMIN_APP) return; const ogv = isOGV() && (CLUB_KNOWN || mode === "demo" || !!user || !CLUB.id || CLUB.id === OGV_ID), q = x => document.querySelector(x);
   const set = (sel, attr, v) => { const el = q(sel); if (el && el.getAttribute(attr) !== v) el.setAttribute(attr, v); };
-  set('link[rel="manifest"]', "href", ogv ? "manifest-ogv.webmanifest" : "manifest.webmanifest");
-  set('link[rel="apple-touch-icon"]', "href", ogv ? "icons/ogv-apple-touch-icon.png" : "icons/apple-touch-icon.png");
-  set('meta[name="apple-mobile-web-app-title"]', "content", ogv ? "OGV Trainers" : "FootballCoachHub"); }
+  const own = !ogv && CLUB.id && CLUB.id !== "platform" && CLUB_KNOWN, BF = "https://intswyovpwiigdwmgjfz.supabase.co/functions/v1/brand?club=" + CLUB.id;   /* andere club: naam en logo van die club op het beginscherm */
+  set('link[rel="manifest"]', "href", ogv ? "manifest-ogv.webmanifest" : own ? BF + "&app=trainers" : "manifest.webmanifest");
+  set('link[rel="apple-touch-icon"]', "href", ogv ? "icons/ogv-apple-touch-icon.png" : own ? BF + "&icon=1" : "icons/apple-touch-icon.png");
+  if (own) set('link[rel="icon"][type="image/png"]', "href", BF + "&icon=1");
+  set('meta[name="apple-mobile-web-app-title"]', "content", ogv ? "OGV Trainers" : own ? (CLUB.short || CLUB.name || "Trainers") : "FootballCoachHub"); }
 function applyClubTheme() { setAppIcon();
   if (typeof evApplyClub === "function") evApplyClub();
   /* nog geen club bekend op dit toestel (aanmelden): de huisstijl van het platform */

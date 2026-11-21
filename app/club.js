@@ -910,7 +910,7 @@ async function csPage(v, id, ctx) {
       <p class="hint">Link: <a class="link" id="slink" target="_blank" rel="noopener"></a> · Een nieuwe code maakt de oude ongeldig; wie al scout is, blijft scout.</p>
       <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de externe scouting en de interne scouting ziet, kies je per persoon bij <a class="link" href="#/clubbeheer/toegang/functies">Beheer › Toegang</a>.</p>${foot()}</form>`;
     draw();
-    { const url = new URL("scout/", location.href.split("#")[0].split("?")[0]).href, el = $("#scode"), lk = $("#slink"); lk.href = url; lk.textContent = url;
+    { const url = new URL("scout/?c=" + CLUB.id, location.href.split("#")[0].split("?")[0]).href, el = $("#scode"), lk = $("#slink"); lk.href = url; lk.textContent = url;
       const get = async nieuw => { if (mode === "demo") { el.textContent = "SDEMO123"; return; } const r = await sb.rpc("scout_code", { nieuw }); el.textContent = r.error ? "niet beschikbaar" : r.data; };
       get(false); $("#scodeNew").onclick = async () => { if (confirm("Een nieuwe scoutcode maken? De oude werkt dan niet meer voor nieuwe scouts.")) await get(true); };
       $("#scodeCp").onclick = async () => { const t = `Scoutapp ${clubName()}: ${url}\nScoutcode: ${el.textContent}`; try { await navigator.clipboard.writeText(t); toast("Link en code gekopieerd."); } catch (e) { toast(t); } }; }
