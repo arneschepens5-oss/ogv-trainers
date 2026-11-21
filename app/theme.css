@@ -124,9 +124,6 @@ h1.pg::after{display:none}
 .tpimg img{width:100%;height:100%;object-fit:cover}
 html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-start!important}
 
-/* zijbalk: geen grijze schuifbalk; een dunne balk verschijnt pas als je over de zijbalk gaat */
-.side{scrollbar-width:thin;scrollbar-color:transparent transparent;scrollbar-gutter:stable}
-.side:hover{scrollbar-color:color-mix(in srgb,var(--ink) 22%,transparent) transparent}
-.side::-webkit-scrollbar{width:6px}.side::-webkit-scrollbar-track{background:transparent}
-.side::-webkit-scrollbar-thumb{background:transparent;border-radius:6px}.side:hover::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink) 22%,transparent)}
-.side::-webkit-scrollbar-button{display:none;height:0}
+/* zijbalk: geen zichtbare schuifbalk (scrollen met muiswiel of touchpad werkt gewoon) */
+.side{scrollbar-width:none;-ms-overflow-style:none;scrollbar-gutter:auto}
+.side::-webkit-scrollbar{display:none;width:0;height:0}
