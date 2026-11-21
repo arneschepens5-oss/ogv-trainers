@@ -154,6 +154,19 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:70
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14.5px;font-weight:700;z-index:9;max-width:90vw;text-align:center}
 .off-line{background:#7c5b00;color:#fff;text-align:center;font-size:13px;padding:6px}
 @media (prefers-reduced-motion:reduce){.sk,.brand .rf.spin svg{animation:none}}
+
+/* huisstijl 2: diepte, veldmotief en de clubkleur, zoals de trainersapp */
+.top{background:radial-gradient(420px 220px at 85% -40px,color-mix(in srgb,var(--yellow) 30%,transparent),transparent 70%),linear-gradient(180deg,#151613,#0E0F0C)}
+.top::after{border-color:color-mix(in srgb,var(--yellow) 16%,transparent)}
+.hero{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 240' fill='none' stroke='%23fff' stroke-opacity='.07' stroke-width='2'%3E%3Crect x='8' y='8' width='384' height='224' rx='4'/%3E%3Cpath d='M200 8v224'/%3E%3Ccircle cx='200' cy='120' r='40'/%3E%3Crect x='8' y='70' width='52' height='100'/%3E%3Crect x='340' y='70' width='52' height='100'/%3E%3C/svg%3E") center/130% auto no-repeat,radial-gradient(120% 100% at 0 0,color-mix(in srgb,var(--yellow) 22%,#1A1B17),#111 70%);border:1px solid color-mix(in srgb,var(--yellow) 30%,#2A2C26);box-shadow:0 20px 40px -22px rgba(0,0,0,.7)}
+.card,.ev,.todo{box-shadow:0 1px 2px rgba(18,24,16,.05),0 10px 26px -18px rgba(18,24,16,.28)}
+@media (prefers-color-scheme:dark){.card,.ev,.todo{box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 12px 28px -18px rgba(0,0,0,.8)}}
+.ev{transition:transform .15s ease,box-shadow .15s ease}
+.btn{box-shadow:0 8px 18px -10px color-mix(in srgb,var(--yellow) 85%,#000),inset 0 1px 0 rgba(255,255,255,.35)}
+.ics{text-decoration:none!important;color:var(--muted)!important;font-weight:700;font-size:13px;border:0;background:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.ics::before{content:"";width:14px;height:14px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5'/%3E%3C/svg%3E") center/contain no-repeat}
+.ics:hover{color:var(--ink)!important}
+.act button{transition:background .15s,border-color .15s,transform .1s}.act button:active{transform:scale(.98)}
 </style>
 </head>
 <body>
