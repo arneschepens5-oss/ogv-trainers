@@ -654,7 +654,9 @@ function shell(fresh) {
   $$("[data-logout]").forEach(b => b.onclick = logout); $$("[data-clubsw]").forEach(b => b.onclick = clubSwitch);
   $$("[data-setname]").forEach(b => b.onclick = e => { e.stopPropagation(); mode !== "demo" && nameForm(); });
   $$("[data-account]").forEach(b => b.onclick = accountDialog);
-  $$("[data-acctmenu]").forEach(b => b.onclick = e => { e.stopPropagation(); const m = b.parentElement.querySelector(".acctmenu"); if (!m) return; const o = m.hidden; $$(".acctmenu").forEach(x => x.hidden = true); m.hidden = !o; });
+  $$("[data-acctmenu]").forEach(b => b.onclick = e => { e.stopPropagation(); const m = b._menu || b.parentElement.querySelector(".acctmenu"); if (!m) return; b._menu = m; const o = m.hidden; $$(".acctmenu").forEach(x => x.hidden = true); $$("body>.acctmenu").forEach(x => x !== m && !$$("[data-acctmenu]").some(y => y._menu === x) && x.remove());
+    if (o) { if (document.documentElement.classList.contains("sidemini") && innerWidth > 900) document.body.appendChild(m); else if (m.parentElement !== b.parentElement) b.parentElement.appendChild(m); } /* buiten de smalle zijbalk, anders vangt die de klikken op */
+    m.hidden = !o; });
   $$("[data-myprof]").forEach(b => b.onclick = myProfile);
   hydratePhotos($(".side") || document); hydratePhotos($(".sheet") || document); if (logged && mode === "cloud" && S.myPhoto === undefined) myPhotoLoad();
   $$("[data-login]").forEach(b => b.onclick = () => go("#/aanmelden"));
@@ -987,4 +989,4 @@ async function myProfile() { $$(".acctmenu").forEach(x => x.hidden = true);
   if (typeof tpLoad !== "function") { location.hash = "#/trainer/" + encodeURIComponent(user.id); return; }
   await tpLoad(); const pr = tpOf(user.id), nm = pr?.name || myName() || tNice(user.email);
   trainerForm({ key: user.id, user_id: user.id, email: user.email, teams: [] }, pr, nm); }
-document.addEventListener("click", e => { if (!e.target.closest(".acct")) $$(".acctmenu").forEach(x => x.hidden = true); });
+document.addEventListener("click", e => { if (!e.target.closest("[data-acctmenu]")) $$(".acctmenu").forEach(x => x.hidden = true); });
