@@ -910,8 +910,10 @@ async function csPage(v, id, ctx) {
       <p class="hint">Link: <a class="link" id="slink" target="_blank" rel="noopener"></a> · Een nieuwe code maakt de oude ongeldig; wie al scout is, blijft scout.</p>
       <h2>Wie mag scouten?</h2><p class="hint" style="margin-top:0">Wie de externe scouting en de interne scouting ziet, kies je per persoon bij <a class="link" href="#/clubbeheer/toegang/functies">Beheer › Toegang</a>.</p>${foot()}</form>`;
     draw();
-    { const url = new URL("scout/?c=" + CLUB.id, location.href.split("#")[0].split("?")[0]).href, el = $("#scode"), lk = $("#slink"); lk.href = url; lk.textContent = url;
-      const get = async nieuw => { if (mode === "demo") { el.textContent = "SDEMO123"; return; } const r = await sb.rpc("scout_code", { nieuw }); el.textContent = r.error ? "niet beschikbaar" : r.data; };
+    { const base = new URL("scout/?c=" + CLUB.id, location.href.split("#")[0].split("?")[0]).href, el = $("#scode"), lk = $("#slink"); let url = base; lk.href = url; lk.textContent = url;
+      /* de scoutcode zit mee in de link: wie hem opent, krijgt meteen toegang tot de scouting van deze club */
+      const setL = code => { url = code && /^[A-Z0-9]{4,}$/i.test(code) ? base + "&k=" + encodeURIComponent(code) : base; lk.href = url; lk.textContent = url; };
+      const get = async nieuw => { if (mode === "demo") { el.textContent = "SDEMO123"; setL("SDEMO123"); return; } const r = await sb.rpc("scout_code", { nieuw }); el.textContent = r.error ? "niet beschikbaar" : r.data; setL(r.error ? "" : r.data); };
       get(false); $("#scodeNew").onclick = async () => { if (confirm("Een nieuwe scoutcode maken? De oude werkt dan niet meer voor nieuwe scouts.")) await get(true); };
       $("#scodeCp").onclick = async () => { const t = `Scoutapp ${clubName()}: ${url}\nScoutcode: ${el.textContent}`; try { await navigator.clipboard.writeText(t); toast("Link en code gekopieerd."); } catch (e) { toast(t); } }; }
     $("#scadd").onclick = () => { comp.push({ k: nextK(), n: "", s: "" }); draw(); $$("[data-n]", host).pop().focus(); };
