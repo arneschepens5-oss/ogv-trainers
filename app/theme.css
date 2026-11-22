@@ -161,3 +161,17 @@ html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-st
 .btn.ok:hover{filter:brightness(1.08)}
 .btn.ghost.bad{color:var(--s-bad,#FB7185);border-color:color-mix(in srgb,var(--s-bad,#FB7185) 45%,transparent)}
 .btn.ghost.bad:hover{background:color-mix(in srgb,var(--s-bad,#FB7185) 14%,transparent)}
+
+/* abonnement */
+.billcard{display:flex;align-items:center;gap:16px;padding:16px 18px;margin:0 0 18px;border-radius:var(--r);background:var(--cardg);border:1px solid color-mix(in srgb,var(--line) 75%,transparent);box-shadow:var(--sh);border-left:4px solid var(--yellow)}
+.billcard .bicon{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--yellow) 22%,var(--card2));color:var(--ink)}
+.billcard .bicon svg{width:22px;height:22px}
+.billcard .bmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.billcard .btitle{font-size:17px;font-weight:800}
+.billcard .bpill{align-self:flex-start;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--yellow) 26%,var(--card2));color:var(--ink)}
+.billcard .bbar{display:block;height:6px;border-radius:99px;background:color-mix(in srgb,var(--line) 70%,transparent);margin-top:8px;max-width:340px;overflow:hidden}
+.billcard .bbar i{display:block;height:100%;border-radius:99px;background:var(--yellow)}
+.billcard.ok{border-left-color:#22C55E}.billcard.ok .bpill{background:color-mix(in srgb,#22C55E 24%,var(--card2))}.billcard.ok .bicon{background:color-mix(in srgb,#22C55E 22%,var(--card2))}
+.billcard.warn{border-left-color:#F59E0B}.billcard.warn .bbar i{background:#F59E0B}
+.billcard.bad{border-left-color:#EF4444}.billcard.bad .bpill{background:color-mix(in srgb,#EF4444 24%,var(--card2))}.billcard.bad .bicon{background:color-mix(in srgb,#EF4444 22%,var(--card2))}.billcard.bad .bbar i{background:#EF4444}
+@media (max-width:640px){.billcard{flex-wrap:wrap}.billcard .btn{width:100%}}
