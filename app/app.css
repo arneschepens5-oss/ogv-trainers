@@ -2686,7 +2686,7 @@ h1.pg::after{display:none}
 .dv-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;transition:border-color .15s,background .15s,transform .15s}
 .dv-card:hover,.dv-card:focus-visible{border-color:var(--yellow);background:var(--card2);transform:translateY(-1px)}
 .dv-card:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
-.dv-b{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.dv-b{position:relative;overflow:hidden;flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
 .dv-t{flex:1;min-width:0;display:flex;flex-direction:column}
 .dv-t b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dv-t small{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2694,3 +2694,4 @@ h1.pg::after{display:none}
 .dv-card:hover .dv-go{color:var(--yellow)}
 .dv-card[hidden],.dv-sec[hidden]{display:none}
 @media(prefers-reduced-motion:reduce){.dv-card{transition:none}.dv-card:hover{transform:none}}
+.dv-b img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:7px;background:#fff;border-radius:inherit}

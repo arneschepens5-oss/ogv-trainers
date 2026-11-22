@@ -418,8 +418,9 @@ function dienstenView(v) {
   v.innerHTML = head("Diensten", "Alles wat het platform draaiende houdt, op één plek. Elke link opent in een nieuw tabblad.", `<a class="btn ghost" href="#/platform">Terug</a>`) +
     `<div class="sec"><input type="search" id="dvq" class="dv-q" placeholder="Zoek een dienst, bv. mail, betalingen, domein…" aria-label="Zoek een dienst" autocomplete="off"></div>` +
     DIENSTEN.map(g => `<section class="sec dv-sec"><h2>${esc(g.g)}</h2><div class="dv-grid">${g.items.map(([n, w, u, l, c]) =>
-      `<a class="dv-card" href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-q="${esc((n + " " + w + " " + g.g).toLowerCase())}"><span class="dv-b" style="background:${c}" aria-hidden="true">${esc(l)}</span><span class="dv-t"><b>${esc(n)}</b><small>${esc(w)}</small></span><span class="dv-go" aria-hidden="true">↗</span></a>`).join("")}</div></section>`).join("") +
+      `<a class="dv-card" href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-q="${esc((n + " " + w + " " + g.g).toLowerCase())}"><span class="dv-b" style="background:${c}" aria-hidden="true">${esc(l)}${u.startsWith(APP_URL) ? "" : `<img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(u).hostname)}&sz=64" alt="" loading="lazy" referrerpolicy="no-referrer">`}</span><span class="dv-t"><b>${esc(n)}</b><small>${esc(w)}</small></span><span class="dv-go" aria-hidden="true">↗</span></a>`).join("")}</div></section>`).join("") +
     `<p class="hint dv-none" hidden>Geen dienst gevonden.</p>`;
+  $$(".dv-b img", v).forEach(i => { i.onerror = () => i.remove(); i.onload = () => { if (i.naturalWidth < 16) i.remove(); }; });
   $("#dvq", v).oninput = e => { const q = e.target.value.trim().toLowerCase(); let any = false;
     $$(".dv-card", v).forEach(a => { const ok = !q || a.dataset.q.includes(q); a.hidden = !ok; if (ok) any = true; });
     $$(".dv-sec", v).forEach(sec => { sec.hidden = !$$(".dv-card", sec).some(a => !a.hidden); }); $(".dv-none", v).hidden = any; };
