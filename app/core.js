@@ -31,8 +31,14 @@ let CLUB_KNOWN = false; /* weten we al bij welke club dit toestel hoort? Zo niet
 /* beheer-app: apart geïnstalleerd (?app=beheer), eigen aanmelding, enkel het platform */
 const ADMIN_APP = !!window.FCH_ADMIN;
 try { if (localStorage.getItem("fch-side-mini") === "1") document.documentElement.classList.add("sidemini"); } catch (e) {}
-document.addEventListener("click", e => { const b = e.target.closest("[data-sidetog]"); if (!b) return; const on = document.documentElement.classList.toggle("sidemini");
-  try { localStorage.setItem("fch-side-mini", on ? "1" : "0"); } catch (x) {} });
+document.addEventListener("click", e => { const b = e.target.closest("[data-sidetog]"); if (!b) return; const cl = document.documentElement.classList; clearTimeout(window._sideT);
+  /* soepel: de teksten verdwijnen eerst (of verschijnen pas) terwijl de zijbalk van breedte verandert, zodat niets verspringt of afbreekt */
+  const mini = cl.contains("sidemini") || cl.contains("sidenarrow"), calm = matchMedia("(prefers-reduced-motion:reduce)").matches;
+  try { localStorage.setItem("fch-side-mini", mini ? "0" : "1"); } catch (x) {}
+  if (calm) { cl.toggle("sidemini", !mini); cl.remove("sidenarrow", "sideanim"); return; }
+  cl.add("sideanim");
+  if (mini) { cl.remove("sidemini", "sidenarrow"); window._sideT = setTimeout(() => cl.remove("sideanim"), 230); }
+  else { cl.add("sidenarrow"); window._sideT = setTimeout(() => { cl.add("sidemini"); cl.remove("sidenarrow", "sideanim"); }, 230); } });
 if (!ADMIN_APP) try { const c = JSON.parse(localStorage.getItem("ogv-club") || "null"); if (c && c.id) { Object.assign(CLUB, c); CLUB_KNOWN = true; } } catch (e) {}
 function rememberClub() { CLUB_KNOWN = true; try { localStorage.setItem("ogv-club", JSON.stringify({ id: CLUB.id, name: CLUB.name, short: CLUB.short, settings: CLUB.settings || {} })); } catch (e) {} }
 /* ---------- kleuren van de club over de hele app ---------- */

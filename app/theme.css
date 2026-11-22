@@ -83,8 +83,11 @@ h1.pg::after{display:none}
 .sidetog svg{width:18px;height:18px}
 @media (max-width:900px){.sidetog{display:none}}
 @media (min-width:901px){
-  html.sidemini{--side:84px}
-  .shell{transition:grid-template-columns .2s ease}
+  html.sidemini,html.sidenarrow{--side:84px}
+  .shell{transition:grid-template-columns .22s cubic-bezier(.4,0,.2,1)}
+  .side{overflow-x:hidden}
+  .side .nav a>span,.side .brand>span,.side .teampick>span,.side .foot .who,.sidetog span,.side .nav a .car{transition:opacity .2s ease .02s}
+  html.sideanim .side .nav a>span,html.sideanim .side .brand>span,html.sideanim .side .teampick>span,html.sideanim .side .foot .who,html.sideanim .sidetog span,html.sideanim .side .nav a .car{opacity:0;white-space:nowrap;transition:none}
   html.sidemini .side{padding:14px 10px;overflow-x:hidden}
   html.sidemini .sidetog span,html.sidemini .side .brand>span:not(.ogvlogo),html.sidemini .side .nav a>span,html.sidemini .side .nav a .car,
   html.sidemini .side .subside,html.sidemini .side .subwrap,html.sidemini .side .teampick>span:not(.bdg),html.sidemini .side .navgrp,
