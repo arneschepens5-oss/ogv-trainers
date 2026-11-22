@@ -2640,36 +2640,39 @@ h1.pg::after{display:none}
 :root[data-theme="light"] b[style*="color:hsl"],:root[data-theme="light"] b[style*="color:#"]{filter:brightness(.72) saturate(1.15)}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) b[style*="color:hsl"],:root:not([data-theme="dark"]) b[style*="color:#"]{filter:brightness(.72) saturate(1.15)}}
 
-/* opstelling per kwart: veld met posities, bank en speeltijd */
-.lu-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.lu-tabs button{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:92px;padding:8px 14px;border-radius:14px;border:1px solid var(--line2);background:var(--card);color:var(--muted);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
-.lu-tabs button i{font-style:normal;font-size:11px;font-weight:700;min-height:14px}
-.lu-tabs button i.ok{color:var(--ok)}.lu-tabs button i.warn{color:var(--warn)}
-.lu-tabs button[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow);color:var(--onY)}
-.lu-tabs button[aria-pressed="true"] i{color:var(--onY)}
-.lu-wrap{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}
-@media(max-width:780px){.lu-wrap{grid-template-columns:1fr}}
-.lu-pitch{position:relative;aspect-ratio:3/4;border-radius:18px;overflow:hidden;border:2px solid rgba(255,255,255,.25);background:repeating-linear-gradient(0deg,#2e8f4d 0 12.5%,#298447 12.5% 25%)}
-.lu-pitch svg{position:absolute;inset:0;width:100%;height:100%;stroke:rgba(255,255,255,.6);stroke-width:.6;fill:none}
-.lu-slot{position:absolute;transform:translate(-50%,-50%);width:80px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;padding:0;cursor:pointer;color:#fff;font:inherit}
-.lu-num{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:16px;border:2px dashed rgba(255,255,255,.75);background:rgba(0,0,0,.22);transition:transform .12s}
-.lu-slot.on .lu-num{background:var(--yellow);color:#111;border:2px solid #fff}
-.lu-slot:active .lu-num{transform:scale(.94)}
-.lu-slot.sel .lu-num{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--info)}
-.lu-nm{font-size:12px;font-weight:700;background:rgba(0,0,0,.65);padding:2px 8px;border-radius:999px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lu-hint{font-size:10px;font-weight:600;opacity:.9;text-shadow:0 1px 2px rgba(0,0,0,.5);text-align:center;line-height:1.1}
-.lu-side{display:flex;flex-direction:column;gap:14px}
-.lu-bench,.lu-time{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
-.lu-bench h3,.lu-time h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
-.lu-bench h3 span{font-size:12px;background:var(--card3);border-radius:999px;padding:1px 8px;color:var(--muted)}
-.lu-chips{display:flex;flex-wrap:wrap;gap:8px}
-.lu-chip{padding:9px 14px;border-radius:999px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font:inherit;font-weight:600;font-size:14px;cursor:pointer}
-.lu-chip.sel{background:var(--info);border-color:var(--info);color:#fff;box-shadow:0 0 0 3px rgba(122,167,255,.35)}
-.lu-tr{display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}
-.lu-tr:first-of-type{border-top:0}
-.lu-tr .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lu-tr .sq{display:flex;gap:3px}
-.lu-tr .sq i{width:14px;height:14px;border-radius:4px;background:var(--card3)}
-.lu-tr .sq i.on{background:var(--ok)}.lu-tr .sq i.cur{outline:2px solid var(--yellow);outline-offset:1px}
-.lu-tr b{min-width:56px;text-align:right}.lu-tr b.warn{color:var(--warn)}
-.lu-set{margin-top:14px}.lu-set summary{cursor:pointer;color:var(--muted);font-weight:600}
+/* opstelling: veld met vakken, bank en speeltijd */
+.fv-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.fv-tabs button{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:92px;padding:8px 14px;border-radius:14px;border:1px solid var(--line2);background:var(--card);color:var(--muted);font:inherit;font-size:14px;cursor:pointer}
+.fv-tabs button b{font-weight:700}.fv-tabs button i{font-style:normal;font-size:11px;font-weight:700}
+.fv-tabs button i.ok{color:var(--ok)}.fv-tabs button i.warn{color:var(--warn)}
+.fv-tabs button[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow);color:var(--onY)}.fv-tabs button[aria-pressed="true"] i{color:var(--onY)}
+.fv-tabs .fv-add{justify-content:center;border-style:dashed;color:var(--ink);font-weight:700}
+.fv-forms{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.fv-forms span{font-weight:700;font-size:13px;color:var(--muted);margin-right:4px}
+.fv-forms button{padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.fv-wrap{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:780px){.fv-wrap{grid-template-columns:1fr}}
+.fv-pitch{position:relative;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(9,1fr);aspect-ratio:7/9;border-radius:18px;overflow:hidden;border:2px solid rgba(255,255,255,.25);background:repeating-linear-gradient(0deg,#2e8f4d 0 11.11%,#298447 11.11% 22.22%);user-select:none;-webkit-user-select:none}
+.fv-pitch svg{position:absolute;inset:0;width:100%;height:100%;stroke:rgba(255,255,255,.65);stroke-width:.35;fill:none;pointer-events:none}
+.fv-cell{position:relative;display:flex;align-items:center;justify-content:center;border:1px dashed rgba(255,255,255,.16);min-width:0}
+.fv-cell.over,.fv-bench.over{background:rgba(255,209,0,.32)}
+.fv-bench.over{outline:2px dashed var(--yellow)}
+.fv-pc{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%;cursor:grab;touch-action:none}
+.fv-dot{width:clamp(26px,70%,40px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:var(--yellow);color:#111;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.fv-nm{margin-top:1px;font-size:10.5px;font-weight:700;color:#fff;background:rgba(0,0,0,.62);padding:0 6px;border-radius:999px;max-width:150%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fv-pc.sel .fv-dot{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--info)}.fv-pc.drag,.fv-chip.drag{opacity:.35}
+.fv-ghost{position:fixed;z-index:9999;transform:translate(-50%,-50%);pointer-events:none;display:flex;flex-direction:column;align-items:center;width:64px;opacity:.95}
+.fv-ghost .fv-dot{width:44px}.fv-ghost.fv-chip{width:auto;display:block}
+.fv-side{display:flex;flex-direction:column;gap:14px}
+.fv-bench,.fv-time{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.fv-bench h3,.fv-time h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+.fv-bench h3 span{font-size:12px;background:var(--card3);border-radius:999px;padding:1px 8px;color:var(--muted)}
+.fv-chips{display:flex;flex-wrap:wrap;gap:8px}
+.fv-chip{padding:9px 14px;border-radius:999px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font-weight:600;font-size:14px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.fv-chip.sel{background:var(--info);border-color:var(--info);color:#fff;box-shadow:0 0 0 3px rgba(122,167,255,.35)}
+.fv-tr{display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}
+.fv-tr:first-of-type{border-top:0}.fv-tr .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fv-tr .sq{display:flex;gap:2px;width:96px}.fv-tr .sq i{height:14px;border-radius:4px;background:var(--card3);min-width:4px}
+.fv-tr .sq i.on{background:var(--ok)}.fv-tr .sq i.cur{outline:2px solid var(--yellow);outline-offset:1px}
+.fv-tr b{min-width:56px;text-align:right}.fv-tr b.warn{color:var(--warn)}
+.fv-set{margin-top:14px}.fv-set summary{cursor:pointer;color:var(--muted);font-weight:600}
+@media(min-width:520px){.fv-nm{font-size:11.5px}}

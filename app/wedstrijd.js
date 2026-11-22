@@ -310,67 +310,106 @@ const POSLIST = { "2v2": ["A","B"], "3v3": ["L","M","R"], "5v5": ["1","3","7","1
 /* oude posities (letters) uit eerdere opstellingen omzetten naar nummers */
 const POS_OLD = { "5v5": { K: "1", LV: "3", RV: "7", M: "11", SP: "9" }, "8v8": { K: "1", LB: "5", CV: "3", RB: "2", LM: "11", CM: "8", RM: "7", SP: "9" },
   "11v11": { K: "1", RB: "2", RCV: "3", LCV: "4", LB: "5", RW: "7", SP: "9", LW: "11" } };
+/* Veld met vakken (7 breed x 9 hoog, keeper onderaan). Een speler staat in een vak ("g:kolom:rij") of op de bank.
+   Sleep spelers naar een vak, of tik een speler en dan een vak. Extra wisselmomenten splitsen een kwart op. */
+const FV_C = 7, FV_R = 9;
+const FORMATIONS = { "11v11": ["4-3-3", "4-4-2", "4-2-3-1", "3-5-2", "5-3-2", "3-4-3", "4-5-1"], "8v8": ["3-3-1", "2-3-2", "3-2-2", "2-4-1"], "5v5": ["2-1-1", "1-2-1", "1-1-2", "2-2"] };
+const fvCode = (c, r) => `g:${c}:${r}`, fvParse = x => { const m = /^g:(\d+):(\d+)$/.exec(x || ""); return m ? [+m[1], +m[2]] : null; };
+/* de vakken van een formatie: keeper eerst, dan lijn per lijn van achter naar voor */
+function fvSlots(def) {
+  const L = def.split("-").map(Number), out = [[3, 8]];
+  L.forEach((m, j) => { const r = Math.round(6 - j * 5 / Math.max(L.length - 1, 1)); for (let i = 0; i < m; i++) out.push([m === 1 ? 3 : Math.round((i + .5) * FV_C / m - .5), L.length === 1 ? 3 : r]); });
+  return out;
+}
+const FV_OLD = { "2v2": { A: [2, 4], B: [4, 4] }, "3v3": { L: [1, 5], M: [3, 3], R: [5, 5] }, "5v5": { "1": [3, 8], "3": [1, 6], "7": [5, 6], "11": [3, 4], "9": [3, 1] },
+  "8v8": { "1": [3, 8], "5": [0, 6], "3": [3, 6], "2": [6, 6], "11": [1, 3], "8": [3, 4], "7": [5, 3], "9": [3, 1] },
+  "11v11": { "1": [3, 8], "2": [6, 6], "3": [4, 7], "4": [2, 7], "5": [0, 6], "6": [3, 5], "8": [5, 4], "10": [1, 4], "7": [6, 2], "9": [3, 1], "11": [0, 2] } };
 function lineupTab(tv, e) {
-  const mf = matchFormat(S.team), pos = POSLIST[S.team.format] || POSLIST["5v5"];
+  const mf = matchFormat(S.team), fmt = S.team.format, pos = POSLIST[fmt] || POSLIST["5v5"], hasKeeper = pos.includes("1");
   e.lineup = e.lineup && e.lineup.grid ? e.lineup : { periods: mf.periods, minutes: mf.minutes, grid: {} };
-  const L = e.lineup, sv = saver(e), om = POS_OLD[S.team.format] || {};
-  for (const id in L.grid) L.grid[id] = (L.grid[id] || []).map(x => om[x] || x);
-  const ps = selPlayers(e);
-  /* positie op het veld (x%, y%): keeper onderaan, aanval naar boven */
-  const XY = {
-    "2v2": { A: [30, 50], B: [70, 50] },
-    "3v3": { L: [20, 58], M: [50, 30], R: [80, 58] },
-    "5v5": { "1": [50, 88], "3": [26, 64], "7": [74, 64], "11": [50, 40], "9": [50, 15] },
-    "8v8": { "1": [50, 90], "5": [16, 68], "3": [50, 70], "2": [84, 68], "11": [18, 38], "8": [50, 44], "7": [82, 38], "9": [50, 14] },
-    "11v11": { "1": [50, 92], "2": [85, 70], "3": [63, 77], "4": [37, 77], "5": [15, 70], "6": [50, 58], "8": [70, 44], "10": [30, 44], "7": [85, 22], "9": [50, 14], "11": [15, 22] } }[S.team.format] || {};
-  const xy = (x, i) => XY[x] || [14 + (i % 4) * 24, 20 + Math.floor(i / 4) * 28];
-  let q = 0, sel = null;
+  const L = e.lineup, sv = saver(e), om = POS_OLD[fmt] || {}, ps = selPlayers(e);
+  const perName = i => L.periods === 2 ? (i ? "Tweede helft" : "Eerste helft") : (L.periods === 4 ? "Kwart " : "Periode ") + (i + 1);
+  const baseMom = () => Array.from({ length: L.periods }, (_, i) => ({ lab: perName(i), dur: L.minutes }));
+  if (!Array.isArray(L.mom) || !L.mom.length) L.mom = baseMom();
+  /* oude opstellingen (positienummers) omzetten naar vakken */
+  const oldXY = FV_OLD[fmt] || {};
+  for (const id in L.grid) { const taken = new Set(); L.grid[id] = (L.grid[id] || []).map(x => x || null); }
+  L.mom.forEach((_, k) => { const taken = new Set(ps.map(p => fvParse((L.grid[p.id] || [])[k])).filter(Boolean).map(a => a.join(":")));
+    ps.forEach(p => { const g = L.grid[p.id]; if (!g || !g[k] || fvParse(g[k])) return; const raw = om[g[k]] || g[k], xy0 = oldXY[raw]; if (!xy0) { g[k] = null; return; }
+      let [c, r] = xy0, d = 0; while (taken.has(c + ":" + r) && d < 6) { d++; const nc = c + (d % 2 ? 1 : -1) * Math.ceil(d / 2); if (nc >= 0 && nc < FV_C) c = nc; else r = Math.max(0, r - 1); }
+      taken.add(c + ":" + r); g[k] = fvCode(c, r); }); });
+  let q = 0, sel = null, drag = false;
+  const posOf = (p, k) => (L.grid[p.id] || [])[k] || null;
+  const setPos = (p, k, x) => { L.grid[p.id] = L.grid[p.id] || []; L.grid[p.id][k] = x || null; };
+  const onAt = (k, code) => ps.find(p => posOf(p, k) === code);
+  const startOf = k => L.mom.slice(0, k).reduce((s, m) => s + m.dur, 0), total = () => L.mom.reduce((s, m) => s + m.dur, 0);
+  const label = k => L.mom[k].x ? "Wissel min " + startOf(k) : L.mom[k].lab;
+  const P = id => ps.find(p => String(p.id) === String(id));
+  const initials = p => ((p.first_name || "?")[0] + (p.last_name || "")[0] || "").toUpperCase();
+  const short = p => esc(p.first_name || pname(p));
+  const swap = (a, b) => { const pa = posOf(a, q), pb = posOf(b, q); setPos(a, q, pb); setPos(b, q, pa); };
+  const place = (s, code) => { const occ = onAt(q, code); if (occ && occ !== s) swap(s, occ); else setPos(s, q, code); };
   const draw = () => {
-    const n = L.periods, half = n * L.minutes / 2; if (q >= n) q = n - 1;
-    const posOf = (p, k) => (L.grid[p.id] || [])[k] || null;
-    const setPos = (p, k, x) => { L.grid[p.id] = L.grid[p.id] || []; L.grid[p.id][k] = x || null; };
-    const onAt = (k, x) => ps.find(p => posOf(p, k) === x);
-    const short = p => esc(p.first_name || pname(p));
-    const miss = k => pos.filter(x => !onAt(k, x)).length;
-    const dupOf = k => { const used = ps.map(p => posOf(p, k)).filter(Boolean); return used.filter((x, i) => used.indexOf(x) !== i).length; };
-    const bench = ps.filter(p => !posOf(p, q));
-    const field = `<div class="lu-pitch"><svg viewBox="0 0 100 133" preserveAspectRatio="none" aria-hidden="true"><rect x="3" y="3" width="94" height="127" fill="none"/><line x1="3" y1="66.5" x2="97" y2="66.5"/><circle cx="50" cy="66.5" r="11"/><rect x="27" y="3" width="46" height="18"/><rect x="38" y="3" width="24" height="7"/><rect x="27" y="112" width="46" height="18"/><rect x="38" y="123" width="24" height="7"/></svg>
-      ${pos.map((x, i) => { const [px, py] = xy(x, i), p = onAt(q, x), lab = posLabel(x) ? posLabel(x).split(" · ")[1] : "";
-        return `<button type="button" class="lu-slot${p ? " on" : ""}${p && sel === p.id ? " sel" : ""}" style="left:${px}%;top:${py}%" data-sl="${x}" aria-label="Positie ${x}${lab ? " " + esc(lab) : ""}${p ? ": " + esc(pname(p)) : ", leeg"}"><span class="lu-num">${x}</span>${p ? `<span class="lu-nm">${short(p)}</span>` : `<span class="lu-hint">${esc(lab)}</span>`}</button>`; }).join("")}</div>`;
-    const tabs = Array.from({ length: n }, (_, k) => { const m = miss(k), d = dupOf(k), ok = ps.length && !m && !d;
-      return `<button type="button" data-q="${k}" aria-pressed="${k === q}"><span>${L.periods === 2 ? (k ? "Tweede helft" : "Eerste helft") : "Kwart " + (k + 1)}</span><i class="${ok ? "ok" : m || d ? "warn" : ""}">${ok ? "✓" : m ? m + " leeg" : d ? "dubbel" : ""}</i></button>`; }).join("");
-    const benchH = `<div class="lu-bench" data-bench><h3>Op de bank <span>${bench.length}</span></h3>${bench.length ? `<div class="lu-chips">${bench.map(p => `<button type="button" class="lu-chip${sel === p.id ? " sel" : ""}" data-pl="${p.id}">${esc(pname(p))}</button>`).join("")}</div>` : `<p class="hint" style="margin:0">Iedereen staat op het veld.</p>`}</div>`;
-    const timeH = `<div class="lu-time"><h3>Speeltijd</h3>${ps.map(p => { const row = L.grid[p.id] || [], played = row.slice(0, n).filter(Boolean).length * L.minutes;
-      return `<div class="lu-tr"><span class="nm">${esc(pname(p))}</span><span class="sq">${Array.from({ length: n }, (_, k) => `<i class="${row[k] ? "on" : ""}${k === q ? " cur" : ""}"></i>`).join("")}</span><b class="${played < half ? "warn" : ""}">${played} min</b></div>`; }).join("")}</div>`;
-    tv.innerHTML = `<div class="lu-tabs noprint" role="group" aria-label="Kwart kiezen">${tabs}</div>
-      <div class="lu-wrap"><div>${field}<p class="hint" style="margin:8px 2px 0">Tik een speler en dan een positie. Tik op een speler op het veld en dan op een andere speler of positie om te wisselen.</p></div>
-      <div class="lu-side">${benchH}${timeH}</div></div>
-      <details class="lu-set noprint"><summary>Instellingen en hulp</summary><div class="row" style="margin-top:10px;flex-wrap:wrap"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Periodes<input type="number" id="lp" min="1" max="8" value="${n}" style="width:70px"></label>
+    if (q >= L.mom.length) q = L.mom.length - 1; const half = total() / 2, N = pos.length;
+    const field = ps.filter(p => fvParse(posOf(p, q))), bench = ps.filter(p => !fvParse(posOf(p, q)));
+    const cells = []; for (let r = 0; r < FV_R; r++) for (let c = 0; c < FV_C; c++) { const code = fvCode(c, r), p = onAt(q, code);
+      cells.push(`<div class="fv-cell" data-cell="${code}">${p ? `<div class="fv-pc${sel === p.id ? " sel" : ""}" data-sp="${p.id}" role="button" tabindex="0" aria-label="${esc(pname(p))}"><div class="fv-dot">${esc(initials(p))}</div><div class="fv-nm">${short(p)}</div></div>` : ""}</div>`); }
+    const tabs = L.mom.map((m, k) => { const f = ps.filter(p => fvParse(posOf(p, k))).length, ok = ps.length && f === N;
+      return `<button type="button" data-q="${k}" aria-pressed="${k === q}"><b>${esc(label(k))}</b><i class="${ok ? "ok" : "warn"}">${ok ? "✓" : f + "/" + N}</i></button>`; }).join("");
+    const forms = FORMATIONS[fmt] && hasKeeper ? `<div class="fv-forms noprint"><span>Formatie</span>${FORMATIONS[fmt].map(f => `<button type="button" data-form="${f}">${f}</button>`).join("")}</div>` : "";
+    const benchH = `<div class="fv-bench" data-bench><h3>Op de bank <span>${bench.length}</span></h3>${bench.length ? `<div class="fv-chips">${bench.map(p => `<div class="fv-chip${sel === p.id ? " sel" : ""}" data-pl="${p.id}" role="button" tabindex="0">${esc(pname(p))}</div>`).join("")}</div>` : `<p class="hint" style="margin:0">Iedereen staat op het veld.</p>`}</div>`;
+    const timeH = `<div class="fv-time"><h3>Speeltijd</h3>${ps.map(p => { const row = L.grid[p.id] || [], played = L.mom.reduce((s, m, k) => s + (fvParse(row[k]) ? m.dur : 0), 0);
+      return `<div class="fv-tr"><span class="nm">${esc(pname(p))}</span><span class="sq">${L.mom.map((m, k) => `<i style="flex:${m.dur}" class="${fvParse(row[k]) ? "on" : ""}${k === q ? " cur" : ""}"></i>`).join("")}</span><b class="${played < half ? "warn" : ""}">${played} min</b></div>`; }).join("")}</div>`;
+    tv.innerHTML = `<div class="fv-tabs noprint" role="group" aria-label="Wisselmoment kiezen">${tabs}<button type="button" class="fv-add" id="addm">+ Wisselmoment</button></div>
+      ${forms}
+      <div class="fv-wrap"><div><div class="fv-pitch"><svg viewBox="0 0 70 90" preserveAspectRatio="none" aria-hidden="true"><rect x="1" y="1" width="68" height="88"/><line x1="1" y1="45" x2="69" y2="45"/><circle cx="35" cy="45" r="8"/><rect x="17" y="1" width="36" height="13"/><rect x="25" y="1" width="20" height="5"/><rect x="17" y="76" width="36" height="13"/><rect x="25" y="84" width="20" height="5"/></svg>${cells.join("")}</div>
+        <p class="hint" style="margin:8px 2px 0">Sleep een speler naar een vak. Liever tikken: tik een speler en dan een vak. Twee spelers na elkaar aantikken wisselt ze.${field.length !== N ? ` <b style="color:var(--warn)">Nu ${field.length} op het veld (${N} nodig).</b>` : ""}</p></div>
+      <div class="fv-side">${benchH}${timeH}</div></div>
+      <details class="fv-set noprint"><summary>Instellingen en hulp</summary><div class="row" style="margin-top:10px;flex-wrap:wrap"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Periodes<input type="number" id="lp" min="1" max="8" value="${L.periods}" style="width:70px"></label>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minuten<input type="number" id="lm" min="5" max="60" value="${L.minutes}" style="width:70px"></label><span class="spacer"></span>
-      ${q > 0 ? `<button class="btn ghost small" type="button" id="cp">Kopieer vorig kwart</button>` : ""}<button class="btn ghost small" type="button" id="auto">Eerlijk verdelen</button><button class="btn ghost small" type="button" id="clear">Leegmaken</button></div>
-      <p class="hint">Oranje speeltijd = minder dan de helft van de wedstrijd. Bij live coachen start kwart 1 automatisch als basisopstelling.</p></details>`;
-    tv.onclick = ev => { const t = ev.target, bt = t.closest("[data-q]"), sl = t.closest("[data-sl]"), pl = t.closest("[data-pl]"), bn = t.closest("[data-bench]"); if (!(bt || sl || pl || bn)) return;
-      const P = id => ps.find(p => String(p.id) === String(id));
+      ${q > 0 ? `<button class="btn ghost small" type="button" id="cp">Kopieer vorig moment</button>` : ""}${L.mom[q].x ? `<button class="btn ghost small" type="button" id="delm">Dit wisselmoment verwijderen</button>` : ""}<button class="btn ghost small" type="button" id="auto">Eerlijk verdelen</button><button class="btn ghost small" type="button" id="clear">Leegmaken</button></div>
+      <p class="hint">Oranje speeltijd = minder dan de helft van de wedstrijd. Bij live coachen start het eerste moment automatisch als basisopstelling.</p></details>`;
+    const done = () => { sel = null; sv(); draw(); };
+    /* slepen met muis of vinger */
+    tv.onpointerdown = ev => { const src = ev.target.closest("[data-pl],[data-sp]"); if (!src || (ev.pointerType === "mouse" && ev.button !== 0)) return; const id = src.dataset.pl || src.dataset.sp, sx = ev.clientX, sy = ev.clientY; let ghost = null, over = null;
+      const under = (x, y) => { if (ghost) ghost.style.display = "none"; const el = document.elementFromPoint(x, y); if (ghost) ghost.style.display = ""; return el; };
+      const mv = m => { if (!ghost) { if (Math.hypot(m.clientX - sx, m.clientY - sy) < 8) return; ghost = src.cloneNode(true); ghost.className = "fv-ghost"; document.body.appendChild(ghost); src.classList.add("drag"); drag = true; }
+        ghost.style.left = m.clientX + "px"; ghost.style.top = m.clientY + "px"; const c = under(m.clientX, m.clientY)?.closest("[data-cell],[data-bench]"); if (c !== over) { over?.classList.remove("over"); over = c; over?.classList.add("over"); } };
+      const end = m => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", end); window.removeEventListener("pointercancel", end); over?.classList.remove("over");
+        if (!ghost) return; const el = under(m.clientX, m.clientY); ghost.remove(); const s = P(id), cell = el?.closest("[data-cell]"), bn = el?.closest("[data-bench]");
+        if (s && m.type !== "pointercancel") { if (cell) place(s, cell.dataset.cell); else if (bn) setPos(s, q, null); else { drag = false; return draw(); } }
+        setTimeout(() => { drag = false; }, 0); done(); };
+      window.addEventListener("pointermove", mv); window.addEventListener("pointerup", end); window.addEventListener("pointercancel", end); };
+    tv.onclick = ev => { if (drag) return; const t = ev.target, bt = t.closest("[data-q]"), fm = t.closest("[data-form]"), sp = t.closest("[data-sp]"), pl = t.closest("[data-pl]"), cell = t.closest("[data-cell]"), bn = t.closest("[data-bench]");
+      if (t.closest("#addm")) return addMoment();
       if (bt) { q = +bt.dataset.q; sel = null; return draw(); }
-      if (sl) { const x = sl.dataset.sl, occ = onAt(q, x), s = sel ? P(sel) : null;
-        if (s) { if (occ && occ === s) sel = null; else { const old = posOf(s, q); setPos(s, q, x); if (occ) setPos(occ, q, old); sel = null; sv(); } }
-        else if (occ) sel = occ.id; else { toast("Tik eerst een speler aan."); return; }
-        return draw(); }
-      if (pl) { const id = pl.dataset.pl, s = sel ? P(sel) : null, c = P(id);
-        if (s && s !== c && posOf(s, q) && !posOf(c, q)) { setPos(c, q, posOf(s, q)); setPos(s, q, null); sel = null; sv(); } else sel = sel === id ? null : c.id;
-        return draw(); }
-      if (bn && sel) { const s = P(sel); if (s && posOf(s, q)) { setPos(s, q, null); sv(); } sel = null; draw(); } };
-    const lp = $("#lp"), lm = $("#lm"); lp.onchange = ev => { L.periods = Math.max(1, +ev.target.value || 1); sv(); draw(); }; lm.onchange = ev => { L.minutes = +ev.target.value || L.minutes; sv(); draw(); };
-    const cp = $("#cp"); if (cp) cp.onclick = () => { ps.forEach(p => setPos(p, q, posOf(p, q - 1))); sel = null; sv(); draw(); };
-    $("#clear").onclick = () => { L.grid = {}; sel = null; sv(); draw(); };
-    $("#auto").onclick = () => { /* elke speler evenveel kwarten op het veld, posities roteren */
-      L.grid = {}; sel = null; const order = ps.slice(); let off = 0;
-      for (let k = 0; k < L.periods; k++) { const on = []; for (let j = 0; j < Math.min(pos.length, order.length); j++) on.push(order[(off + j) % order.length]); off = (off + pos.length) % Math.max(order.length, 1);
-        const keeper = on.find(isKeeper) || null; const rest = on.filter(p => p !== keeper); const slots = pos.slice();
-        if (keeper && slots[0] === "1") { (L.grid[keeper.id] = L.grid[keeper.id] || [])[k] = slots.shift(); }
-        rest.forEach((p, j) => (L.grid[p.id] = L.grid[p.id] || [])[k] = slots[(j + k) % slots.length]); }
-      sv(); draw(); toast("Speeltijd eerlijk verdeeld. Pas aan waar nodig."); };
+      if (fm) return formation(fm.dataset.form);
+      const hit = sp || pl; if (hit) { const id = hit.dataset.sp || hit.dataset.pl, s = sel ? P(sel) : null, c = P(id);
+        if (s && s !== c && (fvParse(posOf(s, q)) || fvParse(posOf(c, q)))) { swap(s, c); return done(); } sel = sel === id ? null : id; return draw(); }
+      if (cell) { const s = sel ? P(sel) : null; if (s) { place(s, cell.dataset.cell); return done(); } toast("Tik eerst een speler aan, of sleep hem naar een vak."); return; }
+      if (bn && sel) { const s = P(sel); if (s) setPos(s, q, null); done(); } };
+    const lp = $("#lp"), lm = $("#lm"); lp.onchange = ev => { L.periods = Math.max(1, +ev.target.value || 1); L.mom = baseMom(); q = 0; sv(); draw(); }; lm.onchange = ev => { L.minutes = +ev.target.value || L.minutes; L.mom = baseMom(); sv(); draw(); };
+    const cp = $("#cp"); if (cp) cp.onclick = () => { ps.forEach(p => setPos(p, q, posOf(p, q - 1))); done(); };
+    const dm = $("#delm"); if (dm) dm.onclick = () => { L.mom[q - 1].dur += L.mom[q].dur; L.mom.splice(q, 1); ps.forEach(p => (L.grid[p.id] || []).splice(q, 1)); q = Math.max(0, q - 1); done(); };
+    $("#clear").onclick = () => { L.grid = {}; done(); };
+    $("#auto").onclick = () => { /* elke speler evenveel op het veld: formatie van de ploeg, spelers draaien rond */
+      L.grid = {}; const sl = (hasKeeper && FORMATIONS[fmt] ? fvSlots(FORMATIONS[fmt][0]) : pos.map((x, i) => oldXY[x] || [1 + i * 2, 5])).slice(0, N), order = ps.slice(); let off = 0;
+      L.mom.forEach((_, k) => { const on = []; for (let j = 0; j < Math.min(N, order.length); j++) on.push(order[(off + j) % order.length]); off = (off + N) % Math.max(order.length, 1);
+        const keeper = hasKeeper ? on.find(isKeeper) : null, rest = on.filter(p => p !== keeper), slots = sl.slice();
+        if (keeper) { setPos(keeper, k, fvCode(...slots.shift())); } rest.forEach((p, j) => setPos(p, k, fvCode(...slots[(j + k) % slots.length]))); });
+      sel = null; sv(); draw(); toast("Speeltijd eerlijk verdeeld. Pas aan waar nodig."); };
   };
+  /* formatie toepassen op wie nu op het veld staat (bv. van 4-3-3 naar 5-3-2 tijdens de match) */
+  const formation = def => { const on = ps.filter(p => fvParse(posOf(p, q))); const sl = fvSlots(def);
+    const ord = on.slice().sort((a, b) => (isKeeper(b) - isKeeper(a)) || (fvParse(posOf(b, q))[1] - fvParse(posOf(a, q))[1]) || (fvParse(posOf(a, q))[0] - fvParse(posOf(b, q))[0]));
+    ps.forEach(p => setPos(p, q, null)); ord.forEach((p, i) => { if (sl[i]) setPos(p, q, fvCode(...sl[i])); }); sel = null; sv(); draw(); toast("Formatie " + def + " toegepast. Sleep om bij te sturen."); };
+  /* extra wisselmoment: splitst het gekozen moment op een minuut van de wedstrijd */
+  const addMoment = () => { const st = startOf(q), dur = L.mom[q].dur, def = st + Math.max(1, Math.round(dur / 2));
+    const d = dialog(`<div class="dlg"><h2>Extra wisselmoment</h2><p class="muted" style="margin-top:0">Op welke minuut van de wedstrijd wissel je? De opstelling van ${esc(label(q))} (minuut ${st} tot ${st + dur}) wordt vanaf dan een nieuw moment.</p>
+      <label class="f">Minuut<input type="number" id="mm" min="${st + 1}" max="${st + dur - 1}" value="${def}"></label><div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn ghost" type="button" data-close>Annuleren</button><button class="btn" type="button" id="mok">Toevoegen</button></div></div>`);
+    $("#mok", d).onclick = () => { const m = Math.round(+$("#mm", d).value); if (!(m > st && m < st + dur)) { toast(`Kies een minuut tussen ${st + 1} en ${st + dur - 1}.`); return; }
+      L.mom[q].dur = m - st; L.mom.splice(q + 1, 0, { x: 1, dur: st + dur - m }); ps.forEach(p => { const g = L.grid[p.id] = L.grid[p.id] || []; g.splice(q + 1, 0, g[q] || null); });
+      d.close(); q += 1; sel = null; sv(); draw(); toast("Wisselmoment toegevoegd. Pas de opstelling aan."); }; };
   draw();
 }
 
