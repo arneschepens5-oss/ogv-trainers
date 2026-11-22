@@ -353,20 +353,29 @@ route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
   if (sub === "meldingen") { v.innerHTML = head("Meldingen van alle clubs", "Problemen en vragen die trainers doorstuurden met de knop Probleem melden.", `<a class="btn ghost" href="#/platform">Terug</a>`) + `<div id="pfb"></div>`; return adminFeedback($("#pfb")); }
   if (sub === "taken") return takenView(v);
   v.innerHTML = head("Platform", "Laden…");
-  let data, st = null;
+  let data, st = null, billRows = [];
   if (mode === "demo") { data = PLATFORM_DEMO(); st = PLATFORM_STATS_DEMO(); }
-  else { const [r, s] = await Promise.all([sb.rpc("platform_clubs"), sb.rpc("platform_stats")]);
+  else { const [r, s, bl] = await Promise.all([sb.rpc("platform_clubs"), sb.rpc("platform_stats"), sb.rpc("platform_billing")]); billRows = bl.error ? [] : (bl.data || []);
     if (r.error) { v.innerHTML = head("Platform", "") + `<div class="empty"><b>Nog niet klaar</b>${/platform_clubs|function/i.test(r.error.message) ? "Voer eerst het databasescript v33 uit in Supabase." : esc(r.error.message)}</div>`; return; }
     data = r.data || []; if (!s.error) st = s.data; }
   const sc = id => st?.clubs?.find(x => x.id === id) || {};
   data.forEach(c => Object.assign(c, { ...sc(c.id), name: c.name, settings: c.settings }));
+  data.forEach(c => { c.bill = billRows.find(b => b.id === c.id) || null; });
+  const fmtD = iso => new Date(iso).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" });
+  const billOf = c => { const b = c.bill; if (!b) return null; const left = b.until ? Math.ceil((new Date(b.until) - Date.now()) / 864e5) : null;
+    if (b.status === "free") return { k: "win", l: "Gratis", t: "Geen einddatum, de club betaalt niets." };
+    if (b.status === "active") return { k: "win", l: b.plan === "year" ? "Jaarcontract" : "Abonnement", t: `Betaalt via Stripe, loopt tot ${fmtD(b.until)}${b.plan === "year" && b.contract_end ? `, contract tot ${fmtD(b.contract_end)}` : ""}.` };
+    if (b.status === "past_due") return { k: "loss", l: "Betaling mislukt", t: `Toegang tot ${fmtD(b.until)}.` };
+    if (left !== null && left <= 0) return { k: "loss", l: "Vergrendeld", t: `${b.status === "trial" ? "Proef" : "Abonnement"} afgelopen op ${fmtD(b.until)}. Niemand van de club kan nog iets doen.` };
+    if (b.status === "canceled") return { k: left <= 7 ? "w" : "win", l: "Opgezegd", t: `Toegang nog tot ${fmtD(b.until)}.` };
+    return { k: left <= 7 ? "w" : "win", l: "Proefperiode", t: `Nog ${left} dag${left === 1 ? "" : "en"}, tot ${fmtD(b.until)}.` }; };
   const sum = k => data.reduce((a, c) => a + (+c[k] || 0), 0);
   const badge = c => { const keep = { id: CLUB.id, short: CLUB.short, name: CLUB.name, settings: CLUB.settings }; Object.assign(CLUB, { id: c.id, short: c.short, name: c.name, settings: c.settings || {} }); const h = LOGO("plat"); Object.assign(CLUB, keep); return h; };
   const days = iso => iso ? (Date.now() - new Date(iso)) / 864e5 : Infinity;
   const status = c => !(c.admins || []).length ? (c.pending_admin ? ["w", "Wacht op beheerder"] : ["loss", "Geen beheerder"])
     : c.setup_done === false && !(c.settings || {}).setup_done && c.id !== OGV_ID ? ["w", "Opstart bezig"]
     : st && days(c.last_login) > 14 ? ["loss", "Stil sinds " + Math.round(days(c.last_login)) + " dagen"] : ["win", "Actief"];
-  const mb = st ? st.db_bytes / 1e6 : 0, mbMax = 500, attention = data.filter(c => status(c)[0] !== "win");
+  const mb = st ? st.db_bytes / 1e6 : 0, mbMax = 500, attention = data.filter(c => status(c)[0] !== "win"), billAttn = data.filter(c => { const o = billOf(c); return o && (o.k === "loss" || o.k === "w"); });
   v.innerHTML = head("Platform", st ? `Overzicht van ${PRODUCT}, bijgewerkt om ${new Date(st.generated_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}. Enkel tellingen: spelers, ploegen en verslagen van een club zie je hier niet.` : "Clubs aanmaken en instellen.",
       `<a class="btn ghost" href="#/platform/taken">${takenOpen() ? `Taken (${takenOpen()} open)` : "Taken"}</a><button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
     (st ? "" : `<div class="share sec">${IC.eye}<div>Voer het databasescript <b>v36</b> uit in Supabase om hier ook het gebruik per club en per week te zien.</div></div>`) +
@@ -375,6 +384,7 @@ route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
       <div class="kpi"><small>Actief deze week</small><b>${st ? st.active_7 : "–"}</b><span>${st ? `van ${st.users} accounts · ${st.active_30} deze maand` : "voer v36 uit"}</span></div>
       <div class="kpi"><small>Spelers in de app</small><b>${sum("players")}</b><span>in ${sum("teams")} ploegen</span></div>
       <a class="kpi kpil" href="#/platform/meldingen"><small>Open meldingen</small><b>${st ? st.feedback_open : sum("feedback_open")}</b><span>bekijken ›</span></a></div>
+    ${billAttn.length ? `<div class="sec pattn"><h2>Abonnementen</h2>${billAttn.map(c => { const o = billOf(c); return `<a class="pat" href="#/platform"><span class="pill ${o.k}">${esc(o.l)}</span><b>${esc(c.name)}</b><span class="hint">${esc(o.t)}</span></a>`; }).join("")}</div>` : ""}
     ${attention.length ? `<div class="sec pattn"><h2>Aandacht nodig</h2>${attention.map(c => { const [k, l] = status(c); return `<a class="pat" href="#/platformclub/${esc(c.id)}/club"><span class="pill ${k}">${esc(l)}</span><b>${esc(c.name)}</b><span class="hint">${
       l === "Geen beheerder" ? "Duid een beheerder aan en stuur de uitnodiging." : l === "Wacht op beheerder" ? "De beheerder heeft nog geen account. Stuur de uitnodiging opnieuw." : l === "Opstart bezig" ? "De club heeft de vijf opstartstappen nog niet afgerond." : "Niemand van de club logde de laatste twee weken in. Even bellen?"}</span></a>`; }).join("")}</div>` : ""}
     ${st ? `<div class="sec pgrid">
@@ -389,6 +399,8 @@ route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
         <p class="hint" style="margin:0">Trainingen en wedstrijden van de laatste 30 dagen, evaluaties van dit seizoen. Laatst iemand ingelogd: ${agoTxt(c.last_login)}${c.matches_30 ? ` · ${Math.round((c.reports_30 || 0) / c.matches_30 * 100)}% wedstrijden met uitslag` : ""}</p>` : ""}
       <dl><div><dt>Beheerder</dt><dd>${(c.admins || []).length ? (c.admins || []).map(esc).join(", ") : c.pending_admin ? esc(c.pending_admin) + ` <span class="hint">(nog geen account)</span>` : `<button class="link" type="button" data-edit="${esc(c.id)}">Aanduiden</button>`}</dd></div>
         <div><dt>Clubcode</dt><dd><b translate="no">${esc(c.code || "–")}</b></dd></div></dl>
+      ${(() => { const o = billOf(c); if (!o) return ""; const open = c.bill.status !== "active" && c.bill.status !== "past_due";
+        return `<div class="pbill ${o.k}"><span class="pill ${o.k}">${esc(o.l)}</span><span class="pbt">${esc(o.t)}</span>${open ? `<span class="pbb"><button class="btn ghost small" type="button" data-bext="${esc(c.id)}">+30 dagen</button><button class="btn ghost small" type="button" data-bset="${esc(c.id)}">Einddatum kiezen</button>${c.bill.status !== "free" ? `<button class="btn ghost small" type="button" data-bfree="${esc(c.id)}">Gratis</button>` : ""}</span>` : ""}</div>`; })()}
       <div class="pact"><a class="btn small" href="#/platformclub/${esc(c.id)}/club">${IC.gear}Instellingen</a><button class="btn ghost small" type="button" data-edit="${esc(c.id)}">Beheerder en code</button>${S.super ? `<button class="btn small" type="button" data-sup="${esc(c.id)}">${IC.eye}Club openen</button>` : ""}<button class="ib" type="button" data-inv="${esc(c.id)}" title="Uitnodiging voor de beheerder kopiëren" aria-label="Uitnodiging kopiëren">${IC.copy}</button></div></article>`; }).join("")}</div></div>
     <details class="sec pdet"><summary><h2 style="display:inline">Zo start een nieuwe club</h2></summary><ol class="psteps">
       <li><b>Club aanmaken</b><span>Met de naam en het e-mailadres van de beheerder (bv. de TVJO). Jij wordt geen lid.</span></li>
@@ -396,6 +408,13 @@ route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
       <li><b>De club zet zichzelf klaar</b><span>Na het aanmelden leidt de app de beheerder door vijf stappen: kleuren, evaluaties, onderdelen, ploegen en trainers uitnodigen.</span></li>
       <li><b>Trainers aan de slag</b><span>Trainers maken een account met de clubcode. Bij elke pagina staat een vraagteken dat naar de uitleg in de handleiding gaat.</span></li></ol></details>`;
   $("#pnew").onclick = () => newClubDialog(() => render());
+  const setBill = async (c, st, until, msg) => { const r = await sb.rpc("platform_set_billing", { c: c.id, st, until: until || null }); if (r.error) { toast(r.error.message); return; } toast(msg); render(); };
+  $$("[data-bext]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.bext); const base = Math.max(Date.now(), c.bill.until ? new Date(c.bill.until).getTime() : 0); setBill(c, "trial", new Date(base + 30 * 864e5).toISOString(), "Proef met 30 dagen verlengd."); });
+  $$("[data-bfree]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.bfree); if (confirm(`${c.name} gratis zetten? Er is dan geen einddatum meer.`)) setBill(c, "free", null, "Club staat op gratis."); });
+  $$("[data-bset]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.bset);
+    const d = document.createElement("dialog"); d.className = "pdlg"; const min = new Date(Date.now() + 864e5).toISOString().slice(0, 10), def = c.bill.until && new Date(c.bill.until) > Date.now() ? c.bill.until.slice(0, 10) : "";
+    d.innerHTML = `<form method="dialog"><h2>Einddatum voor ${esc(c.name)}</h2><p class="hint">Tot en met deze dag kan de club alles gebruiken. Daarna wordt de club vergrendeld, tenzij ze een abonnement nemen.</p><label class="fld"><span>Einddatum</span><input type="date" name="d" min="${min}" value="${def}" required></label><div class="pact"><button class="btn ghost" value="x" formnovalidate>Annuleren</button><button class="btn" value="ok">Opslaan</button></div></form>`;
+    document.body.appendChild(d); d.showModal(); d.addEventListener("close", () => { const val = d.querySelector("input").value; const ok = d.returnValue === "ok" && val; d.remove(); if (ok) setBill(c, "trial", new Date(val + "T23:59:59").toISOString(), "Einddatum opgeslagen."); }); });
   $$("[data-sup]", v).forEach(b => b.onclick = () => supportEnter(data.find(x => x.id === b.dataset.sup)));
   $$("[data-inv]", v).forEach(b => b.onclick = () => { const c = data.find(x => x.id === b.dataset.inv); navigator.clipboard?.writeText(inviteText(c.name, c.code, c.pending_admin || (c.admins || [])[0])).then(() => toast("Uitnodiging gekopieerd. Plak ze in een mail aan de beheerder.")); });
   $$("[data-edit]", v).forEach(b => b.onclick = () => editClubDialog(data.find(x => x.id === b.dataset.edit), () => render()));

@@ -182,3 +182,12 @@ html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-st
 .plan .bpill{align-self:flex-start;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--yellow) 26%,var(--card2))}
 .plan b{font-size:17px;font-weight:800}.plan .pp{font-size:28px;font-weight:900}.plan .pp small{font-size:13px;font-weight:600;color:var(--muted)}
 .plan ul{margin:0;padding-left:18px;flex:1}.plan .btn{margin-top:6px}
+
+/* platform: abonnement per club */
+.pbill{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;margin:10px 0;border-radius:12px;background:#f4f6f5;border:1px solid rgba(0,0,0,.06)}
+.pbill.loss{background:#fdeceb;border-color:#f3c9c6}.pbill.w{background:#fff6df;border-color:#f2e0a8}
+.pbill .pbt{flex:1 1 220px;font-size:.88rem;line-height:1.35}
+.pbill .pbb{display:flex;flex-wrap:wrap;gap:6px}
+.pdlg{border:0;border-radius:16px;padding:20px;max-width:min(92vw,380px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.pdlg::backdrop{background:rgba(0,0,0,.45)}
+.pdlg h2{margin:0 0 6px}.pdlg .fld{display:grid;gap:4px;margin:12px 0}.pdlg input{padding:10px;border:1px solid #ccd;border-radius:10px;font:inherit}
