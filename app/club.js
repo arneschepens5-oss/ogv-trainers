@@ -32,9 +32,9 @@ function viewJoin(v) {
   if (S.locked) { /* abonnement verlopen: de club is dicht, niemand kan iets zien of doen */
     const nm = S.lockClub?.name || "de club", st = S.lockClub?.billing_status;
     v.innerHTML = `<div class="authbox">${AUTHHEAD()}<h2 style="margin:0 0 8px">${st === "trial" ? "De proefperiode is afgelopen" : "Het abonnement is verlopen"}</h2><p class="muted">Het abonnement van <b style="color:var(--ink)">${esc(nm)}</b> is niet meer actief. Zolang dat zo blijft, kan niemand van de club de app gebruiken. Er is niets verwijderd: zodra het abonnement loopt, staat alles terug zoals het was.</p>
-    ${S.lockAdmin ? `<p class="muted">Je bent beheerder. Je kan het abonnement nu meteen hernemen.</p><div class="err" id="berr"></div><div class="row"><button class="btn" type="button" id="paynow">Abonnement starten</button><button class="btn ghost" type="button" id="recheck">Ik heb betaald</button><button class="link" type="button" data-logout>Afmelden</button></div>` : `<p class="muted">Vraag een beheerder van de club om het abonnement te hernemen.</p><div class="row"><button class="btn" type="button" id="recheck">Opnieuw controleren</button><button class="link" type="button" data-logout>Afmelden</button></div>`}</div>`;
+    ${S.lockAdmin ? `<p class="muted">Je bent beheerder. Je kan het abonnement nu meteen hernemen.</p><div class="err" id="berr"></div><div class="row"><button class="btn" type="button" id="paynow">Maandelijks starten</button><button class="btn" type="button" id="payyear">Jaarcontract starten</button><button class="btn ghost" type="button" id="recheck">Ik heb betaald</button><button class="link" type="button" data-logout>Afmelden</button></div>` : `<p class="muted">Vraag een beheerder van de club om het abonnement te hernemen.</p><div class="row"><button class="btn" type="button" id="recheck">Opnieuw controleren</button><button class="link" type="button" data-logout>Afmelden</button></div>`}</div>`;
     $("[data-logout]", v).onclick = logout;
-    if ($("#paynow")) $("#paynow").onclick = e => startCheckout(e.target, $("#berr"));
+    if ($("#paynow")) { $("#paynow").onclick = e => startCheckout(e.target, $("#berr")); $("#payyear").onclick = e => startCheckout(e.target, $("#berr"), "checkout", "year"); }
     $("#recheck").onclick = async e => { e.target.disabled = true; await clubStatus(); if (S.member) { toast("Welkom terug bij " + APPNAME() + "."); startCloud(); } else { toast("Nog niet actief. Een betaling kan enkele minuten duren."); render(); } };
     return; }
   if (S.pending) { /* clubcode is gekend, maar een beheerder moet de toegang nog goedkeuren: tot dan kan dit account niets */
@@ -56,12 +56,12 @@ function viewJoin(v) {
     await clubStatus(); if (S.member) { toast("Welkom bij " + APPNAME() + "."); startCloud(); } else render(); };
 }
 /* abonnement: betaling starten bij Mollie (via de edge function) */
-async function startCheckout(btn, errEl, path = "checkout") {
+async function startCheckout(btn, errEl, path = "checkout", plan = "month") {
   btn.disabled = true; if (errEl) errEl.textContent = "";
-  try { const { data: ss } = await sb.auth.getSession(); const r = await fetch(SB_URL + "/functions/v1/billing/" + path, { method: "POST", headers: { Authorization: "Bearer " + ss.session.access_token, apikey: SB_KEY, "Content-Type": "application/json" }, body: "{}" });
+  try { const { data: ss } = await sb.auth.getSession(); const r = await fetch(SB_URL + "/functions/v1/billing/" + path, { method: "POST", headers: { Authorization: "Bearer " + ss.session.access_token, apikey: SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
     const j = await r.json().catch(() => ({})); if (!r.ok || !j.url) throw new Error(j.error || "Betaling starten lukte niet"); location.href = j.url; }
   catch (e) { btn.disabled = false; if (errEl) errEl.textContent = e.message; else toast(e.message); } }
-function billingCard() {
+function billingCard(noBtn) {
   const b = S.billing; if (!S.admin || !b) return "";
   if (b.status === "free") return `<div class="billcard ok"><span class="bicon" aria-hidden="true">${IC.star}</span><div class="bmain"><span class="bpill">Gratis</span><b class="btitle">Jullie club betaalt niets</b><span class="hint">Je gebruikt FootballCoachHub gratis. Er is niets om te regelen.</span></div></div>`;
   const d = Math.max(Math.ceil((new Date(b.access_until) - Date.now()) / 864e5), 0), dt = new Date(b.access_until).toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
@@ -71,12 +71,26 @@ function billingCard() {
     past_due: ["Betaling mislukt", "bad", "De laatste betaling is niet gelukt", `Pas je betaalmethode aan vóór ${dt}. Daarna is de app voor de hele club dicht.`, "Abonnement beheren"],
     canceled: ["Opgezegd", "bad", `Toegang tot ${dt}`, "Je abonnement is stopgezet. Start het opnieuw om de app te blijven gebruiken.", "Abonnement starten"] }[b.status] || ["Abonnement", "trial", `Toegang tot ${dt}`, "", "Abonnement starten"];
   const portal = b.status === "active" || b.status === "past_due", pct = Math.min(100, Math.round(d / 30 * 100));
-  return `<div class="billcard ${T[1]}"><span class="bicon" aria-hidden="true">${IC.star}</span><div class="bmain"><span class="bpill">${T[0]}</span><b class="btitle">${T[2]}</b><span class="hint">${T[3]}</span>${b.status === "trial" || warn ? `<span class="bbar" role="img" aria-label="${days} over"><i style="width:${pct}%"></i></span>` : ""}</div><button class="btn${T[1] === "ok" ? " ghost" : ""}" type="button" id="paybtn"${portal ? ' data-portal="1"' : ""}>${T[4]}</button></div>`; }
+  return `<div class="billcard ${T[1]}"><span class="bicon" aria-hidden="true">${IC.star}</span><div class="bmain"><span class="bpill">${T[0]}</span><b class="btitle">${T[2]}</b><span class="hint">${T[3]}</span>${b.status === "trial" || warn ? `<span class="bbar" role="img" aria-label="${days} over"><i style="width:${pct}%"></i></span>` : ""}</div>${noBtn ? "" : `<button class="btn${T[1] === "ok" ? " ghost" : ""}" type="button" id="paybtn"${portal ? ' data-portal="1"' : ""}>${T[4]}</button>`}</div>`; }
 function billingAttention() { const b = S.billing; if (!b || b.status === "free") return false; const d = Math.ceil((new Date(b.access_until) - Date.now()) / 864e5); return d <= 7 || b.status === "past_due" || b.status === "canceled"; }
-function adminBilling(host) {
-  host.innerHTML = `<div class="panel sec"><h2>Abonnement</h2><p class="hint" style="margin-top:0">Hier zie je of het abonnement van de club loopt en kan je het beheren.</p>${billingCard()}<div class="err" id="berr"></div>
+async function adminBilling(host) {
+  const b = S.billing || {}, need = b.status === "trial" || b.status === "canceled", eur = c => (c / 100).toLocaleString("nl-BE", { style: "currency", currency: "EUR" });
+  host.innerHTML = `<div class="panel sec"><h2>Abonnement</h2><p class="hint" style="margin-top:0">Hier zie je of het abonnement van de club loopt en kan je het beheren.</p>${billingCard(need)}<div id="bplans"></div><div class="err" id="berr"></div>
   <p class="hint" style="margin-bottom:0">Betalen gaat veilig via Stripe. FootballCoachHub bewaart zelf geen kaart- of rekeningnummers. Als het abonnement stopt, is de app voor de hele club dicht tot het opnieuw loopt. Er wordt niets verwijderd.</p></div>`;
-  const btn = $("#paybtn", host); if (btn) btn.onclick = e => startCheckout(e.target, $("#berr", host), e.target.dataset.portal ? "portal" : "checkout"); }
+  const btn = $("#paybtn", host); if (btn) btn.onclick = e => startCheckout(e.target, $("#berr", host), e.target.dataset.portal ? "portal" : "checkout");
+  if (mode === "demo") return;
+  try {
+    if (need) {
+      const { data: ss } = await sb.auth.getSession(); const r = await fetch(SB_URL + "/functions/v1/billing/plans", { method: "POST", headers: { Authorization: "Bearer " + ss.session.access_token, apikey: SB_KEY } }); const pl = await r.json();
+      if (!pl.month) throw new Error("geen prijzen");
+      $("#bplans", host).innerHTML = `<div class="plans"><div class="plan"><b>Maandelijks</b><div class="pp">${eur(pl.month)}<small> per maand</small></div><ul class="tight"><li>Elke maand opzegbaar</li><li>Altijd je eigen tempo</li></ul><button class="btn ghost" type="button" data-plan="month">Maandelijks starten</button></div>
+      <div class="plan hi"><span class="bpill">1 maand korting</span><b>Jaarcontract</b><div class="pp">${eur(pl.year)}<small> per maand</small></div><ul class="tight"><li>12 maanden vast, maandelijks betaald</li><li>Stopt vanzelf na 12 maanden</li><li>Niet tussentijds opzegbaar</li></ul><button class="btn" type="button" data-plan="year">Jaarcontract starten</button></div></div>`;
+      $$("[data-plan]", host).forEach(x => x.onclick = e => startCheckout(e.target, $("#berr", host), "checkout", x.dataset.plan));
+    } else if (b.status === "active" || b.status === "past_due") {
+      const { data: bi } = await sb.rpc("billing_info");
+      if (bi?.plan === "year" && bi.contract_end) $("#bplans", host).innerHTML = `<p class="hint">Jaarcontract tot ${new Date(bi.contract_end).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" })}. Tot dan kan het niet tussentijds opgezegd worden. Daarna stopt het abonnement vanzelf.</p>`;
+    }
+  } catch (e) { const el = $("#berr", host); if (el) el.textContent = "Prijzen laden lukte niet. Probeer het later opnieuw."; } }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; S.intscout = true; return; }
   try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.pending = !!data.pending; S.locked = !!data.locked; S.lockAdmin = !!data.lock_admin; S.lockClub = data.lock_club || null; S.billing = data.billing || null; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.super = !!data.super; S.support = data.support || null; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club && !ADMIN_APP) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
