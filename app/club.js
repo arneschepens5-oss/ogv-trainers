@@ -56,17 +56,17 @@ function viewJoin(v) {
     await clubStatus(); if (S.member) { toast("Welkom bij " + APPNAME() + "."); startCloud(); } else render(); };
 }
 /* abonnement: betaling starten bij Mollie (via de edge function) */
-async function startCheckout(btn, errEl) {
+async function startCheckout(btn, errEl, path = "checkout") {
   btn.disabled = true; if (errEl) errEl.textContent = "";
-  try { const { data: ss } = await sb.auth.getSession(); const r = await fetch(SB_URL + "/functions/v1/billing/checkout", { method: "POST", headers: { Authorization: "Bearer " + ss.session.access_token, apikey: SB_KEY, "Content-Type": "application/json" }, body: "{}" });
+  try { const { data: ss } = await sb.auth.getSession(); const r = await fetch(SB_URL + "/functions/v1/billing/" + path, { method: "POST", headers: { Authorization: "Bearer " + ss.session.access_token, apikey: SB_KEY, "Content-Type": "application/json" }, body: "{}" });
     const j = await r.json().catch(() => ({})); if (!r.ok || !j.url) throw new Error(j.error || "Betaling starten lukte niet"); location.href = j.url; }
   catch (e) { btn.disabled = false; if (errEl) errEl.textContent = e.message; else toast(e.message); } }
 function billingBanner() {
   const b = S.billing; if (!S.admin || !b || b.status === "free") return "";
   const d = Math.ceil((new Date(b.access_until) - Date.now()) / 864e5), dt = new Date(b.access_until).toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
-  if (b.status === "active" && d > 7) return `<p class="hint">Abonnement actief tot ${dt}.</p>`;
+  if (b.status === "active" && d > 7) return `<div class="actcard sm"><span><b>Abonnement actief tot ${dt}.</b></span><button class="btn small ghost" type="button" id="paybtn" data-portal="1">Abonnement beheren</button></div>`;
   const msg = b.status === "trial" ? `Proefperiode: nog ${Math.max(d, 0)} ${d === 1 ? "dag" : "dagen"}.` : b.status === "past_due" ? `De laatste betaling is niet gelukt. Toegang tot ${dt}.` : b.status === "canceled" ? `Abonnement stopgezet. Toegang tot ${dt}.` : `Je abonnement loopt tot ${dt}.`;
-  return `<div class="actcard sm"><span><b>${msg}</b><br><span class="hint">Na afloop is de app voor de hele club dicht tot het abonnement loopt.</span></span><button class="btn small" type="button" id="paybtn">${b.status === "active" ? "Verlengen" : "Abonnement starten"}</button></div>`; }
+  return `<div class="actcard sm"><span><b>${msg}</b><br><span class="hint">Na afloop is de app voor de hele club dicht tot het abonnement loopt.</span></span><button class="btn small" type="button" id="paybtn"${b.status === "active" ? ' data-portal="1"' : ""}>${b.status === "active" ? "Abonnement beheren" : "Abonnement starten"}</button></div>`; }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; S.intscout = true; return; }
   try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.pending = !!data.pending; S.locked = !!data.locked; S.lockAdmin = !!data.lock_admin; S.lockClub = data.lock_club || null; S.billing = data.billing || null; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.super = !!data.super; S.support = data.support || null; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club && !ADMIN_APP) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
@@ -97,7 +97,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) =>
   v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", club: "Club", platform: "Alle clubs" }[tab]}${helpLink("clubbeheer")}</h1></div></div>
     ${billingBanner()}<nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}${k === "toegang" && S.waitN ? `<span class="bdgn" title="Wachten op toegang">${S.waitN}</span>` : ""}</a>`).join("")}</nav>
     ${tab === "toegang" ? `<nav class="admsub" aria-label="Toegang"><a href="#/clubbeheer/toegang"${sub !== "functies" ? ' aria-current="page"' : ""}>Leden</a><a href="#/clubbeheer/toegang/functies"${sub === "functies" ? ' aria-current="page"' : ""}>Functies en rechten</a></nav>` : S.waitN ? `<a class="actcard sm" href="#/clubbeheer/toegang"><span class="aci">${IC.ppl}</span><span><b>${S.waitN} ${S.waitN === 1 ? "persoon wacht" : "personen wachten"} op toegang</b></span><span class="btn small">Bekijken</span></a>` : ""}<div id="admv"><p class="hint">Laden…</p></div>`;
-  if ($("#paybtn")) $("#paybtn").onclick = e => startCheckout(e.target);
+  if ($("#paybtn")) $("#paybtn").onclick = e => startCheckout(e.target, null, e.target.dataset.portal ? "portal" : "checkout");
   const host = $("#admv"); try { $(".admtabs a[aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" }); } catch (x) {}
   const getInfo = async () => { if (mode === "demo") return { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
     const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
