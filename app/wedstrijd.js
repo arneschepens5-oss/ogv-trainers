@@ -391,7 +391,7 @@ function lineupTab(tv, e) {
       window.addEventListener("pointermove", mv); window.addEventListener("pointerup", end); window.addEventListener("pointercancel", end); };
     tv.onclick = ev => { if (drag) return; const t = ev.target, bt = t.closest("[data-q]"), fm = t.closest("[data-form]"), sp = t.closest("[data-sp]"), pl = t.closest("[data-pl]"), cell = t.closest("[data-cell]"), bn = t.closest("[data-bench]");
       if (t.closest("#addm")) return addMoment();
-      if (bt) { q = +bt.dataset.q; sel = null; return draw(); }
+      if (bt) { q = +bt.dataset.q; sel = null; if (q > 0 && !ps.some(p => fvParse(posOf(p, q))) && ps.some(p => fvParse(posOf(p, q - 1)))) { ps.forEach(p => setPos(p, q, posOf(p, q - 1))); sv(); toast("Opstelling van " + label(q - 1) + " overgenomen. Pas alleen de wissels aan."); } return draw(); }
       if (fm) return formation(fm.dataset.form);
       const hit = sp || pl; if (hit) { const id = hit.dataset.sp || hit.dataset.pl, s = sel ? P(sel) : null, c = P(id);
         if (s && s !== c && (fvParse(posOf(s, q)) || fvParse(posOf(c, q)))) { swap(s, c); return done(); } sel = sel === id ? null : id; return draw(); }
