@@ -187,7 +187,7 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) =>
   $("#wa").href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(txt);
   $("#share").onclick = () => {
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else { navigator.clipboard?.writeText(txt); toast("Uitnodiging gekopieerd."); } };
-  $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 6 tekens):", String(clubShort()).replace(/\W/g, "").toUpperCase().slice(0, 4) + "-" + Math.random().toString(36).slice(2, 8).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
+  $("#newcode").onclick = () => { const c = prompt("Nieuwe clubcode (minstens 8 tekens):", String(clubShort()).replace(/\W/g, "").toUpperCase().slice(0, 4) + "-" + Math.random().toString(36).slice(2, 10).toUpperCase()); if (c) rpc("club_set_code", { code: c }, "Nieuwe clubcode ingesteld."); };
   $$("[data-ref]", v).forEach(b => b.onclick = () => { const w = info.waiting.find(x => x.user_id === b.dataset.ref); if (confirm(`Toegang weigeren voor ${w.name || w.email}? Die persoon blijft zonder toegang en verdwijnt uit deze lijst. Maak daarna eventueel een nieuwe clubcode, zodat niemand de oude nog kan gebruiken.`)) setRefused([...rfIds, w.user_id], "Toegang geweigerd."); });
   $$("[data-unref]", v).forEach(b => b.onclick = () => setRefused(rfIds.filter(x => x !== b.dataset.unref), "Teruggezet bij wachten op toegang."));
   $$("[data-adm]", v).forEach(b => b.onclick = () => { const w = info.waiting.find(x => x.user_id === b.dataset.adm); memberForm({ user_id: w.user_id, email: w.email, name: w.name, role: "", admit: true, rechten: [] }, rpc); });
