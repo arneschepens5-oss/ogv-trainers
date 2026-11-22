@@ -2676,3 +2676,4 @@ h1.pg::after{display:none}
 .fv-tr b{min-width:56px;text-align:right}.fv-tr b.warn{color:var(--warn)}
 .fv-set{margin-top:14px}.fv-set summary{cursor:pointer;color:var(--muted);font-weight:600}
 @media(min-width:520px){.fv-nm{font-size:11.5px}}
+.fv-ph{width:clamp(26px,70%,40px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:rgba(255,255,255,.85);border:2px dashed rgba(255,255,255,.55);background:rgba(255,255,255,.08);pointer-events:none}

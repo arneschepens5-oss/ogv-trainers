@@ -321,6 +321,13 @@ function fvSlots(def) {
   L.forEach((m, j) => { const r = Math.round(6 - j * 5 / Math.max(L.length - 1, 1)); for (let i = 0; i < m; i++) out.push([m === 1 ? 3 : Math.round((i + .5) * FV_C / m - .5), L.length === 1 ? 3 : r]); });
   return out;
 }
+const FV_NAMES = { K: "Keeper", LA: "Linksachter", RA: "Rechtsachter", CV: "Centrale verdediger", LM: "Linkermiddenvelder", RM: "Rechtermiddenvelder", M: "Middenvelder", LB: "Linksbuiten", RB: "Rechtsbuiten", S: "Spits" };
+function fvNamed(def) { const L = def.split("-").map(Number), sl = fvSlots(def), out = [{ c: sl[0][0], r: sl[0][1], n: "K" }]; let k = 1;
+  L.forEach((m, j) => { const last = j === L.length - 1 && L.length > 1, first = j === 0;
+    for (let i = 0; i < m; i++, k++) { const edge = i === 0 ? "L" : i === m - 1 ? "R" : "";
+      let n = first ? (m === 1 ? "CV" : edge === "L" ? "LA" : edge === "R" ? "RA" : "CV") : last ? (m <= 2 ? "S" : edge === "L" ? "LB" : edge === "R" ? "RB" : "S") : (m === 1 ? "M" : edge === "L" ? "LM" : edge === "R" ? "RM" : "M");
+      out.push({ c: sl[k][0], r: sl[k][1], n }); } });
+  return out; }
 const FV_OLD = { "2v2": { A: [2, 4], B: [4, 4] }, "3v3": { L: [1, 5], M: [3, 3], R: [5, 5] }, "5v5": { "1": [3, 8], "3": [1, 6], "7": [5, 6], "11": [3, 4], "9": [3, 1] },
   "8v8": { "1": [3, 8], "5": [0, 6], "3": [3, 6], "2": [6, 6], "11": [1, 3], "8": [3, 4], "7": [5, 3], "9": [3, 1] },
   "11v11": { "1": [3, 8], "2": [6, 6], "3": [4, 7], "4": [2, 7], "5": [0, 6], "6": [3, 5], "8": [5, 4], "10": [1, 4], "7": [6, 2], "9": [3, 1], "11": [0, 2] } };
@@ -339,6 +346,8 @@ function lineupTab(tv, e) {
       let [c, r] = xy0, d = 0; while (taken.has(c + ":" + r) && d < 6) { d++; const nc = c + (d % 2 ? 1 : -1) * Math.ceil(d / 2); if (nc >= 0 && nc < FV_C) c = nc; else r = Math.max(0, r - 1); }
       taken.add(c + ":" + r); g[k] = fvCode(c, r); }); });
   let q = 0, sel = null, drag = false;
+  const formAt = k => { for (let i = k; i >= 0; i--) if (L.mom[i] && L.mom[i].form) return L.mom[i].form; return FORMATIONS[fmt] ? FORMATIONS[fmt][0] : null; };
+  const phMap = k => { const m = {}; const f = hasKeeper && formAt(k); if (f) fvNamed(f).forEach(o => { m[fvCode(o.c, o.r)] = o.n; }); else Object.entries(oldXY).forEach(([key, a]) => { m[fvCode(...a)] = key; }); return m; };
   const posOf = (p, k) => (L.grid[p.id] || [])[k] || null;
   const setPos = (p, k, x) => { L.grid[p.id] = L.grid[p.id] || []; L.grid[p.id][k] = x || null; };
   const onAt = (k, code) => ps.find(p => posOf(p, k) === code);
@@ -352,8 +361,8 @@ function lineupTab(tv, e) {
   const draw = () => {
     if (q >= L.mom.length) q = L.mom.length - 1; const half = total() / 2, N = pos.length;
     const field = ps.filter(p => fvParse(posOf(p, q))), bench = ps.filter(p => !fvParse(posOf(p, q)));
-    const cells = []; for (let r = 0; r < FV_R; r++) for (let c = 0; c < FV_C; c++) { const code = fvCode(c, r), p = onAt(q, code);
-      cells.push(`<div class="fv-cell" data-cell="${code}">${p ? `<div class="fv-pc${sel === p.id ? " sel" : ""}" data-sp="${p.id}" role="button" tabindex="0" aria-label="${esc(pname(p))}"><div class="fv-dot">${esc(initials(p))}</div><div class="fv-nm">${short(p)}</div></div>` : ""}</div>`); }
+    const ph = phMap(q), cells = []; for (let r = 0; r < FV_R; r++) for (let c = 0; c < FV_C; c++) { const code = fvCode(c, r), p = onAt(q, code);
+      cells.push(`<div class="fv-cell" data-cell="${code}">${p ? `<div class="fv-pc${sel === p.id ? " sel" : ""}" data-sp="${p.id}" role="button" tabindex="0" aria-label="${esc(pname(p))}"><div class="fv-dot">${esc(initials(p))}</div><div class="fv-nm">${short(p)}</div></div>` : ph[code] ? `<div class="fv-ph" title="${esc(FV_NAMES[ph[code]] || ph[code])}">${esc(ph[code])}</div>` : ""}</div>`); }
     const tabs = L.mom.map((m, k) => { const f = ps.filter(p => fvParse(posOf(p, k))).length, ok = ps.length && f === N;
       return `<button type="button" data-q="${k}" aria-pressed="${k === q}"><b>${esc(label(k))}</b><i class="${ok ? "ok" : "warn"}">${ok ? "✓" : f + "/" + N}</i></button>`; }).join("");
     const forms = FORMATIONS[fmt] && hasKeeper ? `<div class="fv-forms noprint"><span>Formatie</span>${FORMATIONS[fmt].map(f => `<button type="button" data-form="${f}">${f}</button>`).join("")}</div>` : "";
@@ -402,7 +411,7 @@ function lineupTab(tv, e) {
   /* formatie toepassen op wie nu op het veld staat (bv. van 4-3-3 naar 5-3-2 tijdens de match) */
   const formation = def => { const on = ps.filter(p => fvParse(posOf(p, q))); const sl = fvSlots(def);
     const ord = on.slice().sort((a, b) => (isKeeper(b) - isKeeper(a)) || (fvParse(posOf(b, q))[1] - fvParse(posOf(a, q))[1]) || (fvParse(posOf(a, q))[0] - fvParse(posOf(b, q))[0]));
-    ps.forEach(p => setPos(p, q, null)); ord.forEach((p, i) => { if (sl[i]) setPos(p, q, fvCode(...sl[i])); }); sel = null; sv(); draw(); toast("Formatie " + def + " toegepast. Sleep om bij te sturen."); };
+    L.mom[q].form = def; ps.forEach(p => setPos(p, q, null)); ord.forEach((p, i) => { if (sl[i]) setPos(p, q, fvCode(...sl[i])); }); sel = null; sv(); draw(); toast("Formatie " + def + " toegepast. Sleep om bij te sturen."); };
   /* extra wisselmoment: splitst het gekozen moment op een minuut van de wedstrijd */
   const addMoment = () => { const st = startOf(q), dur = L.mom[q].dur, def = st + Math.max(1, Math.round(dur / 2));
     const d = dialog(`<div class="dlg"><h2>Extra wisselmoment</h2><p class="muted" style="margin-top:0">Op welke minuut van de wedstrijd wissel je? De opstelling van ${esc(label(q))} (minuut ${st} tot ${st + dur}) wordt vanaf dan een nieuw moment.</p>
