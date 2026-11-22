@@ -913,10 +913,12 @@ function accountDialog() {
   const d = dialog(`<div class="dlg"><h2>Mijn account</h2><p class="muted" style="margin-top:0">${esc(user?.email || "")} · ${esc(clubName())}</p>
     <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn ghost" type="button" id="acname">Naam wijzigen</button><button class="btn ghost" type="button" id="acpw">Wachtwoord wijzigen</button></div>
     <form id="acpwf" hidden style="margin-top:14px"><label class="f">Nieuw wachtwoord <span class="hint">minstens 8 tekens</span><input type="password" name="pw" minlength="8" required autocomplete="new-password"></label><div class="row" style="justify-content:flex-end"><button class="btn">Wachtwoord bewaren</button></div></form>
+    ${S.super ? `<h3 style="margin:24px 0 4px">Tweestapsverificatie</h3><div id="mfasec" class="hint" style="color:var(--ink)">Even laden…</div>` : ""}
     <h3 style="margin:24px 0 4px">Account verwijderen</h3><p class="hint" style="margin-top:0">Je account, je eigen oefeningen, trainingen en borden worden definitief gewist. Gegevens van de club (spelers, verslagen, evaluaties) blijven van de club. Dit kan je niet ongedaan maken.</p>
     <form id="acdel"><label class="f">Typ VERWIJDER om te bevestigen<input name="ok" autocomplete="off" spellcheck="false"></label><div class="row" style="justify-content:space-between;align-items:center"><a class="link" href="${esc(PRIVACY_URL)}" target="_blank" rel="noopener">Privacyverklaring</a><button class="btn danger" disabled>Account verwijderen</button></div></form>
     <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" type="button" data-close>Sluiten</button></div></div>`);
   $("#acname", d).onclick = () => { d.close(); nameForm(); };
+  if (S.super && typeof mfaAccountSection === "function") mfaAccountSection(d);
   $("#acpw", d).onclick = () => { const f = $("#acpwf", d); f.hidden = !f.hidden; if (!f.hidden) f.pw.focus(); };
   $("#acpwf", d).onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.updateUser({ password: e.target.pw.value });
     if (error) { toast(error.message); return; } e.target.reset(); e.target.hidden = true; toast("Nieuw wachtwoord bewaard."); };
