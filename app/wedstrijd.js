@@ -316,24 +316,55 @@ function lineupTab(tv, e) {
   const L = e.lineup, sv = saver(e), om = POS_OLD[S.team.format] || {};
   for (const id in L.grid) L.grid[id] = (L.grid[id] || []).map(x => om[x] || x);
   const ps = selPlayers(e);
+  /* positie op het veld (x%, y%): keeper onderaan, aanval naar boven */
+  const XY = {
+    "2v2": { A: [30, 50], B: [70, 50] },
+    "3v3": { L: [20, 58], M: [50, 30], R: [80, 58] },
+    "5v5": { "1": [50, 88], "3": [26, 64], "7": [74, 64], "11": [50, 40], "9": [50, 15] },
+    "8v8": { "1": [50, 90], "5": [16, 68], "3": [50, 70], "2": [84, 68], "11": [18, 38], "8": [50, 44], "7": [82, 38], "9": [50, 14] },
+    "11v11": { "1": [50, 92], "2": [85, 70], "3": [63, 77], "4": [37, 77], "5": [15, 70], "6": [50, 58], "8": [70, 44], "10": [30, 44], "7": [85, 22], "9": [50, 14], "11": [15, 22] } }[S.team.format] || {};
+  const xy = (x, i) => XY[x] || [14 + (i % 4) * 24, 20 + Math.floor(i / 4) * 28];
+  let q = 0, sel = null;
   const draw = () => {
-    const n = L.periods, half = n * L.minutes / 2;
-    const issues = []; for (let k = 0; k < n; k++) { const used = ps.map(p => (L.grid[p.id] || [])[k]).filter(Boolean); const dup = used.filter((x, i) => used.indexOf(x) !== i); const miss = pos.filter(x => !used.includes(x));
-      if (dup.length) issues.push(`Kwart ${k + 1}: ${[...new Set(dup)].join(", ")} dubbel`); if (miss.length) issues.push(`Kwart ${k + 1}: ${miss.join(", ")} niet ingevuld`); }
-    tv.innerHTML = `<div class="row noprint" style="margin-bottom:12px"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Periodes<input type="number" id="lp" min="1" max="8" value="${n}" style="width:70px"></label>
+    const n = L.periods, half = n * L.minutes / 2; if (q >= n) q = n - 1;
+    const posOf = (p, k) => (L.grid[p.id] || [])[k] || null;
+    const setPos = (p, k, x) => { L.grid[p.id] = L.grid[p.id] || []; L.grid[p.id][k] = x || null; };
+    const onAt = (k, x) => ps.find(p => posOf(p, k) === x);
+    const short = p => esc(p.first_name || pname(p));
+    const miss = k => pos.filter(x => !onAt(k, x)).length;
+    const dupOf = k => { const used = ps.map(p => posOf(p, k)).filter(Boolean); return used.filter((x, i) => used.indexOf(x) !== i).length; };
+    const bench = ps.filter(p => !posOf(p, q));
+    const field = `<div class="lu-pitch"><svg viewBox="0 0 100 133" preserveAspectRatio="none" aria-hidden="true"><rect x="3" y="3" width="94" height="127" fill="none"/><line x1="3" y1="66.5" x2="97" y2="66.5"/><circle cx="50" cy="66.5" r="11"/><rect x="27" y="3" width="46" height="18"/><rect x="38" y="3" width="24" height="7"/><rect x="27" y="112" width="46" height="18"/><rect x="38" y="123" width="24" height="7"/></svg>
+      ${pos.map((x, i) => { const [px, py] = xy(x, i), p = onAt(q, x), lab = posLabel(x) ? posLabel(x).split(" · ")[1] : "";
+        return `<button type="button" class="lu-slot${p ? " on" : ""}${p && sel === p.id ? " sel" : ""}" style="left:${px}%;top:${py}%" data-sl="${x}" aria-label="Positie ${x}${lab ? " " + esc(lab) : ""}${p ? ": " + esc(pname(p)) : ", leeg"}"><span class="lu-num">${x}</span>${p ? `<span class="lu-nm">${short(p)}</span>` : `<span class="lu-hint">${esc(lab)}</span>`}</button>`; }).join("")}</div>`;
+    const tabs = Array.from({ length: n }, (_, k) => { const m = miss(k), d = dupOf(k), ok = ps.length && !m && !d;
+      return `<button type="button" data-q="${k}" aria-pressed="${k === q}"><span>${L.periods === 2 ? (k ? "Tweede helft" : "Eerste helft") : "Kwart " + (k + 1)}</span><i class="${ok ? "ok" : m || d ? "warn" : ""}">${ok ? "✓" : m ? m + " leeg" : d ? "dubbel" : ""}</i></button>`; }).join("");
+    const benchH = `<div class="lu-bench" data-bench><h3>Op de bank <span>${bench.length}</span></h3>${bench.length ? `<div class="lu-chips">${bench.map(p => `<button type="button" class="lu-chip${sel === p.id ? " sel" : ""}" data-pl="${p.id}">${esc(pname(p))}</button>`).join("")}</div>` : `<p class="hint" style="margin:0">Iedereen staat op het veld.</p>`}</div>`;
+    const timeH = `<div class="lu-time"><h3>Speeltijd</h3>${ps.map(p => { const row = L.grid[p.id] || [], played = row.slice(0, n).filter(Boolean).length * L.minutes;
+      return `<div class="lu-tr"><span class="nm">${esc(pname(p))}</span><span class="sq">${Array.from({ length: n }, (_, k) => `<i class="${row[k] ? "on" : ""}${k === q ? " cur" : ""}"></i>`).join("")}</span><b class="${played < half ? "warn" : ""}">${played} min</b></div>`; }).join("")}</div>`;
+    tv.innerHTML = `<div class="lu-tabs noprint" role="group" aria-label="Kwart kiezen">${tabs}</div>
+      <div class="lu-wrap"><div>${field}<p class="hint" style="margin:8px 2px 0">Tik een speler en dan een positie. Tik op een speler op het veld en dan op een andere speler of positie om te wisselen.</p></div>
+      <div class="lu-side">${benchH}${timeH}</div></div>
+      <details class="lu-set noprint"><summary>Instellingen en hulp</summary><div class="row" style="margin-top:10px;flex-wrap:wrap"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Periodes<input type="number" id="lp" min="1" max="8" value="${n}" style="width:70px"></label>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minuten<input type="number" id="lm" min="5" max="60" value="${L.minutes}" style="width:70px"></label><span class="spacer"></span>
-      <button class="btn ghost small" type="button" id="auto">Eerlijk verdelen</button><button class="btn ghost small" type="button" id="clear">Leegmaken</button></div>
-      <div class="panel wrapx" style="padding:6px 10px"><table class="tbl lineup"><thead><tr><th>Speler</th>${Array.from({ length: n }, (_, k) => `<th>Kwart ${k + 1}</th>`).join("")}<th>Speeltijd</th></tr></thead><tbody>
-      ${ps.map(p => { const row = L.grid[p.id] || [], played = row.filter(Boolean).length * L.minutes;
-        return `<tr><td>${esc(pname(p))}</td>${Array.from({ length: n }, (_, k) => `<td><select data-c="${p.id}:${k}" aria-label="${esc(pname(p))} kwart ${k + 1}"><option value="">Bank</option>${pos.map(x => `<option value="${x}"${row[k] === x ? " selected" : ""}>${x}${posLabel(x) ? " · " + posLabel(x).split(" · ")[1].toLowerCase() : ""}</option>`).join("")}</select></td>`).join("")}
-        <td class="${played < half ? "warn" : ""}">${played} min</td></tr>`; }).join("")}</tbody></table></div>
-      ${issues.length ? `<p class="hint" style="color:var(--warn)">${issues.map(esc).join(" · ")}</p>` : ps.length ? `<p class="hint" style="color:var(--ok)">Elke positie is in elk kwart ingevuld.</p>` : ""}
-      <p class="hint">Oranje speeltijd = minder dan de helft van de wedstrijd. Bij live coachen start kwart 1 automatisch als basisopstelling.</p>`;
-    $("#lp").onchange = ev => { L.periods = Math.max(1, +ev.target.value || 1); sv(); draw(); }; $("#lm").onchange = ev => { L.minutes = +ev.target.value || L.minutes; sv(); draw(); };
-    $$("[data-c]", tv).forEach(s => s.onchange = () => { const [pid, k] = s.dataset.c.split(":"); L.grid[pid] = L.grid[pid] || []; L.grid[pid][+k] = s.value || null; sv(); draw(); });
-    $("#clear").onclick = () => { L.grid = {}; sv(); draw(); };
+      ${q > 0 ? `<button class="btn ghost small" type="button" id="cp">Kopieer vorig kwart</button>` : ""}<button class="btn ghost small" type="button" id="auto">Eerlijk verdelen</button><button class="btn ghost small" type="button" id="clear">Leegmaken</button></div>
+      <p class="hint">Oranje speeltijd = minder dan de helft van de wedstrijd. Bij live coachen start kwart 1 automatisch als basisopstelling.</p></details>`;
+    tv.onclick = ev => { const t = ev.target, bt = t.closest("[data-q]"), sl = t.closest("[data-sl]"), pl = t.closest("[data-pl]"), bn = t.closest("[data-bench]"); if (!(bt || sl || pl || bn)) return;
+      const P = id => ps.find(p => String(p.id) === String(id));
+      if (bt) { q = +bt.dataset.q; sel = null; return draw(); }
+      if (sl) { const x = sl.dataset.sl, occ = onAt(q, x), s = sel ? P(sel) : null;
+        if (s) { if (occ && occ === s) sel = null; else { const old = posOf(s, q); setPos(s, q, x); if (occ) setPos(occ, q, old); sel = null; sv(); } }
+        else if (occ) sel = occ.id; else { toast("Tik eerst een speler aan."); return; }
+        return draw(); }
+      if (pl) { const id = pl.dataset.pl, s = sel ? P(sel) : null, c = P(id);
+        if (s && s !== c && posOf(s, q) && !posOf(c, q)) { setPos(c, q, posOf(s, q)); setPos(s, q, null); sel = null; sv(); } else sel = sel === id ? null : c.id;
+        return draw(); }
+      if (bn && sel) { const s = P(sel); if (s && posOf(s, q)) { setPos(s, q, null); sv(); } sel = null; draw(); } };
+    const lp = $("#lp"), lm = $("#lm"); lp.onchange = ev => { L.periods = Math.max(1, +ev.target.value || 1); sv(); draw(); }; lm.onchange = ev => { L.minutes = +ev.target.value || L.minutes; sv(); draw(); };
+    const cp = $("#cp"); if (cp) cp.onclick = () => { ps.forEach(p => setPos(p, q, posOf(p, q - 1))); sel = null; sv(); draw(); };
+    $("#clear").onclick = () => { L.grid = {}; sel = null; sv(); draw(); };
     $("#auto").onclick = () => { /* elke speler evenveel kwarten op het veld, posities roteren */
-      L.grid = {}; const order = ps.slice(); let off = 0;
+      L.grid = {}; sel = null; const order = ps.slice(); let off = 0;
       for (let k = 0; k < L.periods; k++) { const on = []; for (let j = 0; j < Math.min(pos.length, order.length); j++) on.push(order[(off + j) % order.length]); off = (off + pos.length) % Math.max(order.length, 1);
         const keeper = on.find(isKeeper) || null; const rest = on.filter(p => p !== keeper); const slots = pos.slice();
         if (keeper && slots[0] === "1") { (L.grid[keeper.id] = L.grid[keeper.id] || [])[k] = slots.shift(); }

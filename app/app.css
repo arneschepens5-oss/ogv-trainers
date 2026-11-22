@@ -2639,3 +2639,37 @@ h1.pg::after{display:none}
 /* scorekleuren leesbaar op een lichte achtergrond */
 :root[data-theme="light"] b[style*="color:hsl"],:root[data-theme="light"] b[style*="color:#"]{filter:brightness(.72) saturate(1.15)}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) b[style*="color:hsl"],:root:not([data-theme="dark"]) b[style*="color:#"]{filter:brightness(.72) saturate(1.15)}}
+
+/* opstelling per kwart: veld met posities, bank en speeltijd */
+.lu-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.lu-tabs button{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:92px;padding:8px 14px;border-radius:14px;border:1px solid var(--line2);background:var(--card);color:var(--muted);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.lu-tabs button i{font-style:normal;font-size:11px;font-weight:700;min-height:14px}
+.lu-tabs button i.ok{color:var(--ok)}.lu-tabs button i.warn{color:var(--warn)}
+.lu-tabs button[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow);color:var(--onY)}
+.lu-tabs button[aria-pressed="true"] i{color:var(--onY)}
+.lu-wrap{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:780px){.lu-wrap{grid-template-columns:1fr}}
+.lu-pitch{position:relative;aspect-ratio:3/4;border-radius:18px;overflow:hidden;border:2px solid rgba(255,255,255,.25);background:repeating-linear-gradient(0deg,#2e8f4d 0 12.5%,#298447 12.5% 25%)}
+.lu-pitch svg{position:absolute;inset:0;width:100%;height:100%;stroke:rgba(255,255,255,.6);stroke-width:.6;fill:none}
+.lu-slot{position:absolute;transform:translate(-50%,-50%);width:80px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;padding:0;cursor:pointer;color:#fff;font:inherit}
+.lu-num{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:16px;border:2px dashed rgba(255,255,255,.75);background:rgba(0,0,0,.22);transition:transform .12s}
+.lu-slot.on .lu-num{background:var(--yellow);color:#111;border:2px solid #fff}
+.lu-slot:active .lu-num{transform:scale(.94)}
+.lu-slot.sel .lu-num{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--info)}
+.lu-nm{font-size:12px;font-weight:700;background:rgba(0,0,0,.65);padding:2px 8px;border-radius:999px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lu-hint{font-size:10px;font-weight:600;opacity:.9;text-shadow:0 1px 2px rgba(0,0,0,.5);text-align:center;line-height:1.1}
+.lu-side{display:flex;flex-direction:column;gap:14px}
+.lu-bench,.lu-time{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.lu-bench h3,.lu-time h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+.lu-bench h3 span{font-size:12px;background:var(--card3);border-radius:999px;padding:1px 8px;color:var(--muted)}
+.lu-chips{display:flex;flex-wrap:wrap;gap:8px}
+.lu-chip{padding:9px 14px;border-radius:999px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font:inherit;font-weight:600;font-size:14px;cursor:pointer}
+.lu-chip.sel{background:var(--info);border-color:var(--info);color:#fff;box-shadow:0 0 0 3px rgba(122,167,255,.35)}
+.lu-tr{display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}
+.lu-tr:first-of-type{border-top:0}
+.lu-tr .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lu-tr .sq{display:flex;gap:3px}
+.lu-tr .sq i{width:14px;height:14px;border-radius:4px;background:var(--card3)}
+.lu-tr .sq i.on{background:var(--ok)}.lu-tr .sq i.cur{outline:2px solid var(--yellow);outline-offset:1px}
+.lu-tr b{min-width:56px;text-align:right}.lu-tr b.warn{color:var(--warn)}
+.lu-set{margin-top:14px}.lu-set summary{cursor:pointer;color:var(--muted);font-weight:600}
