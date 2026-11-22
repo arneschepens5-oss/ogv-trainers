@@ -61,8 +61,9 @@ async function startCheckout(btn, errEl, path = "checkout") {
   try { const { data: ss } = await sb.auth.getSession(); const r = await fetch(SB_URL + "/functions/v1/billing/" + path, { method: "POST", headers: { Authorization: "Bearer " + ss.session.access_token, apikey: SB_KEY, "Content-Type": "application/json" }, body: "{}" });
     const j = await r.json().catch(() => ({})); if (!r.ok || !j.url) throw new Error(j.error || "Betaling starten lukte niet"); location.href = j.url; }
   catch (e) { btn.disabled = false; if (errEl) errEl.textContent = e.message; else toast(e.message); } }
-function billingBanner() {
-  const b = S.billing; if (!S.admin || !b || b.status === "free") return "";
+function billingCard() {
+  const b = S.billing; if (!S.admin || !b) return "";
+  if (b.status === "free") return `<div class="billcard ok"><span class="bicon" aria-hidden="true">${IC.star}</span><div class="bmain"><span class="bpill">Gratis</span><b class="btitle">Jullie club betaalt niets</b><span class="hint">Je gebruikt FootballCoachHub gratis. Er is niets om te regelen.</span></div></div>`;
   const d = Math.max(Math.ceil((new Date(b.access_until) - Date.now()) / 864e5), 0), dt = new Date(b.access_until).toLocaleDateString("nl-BE", { day: "numeric", month: "long" });
   const days = d === 1 ? "1 dag" : d + " dagen", warn = d <= 7;
   const T = { trial: ["Proefperiode", "trial", `Nog ${days} gratis proberen`, `Start je abonnement vóór ${dt}. Daarna is de app voor de hele club dicht tot het abonnement loopt.`, "Abonnement starten"],
@@ -71,6 +72,11 @@ function billingBanner() {
     canceled: ["Opgezegd", "bad", `Toegang tot ${dt}`, "Je abonnement is stopgezet. Start het opnieuw om de app te blijven gebruiken.", "Abonnement starten"] }[b.status] || ["Abonnement", "trial", `Toegang tot ${dt}`, "", "Abonnement starten"];
   const portal = b.status === "active" || b.status === "past_due", pct = Math.min(100, Math.round(d / 30 * 100));
   return `<div class="billcard ${T[1]}"><span class="bicon" aria-hidden="true">${IC.star}</span><div class="bmain"><span class="bpill">${T[0]}</span><b class="btitle">${T[2]}</b><span class="hint">${T[3]}</span>${b.status === "trial" || warn ? `<span class="bbar" role="img" aria-label="${days} over"><i style="width:${pct}%"></i></span>` : ""}</div><button class="btn${T[1] === "ok" ? " ghost" : ""}" type="button" id="paybtn"${portal ? ' data-portal="1"' : ""}>${T[4]}</button></div>`; }
+function billingAttention() { const b = S.billing; if (!b || b.status === "free") return false; const d = Math.ceil((new Date(b.access_until) - Date.now()) / 864e5); return d <= 7 || b.status === "past_due" || b.status === "canceled"; }
+function adminBilling(host) {
+  host.innerHTML = `<div class="panel sec"><h2>Abonnement</h2><p class="hint" style="margin-top:0">Hier zie je of het abonnement van de club loopt en kan je het beheren.</p>${billingCard()}<div class="err" id="berr"></div>
+  <p class="hint" style="margin-bottom:0">Betalen gaat veilig via Stripe. FootballCoachHub bewaart zelf geen kaart- of rekeningnummers. Als het abonnement stopt, is de app voor de hele club dicht tot het opnieuw loopt. Er wordt niets verwijderd.</p></div>`;
+  const btn = $("#paybtn", host); if (btn) btn.onclick = e => startCheckout(e.target, $("#berr", host), e.target.dataset.portal ? "portal" : "checkout"); }
 async function clubStatus() {
   if (mode === "demo") { S.member = true; S.admin = true; S.rechten = ["scouting", "terreinen"]; S.intscout = true; return; }
   try { const { data, error } = await sb.rpc("club_status"); if (error) throw error; S.member = !!data.member; S.pending = !!data.pending; S.locked = !!data.locked; S.lockAdmin = !!data.lock_admin; S.lockClub = data.lock_club || null; S.billing = data.billing || null; S.admin = !!data.admin; S.allTeams = !!data.all_teams; S.teamAccess = Array.isArray(data.team_access) ? data.team_access : []; S.functie = data.functie || ""; S.platform = !!data.platform; S.super = !!data.super; S.support = data.support || null; S.clubs = Array.isArray(data.clubs) ? data.clubs : []; if (data.club && !ADMIN_APP) { if (CLUB_KNOWN && CLUB.id && CLUB.id !== data.club.id) { /* ander club dan vorige keer op dit toestel: niets van de vorige club laten staan */ try { localStorage.removeItem(TEAM_KEY); } catch (x) {} S.team = null; S.club = null; }
@@ -88,25 +94,25 @@ async function clubStatus() {
 
 /* ============ clubbeheer ============ */
 /* ============ beheer: aparte pagina's voor meldingen, toegang, ploegen en systeem ============ */
-const ADM_TABS = [["meldingen", "Meldingen"], ["instellingen", "Instellingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["planning", "Trainingen"], ["systeem", "Systeem"]];
+const ADM_TABS = [["meldingen", "Meldingen"], ["instellingen", "Instellingen"], ["toegang", "Toegang<span class=\"hm\"> en leden</span>"], ["ploegen", "Ploegen<span class=\"hm\"> en trainers</span>"], ["planning", "Trainingen"], ["abonnement", "Abonnement"], ["systeem", "Systeem"]];
 /* nieuwe accounts die op toegang wachten: zichtbaar in het menu, op Vandaag en in Beheer */
 async function waitCount() { if (!S.admin) return; let n = 0; try { if (mode === "demo") n = S.waitN ?? 1; else { const { data } = await sb.rpc("club_admin_info"); const rf = CLUB.settings?.access?.refused || []; n = (data?.waiting || []).filter(w => !rf.includes(w.user_id)).length; } } catch (e) { return; }
   if (n !== S.waitN) { S.waitN = n; const pg = cur().page; if (pg === "start") render(); else if (pg !== "clubbeheer") shell(); } }
 async function fbCount() { if (!S.admin) return; await waitCount(); if (mode !== "cloud") return; try { const { count } = await sb.from("feedback").select("id", { count: "exact", head: true }).neq("status", "afgehandeld"); const c = count || 0; if (c !== S.fbOpen) { S.fbOpen = c; if (cur().page !== "clubbeheer") shell(); } } catch (e) {} }
 route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) => {
   if (!S.admin) { v.innerHTML = `<div class="empty"><b>Alleen voor beheerders</b>Vraag de jeugdcoördinator als je hier iets wil aanpassen.</div>`; return; }
-  const TABS = ADM_TABS.concat([["club", "Club"]]);
+  const TABS = ADM_TABS.filter(t => t[0] !== "abonnement" || S.billing).concat([["club", "Club"]]);
   if (id === "instellingen") { location.replace("#/clubinstellingen"); return; }
   const tab = TABS.some(t => t[0] === id) ? id : "meldingen";
-  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", club: "Club", platform: "Alle clubs" }[tab]}${helpLink("clubbeheer")}</h1></div></div>
-    ${billingBanner()}<nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}${k === "toegang" && S.waitN ? `<span class="bdgn" title="Wachten op toegang">${S.waitN}</span>` : ""}</a>`).join("")}</nav>
+  v.innerHTML = `<div class="admhead"><div><small class="admkick">${IC.gear} Beheer · ${esc(clubName())}</small><h1 class="pg">${{ meldingen: "Meldingen", toegang: "Toegang en leden", ploegen: "Ploegen en trainers", planning: "Trainingen inplannen", systeem: "Systeem", abonnement: "Abonnement", club: "Club", platform: "Alle clubs" }[tab]}${helpLink("clubbeheer")}</h1></div></div>
+    <nav class="admtabs" aria-label="Beheer">${TABS.map(([k, l]) => `<a href="#/clubbeheer/${k}"${k === tab ? ' aria-current="page"' : ""}>${l}${k === "meldingen" && S.fbOpen ? `<span class="bdgn">${S.fbOpen}</span>` : ""}${k === "abonnement" && billingAttention() ? `<span class="bdgn" title="Aandacht nodig">!</span>` : ""}${k === "toegang" && S.waitN ? `<span class="bdgn" title="Wachten op toegang">${S.waitN}</span>` : ""}</a>`).join("")}</nav>
     ${tab === "toegang" ? `<nav class="admsub" aria-label="Toegang"><a href="#/clubbeheer/toegang"${sub !== "functies" ? ' aria-current="page"' : ""}>Leden</a><a href="#/clubbeheer/toegang/functies"${sub === "functies" ? ' aria-current="page"' : ""}>Functies en rechten</a></nav>` : S.waitN ? `<a class="actcard sm" href="#/clubbeheer/toegang"><span class="aci">${IC.ppl}</span><span><b>${S.waitN} ${S.waitN === 1 ? "persoon wacht" : "personen wachten"} op toegang</b></span><span class="btn small">Bekijken</span></a>` : ""}<div id="admv"><p class="hint">Laden…</p></div>`;
-  if ($("#paybtn")) $("#paybtn").onclick = e => startCheckout(e.target, null, e.target.dataset.portal ? "portal" : "checkout");
   const host = $("#admv"); try { $(".admtabs a[aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" }); } catch (x) {}
   const getInfo = async () => { if (mode === "demo") return { code: "OGV-DEMO42", members: [{ user_id: "demo", email: "demo@ogvorselaar.be", name: "Demo Trainer", role: "admin", teams: "Demoploeg U9" }, { user_id: "x", email: "trainer.u11@ogvorselaar.be", role: "trainer", teams: "Demoploeg U11" }], waiting: [{ user_id: "y", email: "nieuwe.trainer@gmail.com", created_at: new Date().toISOString() }] };
     const { data, error } = await sb.rpc("club_admin_info"); if (error) throw error; return data; };
   if (tab === "meldingen") return adminFeedback(host);
   if (tab === "planning") return adminPlanning(host);
+  if (tab === "abonnement") return adminBilling(host);
   if (tab === "club") return adminClub(host);
   if (tab === "systeem") { host.innerHTML = `<div class="panel sec" id="adm-sup"><h2>Platformsupport</h2><p class="hint" style="margin-top:0">FootballCoachHub kan voor onderhoud en ondersteuning jullie club openen. Elke keer dat dat gebeurt, staat het hieronder.</p><div id="supl" class="hint">Laden…</div></div><div class="panel" id="adm-db"></div>
     <div class="grid2 sec"><div class="panel"><h2>Back-up</h2><p class="hint" style="margin-top:0">Download alle gegevens van de club (ploegen, spelers, kalender, verslagen, evaluaties…) als één bestand. Doe dit minstens één keer per maand en bewaar het op een veilige plaats: het bevat gegevens van kinderen.</p>
