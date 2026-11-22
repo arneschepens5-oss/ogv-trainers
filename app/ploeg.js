@@ -10,10 +10,12 @@ route("start", { title: "Vandaag", render: async v => {
   const week = upcoming.slice(1).filter(e => (parse(e.date) - parse(today)) / 864e5 <= 7).slice(0, 4);
   const recentOf = c => (c || []).filter(e => e.date <= today && e.score_for != null).slice(0, 4);
   const recentHtml = rs => rs.length ? `<section class="tsec"><div class="tsh"><h2>Uitslagen van de club</h2><a class="link" href="#/uitslagen">Alles</a></div><div class="list">${rs.map(clubItem).join("")}</div></section>` : "";
-  const todo = t ? past().filter(e => !e.cancelled && !S.att.some(a => a.event_id === e.id)).slice(-3).reverse() : [];
+  /* enkel de laatste 14 dagen: oudere activiteiten (van voor de club de app gebruikte) vragen we niet meer om in te vullen */
+  const recentEv = e => (Date.parse(todayIso()) - Date.parse(e.date)) / 864e5 <= 14;
+  const todo = t ? past().filter(e => recentEv(e) && !e.cancelled && !S.att.some(a => a.event_id === e.id)).slice(-3).reverse() : [];
   /* de eigen aanwezigheid als trainer telt mee voor de vergoeding: ook die laten we niet vergeten */
   const meT = typeof tKey === "function" && S.tattOk !== false && user ? (S.trainers || []).find(r => r.user_id === user.id) : null;
-  const todoT = t && meT ? past().filter(e => !e.cancelled && !todo.includes(e) && !taOf(e.id, tKey(meT))).slice(-3).reverse() : [];
+  const todoT = t && meT ? past().filter(e => recentEv(e) && !e.cancelled && !todo.includes(e) && !taOf(e.id, tKey(meT))).slice(-3).reverse() : [];
   const setup = logged && S.admin && !isOGV() && !CLUB.settings?.setup_done ? `<a class="panel setupbar" href="#/clubinstellingen"><span class="bdg">${IC.gear}</span><span><b>Zet je club klaar</b><small>Kies in vijf stappen jullie kleuren, evaluaties, onderdelen en ploegen, en nodig trainers uit.</small></span><span class="btn small">Beginnen</span></a>` : "";
   const when = e => { const d = Math.round((parse(e.date) - parse(today)) / 864e5); return d === 0 ? "Vandaag" : d === 1 ? "Morgen" : cap(parse(e.date).toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" })); };
   const initials = s => String(s || "?").replace(/\b(K|R|FC|VC|KFC|KVV|SK|VV|KSK|KV|SV|FCO)\b\.?/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
