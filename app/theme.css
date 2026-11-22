@@ -88,7 +88,8 @@ h1.pg::after{display:none}
   .side{overflow-x:hidden}
   .side .nav a>span,.side .brand>span,.side .teampick>span,.side .foot .who,.sidetog span,.side .nav a .car{transition:opacity .2s ease .02s}
   html.sideanim .side .nav a>span,html.sideanim .side .brand>span,html.sideanim .side .teampick>span,html.sideanim .side .foot .who,html.sideanim .sidetog span,html.sideanim .side .nav a .car{opacity:0;white-space:nowrap;transition:none}
-  html.sidemini .side{padding:14px 10px;overflow-x:hidden}
+  .side{transition:padding .22s cubic-bezier(.4,0,.2,1)}
+  html.sidemini .side,html.sidenarrow .side{padding:14px 10px;overflow-x:hidden}
   html.sidemini .sidetog span,html.sidemini .side .brand>span:not(.ogvlogo),html.sidemini .side .nav a>span,html.sidemini .side .nav a .car,
   html.sidemini .side .subside,html.sidemini .side .subwrap,html.sidemini .side .teampick>span:not(.bdg),html.sidemini .side .navgrp,
   html.sidemini .side .foot .who{display:none!important}
@@ -97,7 +98,11 @@ h1.pg::after{display:none}
   html.sidemini .side .brand{justify-content:center;padding:4px 0 14px;margin:0 0 8px}
   html.sidemini .side .brand .ogvlogo.side{height:42px}
   html.sidemini .side .teampick{justify-content:center;padding:8px 0}
-  html.sidemini .side .nav a{justify-content:center;padding:9px 0;gap:0}
+  /* iconen blijven links uitgelijnd en schuiven mee in plaats van te springen: padding-links zet ze precies in het midden van de smalle balk */
+  .side .nav a{transition:background .15s,color .15s,padding .22s cubic-bezier(.4,0,.2,1)}
+  html.sidemini .side .nav a,html.sidenarrow .side .nav a{padding:9px 0 9px 22px}
+  html.sidemini .side .nav a.secl,html.sidenarrow .side .nav a.secl{padding-left:17px}
+  html.sidemini .side .nav a,html.sidemini .side .nav a.secl{gap:0}
   html.sidemini .side .nav a[aria-current="page"]::before{left:-10px}
   html.sidemini .side .foot{align-items:center}
   html.sidemini .side .foot a,html.sidemini .side .foot button{justify-content:center}
