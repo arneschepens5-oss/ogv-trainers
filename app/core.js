@@ -862,7 +862,8 @@ function viewLogin(v, msg) {
 }
 async function startCloud() {
   mode = "cloud"; db = SBDB;
-  await clubStatus(); if (!S.member) { render(); return; } if (typeof v14Check === "function") await v14Check(); setTimeout(fbCount, 1500); setInterval(fbCount, 120000); setTimeout(unreadCount, 2000); setInterval(unreadCount, 120000);
+  if (typeof mfaGate === "function" && !(await mfaGate())) return;
+  await clubStatus(); if (typeof mfaEnforce === "function" && !(await mfaEnforce())) return; if (!S.member) { render(); return; } if (typeof v14Check === "function") await v14Check(); setTimeout(fbCount, 1500); setInterval(fbCount, 120000); setTimeout(unreadCount, 2000); setInterval(unreadCount, 120000);
   try { await loadTeams(); const last = (() => { try { return localStorage.getItem(TEAM_KEY); } catch (e) {} })();
     const pick = myTeams().find(t => t.id === last) || (myTeams().length === 1 ? myTeams()[0] : null); if (pick) await loadTeam(pick.id); }
   catch (e) { console.error(e); db = null; mode = null; shell(true); viewLogin($("#view"), /relation|does not exist|schema cache|column/i.test(e.message || "") ? "De database is nog niet klaargezet. De beheerder moet eerst supabase-setup.sql uitvoeren." : "Laden mislukt: " + (e.message || e)); return; }
