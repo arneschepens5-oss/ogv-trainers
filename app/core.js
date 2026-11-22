@@ -603,7 +603,7 @@ let teardown = null;
 /* shell(true) = nieuwe lege pagina (enkel bij het openen van een pagina); shell() = enkel menu en zijbalk vernieuwen, de getoonde pagina blijft staan */
 function shell(fresh) {
   const oldView = fresh ? null : $("#view");
-  const r = cur(), active = r.page === "platform" && ["meldingen", "taken"].includes(r.id) ? "platform/" + r.id : ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
+  const r = cur(), active = r.page === "platform" && ["meldingen", "taken", "diensten"].includes(r.id) ? "platform/" + r.id : ALIAS[r.page] || r.page, t = S.team, logged = !!db && (mode === "demo" || !!user);
   const coord = S.admin || S.allTeams || (S.teamAccess || []).length, nav = NAV.map(g => g.g === "Club" && coord ? { ...g, items: [["clubdashboard", "Clubdashboard", "chart"], ...g.items] } : g)
     .map(g => ({ ...g, items: g.items.filter(([k]) => !clubOff(k)) })).filter(g => g.items.length);
   /* menu: alles zichtbaar wat iemand mag gebruiken. Wie (nog) geen ploeg heeft, bv. een scout, ziet de ploegonderdelen niet. */
