@@ -373,10 +373,62 @@ function takenView(v) {
     const d = c.closest("details"); d.classList.toggle("done", on); if (on) d.open = false;
     const k = takenDone(), m = all.filter(t => k[t.id]).length; $("#tkn", v).textContent = m === all.length ? "Alles gedaan." : `${m} van ${all.length} gedaan`; $(".tkbar i", v).style.width = m / all.length * 100 + "%"; $(".tkbar", v).setAttribute("aria-valuenow", m); }; });
 }
+/* ============ Diensten: snelle links naar alles wat het platform draaiende houdt ============ */
+const GH = "https://github.com/arneschepens5-oss/ogv-trainers", APP_URL = "https://trainers.footballcoachhub.be";
+const DIENSTEN = [
+  { g: "Het platform zelf", items: [
+    ["De app voor trainers", "Zoals een trainer ze ziet", APP_URL, "F", "#F5C542"],
+    ["Beheer-app", "Dit scherm, op een eigen adres", APP_URL + "/?app=beheer", "B", "#0F4A33"],
+    ["Privacyverklaring", "De openbare pagina", APP_URL + "/privacy.html", "P", "#5b6b8c"],
+    ["Handleiding", "Voor trainers", APP_URL + "/handleiding/", "H", "#5b6b8c"]] },
+  { g: "Databank en inloggen · Supabase", items: [
+    ["Supabase-project", "Overzicht van het clubproject", SB_CLUB, "S", "#3ECF8E"],
+    ["Accounts", "Wie er kan inloggen", SB_CLUB + "/auth/users", "A", "#3ECF8E"],
+    ["Tabellen", "Gegevens bekijken", SB_CLUB + "/editor", "T", "#3ECF8E"],
+    ["SQL-editor", "Een script uitvoeren", SB_CLUB + "/sql/new", "Q", "#3ECF8E"],
+    ["Logs", "Fouten en aanvragen opzoeken", SB_CLUB + "/logs/explorer", "L", "#3ECF8E"],
+    ["Edge functions", "Betalingen, mails en meldingen", SB_CLUB + "/functions", "E", "#3ECF8E"],
+    ["Aanmeldadres", "Site-URL en doorverwijzingen", SB_CLUB + "/auth/url-configuration", "U", "#3ECF8E"],
+    ["Projectinstellingen", "Regio, back-ups, abonnement", SB_CLUB + "/settings/general", "I", "#3ECF8E"]] },
+  { g: "Code en website · GitHub", items: [
+    ["Code", "De broncode van de app", GH, "G", "#24292f"],
+    ["Pages", "Website, domein en https", GH + "/settings/pages", "W", "#24292f"],
+    ["Wijzigingen", "Wat er wanneer is aangepast", GH + "/commits/main", "C", "#24292f"],
+    ["Uitrol", "Is de nieuwste versie online?", GH + "/actions", "R", "#24292f"]] },
+  { g: "Betalingen en mail", items: [
+    ["Stripe (testmodus)", "Abonnementen, klanten, facturen", "https://dashboard.stripe.com/test/dashboard", "S", "#635BFF"],
+    ["Stripe-abonnementen", "Wie betaalt wat", "https://dashboard.stripe.com/test/subscriptions", "A", "#635BFF"],
+    ["Stripe-webhooks", "Koppeling met de app", "https://dashboard.stripe.com/test/webhooks", "K", "#635BFF"],
+    ["Brevo", "Mails naar ouders en trainers", "https://app.brevo.com/", "B", "#0B996E"],
+    ["Brevo-logboek", "Is een mail aangekomen?", "https://app.brevo.com/log", "L", "#0B996E"]] },
+  { g: "Domein en mailbox", items: [
+    ["OVH", "footballcoachhub.be en DNS", "https://www.ovh.com/manager/#/web/", "O", "#123F6D"],
+    ["Gmail van het platform", "footballcoachhub@gmail.com", "https://mail.google.com/mail/u/?authuser=footballcoachhub@gmail.com", "M", "#EA4335"],
+    ["Google-account", "Wachtwoord en beveiliging", "https://myaccount.google.com/security?authuser=footballcoachhub@gmail.com", "Z", "#4285F4"]] },
+  { g: "Bouwen en hulp", items: [
+    ["Claude", "Vragen en nieuwe functies", "https://claude.ai/", "C", "#D97757"],
+    ["Claude Code", "Sessies waarin de app gebouwd wordt", "https://claude.ai/code", "K", "#D97757"],
+    ["Lovable", "De andere apps", "https://lovable.dev/", "L", "#E5558B"]] },
+  { g: "Voetbal en wetgeving", items: [
+    ["Voetbal Vlaanderen", "Bond en opleidingen", "https://www.voetbalvlaanderen.be/", "V", "#C8102E"],
+    ["RBFA", "Kalenders en uitslagen", "https://www.rbfa.be/", "R", "#C8102E"],
+    ["Datalek melden", "Gegevensbeschermingsautoriteit", "https://www.gegevensbeschermingsautoriteit.be/", "D", "#1d3557"]] }
+];
+function dienstenView(v) {
+  v.innerHTML = head("Diensten", "Alles wat het platform draaiende houdt, op één plek. Elke link opent in een nieuw tabblad.", `<a class="btn ghost" href="#/platform">Terug</a>`) +
+    `<div class="sec"><input type="search" id="dvq" class="dv-q" placeholder="Zoek een dienst, bv. mail, betalingen, domein…" aria-label="Zoek een dienst" autocomplete="off"></div>` +
+    DIENSTEN.map(g => `<section class="sec dv-sec"><h2>${esc(g.g)}</h2><div class="dv-grid">${g.items.map(([n, w, u, l, c]) =>
+      `<a class="dv-card" href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-q="${esc((n + " " + w + " " + g.g).toLowerCase())}"><span class="dv-b" style="background:${c}" aria-hidden="true">${esc(l)}</span><span class="dv-t"><b>${esc(n)}</b><small>${esc(w)}</small></span><span class="dv-go" aria-hidden="true">↗</span></a>`).join("")}</div></section>`).join("") +
+    `<p class="hint dv-none" hidden>Geen dienst gevonden.</p>`;
+  $("#dvq", v).oninput = e => { const q = e.target.value.trim().toLowerCase(); let any = false;
+    $$(".dv-card", v).forEach(a => { const ok = !q || a.dataset.q.includes(q); a.hidden = !ok; if (ok) any = true; });
+    $$(".dv-sec", v).forEach(sec => { sec.hidden = !$$(".dv-card", sec).some(a => !a.hidden); }); $(".dv-none", v).hidden = any; };
+}
 route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
   if (!S.platform && mode !== "demo") { v.innerHTML = `<div class="empty"><b>Alleen voor de beheerder van het platform</b></div>`; return; }
   if (sub === "meldingen") { v.innerHTML = head("Meldingen van alle clubs", "Problemen en vragen die trainers doorstuurden met de knop Probleem melden.", `<a class="btn ghost" href="#/platform">Terug</a>`) + `<div id="pfb"></div>`; return adminFeedback($("#pfb")); }
   if (sub === "taken") return takenView(v);
+  if (sub === "diensten") return dienstenView(v);
   v.innerHTML = head("Platform", "Laden…");
   let data, st = null, billRows = [];
   if (mode === "demo") { data = PLATFORM_DEMO(); st = PLATFORM_STATS_DEMO(); }
@@ -402,7 +454,7 @@ route("platform", { title: "Platform", auth: true, render: async (v, sub) => {
     : st && days(c.last_login) > 14 ? ["loss", "Stil sinds " + Math.round(days(c.last_login)) + " dagen"] : ["win", "Actief"];
   const mb = st ? st.db_bytes / 1e6 : 0, mbMax = 500, attention = data.filter(c => status(c)[0] !== "win"), billAttn = data.filter(c => { const o = billOf(c); return o && (o.k === "loss" || o.k === "w"); });
   v.innerHTML = head("Platform", st ? `Overzicht van ${PRODUCT}, bijgewerkt om ${new Date(st.generated_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}. Enkel tellingen: spelers, ploegen en verslagen van een club zie je hier niet.` : "Clubs aanmaken en instellen.",
-      `<a class="btn ghost" href="#/platform/taken">${takenOpen() ? `Taken (${takenOpen()} open)` : "Taken"}</a><button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
+      `<a class="btn ghost" href="#/platform/diensten">Diensten</a><a class="btn ghost" href="#/platform/taken">${takenOpen() ? `Taken (${takenOpen()} open)` : "Taken"}</a><button class="btn" type="button" id="pnew">${IC.plus}Nieuwe club</button>`) +
     (st ? "" : `<div class="share sec">${IC.eye}<div>Voer het databasescript <b>v36</b> uit in Supabase om hier ook het gebruik per club en per week te zien.</div></div>`) +
     `<div class="sec kpis">
       <div class="kpi"><small>Clubs</small><b>${data.length}</b><span>${data.filter(c => status(c)[0] === "win").length} actief</span></div>
