@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://trainers.footballcoachhub.be/sitemap.xml
