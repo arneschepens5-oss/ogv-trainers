@@ -536,7 +536,7 @@ function blankFicheHtml(o = {}) {
     <header class="bl-h"><h1>Trainingsfiche</h1><span class="bl-tot">Tijd totaal: ______ min</span>${logo}</header>
     <div class="bl-meta3"><div><b>Team</b><span>${team}</span></div><div><b>Datum</b><span></span></div><div><b>Aantal spelers</b><span></span></div></div>
     <div class="bl-meta2"><div><b>Trainer</b><span>${who}</span></div><div><b>Thema / hoofddoel van de training</b><span></span></div></div>
-    <section class="bl-blk"><div class="bl-bh">Opwarming<em>Tijd: ______</em></div><div class="bl-wu"><div class="bl-d"><div class="bl-th">Beschrijving</div><div class="bl-in"><small>Activatie / mobiliteit</small>${lines(4)}</div></div><div class="bl-s3"><div class="bl-th">Schema</div><div class="bl-boxes"><i></i><i></i><i></i></div></div></div></section>
+    <section class="bl-blk"><div class="bl-bh">Activatie<em>Tijd: ______</em></div><div class="bl-wu"><div class="bl-d"><div class="bl-th">Beschrijving</div><div class="bl-in"><small>Activatie / mobiliteit</small>${lines(4)}</div></div><div class="bl-s3"><div class="bl-th">Schema</div><div class="bl-boxes"><i></i><i></i><i></i></div></div></div></section>
     <div class="bl-bh main">Hoofdgedeelte<em>Tijd: ______</em></div>
     ${ex(1)}${ex(2)}${ex(3)}
     <footer>Voorkant · keer om voor oefening 4–6, cooling down en evaluatie →</footer>
@@ -563,7 +563,7 @@ async function printBlank(o) {
 route("papier", { title: "Training op papier", auth: true, team: true, render: v => {
   let pre = true;
   const draw = () => {
-    v.innerHTML = head("Training op papier", "Een lege trainingsfiche in de kleuren en met het logo van je club, om op het veld met de hand in te vullen. Voorkant: opwarming en oefening 1–3. Achterkant: oefening 4–6, cooling down en evaluatie.") +
+    v.innerHTML = head("Training op papier", "Een lege trainingsfiche in de kleuren en met het logo van je club, om op het veld met de hand in te vullen. Voorkant: activatie en oefening 1–3. Achterkant: oefening 4–6, cooling down en evaluatie.") +
       `<section class="panel noprint"><div class="row" style="align-items:center;gap:14px;flex-wrap:wrap"><button class="btn" type="button" id="bl-pr">${IC.print}Afdrukken</button>
       <label class="chk" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bl-pre" ${pre ? "checked" : ""}> Ploeg en trainer alvast invullen</label></div>
       <p class="hint" style="margin-bottom:0">Kies in het afdrukvenster <b>A4</b> en <b>dubbelzijdig, omslaan over de lange kant</b>. Kies "Bewaren als PDF" om er een PDF van te maken. De kleuren en het logo pas je aan bij Beheer › Club.</p></section>
