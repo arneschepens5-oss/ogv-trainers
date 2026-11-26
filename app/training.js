@@ -518,3 +518,58 @@ async function libPick(onPick) {
   [["#pb", "band"], ["#pt", "theme"], ["#pp", "soort"]].forEach(([sel, k]) => $(sel, d).onchange = ev => { f[k] = ev.target.value; draw(); });
   draw();
 }
+
+/* ============ training op papier: lege trainingsfiche in de clubkleuren (voor- en achterkant) ============ */
+const blInk = h => { const n = parseInt(h.slice(1), 16), l = .299 * (n >> 16) + .587 * ((n >> 8) & 255) + .114 * (n & 255); return l > 150 ? "#111" : "#fff"; };
+const blPitch = () => `<svg viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true"><rect x="1" y="1" width="198" height="118" fill="none" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="4 3"/><line x1="100" y1="1" x2="100" y2="119" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/><circle cx="100" cy="60" r="14" fill="none" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="4 3"/></svg>`;
+function blankFicheHtml(o = {}) {
+  const hex = h => /^#[0-9a-f]{6}$/i.test(h || "") ? h : "", c1 = hex(CLUB.settings?.color) || "#FFD100", c2 = hex(CLUB.settings?.color2), band = c2 || c1, ink = blInk(band);
+  const style = `--c:${c1};--band:${band};--bi:${ink};--ci:${blInk(c1)}`;
+  const team = o.pre ? esc(S.team?.name || "") : "", who = o.pre ? esc(byName()) : "";
+  const logo = `<span class="bl-logo">${LOGO("")}</span>`;
+  const lines = n => `<div class="bl-lines" style="flex:${n}">${"<i></i>".repeat(n)}</div>`;
+  const ex = n => `<section class="bl-ex"><div class="bl-l"><div class="bl-no">Oefening ${n}</div><div class="bl-bar">Naam van de oefening</div>${lines(2)}<div class="bl-bar">Doelstellingen</div>${lines(4)}<div class="bl-bar">Tijd / herhalingen</div>${lines(2)}</div>
+    <div class="bl-d"><div class="bl-th">Beschrijving</div>${lines(9)}</div><div class="bl-s"><div class="bl-th">Schema</div><div class="bl-pitch">${blPitch()}</div><small>Legende: X = team 1 &nbsp; O = team 2 &nbsp; ⊗ = joker / keeper</small></div></section>`;
+  const meta = (a, b) => `<div class="bl-meta">${a.map(([k, v]) => `<div><b>${k}</b><span>${v || ""}</span></div>`).join("")}</div>`;
+  return `<div class="pbl" style="${style}">
+  <div class="bl-page">
+    <header class="bl-h"><h1>Trainingsfiche</h1><span class="bl-tot">Tijd totaal: ______ min</span>${logo}</header>
+    <div class="bl-meta3"><div><b>Team</b><span>${team}</span></div><div><b>Datum</b><span></span></div><div><b>Aantal spelers</b><span></span></div></div>
+    <div class="bl-meta2"><div><b>Trainer</b><span>${who}</span></div><div><b>Thema / hoofddoel van de training</b><span></span></div></div>
+    <section class="bl-blk"><div class="bl-bh">Opwarming<em>Tijd: ______</em></div><div class="bl-wu"><div class="bl-d"><div class="bl-th">Beschrijving</div><div class="bl-in"><small>Activatie / mobiliteit</small>${lines(4)}</div></div><div class="bl-s3"><div class="bl-th">Schema</div><div class="bl-boxes"><i></i><i></i><i></i></div></div></div></section>
+    <div class="bl-bh main">Hoofdgedeelte<em>Tijd: ______</em></div>
+    ${ex(1)}${ex(2)}${ex(3)}
+    <footer>Voorkant · keer om voor oefening 4–6, cooling down en evaluatie →</footer>
+  </div>
+  <div class="bl-page">
+    <header class="bl-h small"><h1>Trainingsfiche</h1>${logo}</header>
+    <div class="bl-meta2"><div><b>Team</b><span>${team}</span></div><div><b>Datum</b><span></span></div></div>
+    <div class="bl-bh main">Hoofdgedeelte (vervolg)<em>Tijd: ______</em></div>
+    ${ex(4)}${ex(5)}${ex(6)}
+    <section class="bl-blk"><div class="bl-bh">Cooling down<em>Tijd: ______</em></div><div class="bl-wu cd"><div class="bl-d"><div class="bl-in"><small>Uitlopen / stretching / afsluitend spel</small>${lines(3)}</div></div></div></section>
+    <section class="bl-blk grow"><div class="bl-bh">Evaluatie<em></em></div><div class="bl-eval"><small>Evaluatie / opmerkingen / aandachtspunten voor volgende training</small>${lines(6)}</div></section>
+    <footer>Achterkant · ${esc(APPNAME())}</footer>
+  </div></div>`;
+}
+async function printBlank(o) {
+  const el = document.createElement("div"); el.className = "print-only"; el.innerHTML = blankFicheHtml(o);
+  document.body.appendChild(el); document.documentElement.classList.add("printing");
+  await hydrateImgs(el).catch(() => {});
+  const imgs = [...el.querySelectorAll("img")]; imgs.forEach(i => { i.loading = "eager"; });
+  await Promise.race([Promise.all(imgs.map(i => i.complete && i.src ? 0 : new Promise(r => { i.onload = i.onerror = r; }))), new Promise(r => setTimeout(r, 4000))]);
+  const done = () => { el.remove(); document.documentElement.classList.remove("printing"); removeEventListener("afterprint", done); };
+  addEventListener("afterprint", done); setTimeout(() => print(), 150);
+}
+route("papier", { title: "Training op papier", auth: true, team: true, render: v => {
+  let pre = true;
+  const draw = () => {
+    v.innerHTML = head("Training op papier", "Een lege trainingsfiche in de kleuren en met het logo van je club, om op het veld met de hand in te vullen. Voorkant: opwarming en oefening 1–3. Achterkant: oefening 4–6, cooling down en evaluatie.") +
+      `<section class="panel noprint"><div class="row" style="align-items:center;gap:14px;flex-wrap:wrap"><button class="btn" type="button" id="bl-pr">${IC.print}Afdrukken</button>
+      <label class="chk" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bl-pre" ${pre ? "checked" : ""}> Ploeg en trainer alvast invullen</label></div>
+      <p class="hint" style="margin-bottom:0">Kies in het afdrukvenster <b>A4</b> en <b>dubbelzijdig, omslaan over de lange kant</b>. Kies "Bewaren als PDF" om er een PDF van te maken. De kleuren en het logo pas je aan bij Beheer › Club.</p></section>
+      <div class="bl-prev">${blankFicheHtml({ pre })}</div>`;
+    $("#bl-pr", v).onclick = () => printBlank({ pre });
+    $("#bl-pre", v).onchange = e => { pre = e.target.checked; draw(); };
+  };
+  draw();
+} });

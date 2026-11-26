@@ -592,7 +592,7 @@ const NAV = [
   { g: null, items: [["start", "Vandaag", "home"], ["berichten", "Berichten", "mail"]] },
   { g: "Kalender", icon: "cal", items: [["kalender", "Kalender", "cal"], ["matchday", "Wedstrijdblad", "sheet"], ["live", "Live coachen", "mic"], ["uitslagen", "Uitslagen club", "ball"]] },
   { g: "Ploeg", icon: "ppl", team: true, items: [["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"], ["ploeg", "Overzicht", "trophy"], ["ploeg-instellingen", "Ploeg en trainers", "gear"]] },
-  { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"]] },
+  { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["papier", "Training op papier", "print"]] },
   { g: "Tactiek", icon: "board", items: [["animatiebord", "Tactiekbord", "board"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Scouting", icon: "scout", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Externe scouting", "scout"], ["scoutveld", "Posities vergelijken", "field"]] },
   { g: "Club", icon: "club", items: [["terreinen", "Terreinen", "cal"], ["contacten", "Wie contacteer ik?", "phone"], ["trainers", "Trainers", "ppl"], ["betalingen", "Betalingen", "sheet"]]  },
