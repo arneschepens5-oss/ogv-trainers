@@ -2715,7 +2715,7 @@ h1.pg::after{display:none}
 .bl-bh em{position:absolute;right:3mm;font-style:normal;font-weight:400;font-size:8pt;text-transform:none}
 .bl-bh.main{border-radius:1mm 1mm 0 0;margin-bottom:-2.4mm}
 .bl-blk{display:flex;flex-direction:column}.bl-blk.grow{flex:1;min-height:0}
-.bl-wu{min-height:30mm;display:grid;grid-template-columns:1.25fr 1fr;border:.3mm solid #222}.bl-wu.cd{grid-template-columns:1fr;min-height:22mm}
+.bl-wu{min-height:30mm;display:grid;grid-template-columns:1.25fr 1fr;border:.3mm solid #222}.bl-wu.cd{min-height:27mm}
 .bl-wu .bl-d{padding:0}.bl-in{padding:1.5mm 2.5mm;flex:1;display:flex;flex-direction:column;min-height:0}.bl-eval{padding:1.5mm 2.5mm;display:flex;flex-direction:column;flex:1;border:.3mm solid #222;min-height:0}
 .bl-wu small,.bl-eval small,.bl-d small{font-size:7.5pt;color:#555;display:block;margin-bottom:.8mm}
 .bl-th{background:var(--t2);border-bottom:.3mm solid #222;text-align:center;font-weight:700;font-size:8pt;padding:.8mm}

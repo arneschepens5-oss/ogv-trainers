@@ -546,7 +546,7 @@ function blankFicheHtml(o = {}) {
     <div class="bl-meta2"><div><b>Team</b><span>${team}</span></div><div><b>Datum</b><span></span></div></div>
     <div class="bl-bh main">Hoofdgedeelte (vervolg)<em>Tijd: ______</em></div>
     ${ex(4)}${ex(5)}${ex(6)}
-    <section class="bl-blk"><div class="bl-bh">Cooling down<em>Tijd: ______</em></div><div class="bl-wu cd"><div class="bl-d"><div class="bl-in"><small>Uitlopen / stretching / afsluitend spel</small>${lines(3)}</div></div></div></section>
+    <section class="bl-blk"><div class="bl-bh">Cooling down<em>Tijd: ______</em></div><div class="bl-wu cd"><div class="bl-d"><div class="bl-th">Beschrijving</div><div class="bl-in"><small>Uitlopen / stretching / afsluitend spel</small>${lines(3)}</div></div><div class="bl-s3"><div class="bl-th">Schema</div><div class="bl-boxes"><i></i><i></i><i></i></div></div></div></section>
     <section class="bl-blk grow"><div class="bl-bh">Evaluatie<em></em></div><div class="bl-eval"><small>Evaluatie / opmerkingen / aandachtspunten voor volgende training</small>${lines(6)}</div></section>
     <footer>Achterkant · ${esc(APPNAME())}</footer>
   </div></div>`;
