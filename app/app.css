@@ -2731,7 +2731,7 @@ h1.pg::after{display:none}
 .bl-d{border-right:.3mm solid #222;display:flex;flex-direction:column}
 .bl-ex .bl-d .bl-lines{min-height:0;display:flex;flex-direction:column;margin:0 1.5mm}.bl-lines i{flex:1 1 0;min-height:0;border-bottom:.2mm solid #b9b9b9}
 .bl-ex .bl-th{border-top:0}
-.bl-s{display:flex;flex-direction:column;padding:0}.bl-pitch{flex:1;position:relative;min-height:0}.bl-pitch svg{position:absolute;left:2.5mm;right:2.5mm;top:2mm;bottom:.5mm;width:calc(100% - 5mm);height:calc(100% - 2.5mm);display:block}
+.bl-s{display:flex;flex-direction:column;padding:0}.bl-pitch{flex:1;position:relative;min-height:0}.bl-pitch svg{position:absolute;left:2.5mm;right:2.5mm;top:2mm;bottom:2mm;width:calc(100% - 5mm);height:calc(100% - 4mm);display:block}
 .bl-s small{font-size:6.5pt;color:#555;text-align:right;padding:.6mm 2mm 1mm;margin:0}
 .pbl footer{font-size:7.5pt;color:#777;text-align:center;margin-top:auto}
 .bl-prev{overflow:auto;padding:4px 0}

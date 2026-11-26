@@ -529,7 +529,7 @@ function blankFicheHtml(o = {}) {
   const logo = `<span class="bl-logo">${LOGO("")}</span>`;
   const lines = n => `<div class="bl-lines" style="flex:${n}">${"<i></i>".repeat(n)}</div>`;
   const ex = n => `<section class="bl-ex"><div class="bl-l"><div class="bl-no">Oefening ${n}</div><div class="bl-bar">Naam van de oefening</div>${lines(2)}<div class="bl-bar">Doelstellingen</div>${lines(4)}<div class="bl-bar">Tijd / herhalingen</div>${lines(2)}</div>
-    <div class="bl-d"><div class="bl-th">Beschrijving</div>${lines(9)}</div><div class="bl-s"><div class="bl-th">Schema</div><div class="bl-pitch">${blPitch()}</div><small>Legende: X = team 1 &nbsp; O = team 2 &nbsp; ⊗ = joker / keeper</small></div></section>`;
+    <div class="bl-d"><div class="bl-th">Beschrijving</div>${lines(9)}</div><div class="bl-s"><div class="bl-th">Schema</div><div class="bl-pitch">${blPitch()}</div></div></section>`;
   const meta = (a, b) => `<div class="bl-meta">${a.map(([k, v]) => `<div><b>${k}</b><span>${v || ""}</span></div>`).join("")}</div>`;
   return `<div class="pbl" style="${style}">
   <div class="bl-page">
