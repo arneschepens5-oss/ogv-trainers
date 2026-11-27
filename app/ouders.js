@@ -262,9 +262,12 @@ const CLUB_FIELDS = [
   { k: "D", name: "KGV (terrein D)", short: "KGV", kk: "B1–B4 · kunstgras, ook terrein 4", kgv: true },
   { k: "E", name: "Terrein E", short: "E", kk: "E4–E8" },
   { k: "1", name: "Terrein 1", short: "1", kk: "B1–B4 · klein veld" },
-  { k: "2", name: "Terrein 2", short: "2", kk: "B1–B4 · klein veld" }];
+  { k: "2", name: "Terrein 2", short: "2", kk: "B1–B4 · klein veld" },
+  { k: "M", name: "Multiveld", short: "M", kk: "E4–E8", multi: true }];
 const FIELD_NAMES = CLUB_FIELDS.map(f => f.name);
 function fieldOf(loc) { const s = String(loc || "").toLowerCase(); if (!s) return null;
+  if (/multi[\s-]*veld|multiterrein/.test(s)) return "M";
+  if (/duiveltjes[\s-]*(veld|terrein|plein)/.test(s)) return /\b2\b/.test(s) ? "2" : "1"; /* duiveltjesveld = terrein 1 (of 2) */
   if (/\bkgv\b|kunstgras|(?:terrein|terr\.?|veld)\s*4\b/.test(s)) return "D";
   if (/(?:terrein|terr\.?|veld)\s*3\b|c[\s-]*plein/.test(s)) return "C"; /* terrein 3 = C-plein, terrein 4 = kunstgrasveld */
   const m = s.match(/(?:terrein|veld|plein)\s*([a-e]|[12])\b/) || s.match(/(?:^|\s)([a-e]|[12])[\s-]*(?:plein|veld|terrein)\b/) || s.match(/^\s*([a-e])\s*$/);
@@ -418,7 +421,7 @@ function pitchSVG(x, y, w, h, f, st) {
     : Array.from({ length: 8 }, (_, i) => i % 2 ? `<rect x="${x + i * w / 8}" y="${y}" width="${w / 8}" height="${h}" fill="rgba(255,255,255,.05)"/>` : "").join("");
   const small = f.k === "1" || f.k === "2";
   return `<g class="pf${st.sel ? " sel" : ""}${st.now ? " now" : ""}${st.clash ? " clash" : ""}" data-f="${f.k}" tabindex="0" role="button" aria-label="${esc(f.name)}: ${st.n} activiteiten">
-    <rect class="pfg" x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${f.kgv ? "#1F8A5B" : "#2E8B3E"}"/>${stripes}
+    <rect class="pfg" x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${f.kgv ? "#1F8A5B" : "#2E8B3E"}"/>${stripes}${f.multi ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="url(#mvh)" pointer-events="none"/>` : ""}
     ${small ? `<rect x="${x + 3}" y="${y + 3}" width="${w - 6}" height="${h - 6}" fill="none" stroke="${L}" stroke-width="1.2"/>` : `<rect x="${x + 4}" y="${y + 4}" width="${w - 8}" height="${h - 8}" fill="none" stroke="${L}" stroke-width="1.4"/>
     ${vert ? `<line x1="${x + 4}" y1="${cy}" x2="${x + w - 4}" y2="${cy}" stroke="${L}" stroke-width="1.4"/>` : `<line x1="${cx}" y1="${y + 4}" x2="${cx}" y2="${y + h - 4}" stroke="${L}" stroke-width="1.4"/>`}
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${L}" stroke-width="1.4"/>${box.map(([a, b, c, d]) => `<rect x="${a}" y="${b + (vert ? 0 : 0)}" width="${c}" height="${d}" fill="none" stroke="${L}" stroke-width="1.2"/>`).join("")}`}
@@ -428,8 +431,8 @@ function pitchSVG(x, y, w, h, f, st) {
     ${st.now ? `<circle class="pfnow" cx="${x + (small ? 8 : 12)}" cy="${y + (small ? 8 : 12)}" r="${small ? 4 : 6}"/>` : ""}</g>`;
 }
 function clubMapSVG(stOf) {
-  const P = { A: [667, 40, 115, 175], B: [540, 62, 95, 165], C: [437, 68, 92, 160], D: [333, 68, 92, 160], E: [80, 265, 165, 105], "2": [541, 24, 46, 32], "1": [589, 24, 46, 32] };
-  return `<svg class="clubmap" viewBox="60 14 800 420" role="img" aria-label="Plattegrond van OG Vorselaar">
+  const P = { A: [667, 40, 115, 175], B: [540, 62, 95, 165], C: [437, 68, 92, 160], D: [333, 68, 92, 160], E: [80, 265, 165, 105], "2": [541, 24, 46, 32], "1": [589, 24, 46, 32], M: [252, 262, 72, 98] };
+  return `<svg class="clubmap" viewBox="60 14 800 420" role="img" aria-label="Plattegrond van OG Vorselaar"><defs><pattern id="mvh" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="8" fill="rgba(200,30,40,.55)"/></pattern></defs>
     <path d="M40 405 L330 385 L560 372 L860 300" class="road"/><path d="M520 470 L860 280" class="street"/><text x="690" y="395" class="rd" transform="rotate(-29 690 395)">Riemenstraat 89</text>
     <path d="M555 248 L720 262 L800 262 L800 135 L830 132 L830 285 L700 300 L560 292 Z" class="lot"/><path d="M60 395 L335 380 L335 392 L60 410 Z" class="lot"/>
     <path d="M330 238 L330 372 M330 238 L755 238 M510 238 L510 252 M640 238 L640 62" class="walk"/><path d="M233 248 L330 248" class="walk2"/>
