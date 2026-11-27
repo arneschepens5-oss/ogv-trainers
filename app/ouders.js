@@ -431,7 +431,7 @@ function pitchSVG(x, y, w, h, f, st) {
     ${st.now ? `<circle class="pfnow" cx="${x + (small ? 8 : 12)}" cy="${y + (small ? 8 : 12)}" r="${small ? 4 : 6}"/>` : ""}</g>`;
 }
 function clubMapSVG(stOf) {
-  const P = { A: [667, 40, 115, 175], B: [540, 62, 95, 165], C: [437, 68, 92, 160], D: [333, 68, 92, 160], E: [80, 265, 165, 105], "2": [541, 24, 46, 32], "1": [589, 24, 46, 32], M: [252, 262, 72, 98] };
+  const P = { A: [667, 40, 115, 175], B: [540, 62, 95, 165], C: [437, 68, 92, 160], D: [333, 68, 92, 160], E: [80, 265, 165, 105], "2": [541, 24, 46, 32], "1": [589, 24, 46, 32], M: [352, 256, 150, 60] };
   return `<svg class="clubmap" viewBox="60 14 800 420" role="img" aria-label="Plattegrond van OG Vorselaar"><defs><pattern id="mvh" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="8" fill="rgba(200,30,40,.55)"/></pattern></defs>
     <path d="M40 405 L330 385 L560 372 L860 300" class="road"/><path d="M520 470 L860 280" class="street"/><text x="690" y="395" class="rd" transform="rotate(-29 690 395)">Riemenstraat 89</text>
     <path d="M555 248 L720 262 L800 262 L800 135 L830 132 L830 285 L700 300 L560 292 Z" class="lot"/><path d="M60 395 L335 380 L335 392 L60 410 Z" class="lot"/>
