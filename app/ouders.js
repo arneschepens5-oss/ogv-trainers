@@ -373,12 +373,17 @@ async function autoFieldsDialog(list, d1) {
       const y = scrollY; await render(); scrollTo(0, y); }; };
   show(hasSome); }
 
-function overlaps(list) { const bad = new Set(), key = x => fieldOf(x.location) || x.location.trim().toLowerCase();
+/* Overlap: "echt" = zeker een probleem; "zonder vakindeling" = twee ploegen op hetzelfde terrein en uur, maar er is geen helft of kwart ingevuld
+   (dat kan prima: ze delen het veld). Echt = een wedstrijd en een andere activiteit op een gekend terrein, of twee ploegen met een ingevuld vak dat elkaar raakt. */
+function overlaps(list) { const bad = new Set(), soft = new Set(), key = x => fieldOf(x.location) || x.location.trim().toLowerCase();
   const live = list.filter(x => !x.cancelled && x.location && minOf(x.start) != null);
   for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) { const a = live[i], b = live[j];
     if (a.date !== b.date || key(a) !== key(b)) continue;
     const k = fieldOf(a.location); if (k && !(partMask(a.part, k) & partMask(b.part, k))) continue; /* andere helft of ander vak: geen overlap */
-    if (minOf(a.start) < endMin(b) && minOf(b.start) < endMin(a)) { bad.add(a.id); bad.add(b.id); } }
+    if (!(minOf(a.start) < endMin(b) && minOf(b.start) < endMin(a))) continue;
+    const sure = !!k && ((a.part && b.part) || a.type === "wedstrijd" || b.type === "wedstrijd");
+    (sure ? bad : soft).add(a.id); (sure ? bad : soft).add(b.id); }
+  bad.soft = new Set([...soft].filter(id => !bad.has(id)));
   return bad; }
 
 /* één veld in 3D: wie staat waar op het gekozen uur */
@@ -463,7 +468,7 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
       ${act.length ? `${fieldStage(f, xs, bad, FLD_T)}<div class="chips ftimes" role="group" aria-label="Toon het veld om">${FLD_DAY === today ? `<button class="chip" type="button" data-tt="${nowM}" aria-pressed="${FLD_T === nowM}">Nu</button>` : ""}${times.map(m => `<button class="chip" type="button" data-tt="${m}" aria-pressed="${FLD_T === m}">${hhmm(m)}</button>`).join("")}</div>${fieldTimeline(f, xs, bad, FLD_T)}` : ""}
       ${xs.length ? `<div class="fldlist">${xs.map(block).join("")}</div>` : `<p class="muted" style="margin:0">Vrij op deze dag.</p>`}
       ${mag("terreinen") && !V19() && act.length ? `<p class="hint" style="margin:8px 0 0">Wil je een ploeg een helft of een kwart van het veld geven? Voer ogv-database.sql (versie 19) uit in Supabase.</p>` : ""}
-      ${mag("terreinen") && V19() && act.length ? `<p class="hint" style="margin:8px 0 0">Geef een ploeg een helft of een kwart van het veld en tot hoe laat ze het mag gebruiken. Twee ploegen op een andere helft tellen niet als overlap.</p>` : ""}
+      ${mag("terreinen") && V19() && act.length ? `<p class="hint" style="margin:8px 0 0">Geef een ploeg een helft of een kwart van het veld en tot hoe laat ze het mag gebruiken. Twee ploegen op een andere helft tellen niet als overlap. Zonder ingevuld vak tellen trainingen op hetzelfde terrein als “zonder vakindeling”.</p>` : ""}
       <h3 style="margin:16px 0 8px">Deze week</h3><div class="fweek">${days.map(dd => { const n = ofDay(FLD_SEL, dd).filter(x => !x.cancelled); return `<button type="button" data-fd="${dd}" aria-pressed="${dd === FLD_DAY}"><small>${dayLbl(dd)}</small><b>${n.length || "–"}</b>${n.length ? `<span>${esc(n[0].start || "")}${n.length > 1 ? "…" : ""}</span>` : ""}</button>`; }).join("")}</div></div>`; };
   const bindPanel = () => { const fc = $("#fclose"); if (fc) fc.onclick = () => { FLD_SEL = null; FLD_T = null; render(); };
     $$("[data-fd]", v).forEach(b => b.onclick = () => { FLD_DAY = b.dataset.fd; FLD_T = null; render(); });
@@ -472,7 +477,7 @@ route("terreinen", { title: "Terreinen", auth: true, render: async v => {
       const id = row.dataset.pe, patch = { field_part: $("[data-k=p]", row).value || null, end_time: $("[data-k=e]", row).value || null, ...(V20() ? { kk_home: $("[data-k=kk]", row).value || null } : {}) };
       if (await quietSave(row, id, patch)) { const x = list.find(y => y.id === id); if (x) Object.assign(x, { part: patch.field_part, end: patch.end_time ? patch.end_time.slice(0, 5) : null, ...(V20() ? { kk_home: patch.kk_home } : {}) }); } })); };
   v.innerHTML = head("Terreinen", sub) +
-    `<div class="row" style="gap:8px;margin-bottom:10px"><button class="ib" type="button" id="fwp" aria-label="Vorige week">${IC.chevl || "‹"}</button><b>${dShort(d1)} – ${dShort(d2)}</b><button class="ib" type="button" id="fwn" aria-label="Volgende week">${IC.chev}</button>${FLD_W ? `<button class="link" type="button" id="fw0">Deze week</button>` : ""}<span class="spacer"></span>${bad.size ? `<span class="pill loss">${bad.size} overlappend</span>` : list.length ? `<span class="pill w">geen overlap</span>` : ""}<button class="btn ghost small" type="button" id="fprint">${IC.print}Afdrukken</button></div>
+    `<div class="row" style="gap:8px;margin-bottom:10px"><button class="ib" type="button" id="fwp" aria-label="Vorige week">${IC.chevl || "‹"}</button><b>${dShort(d1)} – ${dShort(d2)}</b><button class="ib" type="button" id="fwn" aria-label="Volgende week">${IC.chev}</button>${FLD_W ? `<button class="link" type="button" id="fw0">Deze week</button>` : ""}<span class="spacer"></span>${bad.size ? `<span class="pill loss" title="Zeker een probleem: een wedstrijd op een terrein dat al bezet is, of twee ploegen met een vak dat elkaar raakt.">${bad.size} overlappend</span>` : ""}${bad.soft.size ? `<span class="pill g" title="Meerdere ploegen op hetzelfde terrein en uur, zonder dat een helft of kwart is ingevuld. Dat kan prima als ze het veld delen. Vul een vak in om het te controleren.">${bad.soft.size} zonder vakindeling</span>` : ""}${!bad.size && !bad.soft.size && list.length ? `<span class="pill w">geen overlap</span>` : ""}<button class="btn ghost small" type="button" id="fprint">${IC.print}Afdrukken</button></div>
     <div class="chips fdays">${days.map(dd => `<button class="chip" type="button" data-dd="${dd}" aria-pressed="${dd === FLD_DAY}">${dayLbl(dd)}${dd === today ? " · vandaag" : ""}</button>`).join("")}</div>
     <div class="fmapw"><div class="fmap">${clubMapSVG(stOf)}<div class="flegend"><span><i class="lg now"></i>nu bezig</span><span><i class="lg n">3</i>activiteiten die dag</span><span><i class="lg clash"></i>overlap</span><span><i class="lg kk"></i>kleedkamers</span></div></div>${panel()}</div>
     ${loose.length ? `<div class="sec panel"><h2>Niet op de plattegrond</h2><p class="hint" style="margin-top:0">Bij deze activiteiten staat geen terrein van de club (bv. "Terrein A" of "KGV").${mag("terreinen") ? " Wijs ze hieronder of in de kalender een terrein toe." : ""}</p><div class="fldlist">${loose.filter(x => x.date === FLD_DAY || !FLD_SEL).slice(0, 30).map(x => `<div class="fldb ${x.type}${x.cancelled ? " off" : ""}"><b>${dayLbl(x.date)} · ${x.start || "?"}</b><span>${esc(x.team)}</span><em>${esc(x.location || "geen plaats")}${x.type === "wedstrijd" ? " · vs " + esc(x.opponent || "") : ""}</em></div>`).join("")}</div></div>` : ""}
@@ -534,7 +539,7 @@ function printDialog(list, days, day) {
     $("#prok", d).disabled = !n; };
   $$("[data-pd]", d).forEach(b => b.onclick = () => { if (b.dataset.pd === "week") st.week = true; else { st.week = false; st.day = b.dataset.pd; } paint(); });
   $$("[data-pw]", d).forEach(b => b.onclick = () => { st.what = b.dataset.pw; paint(); });
-  $("#prok", d).onclick = () => { const ps = pick(); d.close(); printFieldDays(ps, st.what); };
+  $("#prok", d).onclick = () => { const ps = pick(); d.close(); try { printFieldDays(ps, st.what); } catch (e) { document.querySelectorAll(".print-only").forEach(n => n.remove()); document.documentElement.classList.remove("printing"); toast("Afdrukken lukt niet: " + (e.message || e) + ". Probeer het opnieuw of ververs de pagina."); } };
   paint();
 }
 function printFieldDays(pages, what) {
