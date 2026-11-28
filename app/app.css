@@ -2912,3 +2912,35 @@ b.hi,.zsc.hi b{color:var(--warn)}b.lo,.zsc.lo b{color:var(--info)}
 .tscards .tsch .ax{font-size:14px}
 .tsch{max-width:780px}.tsch svg{max-height:none}
 .tsgrid select#tsDay{display:inline-block;width:auto;margin:0}
+/* v261: beheer en instellingen luchtiger — meer ruimte tussen blokken, kortere regels, duidelijke scheiding per onderwerp */
+.cstabs{margin:18px 0 22px!important}
+.csv>form.panel,.csv>.panel{padding:26px 28px 22px}
+.csv>form.panel>h2,.csv .panel>h2{font-size:19px;line-height:1.25;margin:0 0 6px}
+.csv>form.panel>h2:not(:first-child),.csv>form.panel>div>h2:not(:first-child){margin-top:34px;padding-top:28px;border-top:1px solid var(--line)}
+.csv h3{margin:26px 0 10px}
+.csv .hint{line-height:1.55;max-width:74ch}
+.csv>form.panel>.hint:first-of-type,.csv>form.panel>h2+.hint{margin:0 0 18px}
+.csv label.f,.csv .f{margin-bottom:14px}
+.csv .chips{gap:8px}
+.csv details.csblk{margin:16px 0}
+.csv .csfoot{margin-top:30px;padding-top:18px}
+.csv .cslist,.csv .scrows{margin:10px 0 12px}
+.csv textarea{margin-top:4px}
+#tslinks{margin:6px 0 4px}#tslinks .tllist .item{padding:14px 16px;gap:10px;flex-wrap:wrap}
+#tlnew>div{display:grid;gap:16px;padding:12px 2px 8px!important}#tlnew .f{margin:0}
+#tlnew .btn{justify-self:start}
+@media(max-width:640px){.csv>form.panel,.csv>.panel{padding:18px 16px}}
+/* Beheer: meer ruimte tussen de panelen */
+#admv>.panel+.panel,#admv>.panel+.sec,#admv .grid2{margin-top:18px}
+#admv .panel{padding:22px 24px}
+#admv .panel h2{margin-bottom:6px}#admv .panel .hint{line-height:1.55}
+#admv .waitbox{margin-bottom:20px}
+/* Wie ziet wat: onderdelen per menugroep, twee kolommen */
+.accl.panel{padding:24px 26px}
+.accl h3{margin:28px 0 12px!important;font-size:16px}
+.accgrps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 16px}
+.accgrp h4{margin:0 0 8px;font-size:12.5px;font-weight:800;color:var(--muted)}
+.accgrp .accrow{padding:10px 14px}
+@media(max-width:1100px){.accgrps{grid-template-columns:1fr}}
+.accgrps{display:block;columns:2;column-gap:16px}.accgrp{break-inside:avoid;margin-bottom:18px}
+@media(max-width:1100px){.accgrps{columns:1}}
