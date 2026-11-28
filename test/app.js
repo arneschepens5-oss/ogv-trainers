@@ -39,7 +39,10 @@ function paint(c) { const R = document.documentElement.style, ogv = c.id === OGV
 const msgCard = (t, x) => { app.innerHTML = `<div class="card center"><h2>${t}</h2><p>${x}</p></div>`; };
 
 async function start() {
-  if (!TOK) return msgCard("Open je testlink", "Deze app werkt met een testlink die je van de club kreeg (via WhatsApp of mail). Tik op die link om te beginnen. Een account is niet nodig.");
+  if (!TOK) { let trainer = false; try { trainer = !!localStorage.getItem("tb_auth"); } catch (e) {}
+    const oud = new URLSearchParams(location.search).has("c");
+    return msgCard("Open je testlink", `${oud ? "Deze oude link werkt niet meer: de testapp werkt nu zonder account, met een testlink. " : ""}Tik op de testlink die je van de club kreeg (via WhatsApp of mail). Een account is niet nodig.
+      ${trainer ? `<br><br><b>Ben je beheerder?</b> Maak eerst een testlink in Beheer › Instellingen › Fysieke testen en stuur die door.<br><br><a class="btn" href="../#/clubinstellingen/testen">Testlink maken</a>` : ""}`); }
   let r; try { r = await sb.rpc("test_link_info", { tok: TOK }); } catch (e) { r = { error: e }; }
   if (r.error) { const c = ls.get("fch-test-info", null); if (!navigator.onLine && c) r = { data: c }; else return msgCard("Geen verbinding", `Laden lukt niet. Controleer je verbinding.<br><br><button class="btn" type="button" onclick="start()">Opnieuw</button>`); }
   if (!r.data) { ls.set("fch-test-info", null); return msgCard("Deze testlink werkt niet meer", "De link is verlopen of ingetrokken. Vraag een nieuwe link aan de club."); }
