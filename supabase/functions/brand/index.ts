@@ -1,5 +1,5 @@
 // Huisstijl van een club voor de apps: manifest (naam + icoon op het beginscherm), icoon en korte info.
-// GET ?club=<id> of ?tok=<ouder-/spelerslink>  &app=scout|ouder|trainers  (manifest)
+// GET ?club=<id> of ?tok=<ouder-/spelerslink>  &app=scout|test|ouder|trainers  (manifest)
 //     &icon=1 (logo als afbeelding)   &info=1 (naam, kleur, logo)
 import { createClient } from "npm:@supabase/supabase-js@2";
 const SITE = "https://trainers.footballcoachhub.be";
@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
   const icon = `${self}?club=${c.id}&icon=1`, col = st.color2 || "#0E0F0C";
   const M: Record<string, unknown> = {
     scout: { name: `Scouting · ${short}`, short_name: "Scouting", start_url: `${SITE}/scout/?c=${c.id}`, scope: `${SITE}/scout/`, id: `${SITE}/scout/?c=${c.id}` },
+    test: { name: `Fysieke testen · ${short}`, short_name: "Testen", start_url: `${SITE}/test/?c=${c.id}`, scope: `${SITE}/test/`, id: `${SITE}/test/?c=${c.id}` },
     ouder: { name: `${short} · ouders en spelers`, short_name: ogv ? "OGV Ouders" : short, scope: `${SITE}/ouder/` },
     trainers: { name: ogv ? "OGV Trainers" : `${short} Trainers`, short_name: ogv ? "OGV Trainers" : short, start_url: `${SITE}/`, scope: `${SITE}/`, id: `${SITE}/?club=${c.id}` },
   };

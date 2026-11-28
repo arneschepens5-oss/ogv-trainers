@@ -721,7 +721,7 @@ async function renderPage(seq) {
   /* scouts (via de scoutapp) zien in de trainersapp enkel de externe scouting */
   if (mode === "cloud" && S.functie === "Scout" && !S.admin && !S.myTeamIds?.length && !["scouting", "aanmelden"].includes(r.page)) { location.replace("#/scouting"); return; }
   /* testafnemers zonder ploeg: enkel de gsm-app voor de testen */
-  if (mode === "cloud" && !S.admin && !S.myTeamIds?.length && !S.allTeams && !(S.teamAccess || []).length && (S.rechten || []).includes("tester") && !["testafname", "aanmelden", "berichten", "contacten"].includes(r.page)) { location.replace("#/testafname"); return; }
+  if (mode === "cloud" && !S.admin && !S.myTeamIds?.length && !S.allTeams && !(S.teamAccess || []).length && (S.rechten || []).includes("tester") && !["aanmelden", "berichten", "contacten"].includes(r.page)) { location.replace(tsAppUrl()); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   /* nooit meer een leeg scherm: na een halve seconde "Laden…", na 12 seconden een knop om opnieuw te laden */
   let settled = false;
