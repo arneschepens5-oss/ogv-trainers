@@ -18,7 +18,7 @@ const FN_PRESETS = { TVJO: { all: true, rechten: ["scouting", "terreinen", "ints
   Testafnemer: { rechten: ["tester"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten", "testafname"].includes(k)) } };
 const accOff = page => { if (S.admin || typeof user === "undefined" || !user) return false; const A = CLUB.settings?.access || {}, u = (A.users || {})[user.id] || {};
   if ((u.on || []).includes(page)) return false; if ((u.off || []).includes(page)) return true; const fh = S.functie && (A.fn || {})[S.functie]?.hide; return (fh || A.all?.hide || []).includes(page); };
-const clubOff = page => (CLUB.settings?.hidden || []).includes(page) || accOff(page);
+const clubOff = page => { if (page === "zelfspeler") page = "evaluaties"; return (CLUB.settings?.hidden || []).includes(page) || accOff(page); };  /* zelfevaluatie speler volgt de evaluaties */
 const ogvBrand = () => isOGV() && (CLUB_KNOWN || mode === "demo" || !!user);
 const clubName = () => (isOGV() ? "OG Vorselaar" : CLUB.settings?.full || CLUB.name);
 const clubShort = () => CLUB.short || clubName();
@@ -553,7 +553,7 @@ function playerStats(p) {
 const ROUTES = {};
 function route(name, def) { ROUTES[name] = def; }
 /* onderdelen die enkel zin hebben met een ploeg, en wat iemand zelf uit zijn menu haalde */
-const NAV_TEAM = ["evaluaties", "testen", "live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
+const NAV_TEAM = ["evaluaties", "zelfspeler", "testen", "live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
 const SIDE_OPEN = new Set(), SIDE_SHUT = new Set();
 const navHidden = () => { try { const x = JSON.parse(localStorage.getItem("ogv-nav-hidden")); return Array.isArray(x) ? x : []; } catch (e) { return []; } };
 /* onderaan het menu staat nog maar één knop; alles voor jezelf (weergave, lettergrootte, menu, account, hulp) zit in "Mijn instellingen" */
@@ -594,7 +594,7 @@ const NAV = [
   { g: null, items: [["start", "Vandaag", "home"], ["berichten", "Berichten", "mail"]] },
   { g: "Kalender", icon: "cal", items: [["kalender", "Kalender", "cal"], ["matchday", "Wedstrijdblad", "sheet"], ["live", "Live coachen", "mic"], ["uitslagen", "Uitslagen club", "ball"]] },
   { g: "Ploeg", icon: "ppl", team: true, items: [["spelers", "Spelers", "ppl"], ["cijfers", "Cijfers", "chart"], ["ploeg-instellingen", "Ploeg en trainers", "gear"]] },
-  { g: "Evaluaties", icon: "star", items: [["evaluaties", "Spelers", "star"], ["zelftrainer", "Zelfevaluatie trainer", "check"], ["zelfcoord", "Zelfevaluatie coördinator", "check"]] },
+  { g: "Evaluaties", icon: "star", items: [["evaluaties", "Spelersevaluatie", "star"], ["zelfspeler", "Zelfevaluatie speler", "check"], ["zelftrainer", "Zelfevaluatie trainer", "check"], ["zelfcoord", "Zelfevaluatie coördinator", "check"]] },
   { g: "Fysieke testen", icon: "up", items: [["testen", "Resultaten ploeg", "chart"], ["testafname", "Testen afnemen", "phone"]] },
   { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["papier", "Training op papier", "print"]] },
   { g: "Tactiek", icon: "board", items: [["animatiebord", "Tactiekbord", "board"], ["videoanalyse", "Videoanalyse", "split"]] },

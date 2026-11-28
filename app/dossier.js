@@ -227,6 +227,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
   if ($("#dosEdit")) $("#dosEdit").onclick = () => playerForm(p);
   $("#spEdit").onclick = () => scProfForm(p);
   if ($("#gAdd")) $("#gAdd").onclick = () => groeiForm(p);
+  if (typeof tsTipBind === "function") tsTipBind(v);
   if (typeof absBind === "function") absBind(v);
   $$("[data-gE]", v).forEach(b => b.onclick = () => groeiForm(p, S.pmeas.find(x => x.id === b.dataset.gE)));
   if ($("#scAdd")) $("#scAdd").onclick = () => pScoutForm(p);

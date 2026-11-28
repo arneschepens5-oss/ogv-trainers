@@ -245,17 +245,15 @@ function evFicheBar() {
     ${S.admin ? `<a class="btn ghost small" href="#/clubinstellingen/evaluaties" data-agepick="${esc(k)}">Aanpassen voor ${esc(evAgeLbl(k))}</a>` : ""}</div>`;
 }
 function evZelfHtml(m, ps) {
-  if (!EV_SELF.on) return "";
-  if (S.zelfOk === false) return `<div class="panel row" style="margin:10px 0"><span class="hint">Zelfevaluatie van spelers kan pas nadat de beheerder <b>supabase-zelfevaluatie-v38.sql</b> uitvoerde.</span></div>`;
+  if (!EV_SELF.on || S.zelfOk === false) return "";
   const on = evZelfOpen(m), n = ps.filter(p => evZelf(p.id, m)).length;
-  return `<div class="panel row evpub${on ? " hl" : ""}" style="margin:10px 0"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="evZelfT"${on ? " checked" : ""}>
-    <span><b>Spelers vullen hun zelfevaluatie in</b><br><span class="hint">${on ? `Open in de speler- en ouderapp · ${n} van ${ps.length} ingevuld. Ze kunnen hun antwoorden aanpassen tot je dit sluit.` : "Staat uit. Zet aan als spelers (of ouders samen met hun kind) hun eigen vragenlijst mogen invullen via hun persoonlijke link."}</span></span></label></div>`;
+  return `<a class="panel row evpub zslink" href="#/zelfspeler" style="margin:10px 0"><span style="flex:1;min-width:220px"><b>Zelfevaluatie speler</b><br><span class="hint">${n} van ${ps.length} ingevuld · ${on ? "staat open voor de spelers" : "gesloten"}. Openen, antwoorden bekijken en vergelijken met jouw scores doe je op een aparte pagina.</span></span><span class="btn ghost small">Bekijken ›</span></a>`;
 }
 function evSelfPanel(z, e, m) {
   if (!EV_SELF.on) return "";
   const qs = EV_SELF.questions, state = z ? `<span class="pill t">${z.by === "ouder" ? "ingevuld met ouder" : "ingevuld door speler"}</span>` : evZelfOpen(m) ? '<span class="pill w">nog niet ingevuld</span>' : '<span class="pill g">gesloten</span>';
   const head = `<section class="panel evself" id="ev-self"><div class="gh"><h2>Zelfevaluatie van de speler</h2>${state}</div>`;
-  if (!z) return head + `<p class="hint" style="margin:0">${evZelfOpen(m) ? "De speler of ouder kan dit invullen in de app." : "Open de zelfevaluatie voor dit moment in het overzicht van de evaluaties."}</p></section>`;
+  if (!z) return head + `<p class="hint" style="margin:0">${evZelfOpen(m) ? "De speler of ouder kan dit invullen in de app." : `Open ze bij <a class="link" href="#/zelfspeler">Zelfevaluatie speler</a>.`}</p></section>`;
   const gaps = qs.filter(q => q.type === "schaal" && q.link).map(q => { const s = evSelfScore(z, q), t = evScore(e, q.link); return s != null && t != null ? { q, s, t, d: s - t } : null; })
     .filter(g => g && Math.abs(g.d) >= 1.5).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3);
   return head + (gaps.length ? `<div class="selfgap"><b>Om te bespreken</b>${gaps.map(g => `<p>${esc(g.q.link)}: de speler geeft zichzelf ${g.d > 0 ? "meer" : "minder"} (${evF(g.s)}) dan jij (${evF(g.t)}).</p>`).join("")}</div>` : "") +
@@ -479,3 +477,66 @@ function evReminder() {
     return `<a class="evremind${mo.verplicht ? " req" : ""}" href="#/evaluaties" data-em="${mo.m}"><span class="ic">${IC.star}</span><span><b>Evaluatie ${mo.naam.toLowerCase()}${mo.verplicht ? " (verplicht)" : ""}</b><small>${before ? `Start over ${Math.ceil((w.from - now) / 864e5)} dagen` : `${dn} van ${ps.length} spelers klaar · nog ${days} ${days === 1 ? "dag" : "dagen"}`}</small></span><span class="go">Evalueren ›</span></a>`; }
   return "";
 }
+
+/* ============ zelfevaluatie speler: eigen pagina ============
+   Wat de spelers (of ouders samen met hun kind) zelf invulden via hun persoonlijke link, apart van de evaluatie door de trainer. */
+let zsView = "spelers", zsOpen = null;
+async function evZelfToggle(m, on) {
+  const ok = await safe(async () => {
+    if (mode === "demo") { if (on) await db.save("eval_zelf_open", { team_id: S.team.id, moment: m, opened_at: new Date().toISOString() }); else await db.del("eval_zelf_open", { team_id: S.team.id, moment: m }); }
+    else { const { error } = await sb.rpc("set_eval_zelf", { t: S.team.id, m, aan: on }); if (error) throw error; }
+    return true; }, on ? "Spelers kunnen hun zelfevaluatie invullen." : "Zelfevaluatie gesloten.");
+  if (ok) S.zelfOpen = on ? [...(S.zelfOpen || []).filter(o => o.moment !== m), { team_id: S.team.id, moment: m }] : (S.zelfOpen || []).filter(o => o.moment !== m);
+  render();
+}
+/* gemiddelde zelfscore op de schaal van de trainer (op 5), zodat je ze naast elkaar kan zetten */
+const zsAvg = z => avg(EV_SELF.questions.filter(q => q.type === "schaal").map(q => evSelfScore(z, q)));
+const zsGap = (z, e) => { const ds = EV_SELF.questions.filter(q => q.type === "schaal" && q.link).map(q => { const s = evSelfScore(z, q), t = evScore(e, q.link); return s != null && t != null ? s - t : null; }); return avg(ds); };
+route("zelfspeler", { title: "Zelfevaluatie speler", auth: true, team: true, render: v => {
+  if (evMoment == null) evMoment = evCurrent();
+  const ps = active(), m = evMoment, mo = EV_MOMENTS[m - 1];
+  const sub = `${esc(S.team.name)} · wat spelers zelf invullen over hoe het gaat, via hun persoonlijke link (eventueel samen met de ouders). De evaluatie door de trainer staat apart bij <a class="link" href="#/evaluaties">Spelersevaluatie</a>.`;
+  if (!EV_SELF.on) { v.innerHTML = head("Zelfevaluatie speler", sub) + `<div class="empty"><b>Geen zelfevaluatie voor ${esc(evAgeLbl(evAgeKey(S.team)))}</b>${S.admin ? `Zet ze aan per leeftijd in <a class="link" href="#/clubinstellingen/evaluaties">Instellingen › Evaluaties</a> (Spelers › Per leeftijd).` : "De club gebruikt voor deze leeftijd geen zelfevaluatie. Vraag het na bij de beheerder."}</div>`; return; }
+  if (S.zelfOk === false) { v.innerHTML = head("Zelfevaluatie speler", sub) + `<div class="empty"><b>Nog niet beschikbaar</b>De database van de club moet nog bijgewerkt worden (versie 38).</div>`; return; }
+  const Z = ps.map(p => ({ p, z: evZelf(p.id, m), e: evOf(p.id, m) })), filled = Z.filter(x => x.z), on = evZelfOpen(m);
+  const scales = EV_SELF.questions.filter(q => q.type === "schaal"), texts = EV_SELF.questions.filter(q => q.type === "tekst"), linked = scales.filter(q => q.link);
+  const gaps = filled.map(x => zsGap(x.z, x.e)).filter(g => g != null), meanSelf = avg(filled.map(x => zsAvg(x.z)));
+  const lbl5 = v5 => v5 == null ? "–" : EV_SELF.scale === "smiley" ? (EV_FACES[Math.round(v5 * EV_SELFMAX / 5)] || "") + " " + f1(v5 * EV_SELFMAX / 5) : f1(v5 * EV_SELFMAX / 5);
+  v.innerHTML = head("Zelfevaluatie speler", sub) +
+    `<div class="evmoments" role="tablist">${EV_MOMENTS.map(x => { const n = ps.filter(p => evZelf(p.id, x.m)).length, o = evZelfOpen(x.m);
+      return `<button type="button" role="tab" data-zm="${x.m}" aria-selected="${x.m === m}"><span class="n">${x.m}</span><span class="tx"><b>${x.naam}</b><small>${x.periode}</small></span>
+        <span class="pr"><span style="width:${ps.length ? n / ps.length * 100 : 0}%"></span></span><small class="ct">${n ? n + "/" + ps.length + " ingevuld" : o ? "open" : "gesloten"}</small></button>`; }).join("")}</div>
+    <div class="panel row evpub${on ? " hl" : ""}" style="margin:12px 0"><label class="check" style="flex:1;min-width:220px"><input type="checkbox" id="zsT"${on ? " checked" : ""}>
+      <span><b>Open voor de spelers (${esc(mo.naam.toLowerCase())})</b><br><span class="hint">${on ? "Spelers en ouders zien de vragenlijst in hun app en kunnen antwoorden aanpassen tot je dit sluit." : "Gesloten. Zet open als spelers hun vragenlijst voor dit moment mogen invullen."}</span></span></label>
+      <a class="btn ghost small" href="#/spelers">Persoonlijke links van de spelers</a></div>
+    <div class="tssum"><div class="kpi"><small>Ingevuld</small><b>${filled.length}<span class="u">/${ps.length}</span></b><span>${filled.filter(x => x.z.by === "ouder").length} samen met een ouder</span></div>
+      <div class="kpi"><small>Gemiddelde zelfscore</small><b>${lbl5(meanSelf)}</b><span>${EV_SELF.scale === "smiley" ? "op 5 smileys" : "op " + EV_SELFMAX}</span></div>
+      <div class="kpi"><small>Zelf vs trainer</small><b>${gaps.length ? (avg(gaps) > 0 ? "+" : avg(gaps) < 0 ? "−" : "") + f1(Math.abs(avg(gaps)) * EV_DISP) : "–"}</b><span>${gaps.length ? (avg(gaps) > 0.25 ? "spelers schatten zich hoger in" : avg(gaps) < -0.25 ? "spelers schatten zich lager in" : "ongeveer gelijk") : linked.length ? "nog geen vergelijking" : "geen gekoppelde vragen"}</span></div>
+      <div class="kpi"><small>Nog niet ingevuld</small><b>${ps.length - filled.length}</b><span>${ps.length - filled.length ? Z.filter(x => !x.z).slice(0, 3).map(x => esc(x.p.first_name || pname(x.p))).join(", ") + (ps.length - filled.length > 3 ? "…" : "") : "iedereen klaar"}</span></div></div>
+    <div class="ptabs" role="tablist" style="margin-top:14px">${[["spelers", "Per speler"], ["vragen", "Per vraag"], ["vgl", "Zelf vs trainer"]].map(([k, l]) => `<button type="button" role="tab" data-zv="${k}" aria-selected="${zsView === k}">${l}</button>`).join("")}</div><div id="zsv" class="sec"></div>`;
+  const host = $("#zsv");
+  if (!filled.length) host.innerHTML = `<div class="empty"><b>Nog niemand vulde dit in</b>${on ? "De vragenlijst staat open. Spelers vinden ze in de speler- en ouderapp via hun persoonlijke link." : "Zet de zelfevaluatie hierboven open voor dit moment."}</div>`;
+  else if (zsView === "spelers") host.innerHTML = `<div class="zslist">${Z.map(({ p, z, e }) => { const a = z ? zsAvg(z) : null, g = z ? zsGap(z, e) : null, open = zsOpen === p.id && z;
+      return `<div class="zsrow${z ? "" : " none"}${open ? " open" : ""}"><button type="button" class="zshd" data-zp="${p.id}"${z ? "" : " disabled"} aria-expanded="${!!open}">${pAv(p)}<span class="nm"><b>${esc(pname(p))}</b><small>${z ? (z.by === "ouder" ? "samen met ouder" : "door de speler") + (z.updated_at ? " · " + esc(dShort(String(z.updated_at).slice(0, 10))) : "") : "nog niet ingevuld"}</small></span>
+        ${z ? `<span class="zsk"><small>zelf</small><b>${lbl5(a)}</b></span><span class="zsk"><small>trainer</small><b>${evF(evAvgOf(e, evItems()))}</b></span><span class="zsk"><small>verschil</small><b class="${g == null ? "" : g > 0.5 ? "hi" : g < -0.5 ? "lo" : ""}">${g == null ? "–" : (g > 0 ? "+" : g < 0 ? "−" : "") + f1(Math.abs(g) * EV_DISP)}</b></span><span class="car" aria-hidden="true">›</span>` : ""}</button>
+        ${open ? `<div class="zsbody">${evSelfPanel(z, e, m)}<a class="link" href="#/evaluaties/${p.id}/${m}">Naar de evaluatie door de trainer ›</a></div>` : ""}</div>`; }).join("")}</div>
+      <p class="hint">Verschil: zelfscore min de score van de trainer op de gekoppelde onderdelen. Een groot verschil is een goed startpunt voor een gesprek.</p>`;
+  else if (zsView === "vragen") host.innerHTML = scales.map(q => { const vs = filled.map(x => x.z.answers?.[q.id]).filter(a => typeof a === "number"), mx = EV_SELFMAX, cnt = Array.from({ length: mx }, (_, i) => vs.filter(a => Math.round(a) === i + 1).length), top = Math.max(1, ...cnt);
+      return `<div class="panel zsq"><div class="row" style="gap:10px"><h3 style="margin:0;margin-right:auto">${esc(q.text)}</h3>${q.link ? `<small class="muted">${esc(q.link)}</small>` : ""}<b class="zsqa">${vs.length ? (EV_SELF.scale === "smiley" ? (EV_FACES[Math.round(avg(vs))] || "") + " " : "") + f1(avg(vs)) : "–"}</b></div>
+        <div class="zsdist">${cnt.map((c, i) => `<div title="${c} ${c === 1 ? "speler" : "spelers"}"><span class="b"><i style="height:${c / top * 100}%"></i></span><small>${EV_SELF.scale === "smiley" ? EV_FACES[i + 1] : i + 1}</small><em>${c || ""}</em></div>`).join("")}</div>
+        ${vs.length ? `<p class="hint" style="margin:6px 0 0">Laagst: ${filled.filter(x => typeof x.z.answers?.[q.id] === "number").sort((a, b) => a.z.answers[q.id] - b.z.answers[q.id]).slice(0, 3).map(x => esc(x.p.first_name || pname(x.p)) + " (" + evSelfLabel(x.z.answers[q.id]) + ")").join(", ")}</p>` : ""}</div>`; }).join("") +
+    texts.map(q => { const as = filled.filter(x => String(x.z.answers?.[q.id] ?? "").trim());
+      return `<div class="panel zsq"><h3 style="margin:0 0 8px">${esc(q.text)}</h3>${as.length ? as.map(x => `<div class="selftx"><small>${esc(pname(x.p))}</small><p>${esc(String(x.z.answers[q.id])).replace(/\n/g, "<br>")}</p></div>`).join("") : `<p class="hint" style="margin:0">Nog geen antwoorden.</p>`}</div>`; }).join("");
+  else { if (!linked.length) host.innerHTML = `<div class="empty"><b>Geen vragen gekoppeld aan onderdelen</b>Koppel in de instellingen van de zelfevaluatie een vraag aan een onderdeel van de trainer (bv. "Hoe goed kan je passen?" aan Passing), dan zie je hier zelfbeeld en trainersscore naast elkaar.</div>`;
+    else { const crit = [...new Set(linked.map(q => q.link))];
+      const cell = (z, e, c) => { const s = evSelfOf(z, c), t = evScore(e, c); if (s == null && t == null) return `<td class="zsc">–</td>`; const d = s != null && t != null ? s - t : null;
+        return `<td class="zsc ${d == null ? "" : d >= 1 ? "hi" : d <= -1 ? "lo" : "eq"}" title="zelf ${evF(s)} · trainer ${evF(t)}"><b>${evF(s)}</b><small>${evF(t)}</small></td>`; };
+      host.innerHTML = `<div class="panel wrapx" style="padding:6px 10px"><table class="tbl zstbl"><thead><tr><th>Speler</th>${crit.map(c => `<th>${esc(c)}</th>`).join("")}<th>Gem. verschil</th></tr></thead>
+        <tbody>${filled.map(({ p, z, e }) => { const g = zsGap(z, e); return `<tr><td><a class="link" href="#/evaluaties/${p.id}/${m}">${esc(pname(p))}</a></td>${crit.map(c => cell(z, e, c)).join("")}<td><b class="${g == null ? "" : g > 0.5 ? "hi" : g < -0.5 ? "lo" : ""}">${g == null ? "–" : (g > 0 ? "+" : g < 0 ? "−" : "") + f1(Math.abs(g) * EV_DISP)}</b></td></tr>`; }).join("")}</tbody>
+        <tfoot><tr><th>Ploeg</th>${crit.map(c => { const s = avg(filled.map(x => evSelfOf(x.z, c))), t = avg(filled.map(x => evScore(x.e, c))); return `<td class="zsc"><b>${evF(s)}</b><small>${evF(t)}</small></td>`; }).join("")}<td></td></tr></tfoot></table></div>
+        <p class="hint">Boven: wat de speler zichzelf geeft, onder: de score van de trainer (zelfde schaal). <span class="zslg hi">hoger ingeschat</span> <span class="zslg lo">lager ingeschat</span> dan de trainer, met minstens 1 punt verschil.</p>`; } }
+  $$("[data-zm]", v).forEach(b => b.onclick = () => { evMoment = +b.dataset.zm; zsOpen = null; render(); });
+  $$("[data-zv]", v).forEach(b => b.onclick = () => { zsView = b.dataset.zv; render(); });
+  $$("[data-zp]", v).forEach(b => b.onclick = () => { zsOpen = zsOpen === b.dataset.zp ? null : b.dataset.zp; render(); });
+  $("#zsT").onchange = e => evZelfToggle(m, e.target.checked);
+} });
