@@ -14,8 +14,7 @@ const FN_ALLMODS = ["kalender", "uitslagen", "spelers", "ploeg", "ploeg-instelli
 const FN_PRESETS = { TVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, AVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, "Jeugdcoördinator": { all: true, rechten: ["scouting", "terreinen", "intscout"] },
   "Coördinator onderbouw": { bouw: "onder", rechten: ["intscout"] }, "Coördinator middenbouw": { bouw: "midden", rechten: ["intscout"] }, "Coördinator bovenbouw": { bouw: "boven", rechten: ["intscout"] },
   Scout: { rechten: ["scouting", "intscout"], hide: ["evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "terreinen", "clubdashboard"] },
-  Penningmeester: { rechten: ["betalingen"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) }, Terreinverantwoordelijke: { rechten: ["terreinen", "intscout"] },
-  Testafnemer: { rechten: ["tester"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) } };
+  Penningmeester: { rechten: ["betalingen"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) }, Terreinverantwoordelijke: { rechten: ["terreinen", "intscout"] } };
 const accOff = page => { if (S.admin || typeof user === "undefined" || !user) return false; const A = CLUB.settings?.access || {}, u = (A.users || {})[user.id] || {};
   if ((u.on || []).includes(page)) return false; if ((u.off || []).includes(page)) return true; const fh = S.functie && (A.fn || {})[S.functie]?.hide; return (fh || A.all?.hide || []).includes(page); };
 const clubOff = page => { if (page === "zelfspeler") page = "evaluaties"; return (CLUB.settings?.hidden || []).includes(page) || accOff(page); };  /* zelfevaluatie speler volgt de evaluaties */
@@ -720,8 +719,6 @@ async function renderPage(seq) {
   if (clubOff(r.page)) { v.innerHTML = `<div class="empty"><b>Dit onderdeel staat uit voor ${esc(clubName())}</b>${S.admin ? `Zet het aan in <a class="link" href="#/clubinstellingen/onderdelen">Beheer › Instellingen</a>.` : "Vraag je clubbeheerder als je het wil gebruiken."}</div>`; return; }
   /* scouts (via de scoutapp) zien in de trainersapp enkel de externe scouting */
   if (mode === "cloud" && S.functie === "Scout" && !S.admin && !S.myTeamIds?.length && !["scouting", "aanmelden"].includes(r.page)) { location.replace("#/scouting"); return; }
-  /* testafnemers zonder ploeg: enkel de gsm-app voor de testen */
-  if (mode === "cloud" && !S.admin && !S.myTeamIds?.length && !S.allTeams && !(S.teamAccess || []).length && (S.rechten || []).includes("tester") && !["aanmelden", "berichten", "contacten"].includes(r.page)) { location.replace(tsAppUrl()); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   /* nooit meer een leeg scherm: na een halve seconde "Laden…", na 12 seconden een knop om opnieuw te laden */
   let settled = false;

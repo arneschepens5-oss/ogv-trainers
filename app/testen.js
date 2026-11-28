@@ -88,24 +88,57 @@ const tsRow = t => `<div class="csr tsr" data-id="${esc(t.id || "t" + Math.rando
 function tsSettingsHtml(st) {
   const T = (Array.isArray(st.tests) ? st.tests : []).filter(t => t && !t.del);
   return `<h2 style="margin-top:0">Fysieke testen van de club</h2>
-    <p class="hint" style="margin-top:0">Maak elke test één keer aan. Testafnemers kiezen ze daarna in de testapp en zien de resultaten per ploeg en in het dossier van de speler. Bij meer pogingen telt de beste.</p>
+    <p class="hint" style="margin-top:0">Maak elke test één keer aan. Wie de testen afneemt, kiest ze in de testapp. Trainers zien de resultaten per ploeg en in het dossier van de speler. Bij meer pogingen telt de beste.</p>
     <datalist id="tsunits">${TS_UNITS.map(u => `<option value="${u}">`).join("")}</datalist>
     <div id="tslist" class="cslist">${T.length ? T.map(tsRow).join("") : ""}</div>
     ${T.length ? "" : `<p class="hint" id="tsnone">Nog geen testen. Voorbeelden: <i>Sprint 10 m</i> (s, lager is beter, 2 decimalen, 2 pogingen), <i>Verspringen zonder aanloop</i> (cm, hoger is beter), <i>Yo-yo-test</i> (niveau).</p>`}
     <button class="link" type="button" id="tsadd" style="margin:4px 0 12px">${IC.plus}Test toevoegen</button>
-    <h2>Testapp voor testafnemers</h2>
-    <p class="hint" style="margin-top:0">Testen worden ingevuld in een aparte gsm-app. Testafnemers (bv. een kinesist, looptrainer of trainer) openen de link, maken een account aan met deze testcode en wachten tot jij ze toelaat bij <a class="link" href="#/clubbeheer/toegang">Toegang en leden</a>. Ze zien enkel de namen en rugnummers van de spelers en kunnen niets anders in de app.</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><code id="tcode" style="font-size:18px;font-weight:900;padding:8px 12px;border-radius:10px;background:var(--card2)">…</code><button class="btn ghost small" type="button" id="tcodeNew">Nieuwe code</button><button class="btn ghost small" type="button" id="tcodeCp">${IC.copy || ""}Link en code kopiëren</button><a class="btn ghost small" id="tapp" target="_blank" rel="noopener">Testapp openen</a></div>
-    <p class="hint">Link: <a class="link" id="tlink" target="_blank" rel="noopener"></a> · Een nieuwe code maakt de oude ongeldig; wie al testafnemer is, blijft dat. Een bestaand lid kan je ook zelf het recht <b>Fysieke testen afnemen</b> of de functie <b>Testafnemer</b> geven. Beheerders kunnen altijd testen afnemen.</p>`;
+    <h2>Testlinks voor wie de testen afneemt</h2>
+    <p class="hint" style="margin-top:0">Wie testen afneemt (een trainer, kinesist of looptrainer) heeft geen account nodig: stuur een testlink. Met die link kan je enkel resultaten invullen. Spelers verschijnen met voornaam, eerste letter van de achternaam en rugnummer. Vroegere resultaten zijn nooit zichtbaar. Geef een link een korte geldigheid en trek ze in als ze niet meer nodig is: wie de link heeft, kan invullen.</p>
+    <div id="tslinks"><p class="hint">Laden…</p></div>
+    <details class="csblk" id="tlnew"><summary><b>Nieuwe testlink maken</b><small>kies de ploegen en hoe lang de link werkt</small></summary>
+      <div style="padding:4px 0 8px"><label class="f" style="max-width:420px">Naam van de link <small class="muted">bv. "Testdag U9-U11 december"</small><input id="tlLabel" maxlength="60" placeholder="Testdag"></label>
+      <div class="f full"><span>Ploegen</span><div class="chips" id="tlTeams" style="margin-top:6px"><button type="button" class="chip" data-tlall aria-pressed="true">Alle ploegen</button>${(S.teams || []).map(t => `<button type="button" class="chip" data-tlt="${t.id}" aria-pressed="false">${esc(teamLbl(t))}</button>`).join("")}</div></div>
+      <label class="f" style="max-width:260px">Werkt tot<select id="tlExp"><option value="1">Vandaag en morgen</option><option value="7" selected>1 week</option><option value="31">1 maand</option><option value="92">3 maanden</option><option value="0">Tot ik ze intrek</option></select></label>
+      <button class="btn" type="button" id="tlMake">Link maken</button></div></details>
+`;
 }
-const tsAppUrl = () => new URL("test/?c=" + CLUB.id, location.href.split("#")[0].split("?")[0]).href;
+const tsAppUrl = tok => new URL("test/?s=" + encodeURIComponent(tok), location.href.split("#")[0].split("?")[0]).href;
+/* testlinks (databaseversie 63): enkel beheerders maken en zien ze */
+async function tsLinksBind(f) {
+  const host = $("#tslinks", f); if (!host) return;
+  const sel = new Set(); let all = true;
+  const paintT = () => { $("[data-tlall]", f).setAttribute("aria-pressed", all); $$("[data-tlt]", f).forEach(b => b.setAttribute("aria-pressed", !all && sel.has(b.dataset.tlt))); };
+  $("[data-tlall]", f).onclick = () => { all = true; sel.clear(); paintT(); };
+  $$("[data-tlt]", f).forEach(b => b.onclick = () => { all = false; sel.has(b.dataset.tlt) ? sel.delete(b.dataset.tlt) : sel.add(b.dataset.tlt); if (!sel.size) all = true; paintT(); });
+  const share = async (l, nm) => { const u = tsAppUrl(l.token), t = `Testapp ${clubName()}${l.label ? " (" + l.label + ")" : ""}: ${u}\nOpen de link op je gsm. Je hebt geen account nodig.${l.expires_at ? "\nDe link werkt tot " + new Date(l.expires_at).toLocaleDateString("nl-BE", { day: "numeric", month: "long" }) + "." : ""}`;
+    if (nm === "wa") { window.open("https://wa.me/?text=" + encodeURIComponent(t), "_blank", "noopener"); return; }
+    try { await navigator.clipboard.writeText(t); toast("Link gekopieerd."); } catch (e) { toast(t); } };
+  const load = async () => {
+    let L = []; if (mode === "demo") L = window.TS_DEMO_LINKS || (window.TS_DEMO_LINKS = []);
+    else { const r = await sb.from("test_links").select("*").eq("club_id", CLUB.id).order("created_at", { ascending: false }); if (r.error) { host.innerHTML = `<p class="hint">Testlinks zijn nog niet beschikbaar (databaseversie 63).</p>`; return; } L = r.data || []; }
+    const live = l => !l.revoked && (!l.expires_at || new Date(l.expires_at) > new Date()), on = L.filter(live), off = L.filter(l => !live(l)).slice(0, 5);
+    const tn = l => !l.team_ids ? "alle ploegen" : l.team_ids.map(id => teamLbl((S.teams || []).find(t => t.id === id) || { name: "?" })).join(", ");
+    const dd = x => new Date(x).toLocaleDateString("nl-BE", { day: "numeric", month: "short" });
+    host.innerHTML = (on.length ? `<div class="list tllist">${on.map(l => `<div class="item static"><span class="main"><b>${esc(l.label || "Testlink")}</b><small>${esc(tn(l))} · ${l.expires_at ? "werkt tot " + dd(l.expires_at) : "werkt tot je ze intrekt"}${l.last_used_at ? " · laatst gebruikt " + dd(l.last_used_at) : " · nog niet gebruikt"}</small></span>
+        <button class="btn small" type="button" data-tlwa="${l.id}">WhatsApp</button><button class="btn ghost small" type="button" data-tlcp="${l.id}">Kopiëren</button><a class="btn ghost small" href="${esc(tsAppUrl(l.token))}" target="_blank" rel="noopener">Openen</a><button class="link danger" type="button" data-tlrv="${l.id}">Intrekken</button></div>`).join("")}</div>`
+      : `<p class="hint">Er is nog geen werkende testlink.</p>`) + (off.length ? `<details class="refd"><summary>Verlopen of ingetrokken (${off.length})</summary><div class="list">${off.map(l => `<div class="item static"><span class="main"><b>${esc(l.label || "Testlink")}</b><small>${esc(tn(l))} · ${l.revoked ? "ingetrokken" : "verlopen"}</small></span></div>`).join("")}</div></details>` : "");
+    const by = id => L.find(x => x.id === id);
+    $$("[data-tlwa]", host).forEach(b => b.onclick = () => share(by(b.dataset.tlwa), "wa"));
+    $$("[data-tlcp]", host).forEach(b => b.onclick = () => share(by(b.dataset.tlcp)));
+    $$("[data-tlrv]", host).forEach(b => b.onclick = async () => { const l = by(b.dataset.tlrv); if (!confirm(`"${l.label || "Testlink"}" intrekken? Wie de link heeft, kan dan niets meer invullen. Ingevulde resultaten blijven bewaard.`)) return;
+      if (mode === "demo") l.revoked = true; else { const r = await sb.from("test_links").update({ revoked: true }).eq("id", l.id); if (r.error) { toast(r.error.message); return; } }
+      toast("Testlink ingetrokken."); load(); }); };
+  $("#tlMake", f).onclick = async () => { const days = +$("#tlExp", f).value, exp = days ? new Date(Date.now() + days * 864e5) : null; if (exp) exp.setHours(23, 59, 0, 0);
+    const rec = { club_id: CLUB.id, label: $("#tlLabel", f).value.trim().slice(0, 60), team_ids: all ? null : [...sel], expires_at: exp ? exp.toISOString() : null };
+    let l; if (mode === "demo") { l = { ...rec, id: uid(), token: "demo" + Math.random().toString(36).slice(2).padEnd(24, "x"), revoked: false, created_at: new Date().toISOString() }; (window.TS_DEMO_LINKS = window.TS_DEMO_LINKS || []).unshift(l); }
+    else { const r = await sb.from("test_links").insert(rec).select().single(); if (r.error) { toast(r.error.message); return; } l = r.data; }
+    $("#tlLabel", f).value = ""; $("#tlnew", f).open = false; await load(); share(l); };
+  load();
+}
 function tsSettingsBind(f, st) {
   const L = $("#tslist", f);
-  { const base = tsAppUrl(), el = $("#tcode", f), lk = $("#tlink", f); let url = base; $("#tapp", f).href = base;
-    const setL = c => { url = c && /^[A-Z0-9]{4,}$/i.test(c) ? base + "&k=" + encodeURIComponent(c) : base; lk.href = url; lk.textContent = url; }; setL("");
-    const get = async nieuw => { if (mode === "demo") { el.textContent = "TDEMO123"; setL("TDEMO123"); return; } const r = await sb.rpc("test_code", { nieuw }); el.textContent = r.error ? "niet beschikbaar" : r.data; setL(r.error ? "" : r.data); };
-    get(false); $("#tcodeNew", f).onclick = async () => { if (confirm("Een nieuwe testcode maken? De oude werkt dan niet meer voor nieuwe testafnemers.")) await get(true); };
-    $("#tcodeCp", f).onclick = async () => { const t = `Testapp ${clubName()}: ${url}\nTestcode: ${el.textContent}\nMaak een account aan met de testcode. Daarna laat de beheerder je toe.`; try { await navigator.clipboard.writeText(t); toast("Link en code gekopieerd."); } catch (e) { toast(t); } }; }
+  tsLinksBind(f);
   L.addEventListener("click", e => { const b = e.target.closest("button"), r = b?.closest(".csr"); if (!r) return;
     if (b.hasAttribute("data-del")) { if (confirm("Deze test verwijderen? Bestaande resultaten blijven bewaard, maar worden niet meer getoond. Zet de test liever uit als je ze later nog wil zien.")) r.remove(); }
     else if (b.dataset.mv) { const up = +b.dataset.mv < 0, sib = up ? r.previousElementSibling : r.nextElementSibling; if (sib) L.insertBefore(up ? r : sib, up ? sib : r); } });

@@ -198,8 +198,8 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) =>
 } });
 
 /* lid bewerken: functie, beheerder en toegang tot alle ploegen */
-const FUNCTIES = ["Trainer", "Penningmeester", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Testafnemer", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
-const RECHTEN = [["scouting", "Externe scouting", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."], ["tester", "Fysieke testen afnemen", "Resultaten invullen voor alle ploegen via de gsm-app. Ziet enkel naam en rugnummer van de spelers."]];
+const FUNCTIES = ["Trainer", "Penningmeester", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
+const RECHTEN = [["scouting", "Externe scouting", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
 function memberForm(m, rpc) {
   const me = m.user_id === user?.id;
   const prof = fn => { const c = (CLUB.settings?.access?.fn || {})[fn], p = FN_PRESETS[fn] || {}; return c ? { all: !!c.all, rechten: c.rechten || [], bouw: p.bouw || "" } : { all: !!p.all, rechten: p.rechten || ["intscout"], bouw: p.bouw || "" }; };
