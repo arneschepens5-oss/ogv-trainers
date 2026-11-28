@@ -10,12 +10,12 @@ const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 /* onderdelen die de club heeft uitgezet (Beheer > Instellingen) */
 /* een onderdeel staat uit voor de hele club, of enkel voor deze trainer (Instellingen › Wie ziet wat) */
 /* functies: wat iemand standaard krijgt bij een functie. Rechten en toegang worden bij het toekennen van de functie overgenomen (en kan je per persoon aanpassen); onderdelen van het menu kan de club per functie instellen (settings.access.fn) */
-const FN_ALLMODS = ["kalender", "uitslagen", "spelers", "ploeg", "ploeg-instellingen", "trainingen", "bibliotheek", "scoutveld", "trainers", "opslag", "evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "berichten", "terreinen", "contacten", "clubdashboard", "zelftrainer", "zelfcoord", "testen", "testafname"];
+const FN_ALLMODS = ["kalender", "uitslagen", "spelers", "ploeg", "ploeg-instellingen", "trainingen", "bibliotheek", "scoutveld", "trainers", "opslag", "evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "berichten", "terreinen", "contacten", "clubdashboard", "zelftrainer", "zelfcoord", "testen"];
 const FN_PRESETS = { TVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, AVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, "Jeugdcoördinator": { all: true, rechten: ["scouting", "terreinen", "intscout"] },
   "Coördinator onderbouw": { bouw: "onder", rechten: ["intscout"] }, "Coördinator middenbouw": { bouw: "midden", rechten: ["intscout"] }, "Coördinator bovenbouw": { bouw: "boven", rechten: ["intscout"] },
   Scout: { rechten: ["scouting", "intscout"], hide: ["evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "terreinen", "clubdashboard"] },
   Penningmeester: { rechten: ["betalingen"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) }, Terreinverantwoordelijke: { rechten: ["terreinen", "intscout"] },
-  Testafnemer: { rechten: ["tester"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten", "testafname"].includes(k)) } };
+  Testafnemer: { rechten: ["tester"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) } };
 const accOff = page => { if (S.admin || typeof user === "undefined" || !user) return false; const A = CLUB.settings?.access || {}, u = (A.users || {})[user.id] || {};
   if ((u.on || []).includes(page)) return false; if ((u.off || []).includes(page)) return true; const fh = S.functie && (A.fn || {})[S.functie]?.hide; return (fh || A.all?.hide || []).includes(page); };
 const clubOff = page => { if (page === "zelfspeler") page = "evaluaties"; return (CLUB.settings?.hidden || []).includes(page) || accOff(page); };  /* zelfevaluatie speler volgt de evaluaties */
@@ -595,7 +595,7 @@ const NAV = [
   { g: "Kalender", icon: "cal", items: [["kalender", "Kalender", "cal"], ["matchday", "Wedstrijdblad", "sheet"], ["live", "Live coachen", "mic"], ["uitslagen", "Uitslagen club", "ball"]] },
   { g: "Ploeg", icon: "ppl", team: true, items: [["spelers", "Spelers", "ppl"], ["cijfers", "Cijfers", "chart"], ["ploeg-instellingen", "Ploeg en trainers", "gear"]] },
   { g: "Evaluaties", icon: "star", items: [["evaluaties", "Spelersevaluatie", "star"], ["zelfspeler", "Zelfevaluatie speler", "check"], ["zelftrainer", "Zelfevaluatie trainer", "check"], ["zelfcoord", "Zelfevaluatie coördinator", "check"]] },
-  { g: "Fysieke testen", icon: "up", items: [["testen", "Resultaten ploeg", "chart"], ["testafname", "Testen afnemen", "phone"]] },
+  { g: "Fysieke testen", icon: "up", items: [["testen", "Resultaten ploeg", "chart"]] },
   { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["papier", "Training op papier", "print"]] },
   { g: "Tactiek", icon: "board", items: [["animatiebord", "Tactiekbord", "board"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Scouting", icon: "scout", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Externe scouting", "scout"], ["scoutveld", "Posities vergelijken", "field"]] },
@@ -621,7 +621,7 @@ function shell(fresh) {
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
   const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/taken", "Taken", "plan"], ["platform/diensten", "Diensten", "link"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["clubinstellingen", "Instellingen", "star"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
-    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "intscouting" || S.admin || S.intscout !== false) && (k !== "scoutveld" || S.admin || S.intscout !== false || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "zelfcoord" || (typeof isCoord === "function" && isCoord())) && (k !== "zelftrainer" || hasTeam) && (k !== "testafname" || S.admin || mode === "demo" || (S.rechten || []).includes("tester")) && (k !== "testafname" || !clubOff("testen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
+    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "intscouting" || S.admin || S.intscout !== false) && (k !== "scoutveld" || S.admin || S.intscout !== false || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "zelfcoord" || (typeof isCoord === "function" && isCoord())) && (k !== "zelftrainer" || hasTeam) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>

@@ -13,8 +13,6 @@ const tsBest = (t, xs) => { const v = xs.filter(x => x != null && x !== "" && is
 const tsFmt = (t, v) => v == null || v === "" ? "–" : Number(v).toFixed(Math.max(0, Math.min(3, t?.dec ?? 1))).replace(".", ",");
 const tsUnit = t => t?.unit ? ` <span class="u">${esc(t.unit)}</span>` : "";
 const tsNum = s => { const x = String(s ?? "").trim().replace(",", "."); return x === "" || !isFinite(x) ? null : Number(x); };
-const tsMayTest = () => S.admin || (S.rechten || []).includes("tester") || mode === "demo";
-const tsTeams = () => tsMayTest() ? (S.teams || []) : myTeams();
 const tsFit = pid => (S.fit || []).filter(r => r.player_id === pid);
 const tsDirTxt = t => tsLow(t) ? "lager is beter" : "hoger is beter";
 
@@ -24,7 +22,7 @@ let TS_VIEW = "tabel", TS_PID = "", TS_TEST = "", TS_TDAY = "";
 route("testen", { title: "Fysieke testen", auth: true, team: true, render: (v, pid) => { if (pid && active().some(p => p.id === pid)) { TS_VIEW = "speler"; TS_PID = pid; } tsTableView(v); } });
 function tsTableView(v) {
   const T = tsOn(), P = active(), R = (S.fit || []).filter(r => P.some(p => p.id === r.player_id));
-  const acts = `<div class="row" style="gap:8px;flex-wrap:wrap">${tsMayTest() ? `<a class="btn" href="${esc(tsAppUrl())}" target="_blank" rel="noopener">${IC.phone}Testapp openen</a>` : ""}${R.length ? `<button class="btn ghost" type="button" id="tsCsv">${IC.dl}Exporteren</button><button class="btn ghost" type="button" id="tsPr">${IC.print}Afdrukken</button>` : ""}</div>`;
+  const acts = `<div class="row" style="gap:8px;flex-wrap:wrap">${R.length ? `<button class="btn ghost" type="button" id="tsCsv">${IC.dl}Exporteren</button><button class="btn ghost" type="button" id="tsPr">${IC.print}Afdrukken</button>` : ""}</div>`;
   const sub = `Resultaten van ${esc(teamLbl(S.team))}. Ze worden ingevuld door de testafnemers van de club, daarna staan ze hier en in het dossier van elke speler.`;
   if (S.fitOk === false) { v.innerHTML = head("Fysieke testen", sub) + `<div class="empty"><b>Nog niet beschikbaar</b>De database van de club moet nog bijgewerkt worden (versie 60).</div>`; return; }
   if (!T.length) { v.innerHTML = head("Fysieke testen", sub) + `<div class="empty"><b>De club heeft nog geen testen</b>${S.admin ? `Maak ze aan in <a class="link" href="#/clubinstellingen/testen">Instellingen › Fysieke testen</a>: naam, eenheid en of hoger of lager beter is.` : "Vraag de beheerder om de testen van de club aan te maken."}</div>`; return; }
@@ -43,7 +41,7 @@ function tsTableView(v) {
   const bindTabs = () => $$("[data-tv]", v).forEach(b => b.onclick = () => { TS_VIEW = b.dataset.tv; render(); });
   if (R.length && TS_VIEW === "speler") { v.innerHTML = head("Fysieke testen", sub, acts) + tabs + `<div id="tsv"></div>`; bindTabs(); tsPlayerView($("#tsv"), T, P, R); return; }
   if (R.length && TS_VIEW === "ploeg") { v.innerHTML = head("Fysieke testen", sub, acts) + tabs + `<div id="tsv"></div>`; bindTabs(); tsTeamView($("#tsv"), T, P, R); return; }
-  v.innerHTML = head("Fysieke testen", sub, acts) + tabs + (!R.length ? `<div class="empty"><b>Nog geen resultaten</b>${tsMayTest() ? `Neem de eerste testen af met <a class="link" href="${esc(tsAppUrl())}" target="_blank" rel="noopener">de testapp</a>.` : "Een testafnemer van de club vult ze in met de testapp."}</div>` : `
+  v.innerHTML = head("Fysieke testen", sub, acts) + tabs + (!R.length ? `<div class="empty"><b>Nog geen resultaten</b>De testafnemers van de club vullen ze in met de aparte testapp.${S.admin ? ` De link en testcode vind je in <a class="link" href="#/clubinstellingen/testen">Instellingen › Fysieke testen</a>.` : ""}</div>` : `
     <div class="tsdays"><span>Toon</span><button type="button" data-day="" aria-pressed="${!TS_DAY}">Laatste per speler</button>${days.map(d => `<button type="button" data-day="${d}" aria-pressed="${TS_DAY === d}">${esc(dShort(d))}${parse(d).getFullYear() !== new Date().getFullYear() ? " " + parse(d).getFullYear() : ""}</button>`).join("")}</div>
     <div class="tblwrap sec"><table class="tbl tstbl"><thead><tr><th>Speler</th>${cols.map(t => `<th title="${esc(t.uitleg || "")}"><b>${esc(t.name)}</b><small>${esc(t.unit || "")}${t.unit ? " · " : ""}${tsDirTxt(t)}</small></th>`).join("")}</tr></thead>
     <tbody>${rows.map(r => `<tr><td><a class="link" href="#/testen/${r.p.id}" title="Evolutie van ${esc(pname(r.p))}">${r.p.number != null ? `<span class="muted">${r.p.number}</span> ` : ""}${esc(pname(r.p))}</a></td>${r.c.map((c, k) => c ? `<td class="tsc${band(cols[k], stats[k], c.cur.value)}"><b>${tsFmt(cols[k], c.cur.value)}</b>${arrow(cols[k], c)}${TS_DAY ? "" : `<small class="tsd">${esc(dShort(c.cur.date))}</small>`}</td>` : `<td class="tsc none">–</td>`).join("")}</tr>`).join("")}</tbody>
@@ -70,16 +68,12 @@ function fysiekTestsPane(p) {
         <div class="kpi"><small>Beste ooit</small><b>${tsFmt(t, best)}${tsUnit(t)}</b><span>${xs.length} ${xs.length === 1 ? "meting" : "metingen"}</span></div>
         <div class="kpi"><small>In de ploeg</small><b>${rank ? rank + "<span class=\"u\">/" + team.length + "</span>" : "–"}</b><span>${rank ? "op die dag" : "geen vergelijking"}</span></div></div>
       ${xs.length > 1 ? tsLine(t, [{ name: pname(p), cls: "me", pts: xs.map(x => ({ date: x.date, v: +x.value })) }, { name: "Gemiddelde ploeg", cls: "avg", pts: tsDays((S.fit || []).filter(r => active().some(q => q.id === r.player_id)), t).map(d => ({ date: d.date, v: d.avg })) }], null, t.name) : ""}</div>`; }).join("");
-  return `<div class="sec panel" data-t="groei"><div class="row" style="margin-bottom:6px"><h2 style="margin:0;margin-right:auto">Fysieke testen</h2>${tsMayTest() ? `<a class="btn small ghost noprint" href="${esc(tsAppUrl())}" target="_blank" rel="noopener">Testapp openen</a>` : ""}</div>
+  return `<div class="sec panel" data-t="groei"><div class="row" style="margin-bottom:6px"><h2 style="margin:0;margin-right:auto">Fysieke testen</h2></div>
     ${cards ? `<div class="tscards">${cards}</div><p class="hint" style="margin-bottom:0"><a class="link" href="#/testen/${p.id}">Volledige analyse en alle metingen ›</a> Vergelijk vooral met eerdere resultaten van deze speler. Een groeispurt (zie Meten en wegen) kan resultaten tijdelijk doen dalen.</p>` : `<p class="hint" style="margin:0">Nog geen testresultaten voor ${esc(p.first_name || "deze speler")}.${tsOn().length ? "" : " De club heeft nog geen testen aangemaakt."}</p>`}</div>`;
 }
 
-/* ============ testen afnemen gebeurt in de aparte testapp (test/) ============ */
-route("testafname", { title: "Testen afnemen", auth: true, render: v => {
-  const u = tsAppUrl();
-  v.innerHTML = head("Testen afnemen", "Testen vul je in met de aparte testapp op je gsm.", "") + `<div class="panel" style="max-width:560px"><p style="margin-top:0">De testapp opent nu. Gebeurt er niets, tik dan op de knop. Zet de testapp op het beginscherm van je gsm, dan open je ze voortaan rechtstreeks.</p><a class="btn" href="${esc(u)}">${IC.phone}Testapp openen</a></div>`;
-  if (tsMayTest() && !clubOff("testen")) setTimeout(() => { if (/^#\/testafname/.test(location.hash)) location.assign(u); }, 250);
-} });
+/* ============ testen afnemen kan enkel in de aparte testapp (test/), niet in de trainersapp ============ */
+route("testafname", { title: "Fysieke testen", auth: true, render: () => location.replace("#/testen") });
 
 /* ============ instellingen: de testen van de club ============ */
 const tsRow = t => `<div class="csr tsr" data-id="${esc(t.id || "t" + Math.random().toString(36).slice(2, 8))}">
