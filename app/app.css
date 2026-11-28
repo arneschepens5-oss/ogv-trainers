@@ -2843,3 +2843,7 @@ html.tamode main{padding:0!important}
 @media print{.tsdays,.tafoot{display:none}}
 .tstbl th{text-align:center}.tstbl th:first-child{text-align:left}
 .kpi b span.u{display:inline!important}
+
+/* v255: kleur voor Evaluaties en Fysieke testen */
+body[data-sec="Evaluaties"]{--sc:#4F46E5}body[data-sec="Fysieke testen"]{--sc:#0D9488}
+.side .nav a[data-sc="Evaluaties"]{--c:#4F46E5}.side .nav a[data-sc="Fysieke testen"]{--c:#0D9488}

@@ -199,3 +199,5 @@ html.sidemini .acctmenu button,html.sidemini .acctmenu a{justify-content:flex-st
 .pdlg{border:0;border-radius:16px;padding:20px;max-width:min(92vw,380px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .pdlg::backdrop{background:rgba(0,0,0,.45)}
 .pdlg h2{margin:0 0 6px}.pdlg .fld{display:grid;gap:4px;margin:12px 0}.pdlg input{padding:10px;border:1px solid #ccd;border-radius:10px;font:inherit}
+
+.side .nav a[data-sc="Evaluaties"]{--c:#6366F1}.side .nav a[data-sc="Fysieke testen"]{--c:#14B8A6}

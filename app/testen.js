@@ -22,8 +22,8 @@ const tsDirTxt = t => tsLow(t) ? "lager is beter" : "hoger is beter";
 let TS_DAY = "";
 route("testen", { title: "Fysieke testen", auth: true, team: true, render: v => {
   const T = tsOn(), P = active(), R = (S.fit || []).filter(r => P.some(p => p.id === r.player_id));
-  const acts = `<div class="row" style="gap:8px;flex-wrap:wrap"><a class="btn" href="#/testafname">${IC.phone}Testen afnemen</a>${R.length ? `<button class="btn ghost" type="button" id="tsCsv">${IC.dl}Exporteren</button><button class="btn ghost" type="button" id="tsPr">${IC.print}Afdrukken</button>` : ""}</div>`;
-  const sub = `Resultaten van ${esc(teamLbl(S.team))}. Op het veld vul je ze in met de gsm-app, daarna staan ze hier en in het dossier van elke speler.`;
+  const acts = `<div class="row" style="gap:8px;flex-wrap:wrap">${tsMayTest() ? `<a class="btn" href="#/testafname">${IC.phone}Testen afnemen</a>` : ""}${R.length ? `<button class="btn ghost" type="button" id="tsCsv">${IC.dl}Exporteren</button><button class="btn ghost" type="button" id="tsPr">${IC.print}Afdrukken</button>` : ""}</div>`;
+  const sub = `Resultaten van ${esc(teamLbl(S.team))}. Ze worden ingevuld door de testafnemers van de club, daarna staan ze hier en in het dossier van elke speler.`;
   if (S.fitOk === false) { v.innerHTML = head("Fysieke testen", sub) + `<div class="empty"><b>Nog niet beschikbaar</b>De database van de club moet nog bijgewerkt worden (versie 60).</div>`; return; }
   if (!T.length) { v.innerHTML = head("Fysieke testen", sub) + `<div class="empty"><b>De club heeft nog geen testen</b>${S.admin ? `Maak ze aan in <a class="link" href="#/clubinstellingen/testen">Instellingen › Fysieke testen</a>: naam, eenheid en of hoger of lager beter is.` : "Vraag de beheerder om de testen van de club aan te maken."}</div>`; return; }
   const days = [...new Set(R.map(r => r.date))].sort().reverse(); if (TS_DAY && !days.includes(TS_DAY)) TS_DAY = "";
@@ -37,7 +37,7 @@ route("testen", { title: "Fysieke testen", auth: true, team: true, render: v => 
   const band = (t, s, x) => { if (!s || s.n < 4) return ""; const good = tsLow(t) ? x <= s.lo : x >= s.hi, weak = tsLow(t) ? x >= s.hi : x <= s.lo; return good ? " top" : weak ? " low" : ""; };
   const arrow = (t, c) => { if (!c?.prev) return ""; const d = c.cur.value - c.prev.value; if (!d) return `<small class="tsev">=</small>`; const up = tsLow(t) ? d < 0 : d > 0;
     return `<small class="tsev ${up ? "up" : "down"}" title="Vorige keer ${esc(tsFmt(t, c.prev.value))} (${esc(dShort(c.prev.date))})">${up ? "▲" : "▼"} ${tsFmt(t, Math.abs(d))}</small>`; };
-  v.innerHTML = head("Fysieke testen", sub, acts) + (!R.length ? `<div class="empty"><b>Nog geen resultaten</b>Neem de eerste testen af met <a class="link" href="#/testafname">de gsm-app</a>. Je kan ze ook op een computer invullen.</div>` : `
+  v.innerHTML = head("Fysieke testen", sub, acts) + (!R.length ? `<div class="empty"><b>Nog geen resultaten</b>${tsMayTest() ? `Neem de eerste testen af met <a class="link" href="#/testafname">de gsm-app</a>.` : "Een testafnemer van de club vult ze in met de gsm-app."}</div>` : `
     <div class="tsdays"><span>Toon</span><button type="button" data-day="" aria-pressed="${!TS_DAY}">Laatste per speler</button>${days.map(d => `<button type="button" data-day="${d}" aria-pressed="${TS_DAY === d}">${esc(dShort(d))}${parse(d).getFullYear() !== new Date().getFullYear() ? " " + parse(d).getFullYear() : ""}</button>`).join("")}</div>
     <div class="tblwrap sec"><table class="tbl tstbl"><thead><tr><th>Speler</th>${cols.map(t => `<th title="${esc(t.uitleg || "")}"><b>${esc(t.name)}</b><small>${esc(t.unit || "")}${t.unit ? " · " : ""}${tsDirTxt(t)}</small></th>`).join("")}</tr></thead>
     <tbody>${rows.map(r => `<tr><td><a class="link" href="#/${isDossierOff() ? "speler" : "dossier"}/${r.p.id}" data-dos="${r.p.id}">${r.p.number != null ? `<span class="muted">${r.p.number}</span> ` : ""}${esc(pname(r.p))}</a></td>${r.c.map((c, k) => c ? `<td class="tsc${band(cols[k], stats[k], c.cur.value)}"><b>${tsFmt(cols[k], c.cur.value)}</b>${arrow(cols[k], c)}${TS_DAY ? "" : `<small class="tsd">${esc(dShort(c.cur.date))}</small>`}</td>` : `<td class="tsc none">–</td>`).join("")}</tr>`).join("")}</tbody>
@@ -76,6 +76,7 @@ route("testafname", { title: "Testen afnemen", auth: true, render: async v => {
   document.documentElement.classList.add("tamode");
   const close = `<a class="tax" href="#/${S.team && !clubOff("testen") ? "testen" : "start"}" aria-label="Sluiten">${IC.x || "×"}</a>`;
   if (clubOff("testen")) { v.innerHTML = `<div class="ta">${close}<div class="empty"><b>Fysieke testen staan uit</b>Vraag de beheerder om ze aan te zetten.</div></div>`; return; }
+  if (!tsMayTest()) { v.innerHTML = `<div class="ta">${close}<div class="empty"><b>Enkel voor testafnemers</b>Testen invullen mag enkel wie van de beheerder het recht "Fysieke testen afnemen" kreeg. Vraag het aan je clubbeheerder.</div></div>`; return; }
   const teams = tsTeams(), T = tsOn();
   if (!T.length || !teams.length) { v.innerHTML = `<div class="ta">${close}<div class="empty"><b>${!T.length ? "Nog geen testen" : "Geen ploegen"}</b>${!T.length ? "De beheerder maakt eerst de testen van de club aan." : "Je hebt nog geen toegang tot een ploeg. Vraag de beheerder het recht om testen af te nemen."}</div></div>`; return; }
   if (!teams.some(t => t.id === TA.team)) TA.team = (S.team && teams.some(t => t.id === S.team.id) ? S.team.id : teams[0].id);
