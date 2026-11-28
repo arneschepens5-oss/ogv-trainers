@@ -22,14 +22,15 @@ const csCritNames = lines => lines.filter(l => !String(l).trim().startsWith("#")
 function csEvalEditorsHtml(ev) {
   const M = evMaster({ eval: ev }), tpl = M.template, crits = csCritNames(tpl);
   const sf = ev.self || {}, qs = (Array.isArray(sf.questions) ? sf.questions : []).map(evCleanQ).map(evSelfQ).filter(Boolean), open = M.open;
-  return `<h2>Onderdelen met een score</h2><p class="hint" style="margin-top:0">De trainer scoort elk onderdeel. De groepen zijn de hoeken van het spelersprofiel. Een groep die begint met <b>Keeper</b> geldt enkel voor doelmannen. Wat niet past bij een leeftijd, vink je af onder <b>Per leeftijd</b>; hier staat alles wat de club kan gebruiken.</p>
+  const nG = tpl.filter(l => String(l).trim().startsWith("#")).length;
+  return `<details class="csblk" open><summary><b>Onderdelen met een score</b><small>${crits.length} onderdelen in ${nG} groepen · de trainer geeft per onderdeel een score</small></summary><p class="hint" style="margin-top:0">De trainer scoort elk onderdeel. De groepen zijn de hoeken van het spelersprofiel. Een groep die begint met <b>Keeper</b> geldt enkel voor doelmannen. Wat niet past bij een leeftijd, vink je af onder <b>Per leeftijd</b>; hier staat alles wat de club kan gebruiken.</p>
     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn ghost small" type="button" data-tpl="ogv">Fiche OG Vorselaar herstellen</button></div>
     <div id="cscrit" class="cslist">${tpl.map(csCritRow).join("")}</div>
-    <div class="row" style="gap:16px;margin:4px 0 8px"><button class="link" type="button" id="csaddg">${IC.plus}Groep toevoegen</button><button class="link" type="button" id="csaddi">${IC.plus}Onderdeel toevoegen</button></div>
-    <h2>Vragen voor de trainer</h2><p class="hint" style="margin-top:0">Open vragen, keuzelijsten en scores naast de onderdelen. Tussentitels maken er inklapbare blokken van. Vink <b>intern</b> aan voor wat enkel voor trainers en club is: dat komt niet op het rapport. Sterktes, werkpunten en doelen staan al vast in elke evaluatie, die hoef je hier niet toe te voegen.</p>
+    <div class="row" style="gap:16px;margin:4px 0 8px"><button class="link" type="button" id="csaddg">${IC.plus}Groep toevoegen</button><button class="link" type="button" id="csaddi">${IC.plus}Onderdeel toevoegen</button></div></details>
+    <details class="csblk"><summary><b>Vragen voor de trainer</b><small>${open.length} vragen · open antwoorden, keuzes en tussentitels</small></summary><p class="hint" style="margin-top:0">Open vragen, keuzelijsten en scores naast de onderdelen. Tussentitels maken er inklapbare blokken van. Vink <b>intern</b> aan voor wat enkel voor trainers en club is: dat komt niet op het rapport. Sterktes, werkpunten en doelen staan al vast in elke evaluatie, die hoef je hier niet toe te voegen.</p>
     <p class="hint">Laat de vragen <b>Potentieel</b> en <b>Advies</b> staan: daarop zoek je in Interne scouting.</p>
-    <div id="csopen" class="cslist">${open.map(csOpenRow).join("")}</div><button class="link" type="button" id="csaddo" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button>
-    <div class="csselfwrap"><h2>Eigen zelfevaluatie (optioneel)</h2>
+    <div id="csopen" class="cslist">${open.map(csOpenRow).join("")}</div><button class="link" type="button" id="csaddo" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button></details>
+    <details class="csblk csselfwrap"><summary><b>Zelfevaluatie van de spelers</b><small>${sf.on === true ? qs.length + " eigen vragen" : "voorstel van de app per leeftijd"} · optioneel</small></summary>
     <label class="csmod" style="max-width:640px"><span><b>Eigen vragen voor de zelfevaluatie</b><small>Per leeftijd kies je de zelfevaluatie: een korte lijst met smileys, een uitgebreide met cijfers, of deze eigen vragen van de club.</small></span><span class="tgl"><input type="checkbox" name="selfon"${sf.on === true ? " checked" : ""}><span></span></span></label>
     <div id="csself"${sf.on === true ? "" : " hidden"}>
       <p class="hint"><b>Deze vragen staan los van de scores van de trainer.</b> Schrijf ze helemaal zelf, in kindertaal, en kies per vraag een schaal of een open antwoord. Koppelen aan een onderdeel van de trainer is optioneel en dient enkel om beide scores naast elkaar te tonen.</p>
@@ -41,7 +42,7 @@ function csEvalEditorsHtml(ev) {
         <label class="chkl"><input type="radio" name="sscale" value="cijfers10"${sf.scale === "cijfers10" ? " checked" : ""}><span>Cijfers 1 tot 10</span></label></div>
       <label class="f full" style="display:block;margin-bottom:10px">Korte uitleg bovenaan de lijst<input name="selfintro" maxlength="200" value="${esc(sf.intro || "")}" placeholder="bv. Vul dit samen met je mama of papa in. Er zijn geen foute antwoorden."></label>
       <div id="csslist" class="cslist">${qs.map(q => csSelfRow(q, crits)).join("")}</div><button class="link" type="button" id="csaddq" style="margin:4px 0 8px">${IC.plus}Vraag toevoegen</button>
-    </div></div></div>`;
+    </div></details>`;
 }
 
 /* koppelt knoppen en lijsten; geeft een functie terug die de gekozen vragen verzamelt (of een foutmelding) */

@@ -2761,3 +2761,85 @@ h1.pg::after{display:none}
 .cddn{flex:none;font-size:12px;font-weight:800;color:var(--muted);background:rgba(0,0,0,.06);border-radius:99px;padding:2px 9px}
 .cddv{flex:none;opacity:0}.cddo.on .cddv{opacity:1}
 @media (max-width:600px){.cddp{min-width:0}}
+
+/* ============ evaluaties: wie evalueer je? (instellingen) ============ */
+.evwho{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:0 0 20px}
+.evwho button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px 16px;border:1.5px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.evwho button b{font-size:17px}.evwho button small{font-size:12.5px;color:var(--muted);font-weight:600}
+.evwho button:hover{border-color:var(--yellow)}
+.evwho button[aria-selected=true]{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,210,0,.3);background:var(--card2)}
+.csblk{border:1px solid var(--line);border-radius:16px;padding:0 14px;margin:0 0 10px;background:var(--card)}
+.csblk>summary{display:flex;flex-direction:column;gap:2px;padding:14px 0;cursor:pointer;list-style:none}
+.csblk>summary::-webkit-details-marker{display:none}
+.csblk>summary b{font-size:16.5px}.csblk>summary b::before{content:"▸ ";color:var(--muted)}.csblk[open]>summary b::before{content:"▾ "}
+.csblk>summary small{color:var(--muted);font-weight:600;font-size:12.5px}
+.csblk[open]{padding-bottom:12px}
+.seset h3{margin:18px 0 6px;font-size:15px}
+.seset input[name^=se_m_],.seset input[name^=se_i_]{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card2);color:var(--ink);font:inherit}
+.cslist.sel .csint{display:none}
+
+/* ============ zelfevaluatie trainer / coördinator ============ */
+.semoms{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.semoms button{display:flex;flex-direction:column;align-items:flex-start;padding:10px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.semoms button[aria-pressed=true]{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,210,0,.3)}
+.semoms small{font-size:12px;font-weight:700;color:var(--muted)}.semoms small.ok{color:var(--good,#15803D)}.semoms small.wip{color:#B45309}
+.seh{margin:22px 0 4px;font-size:15px;color:var(--muted);text-transform:none}
+.seq{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.seq>b{font-size:15.5px;font-weight:700}
+.seq textarea{width:100%;min-height:80px}
+.seq.ro p{margin:0}.seprev{color:var(--muted);font-size:12.5px}
+.sescale{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;max-width:560px}
+.sescale button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:1.5px solid var(--line);border-radius:12px;background:var(--card2);color:var(--ink);font:inherit;cursor:pointer}
+.sescale button span{font-size:18px;font-weight:900}.sescale button small{font-size:11.5px;color:var(--muted);font-weight:600}
+.sescale button[aria-checked=true]{background:var(--yellow);border-color:var(--yellow);color:#111}.sescale button[aria-checked=true] small{color:#333}
+.sedot{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--yellow);color:#111;font-weight:900;margin-right:4px}
+.seone{border:1px solid var(--line);border-radius:14px;padding:0 14px;margin-bottom:8px}.seone>summary{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:12px 0;cursor:pointer}
+.seavg{margin:0 0 12px}.seavg>summary{cursor:pointer;font-weight:700}
+
+/* ============ fysieke testen ============ */
+.tsdays{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:14px 0 0}.tsdays>span{font-size:12px;font-weight:800;color:var(--muted);margin-right:4px}
+.tsdays button{padding:7px 12px;border:1.5px solid var(--line);border-radius:99px;background:var(--card);color:var(--ink);font:700 13.5px/1 inherit;cursor:pointer}
+.tsdays button[aria-pressed=true]{background:var(--yellow);border-color:var(--yellow);color:#111}
+.tstbl th small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}
+.tstbl td.tsc{text-align:center;white-space:nowrap}.tstbl td.tsc b{font-size:15px}
+.tstbl td.tsc.top{background:rgba(16,185,129,.16)}.tstbl td.tsc.low{background:rgba(234,88,12,.13)}.tstbl td.none{color:var(--dim)}
+.tsev{display:block;font-size:11.5px;font-weight:800}.tsev.up{color:var(--good,#15803D)}.tsev.down{color:#C2410C}
+.tsd{display:block;font-size:11px;color:var(--dim)}
+.tstbl tfoot th,.tstbl tfoot td{font-weight:800;text-align:center}.tstbl tfoot th{text-align:left}
+.tscards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.tscard .dkpis{grid-template-columns:repeat(3,1fr)}
+.csr.tsr{display:grid;grid-template-columns:minmax(150px,1fr) 90px 150px 150px 120px;gap:8px;margin-bottom:8px}.csr.tsr input,.csr.tsr select{width:100%}.csr.tsr input[name=n]{font-weight:700}
+.csr.tsr .tsx{grid-column:1/4}.csr.tsr .tgl{justify-self:start}.csr.tsr .csctl{justify-self:end}
+@media (max-width:760px){.csr.tsr{grid-template-columns:1fr 1fr}.csr.tsr input[name=n],.csr.tsr .tsx{grid-column:1/-1}}
+
+/* gsm-app: volledig scherm, grote knoppen */
+html.tamode .side,html.tamode .topbar,html.tamode .tabbar,html.tamode .supbar,html.tamode .subnav,html.tamode .obx~x{display:none!important}
+html.tamode .shell{grid-template-columns:1fr}
+html.tamode main{padding:0!important}
+.ta{max-width:560px;margin:0 auto;padding:14px 14px calc(96px + env(safe-area-inset-bottom));position:relative;min-height:100dvh}
+.tax{position:absolute;top:12px;right:12px;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--ink);z-index:2}
+.tax svg{width:20px;height:20px}
+.tahd{display:flex;align-items:center;gap:12px;margin:8px 56px 18px 0}.tahd h1{margin:0;font-size:26px}.tahd small{color:var(--muted);font-weight:700}.tahd img{height:48px;width:auto}
+.tapanel{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:var(--card);border:1px solid var(--line)}
+.tapanel select,.tapanel input{min-height:52px;font-size:17px}
+.btn.big{min-height:56px;font-size:18px}
+.tabar{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:10px;margin:-14px -14px 10px;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--line)}
+.tabar .tax{position:static;flex:none}
+.tat{flex:1;min-width:0;display:flex;flex-direction:column}.tat b{font-size:18px}.tat small{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tacnt{flex:none;padding:6px 12px;border-radius:99px;background:var(--yellow);color:#111;font-weight:900}
+.tauitleg{margin:0 0 10px;padding:10px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line)}.tauitleg summary{font-weight:700;cursor:pointer}
+.tasw{position:sticky;top:64px;z-index:2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:10px 12px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.tasw #swt{font:900 30px/1 ui-monospace,monospace;min-width:110px}.tasw .btn{min-height:48px}.tasw small{flex:1 1 100%;color:var(--muted)}
+.talist{display:flex;flex-direction:column;gap:8px}
+.tarow{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:var(--card);border:1.5px solid var(--line)}
+.tarow.cur{border-color:var(--yellow)}.tarow.ok{border-color:rgba(16,185,129,.6)}.tarow.bad{border-color:#DC2626}
+.tan{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.tan b{font-size:17px}
+.tanr{display:grid;place-items:center;min-width:32px;height:32px;border-radius:10px;background:var(--card3);font-weight:900}
+.tabest{flex:1 1 100%;color:var(--muted);font-weight:700}.tarow.ok .tabest{color:var(--good,#15803D)}.tarow.bad .tabest{color:#DC2626}
+.tain{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}
+.tain input{min-height:54px;font-size:22px;font-weight:800;text-align:center;border-radius:14px}
+.tafoot{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;gap:10px;justify-content:center;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
+.tafoot .btn{flex:1;max-width:260px;min-height:52px}
+@media print{.tsdays,.tafoot{display:none}}
+.tstbl th{text-align:center}.tstbl th:first-child{text-align:left}
+.kpi b span.u{display:inline!important}

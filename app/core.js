@@ -10,11 +10,12 @@ const isOGV = () => !CLUB.id || CLUB.id === OGV_ID;
 /* onderdelen die de club heeft uitgezet (Beheer > Instellingen) */
 /* een onderdeel staat uit voor de hele club, of enkel voor deze trainer (Instellingen › Wie ziet wat) */
 /* functies: wat iemand standaard krijgt bij een functie. Rechten en toegang worden bij het toekennen van de functie overgenomen (en kan je per persoon aanpassen); onderdelen van het menu kan de club per functie instellen (settings.access.fn) */
-const FN_ALLMODS = ["kalender", "uitslagen", "spelers", "ploeg", "ploeg-instellingen", "trainingen", "bibliotheek", "scoutveld", "trainers", "opslag", "evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "berichten", "terreinen", "contacten", "clubdashboard"];
+const FN_ALLMODS = ["kalender", "uitslagen", "spelers", "ploeg", "ploeg-instellingen", "trainingen", "bibliotheek", "scoutveld", "trainers", "opslag", "evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "berichten", "terreinen", "contacten", "clubdashboard", "zelftrainer", "zelfcoord", "testen", "testafname"];
 const FN_PRESETS = { TVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, AVJO: { all: true, rechten: ["scouting", "terreinen", "intscout"] }, "Jeugdcoördinator": { all: true, rechten: ["scouting", "terreinen", "intscout"] },
   "Coördinator onderbouw": { bouw: "onder", rechten: ["intscout"] }, "Coördinator middenbouw": { bouw: "midden", rechten: ["intscout"] }, "Coördinator bovenbouw": { bouw: "boven", rechten: ["intscout"] },
   Scout: { rechten: ["scouting", "intscout"], hide: ["evaluaties", "dossier", "cijfers", "live", "matchday", "videoanalyse", "animatiebord", "mixschema", "principes", "terreinen", "clubdashboard"] },
-  Penningmeester: { rechten: ["betalingen"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) }, Terreinverantwoordelijke: { rechten: ["terreinen", "intscout"] } };
+  Penningmeester: { rechten: ["betalingen"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten"].includes(k)) }, Terreinverantwoordelijke: { rechten: ["terreinen", "intscout"] },
+  Testafnemer: { rechten: ["tester"], hide: FN_ALLMODS.filter(k => !["berichten", "contacten", "testafname"].includes(k)) } };
 const accOff = page => { if (S.admin || typeof user === "undefined" || !user) return false; const A = CLUB.settings?.access || {}, u = (A.users || {})[user.id] || {};
   if ((u.on || []).includes(page)) return false; if ((u.off || []).includes(page)) return true; const fh = S.functie && (A.fn || {})[S.functie]?.hide; return (fh || A.all?.hide || []).includes(page); };
 const clubOff = page => (CLUB.settings?.hidden || []).includes(page) || accOff(page);
@@ -72,7 +73,7 @@ function applyClubTheme() { setAppIcon();
   const m = document.querySelector('meta[name="theme-color"]'); if (m && st.color2 && !light) m.content = getComputedStyle(root).getPropertyValue("--sidebg").trim() || m.content;
 }
 const KEYS = { teams:["id"], team_trainers:["team_id","user_id"], players:["id"], events:["id"], attendance:["event_id","player_id"],
-  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], club_logos:["club_id","key"], player_absence:["id"], trainer_att:["event_id","tkey"], trainer_rates:["club_id","tkey"], trainer_profiles:["user_id"] };
+  evaluations:["player_id","moment"], goals:["id"], scouting:["id"], club_docs:["key"], trainer_items:["id"], rsvp:["event_id","player_id"], messages:["id"], parent_messages:["id"], eval_publicaties:["team_id","moment"], eval_zelf:["player_id","moment"], eval_zelf_open:["team_id","moment"], player_scout:["id"], player_measures:["id"], fit_results:["player_id","test_id","date"], staff_evals:["user_id","kind","season","moment"], club_logos:["club_id","key"], player_absence:["id"], trainer_att:["event_id","tkey"], trainer_rates:["club_id","tkey"], trainer_profiles:["user_id"] };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
 
 /* ============ gegevenslaag ============ */
@@ -496,6 +497,7 @@ async function loadTeam(id) {
   try { S.abs = await db.list("player_absence", m); S.absOk = true; } catch (e) { S.abs = []; S.absOk = false; } /* blessures en afwezigheden (databaseversie 48) */
   try { S.tatt = await db.list("trainer_att", m); S.tattOk = true; } catch (e) { S.tatt = []; S.tattOk = false; } /* aanwezigheid trainers (databaseversie 46) */
   try { S.pmeas = await db.list("player_measures", m); S.pmeasOk = true; } catch (e) { S.pmeas = []; S.pmeasOk = false; } /* meten en wegen (databaseversie 42) */
+  try { S.fit = await db.list("fit_results", m); S.fitOk = true; } catch (e) { S.fit = []; S.fitOk = false; } /* fysieke testen (databaseversie 60) */
   if (typeof tpLoad === "function") await tpLoad(); /* trainersprofielen (databaseversie 40) */
   sortPlayers(); sortEvents();
   if (typeof rbfaAuto === "function") setTimeout(rbfaAuto, 800);
@@ -551,7 +553,7 @@ function playerStats(p) {
 const ROUTES = {};
 function route(name, def) { ROUTES[name] = def; }
 /* onderdelen die enkel zin hebben met een ploeg, en wat iemand zelf uit zijn menu haalde */
-const NAV_TEAM = ["live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
+const NAV_TEAM = ["evaluaties", "testen", "live", "matchday", "videoanalyse", "trainingen", "animatiebord", "mixschema", "intscouting"];
 const SIDE_OPEN = new Set(), SIDE_SHUT = new Set();
 const navHidden = () => { try { const x = JSON.parse(localStorage.getItem("ogv-nav-hidden")); return Array.isArray(x) ? x : []; } catch (e) { return []; } };
 /* onderaan het menu staat nog maar één knop; alles voor jezelf (weergave, lettergrootte, menu, account, hulp) zit in "Mijn instellingen" */
@@ -591,7 +593,9 @@ function menuEdit() {
 const NAV = [
   { g: null, items: [["start", "Vandaag", "home"], ["berichten", "Berichten", "mail"]] },
   { g: "Kalender", icon: "cal", items: [["kalender", "Kalender", "cal"], ["matchday", "Wedstrijdblad", "sheet"], ["live", "Live coachen", "mic"], ["uitslagen", "Uitslagen club", "ball"]] },
-  { g: "Ploeg", icon: "ppl", team: true, items: [["spelers", "Spelers", "ppl"], ["evaluaties", "Evaluaties", "star"], ["cijfers", "Cijfers", "chart"], ["ploeg-instellingen", "Ploeg en trainers", "gear"]] },
+  { g: "Ploeg", icon: "ppl", team: true, items: [["spelers", "Spelers", "ppl"], ["cijfers", "Cijfers", "chart"], ["ploeg-instellingen", "Ploeg en trainers", "gear"]] },
+  { g: "Evaluaties", icon: "star", items: [["evaluaties", "Spelers", "star"], ["zelftrainer", "Zelfevaluatie trainer", "check"], ["zelfcoord", "Zelfevaluatie coördinator", "check"]] },
+  { g: "Fysieke testen", icon: "up", items: [["testen", "Resultaten ploeg", "chart"], ["testafname", "Testen afnemen", "phone"]] },
   { g: "Training", icon: "plan", items: [["trainingen", "Trainingen maken", "plan"], ["bibliotheek", "Trainings\u00ADbibliotheek", "book"], ["papier", "Training op papier", "print"]] },
   { g: "Tactiek", icon: "board", items: [["animatiebord", "Tactiekbord", "board"], ["videoanalyse", "Videoanalyse", "split"]] },
   { g: "Scouting", icon: "scout", items: [["intscouting", "Interne scouting", "star"], ["scouting", "Externe scouting", "scout"], ["scoutveld", "Posities vergelijken", "field"]] },
@@ -617,7 +621,7 @@ function shell(fresh) {
   const platOnly = ADMIN_APP || (mode === "cloud" && S.platform && S.member === false);
   const secs = platOnly ? [{ g: null, items: [["platform", "Overzicht", "chart"], ["platform/taken", "Taken", "plan"], ["platform/diensten", "Diensten", "link"], ["platform/meldingen", "Meldingen", "mail"]] }] : (S.admin || S.platform ? [...nav, { g: "Beheer", icon: "gear", items: [...(S.admin ? [["clubbeheer", "Beheer", "gear"], ["clubinstellingen", "Instellingen", "star"], ["privacybeheer", "Privacy", "eye"]] : [])] }] : nav)
     .filter(sec => hasTeam || !sec.team)
-    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "intscouting" || S.admin || S.intscout !== false) && (k !== "scoutveld" || S.admin || S.intscout !== false || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
+    .map(sec => ({ ...sec, items: sec.items.filter(([k]) => (k !== "scouting" || mag("scouting")) && (k !== "intscouting" || S.admin || S.intscout !== false) && (k !== "scoutveld" || S.admin || S.intscout !== false || mag("scouting")) && (k !== "betalingen" || mag("betalingen")) && (k !== "zelfcoord" || (typeof isCoord === "function" && isCoord())) && (k !== "zelftrainer" || hasTeam) && (k !== "testafname" || hasTeam || (S.rechten || []).includes("tester")) && (k !== "testafname" || !clubOff("testen")) && (k !== "ploeg-instellingen" || (logged && t)) && (hasTeam || !NAV_TEAM.includes(k)) && !navHidden().includes(k)) })).filter(sec => sec.items.length);
   /* menu: groepen klappen open en dicht; de groep waar je nu in zit staat altijd open, de keuze wordt onthouden */
   let navClosed; try { navClosed = JSON.parse(localStorage.getItem("ogv-nav-closed")); } catch (e) {} if (!Array.isArray(navClosed)) navClosed = ["Mijn map", "Club"];
   const navItems = sec => sec.items.map(([k, l, i]) =>
@@ -716,6 +720,8 @@ async function renderPage(seq) {
   if (clubOff(r.page)) { v.innerHTML = `<div class="empty"><b>Dit onderdeel staat uit voor ${esc(clubName())}</b>${S.admin ? `Zet het aan in <a class="link" href="#/clubinstellingen/onderdelen">Beheer › Instellingen</a>.` : "Vraag je clubbeheerder als je het wil gebruiken."}</div>`; return; }
   /* scouts (via de scoutapp) zien in de trainersapp enkel de externe scouting */
   if (mode === "cloud" && S.functie === "Scout" && !S.admin && !S.myTeamIds?.length && !["scouting", "aanmelden"].includes(r.page)) { location.replace("#/scouting"); return; }
+  /* testafnemers zonder ploeg: enkel de gsm-app voor de testen */
+  if (mode === "cloud" && !S.admin && !S.myTeamIds?.length && !S.allTeams && !(S.teamAccess || []).length && (S.rechten || []).includes("tester") && !["testafname", "aanmelden", "berichten", "contacten"].includes(r.page)) { location.replace("#/testafname"); return; }
   if (def.team && !S.team) { viewNoTeam(v); return; }
   /* nooit meer een leeg scherm: na een halve seconde "Laden…", na 12 seconden een knop om opnieuw te laden */
   let settled = false;

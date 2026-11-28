@@ -198,8 +198,8 @@ route("clubbeheer", { title: "Beheer", auth: true, render: async (v, id, sub) =>
 } });
 
 /* lid bewerken: functie, beheerder en toegang tot alle ploegen */
-const FUNCTIES = ["Trainer", "Penningmeester", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
-const RECHTEN = [["scouting", "Externe scouting", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."]];
+const FUNCTIES = ["Trainer", "Penningmeester", "TVJO", "AVJO", "Jeugdcoördinator", "Coördinator onderbouw", "Coördinator middenbouw", "Coördinator bovenbouw", "Scout", "Testafnemer", "Terreinverantwoordelijke", "ICT", "Bestuur", "Clubkinesist", "API"];
+const RECHTEN = [["scouting", "Externe scouting", "Spelers van andere clubs bekijken, toevoegen en beoordelen."], ["betalingen", "Betalingen", "Aanwezigheid van trainers en hun vergoeding per maand bekijken en exporteren (bv. de penningmeester). Geen spelersgegevens."], ["terreinen", "Terreinen indelen", "Terrein, uur, helft of kwart, kleedkamers en scheidsrechter van alle ploegen aanpassen."], ["tester", "Fysieke testen afnemen", "Resultaten invullen voor alle ploegen via de gsm-app. Ziet enkel naam en rugnummer van de spelers."]];
 function memberForm(m, rpc) {
   const me = m.user_id === user?.id;
   const prof = fn => { const c = (CLUB.settings?.access?.fn || {})[fn], p = FN_PRESETS[fn] || {}; return c ? { all: !!c.all, rechten: c.rechten || [], bouw: p.bouw || "" } : { all: !!p.all, rechten: p.rechten || ["intscout"], bouw: p.bouw || "" }; };
@@ -985,9 +985,9 @@ function accountDialog() {
 }
 
 /* ============ clubinstellingen: bij de opstart stap voor stap, daarna altijd aan te passen ============ */
-const CS_STEPS = [["club", "Club"], ["onderdelen", "Onderdelen"], ["toegang", "Wie ziet wat"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"], ["ploegen", "Ploegen"], ["trainers", "Trainers"]];
+const CS_STEPS = [["club", "Club"], ["onderdelen", "Onderdelen"], ["toegang", "Wie ziet wat"], ["evaluaties", "Evaluaties"], ["testen", "Fysieke testen"], ["scouting", "Scouting"], ["ploegen", "Ploegen"], ["trainers", "Trainers"]];
 /* onderdelen die een club kan uitzetten; de basis (start, kalender, spelers, trainingen) staat altijd aan */
-const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste momenten"], ["dossier", "Spelersdossier", "Alles van een speler op één pagina"], ["cijfers", "Cijfers", "Statistieken van de ploeg"],
+const CS_MODULES = [["evaluaties", "Evaluaties", "Spelers evalueren op vaste momenten"], ["testen", "Fysieke testen", "Eigen testen, resultaten en een gsm-app om ze af te nemen"], ["dossier", "Spelersdossier", "Alles van een speler op één pagina"], ["cijfers", "Cijfers", "Statistieken van de ploeg"],
   ["live", "Live coachen", "Klok, doelpunten en wissels langs de lijn"], ["matchday", "Wedstrijdblad", "Opstelling om af te drukken"], ["videoanalyse", "Videoanalyse", "Videostudio met spelersherkenning"],
   ["animatiebord", "Tactiekbord", "Bewegende spelpatronen"], ["mixschema", "Mixschema", "Rotatieschema voor gemengde ploegen"], ["principes", "Mijn spelprincipes", "Eigen video's per principe"],
   ["berichten", "Berichten", "Mededelingen aan trainers"], ["terreinen", "Terreinen", "Veldindeling en plattegrond"], ["contacten", "Wie contacteer ik?", "Contactlijst van de club"],
@@ -1033,11 +1033,16 @@ async function csPage(v, id, ctx) {
       <label><span class="hint">van</span><input name="from" value="${esc(x.from || "")}" placeholder="MM-DD" maxlength="5" inputmode="numeric" aria-label="Van (maand-dag)"></label>
       <label><span class="hint">tot</span><input name="to" value="${esc(x.to || "")}" placeholder="MM-DD" maxlength="5" inputmode="numeric" aria-label="Tot (maand-dag)"></label>
       <label class="tgl sm"><input type="checkbox" name="verplicht"${x.verplicht ? " checked" : ""}><span></span>verplicht</label><button class="ib" type="button" data-del title="Moment verwijderen" aria-label="Moment verwijderen">${IC.x || "×"}</button></div>`;
-    host.innerHTML = `<form class="panel" id="cse" style="max-width:820px">
-      <div class="evstabs" role="tablist">${[...(ctx.platform ? [] : [["ages", "Per leeftijd en ploeg", "wat elke ploeg ziet"]]), ["fiche", "De fiche", "alle onderdelen en vragen"], ["mom", "Momenten en schaal", "wanneer en hoe scoren"]].map(([k, l, d], i) => `<button type="button" role="tab" data-pane="${k}" aria-selected="${i === 0}"><b>${l}</b><small>${d}</small></button>`).join("")}</div>
-      ${ctx.platform ? "" : `<div class="evspane" data-p="ages"><p class="hint" style="margin-top:0">Eén evaluatie voor de hele club. Kies per leeftijd welke onderdelen en vragen de trainers zien. Wat je afvinkt, verdwijnt voor die ploegen uit de evaluatie; al ingevulde scores blijven bewaard.</p><div id="csages"></div></div>`}
-      <div class="evspane" data-p="fiche"${ctx.platform ? "" : " hidden"}>${csEvalEditorsHtml(ev)}</div>
-      <div class="evspane" data-p="mom" hidden>
+    const seOn = k => (typeof seCfg === "function" ? seCfg(k, st) : null), whoCard = (k, l, d) => `<button type="button" role="tab" data-who-b="${k}" aria-selected="${k === "spelers"}"><b>${l}</b><small>${d}</small></button>`;
+    const nCrit = csCritNames(evMaster(st).template).length, seTxt = k => { const c = seOn(k); return !c ? "" : c.on ? `zelfevaluatie · ${c.questions.filter(q => q.type !== "kop").length} vragen · ${c.moments.length} momenten` : "zelfevaluatie · staat uit"; };
+    host.innerHTML = `<form class="panel" id="cse" style="max-width:980px">
+      <h2 style="margin-top:0">Wie evalueer je?</h2>
+      <div class="evwho" role="tablist" aria-label="Soort evaluatie">${whoCard("spelers", "Spelers", `de trainer evalueert · ${ms.length} momenten · ${nCrit} onderdelen`)}${seOn("trainer") ? whoCard("trainer", "Trainers", seTxt("trainer")) + whoCard("coord", "Coördinatoren", seTxt("coord")) : ""}</div>
+      <div data-who="spelers">
+      <div class="evstabs" role="tablist">${[["mom", "1 · Wanneer en schaal", "momenten van het seizoen"], ["fiche", "2 · De vragenlijst", "onderdelen en vragen"], ...(ctx.platform ? [] : [["ages", "3 · Per leeftijd", "wat elke ploeg ziet"]])].map(([k, l, d], i) => `<button type="button" role="tab" data-pane="${k}" aria-selected="${i === 0}"><b>${l}</b><small>${d}</small></button>`).join("")}</div>
+      ${ctx.platform ? "" : `<div class="evspane" data-p="ages" hidden><p class="hint" style="margin-top:0">Eén evaluatie voor de hele club. Kies per leeftijd welke onderdelen en vragen de trainers zien. Wat je afvinkt, verdwijnt voor die ploegen uit de evaluatie; al ingevulde scores blijven bewaard.</p><div id="csages"></div></div>`}
+      <div class="evspane" data-p="fiche" hidden>${csEvalEditorsHtml(ev)}</div>
+      <div class="evspane" data-p="mom">
       <h2 style="margin-top:0">Wanneer evalueren jullie?</h2><p class="hint" style="margin-top:0">Trainers zien per moment wanneer de evaluaties klaar moeten zijn. Data als maand-dag, bv. 12-01 voor 1 december. Het seizoen start in juli.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">${Object.entries(EV_PRESETS).map(([k, p]) => `<button class="btn ghost small" type="button" data-pre="${k}">${p.naam}</button>`).join("")}</div>
       <div id="csms">${ms.map(rowHtml).join("")}</div><button class="link" type="button" id="csadd" style="margin:4px 0 8px">${IC.plus}Moment toevoegen</button>
@@ -1045,28 +1050,38 @@ async function csPage(v, id, ctx) {
         <label class="chkl"><input type="radio" name="scale" value="woorden"${ev.scale !== "cijfers" && ev.scale !== "cijfers10" ? " checked" : ""}><span>Woorden <span class="hint">(nog niet, soms, meestal, bijna altijd, uitblinker)</span></span></label>
         <label class="chkl"><input type="radio" name="scale" value="cijfers"${ev.scale === "cijfers" ? " checked" : ""}><span>Cijfers 1 tot 5</span></label>
         <label class="chkl"><input type="radio" name="scale" value="cijfers10"${ev.scale === "cijfers10" ? " checked" : ""}><span>Cijfers 1 tot 10</span></label></div>
-      <p class="hint" style="margin-top:4px">Wissel je later van schaal, dan blijven ingevulde evaluaties bewaard en worden ze omgerekend (3 op 5 wordt 6 op 10). De zelfevaluatie van de spelers heeft een eigen schaal, hieronder.</p>
-      </div>
+      <p class="hint" style="margin-top:4px">Wissel je later van schaal, dan blijven ingevulde evaluaties bewaard en worden ze omgerekend (3 op 5 wordt 6 op 10). De zelfevaluatie van de spelers heeft een eigen schaal, onder De vragenlijst.</p>
+      </div></div>
+      ${seOn("trainer") ? `<div data-who="trainer" hidden>${seSettingsHtml("trainer", st)}</div><div data-who="coord" hidden>${seSettingsHtml("coord", st)}</div>` : ""}
       ${foot()}</form>`;
     const f = $("#cse"), list = $("#csms", f);
     const wire = () => $$("[data-del]", list).forEach(b => b.onclick = () => { if ($$(".csm", list).length > 1) b.closest(".csm").remove(); else toast("Hou minstens één moment."); });
     wire();
     $$("[data-pre]", f).forEach(b => b.onclick = () => { list.innerHTML = EV_PRESETS[b.dataset.pre].moments.map(rowHtml).join(""); wire(); });
     $("#csadd", f).onclick = () => { list.insertAdjacentHTML("beforeend", rowHtml({ naam: "", from: "", to: "" }, $$(".csm", list).length)); wire(); };
-    const collect = csEvalEditorsBind(f);
+    const collect = csEvalEditorsBind(f), seCollect = typeof seSettingsBind === "function" && $("[data-who=trainer]", f) ? seSettingsBind(f) : () => ({});
+    const showWho = k => { $$("[data-who-b]", f).forEach(x => x.setAttribute("aria-selected", x.dataset.whoB === k)); $$("[data-who]", f).forEach(p => { p.hidden = p.dataset.who !== k; }); };
+    $$("[data-who-b]", f).forEach(b => b.onclick = () => showWho(b.dataset.whoB));
     const masterNow = () => { const q = collect(); return q.err ? evMaster(st) : { template: q.template, open: evOpenList(q.open), self: q.self }; };
     CSA.ages = null; const AG = ctx.platform ? null : csAges($("#csages", f), st, masterNow);
     $$("[data-pane]", f).forEach(b => b.onclick = () => { $$("[data-pane]", f).forEach(x => x.setAttribute("aria-selected", x === b)); $$(".evspane", f).forEach(p => { p.hidden = p.dataset.p !== b.dataset.pane; }); if (b.dataset.pane === "ages" && AG) AG.redraw(); });
     f.onsubmit = async e => { e.preventDefault();
       const moments = $$(".csm", list).map(r => ({ naam: $("[name=naam]", r).value.trim(), from: $("[name=from]", r).value.trim(), to: $("[name=to]", r).value.trim(), verplicht: $("[name=verplicht]", r).checked }));
-      const bad = moments.find(x => !x.naam || !evMd(x.from) || !evMd(x.to)); if (bad) { toast("Geef elk moment een naam en een datum als maand-dag, bv. 12-01."); return; }
-      const q = collect(); if (q.err) { toast(q.err); return; } const template = q.template;
+      const bad = moments.find(x => !x.naam || !evMd(x.from) || !evMd(x.to)); if (bad) { showWho("spelers"); toast("Geef elk moment een naam en een datum als maand-dag, bv. 12-01."); return; }
+      const q = collect(); if (q.err) { showWho("spelers"); toast(q.err); return; } const template = q.template;
+      const q2 = seCollect(); if (q2.err) { showWho(/coörd/.test(q2.err) ? "coord" : "trainer"); toast(q2.err); return; }
       const cur = (CLUB.settings || st).eval || {}, ages = AG ? AG.value() : (cur.ages || {});
-      const eval2 = { ...cur, v2: true, moments, scale: f.scale.value, template, open: q.open, self: q.self, ages }; delete eval2.isc; delete eval2.profiles;
+      const eval2 = { ...cur, v2: true, moments, scale: f.scale.value, template, open: q.open, self: q.self, ages, ...(q2.staff ? { staff: q2.staff } : {}) }; delete eval2.isc; delete eval2.profiles;
       if (!(await csSave({ eval: eval2 }, "Evaluaties bewaard."))) return;
       if (typeof evApplyClub === "function") evApplyClub();
       if (!ctx.platform) await evSyncTeams(CLUB.settings);
       go(); };
+    return; }
+
+  if (step === "testen") {
+    host.innerHTML = `<form class="panel" id="cst" style="max-width:1040px">${tsSettingsHtml(st)}${foot()}</form>`;
+    const f = $("#cst"), collect = tsSettingsBind(f, st);
+    f.onsubmit = async e => { e.preventDefault(); const q = collect(); if (q.err) { toast(q.err); return; } if (!(await csSave({ tests: q.tests }, "Testen bewaard."))) return; go(); };
     return; }
 
   if (step === "onderdelen") {

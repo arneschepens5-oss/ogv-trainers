@@ -17,7 +17,7 @@ function dosChart(rows) {
       ${n <= 16 ? `<text x="${xs(i)}" y="${H - 6}" text-anchor="middle" font-size="9.5" style="fill:var(--dim)">${dDay(x.e.date)}/${parse(x.e.date).getMonth() + 1}</text>` : ""}`).join("")}</svg>`;
 }
 
-const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["groei", "Groei"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
+const DOS_TABS = [["overzicht", "Startblad"], ["persoonlijk", "Persoonlijk en contact"], ["groei", "Fysiek"], ["trainingen", "Trainingen"], ["wedstrijden", "Wedstrijden"], ["evaluaties", "Evaluaties"], ["scouting", "Scouting"]];
 const DOS_IC = { overzicht: "home", persoonlijk: "phone", groei: "up", trainingen: "check", wedstrijden: "ball", evaluaties: "star", scouting: "scout" };
 let dosTab = "overzicht", DOS_EVM = 0, DOS_SEAS = "";
 /* van waar kwam je? (bv. Interne scouting): dan brengt "terug" je daar opnieuw naartoe */
@@ -213,7 +213,7 @@ route("dossier", { title: "Spelersdossier", auth: true, team: true, render: (v, 
     <div class="doslines print-only-lines"><b>Afspraken uit het gesprek</b><i></i><i></i><i></i><i></i></div></div>
 
   ${matchPane}
-  ${persoonlijkPane}${typeof absPanel === "function" ? absPanel(p).replace('class="panel sec absp"', 'class="panel sec absp" data-t="persoonlijk"') : ""}${groeiPane(p)}${trainingPane}${scoutPane}
+  ${persoonlijkPane}${typeof absPanel === "function" ? absPanel(p).replace('class="panel sec absp"', 'class="panel sec absp" data-t="persoonlijk"') : ""}${groeiPane(p)}${typeof fysiekTestsPane === "function" ? fysiekTestsPane(p) : ""}${trainingPane}${scoutPane}
   </div>`;
   const gm = pfGroupMap([S.team.criteria || []]), lst = q => pfList(q, S.evals, S.team.season);
   const pfCtx = { p, list: lst(p), gm, teamAvg: e => e.key && e.key[0] === "c" ? pfAvgScores(S.evals.filter(x => x.moment === e.moment && ps.some(q => q.id === x.player_id))) : null,
