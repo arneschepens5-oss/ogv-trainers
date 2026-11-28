@@ -2742,3 +2742,22 @@ h1.pg::after{display:none}
   html.printing .pbl{font-size:9pt}
   html.printing .pbl .bl-page{width:auto;height:265mm;margin:0;border:0;box-shadow:none;zoom:1}
 }
+
+/* ploegkeuze (posities vergelijken): eigen uitklaplijst */
+.cmpsel{position:relative}
+.cdd{position:relative}
+.cddb{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;padding:8px 14px;border:1.5px solid var(--line);border-radius:16px;background:var(--card);font:inherit;color:var(--ink);cursor:pointer;text-align:left;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.cddb:hover{border-color:var(--yellow)}.cddb:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.cddb[aria-expanded=true]{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,210,0,.35)}
+.cddb svg{flex:none;transition:transform .15s}.cddb[aria-expanded=true] svg{transform:rotate(180deg)}
+.cddt{display:flex;flex-direction:column;min-width:0;flex:1}.cddt b{font-size:17px;font-weight:800;line-height:1.2}.cddt small{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cddp{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 6px);min-width:300px;max-height:min(70vh,440px);overflow:auto;padding:6px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.cddp[hidden]{display:none}
+.cddg+.cddg{margin-top:4px;padding-top:4px;border-top:1px solid var(--line)}
+.cddh{position:sticky;top:-6px;z-index:1;padding:8px 10px 4px;background:var(--card);font-size:12px;font-weight:900;letter-spacing:.04em;color:var(--muted)}
+.cddo{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:12px;background:transparent;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.cddo:hover,.cddo:focus-visible{background:rgba(255,210,0,.18);outline:none}
+.cddo.on{background:rgba(255,210,0,.3)}.cddo.all .cddt b{font-weight:900}
+.cddn{flex:none;font-size:12px;font-weight:800;color:var(--muted);background:rgba(0,0,0,.06);border-radius:99px;padding:2px 9px}
+.cddv{flex:none;opacity:0}.cddo.on .cddv{opacity:1}
+@media (max-width:600px){.cddp{min-width:0}}
